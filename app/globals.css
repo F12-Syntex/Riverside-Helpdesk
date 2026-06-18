@@ -1,0 +1,35 @@
+html, body { margin: 0; height: 100%; }
+body {
+  background: #f0f4f5;
+  font-family: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
+  color: #212b32;
+  -webkit-font-smoothing: antialiased;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+@keyframes rivaUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes rivaBlink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+button:focus-visible, [tabindex]:focus-visible {
+  outline: none;
+  background: #ffeb3b !important;
+  color: #212b32 !important;
+  box-shadow: 0 -2px #ffeb3b, 0 4px #212b32 !important;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 3px solid #ffeb3b;
+  outline-offset: 0;
+  border-color: #212b32 !important;
+}
+
+/* Input focus styling that mirrors the design's style-focus hints. */
+.riva-input:focus { border-color: #212b32 !important; background: #fff !important; }
+.riva-form-field:focus { border-color: #212b32 !important; }
+
+#riva-scroll::-webkit-scrollbar { width: 10px; }
+#riva-scroll::-webkit-scrollbar-thumb { background: #d8dde0; border-radius: 8px; border: 2px solid #f0f4f5; }
+::selection { background: #41b6e6; }
+
+/* Icon wrappers render raw inline SVG; keep them flush with surrounding text. */
+.riva-ico { display: inline-flex; align-items: center; justify-content: center; }
+.riva-ico svg { display: block; }
