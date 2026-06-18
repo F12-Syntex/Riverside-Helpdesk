@@ -932,8 +932,8 @@ class Riva extends React.Component {
     const g = v.guide;
     return (
       <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-        <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#005eb8;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-          <span className="riva-ico"><Svg w={18} stroke="#fff">{Icons.bot}</Svg></span>
+        <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
+          <img src="/assets/logo.png" alt="" style={s('width:24px;height:24px;display:block;')} />
         </div>
         <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
           <div style={s('padding:18px 22px 0;')}>
@@ -1050,8 +1050,8 @@ class Riva extends React.Component {
   renderSuggest(v) {
     return (
       <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-        <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#005eb8;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-          <span className="riva-ico"><Svg w={18} stroke="#fff">{Icons.bot}</Svg></span>
+        <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
+          <img src="/assets/logo.png" alt="" style={s('width:24px;height:24px;display:block;')} />
         </div>
         <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;padding:16px 20px;box-shadow:0 1px 3px rgba(33,43,50,.08);')}>
           <p style={s('margin:0 0 12px;font-size:17px;line-height:1.45;')}>{v.text}</p>
@@ -1071,8 +1071,8 @@ class Riva extends React.Component {
   renderAi(v) {
     return (
       <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-        <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#005eb8;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-          <span className="riva-ico"><Svg w={18} stroke="#fff">{Icons.bot}</Svg></span>
+        <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
+          <img src="/assets/logo.png" alt="" style={s('width:24px;height:24px;display:block;')} />
         </div>
         <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
           <div style={s('background:#ebe6f1;color:#330072;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #ddd4e8;')}>
@@ -1143,7 +1143,7 @@ class Riva extends React.Component {
 
         <header style={s('flex:none;height:72px;display:flex;align-items:center;gap:14px;padding:0 24px;background:#fff;border-bottom:1px solid #d8dde0;')}>
           <Hover tag="button" onClick={v.onNewChat} aria-label="Start a new chat" base="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;" hover="opacity:.85;">
-            <img src="/assets/logo.png" alt="The Riverside Practice — start a new chat" style={s('height:30px;width:auto;display:block;')} />
+            <img src="/assets/nhs-logo.png" alt="NHS — start a new chat" style={s('height:30px;width:auto;display:block;')} />
           </Hover>
           <div style={s('display:flex;flex-direction:column;line-height:1.15;')}>
             <span style={s('font-weight:700;font-size:18px;white-space:nowrap;')}>The Riverside Practice</span>
@@ -1161,8 +1161,8 @@ class Riva extends React.Component {
             {v.isEmpty && (
               <>
                 <div style={s('text-align:center;padding:20px 0 4px;')}>
-                  <div style={s('width:64px;height:64px;border-radius:18px;background:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}>
-                    <span className="riva-ico"><Svg w={32} stroke="#fff">{Icons.bot}</Svg></span>
+                  <div style={s('width:64px;height:64px;border-radius:18px;background:#fff;border:1px solid #d8dde0;display:inline-flex;align-items:center;justify-content:center;')}>
+                    <img src="/assets/logo.png" alt="" style={s('width:42px;height:42px;display:block;')} />
                   </div>
                   <h1 style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
                   <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>

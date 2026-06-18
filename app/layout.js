@@ -3,6 +3,7 @@ import './globals.css';
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
   description: 'Reception help & guidance for The Riverside Practice — using EMIS Web and front-desk tasks.',
+  icons: { icon: '/assets/logo.png', shortcut: '/assets/logo.png', apple: '/assets/logo.png' },
 };
 
 export default function RootLayout({ children }) {
