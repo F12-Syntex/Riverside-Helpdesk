@@ -196,27 +196,38 @@ class Riva extends React.Component {
     return scored.slice(0, n || 3).map((x) => x.c);
   }
 
-  // Build a short transcript of the conversation so the AI understands follow-ups.
-  buildHistory(upto) {
+  // Turn the whole conversation so far into role-tagged messages, so the model
+  // receives the entire chat as real multi-turn context rather than one
+  // flattened prompt. `upto` excludes the latest user question and the pending
+  // AI placeholder, which are re-added separately with the answer instructions.
+  buildHistoryMessages(upto) {
     const all = this.allGuides();
-    const msgs = this.state.messages.slice(0, upto).slice(-8);
-    const lines = [];
+    const msgs = this.state.messages.slice(0, upto);
+    const out = [];
     for (const m of msgs) {
-      if (m.role === 'user') { lines.push('Staff member: ' + m.text); continue; }
+      if (m.role === 'user') {
+        if (m.text) out.push({ role: 'user', content: m.text });
+        continue;
+      }
       if (m.kind === 'answer') {
         const g = all.find((x) => x.id === m.guideId);
         if (g) {
           const steps = (g.steps || []).map((st, i) => (st.kbd ? st.kbd + ' = ' + st.text : (i + 1) + ') ' + st.text)).join('  ');
-          lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
+          out.push({ role: 'assistant', content: 'I showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : '') });
         }
       } else if (m.kind === 'ai') {
+        const parts = [];
+        if (m.intro) parts.push(m.intro);
         const steps = (m.steps || []).map((t, i) => (i + 1) + ') ' + t).join('  ');
-        if (steps) lines.push('The assistant answered: ' + steps);
+        if (steps) parts.push(steps);
+        if (m.message) parts.push('Suggested wording: ' + m.message);
+        if (m.tip) parts.push('Tip: ' + m.tip);
+        if (parts.length) out.push({ role: 'assistant', content: parts.join('  ') });
       } else if (m.kind === 'suggest') {
-        lines.push('The assistant: ' + m.text);
+        if (m.text) out.push({ role: 'assistant', content: m.text });
       }
     }
-    return lines.join('\n');
+    return out;
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -620,12 +631,14 @@ class Riva extends React.Component {
     this.setState({ messages, input: '' }, () => { this.save(); this.fetchAI(t, aiIdx); });
   }
 
-  // Call the OpenRouter-backed API route and return the model's text.
-  async askLLM(prompt) {
+  // Call the OpenRouter-backed API route and return the model's text. Pass the
+  // full conversation as a messages array so the model sees the whole chat as
+  // real multi-turn context rather than one flattened prompt.
+  async askLLM(messages) {
     const res = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ messages }),
     });
     if (!res.ok) throw new Error('AI request failed (' + res.status + ')');
     const data = await res.json();
@@ -642,17 +655,20 @@ class Riva extends React.Component {
     // the ones that illustrate its answer (validated against this list below).
     const candidateImages = [];
     passages.forEach((p) => (p.img || []).forEach((im) => { if (!candidateImages.includes(im)) candidateImages.push(im); }));
-    const history = this.buildHistory(idx);
-    let prompt = 'You are the Riverside Practice Q&A assistant, a help tool for RECEPTION and ADMIN staff at an NHS GP practice. '
+    // The whole conversation so far, as real user/assistant turns (everything
+    // before the latest user question, which is re-added as the final turn).
+    const history = this.buildHistoryMessages(idx - 1);
+    // Constant role, safety and style rules live in the system message.
+    const system = 'You are the Riverside Practice Q&A assistant, a help tool for RECEPTION and ADMIN staff at an NHS GP practice. '
       + 'The reader is a receptionist, not a clinician. Help with front-desk and administrative tasks: using EMIS Web, booking and cancelling appointments, registrations, documents and scanning, tasks and messages, repeat prescription requests, and knowing who to pass things to. '
       + 'Answer in plain British English in the NHS style: calm, sentence case, no emoji, no marketing words like "simply" or "easy". Address the reader as "you".\n\n'
       + 'IMPORTANT: Do NOT give clinical or medical advice, diagnoses, symptom assessment, or treatment steps — that is a clinician’s job. If a question needs clinical judgement, tell the receptionist to pass it to a clinician (for example the duty doctor). '
-      + 'If the message could be a medical emergency (for example chest pain, difficulty breathing, signs of a stroke, severe bleeding, collapse, anaphylaxis or a seizure), the answer must be: call 999 now, alert a duty clinician immediately, and stay with the patient — do not try to assess or treat them.\n\n';
+      + 'If the message could be a medical emergency (for example chest pain, difficulty breathing, signs of a stroke, severe bleeding, collapse, anaphylaxis or a seizure), the answer must be: call 999 now, alert a duty clinician immediately, and stay with the patient — do not try to assess or treat them.\n\n'
+      + 'The earlier messages in this conversation are the full chat so far — use them to understand follow-up questions, and answer in the context of what was already shown rather than repeating a whole guide.';
+    // The final user turn carries the per-question context and answer format.
+    let prompt = '';
     if (context) {
       prompt += 'Use the following extracts from the practice’s own guides as your main source. Prefer them over general knowledge, point the reader to the relevant guide where one exists, and do not invent menu paths or contact details that are not supported by them:\n"""\n' + context + '\n"""\n\n';
-    }
-    if (history) {
-      prompt += 'Conversation so far (so you can understand follow-up questions):\n"""\n' + history + '\n"""\n\n';
     }
     const catalogue = this.allGuides().map((g) => '- ' + g.id + ': ' + g.question).join('\n');
     prompt += 'Here are the practice’s existing guides. Only return a "guideId" when ONE of these guides DIRECTLY and FULLY answers the staff member’s actual question — that is, the guide is about the same specific task, not merely the same topic or area. If the closest guide only partly answers it, covers a related but different task, or you are at all unsure, do NOT return a guideId: compose your own answer in "steps" or "message" instead. Showing a guide that does not really answer the question is worse than writing a short, focused answer yourself. When you do return a guideId, leave steps and message empty — the full guide (with screenshots) is shown to the reader instead:\nGUIDES:\n' + catalogue + '\n\n';
@@ -661,13 +677,14 @@ class Riva extends React.Component {
         + candidateImages.map((im) => '- ' + im).join('\n') + '\n\n';
     }
     prompt += 'The staff member’s latest message is: "' + question + '"\n'
-      + 'If it is a follow-up, answer in the context of what was already shown above rather than repeating a whole guide.\n'
+      + 'If it is a follow-up, answer in the context of the conversation above rather than repeating a whole guide.\n'
       + 'Decide how to respond and return ONLY valid JSON, no markdown fences, with this exact shape:\n'
       + '{"guideId":"id of a guide above or empty string","intro":"one short sentence","steps":["step one","step two"],"message":"wording to send to a patient or colleague, or empty string","tip":"one short tip or empty string","images":["exact filename from the list above, or leave empty"]}\n'
       + 'Rules: only use "guideId" when an existing guide directly and fully answers this specific question; if in doubt, answer it yourself rather than returning a guide. Use "steps" for a how-to (1 to 6 steps), OR use "message" when the reader asks for wording to give or send to a patient or colleague (you may draft routine administrative messages such as appointment or review invitations, but never clinical or medical advice). '
       + 'If you are unsure or it is outside a receptionist’s role, say so in the intro and advise passing it to a clinician or the practice lead.';
+    const messages = [{ role: 'system', content: system }].concat(history, [{ role: 'user', content: prompt }]);
     try {
-      const raw = await this.askLLM(prompt);
+      const raw = await this.askLLM(messages);
       const data = this.parseAI(raw);
       if (data.guideId && this.allGuides().some((g) => g.id === data.guideId)) {
         const messages = this.state.messages.slice();
