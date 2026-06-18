@@ -608,6 +608,10 @@ class Riva extends React.Component {
     const context = passages.length
       ? passages.map((p) => '[' + p.s + ']\n' + p.x).join('\n\n')
       : '';
+    // Screenshots that came from the retrieved passages — the model may pick
+    // the ones that illustrate its answer (validated against this list below).
+    const candidateImages = [];
+    passages.forEach((p) => (p.img || []).forEach((im) => { if (!candidateImages.includes(im)) candidateImages.push(im); }));
     const history = this.buildHistory(idx);
     let prompt = 'You are the Riverside Practice Q&A assistant, a help tool for RECEPTION and ADMIN staff at an NHS GP practice. '
       + 'The reader is a receptionist, not a clinician. Help with front-desk and administrative tasks: using EMIS Web, booking and cancelling appointments, registrations, documents and scanning, tasks and messages, repeat prescription requests, and knowing who to pass things to. '
@@ -622,10 +626,14 @@ class Riva extends React.Component {
     }
     const catalogue = this.allGuides().map((g) => '- ' + g.id + ': ' + g.question).join('\n');
     prompt += 'Here are the practice’s existing guides. If ONE of them already answers the question, return its id in "guideId" and leave steps and message empty — the full guide (with screenshots) will be shown to the reader instead:\nGUIDES:\n' + catalogue + '\n\n';
+    if (candidateImages.length) {
+      prompt += 'Screenshots available from the source guides above. If one of them directly illustrates your answer, include its exact filename in the "images" array (you may include up to 3, most relevant first); otherwise use an empty array. Only use filenames from this list:\n'
+        + candidateImages.map((im) => '- ' + im).join('\n') + '\n\n';
+    }
     prompt += 'The staff member’s latest message is: "' + question + '"\n'
       + 'If it is a follow-up, answer in the context of what was already shown above rather than repeating a whole guide.\n'
       + 'Decide how to respond and return ONLY valid JSON, no markdown fences, with this exact shape:\n'
-      + '{"guideId":"id of a guide above or empty string","intro":"one short sentence","steps":["step one","step two"],"message":"wording to send to a patient or colleague, or empty string","tip":"one short tip or empty string"}\n'
+      + '{"guideId":"id of a guide above or empty string","intro":"one short sentence","steps":["step one","step two"],"message":"wording to send to a patient or colleague, or empty string","tip":"one short tip or empty string","images":["exact filename from the list above, or leave empty"]}\n'
       + 'Rules: use "guideId" when an existing guide fits. Otherwise use "steps" for a how-to (1 to 6 steps), OR use "message" when the reader asks for wording to give or send to a patient or colleague (you may draft routine administrative messages such as appointment or review invitations, but never clinical or medical advice). '
       + 'If you are unsure or it is outside a receptionist’s role, say so in the intro and advise passing it to a clinician or the practice lead.';
     try {
@@ -638,7 +646,9 @@ class Riva extends React.Component {
         return;
       }
       if (!data.steps.length && !data.message) { this.updateAi(idx, { status: 'error' }); return; }
-      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip });
+      // Only keep images the model picked from the offered, retrieved set.
+      const images = (data.images || []).filter((im) => candidateImages.includes(im)).slice(0, 3);
+      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
     }
@@ -656,10 +666,11 @@ class Riva extends React.Component {
         steps: Array.isArray(o.steps) ? o.steps.map((x) => String(x).trim()).filter(Boolean) : [],
         message: typeof o.message === 'string' ? o.message.trim() : '',
         tip: typeof o.tip === 'string' ? o.tip : '',
+        images: Array.isArray(o.images) ? o.images.map((x) => String(x).trim()).filter(Boolean) : [],
       };
     } catch (e) {
       const lines = (raw || '').split(/\n+/).map((x) => x.replace(/^[-*\d.\)\s]+/, '').trim()).filter(Boolean);
-      return { guideId: '', intro: '', steps: lines.slice(0, 6), message: '', tip: '' };
+      return { guideId: '', intro: '', steps: lines.slice(0, 6), message: '', tip: '', images: [] };
     }
   }
 
@@ -849,6 +860,8 @@ class Riva extends React.Component {
           hasMessage: !!(m.message && m.message.length),
           hasTip: !!(m.tip && m.tip.length),
           tip: m.tip || '',
+          images: (m.images || []).map((src) => ({ src: assetSrc(src) })),
+          hasImages: !!(m.images && m.images.length),
           onCopy: () => self.copyAi(m, idx),
           copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy steps',
           onSave: () => self.prefillFromAi(m),
@@ -1113,6 +1126,18 @@ class Riva extends React.Component {
                     <div key={st.num} style={s('display:flex;gap:14px;align-items:flex-start;')}>
                       <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#330072;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{st.num}</div>
                       <div style={s('flex:1;min-width:0;font-size:17px;line-height:1.5;')}>{st.text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {v.hasImages && (
+                <div style={s('padding:0 22px 4px;display:flex;flex-direction:column;gap:12px;')}>
+                  {v.images.map((im, i) => (
+                    <div key={i} style={s('border:1px solid #d8dde0;border-radius:8px;overflow:hidden;background:#fff;')}>
+                      <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#f7fbff;display:flex;align-items:center;gap:6px;')}>
+                        <span className="riva-ico"><Svg w={13} stroke="#768692">{Icons.image}</Svg></span>From the EMIS Web guide
+                      </div>
+                      <img src={im.src} alt="EMIS Web screenshot" style={s('display:block;width:100%;height:auto;')} />
                     </div>
                   ))}
                 </div>
