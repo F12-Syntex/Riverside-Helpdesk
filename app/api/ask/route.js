@@ -36,7 +36,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
         // Optional attribution headers recommended by OpenRouter.
         'HTTP-Referer': 'https://riverside-practice.local',
-        'X-Title': 'Riva — EMIS Helper',
+        'X-Title': 'Riva - EMIS Helper',
       },
       body: JSON.stringify({
         model,

@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Riva — The Riverside Practice Q&A bot',
+  title: 'The Riverside Practice Q&A bot',
   description: 'Reception help & guidance for The Riverside Practice — using EMIS Web and front-desk tasks.',
 };
 
