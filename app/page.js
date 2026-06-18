@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { EMIS_KB } from '../lib/emis-knowledge';
+import { UCR_KB } from '../lib/ucr-knowledge';
+import { HANDBOOK_KB } from '../lib/handbook-knowledge';
 
 /* ------------------------------------------------------------------ *
  * Small helpers that let us keep the design's inline-style strings
@@ -152,7 +154,7 @@ class Riva extends React.Component {
       copiedIdx: null,
       draftError: false,
     };
-    this._kb = EMIS_KB || [];
+    this._kb = [...(EMIS_KB || []), ...(UCR_KB || []), ...(HANDBOOK_KB || [])];
   }
 
   blankDraft() {
