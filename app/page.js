@@ -24,22 +24,50 @@ function s(str) {
   return o;
 }
 
-// A button/element that merges hover + active style strings on the fly,
-// mirroring the design's style-hover / style-active hints.
-function Hover({ tag = 'button', base = '', hover = '', active = '', children, ...rest }) {
-  const [h, setH] = React.useState(false);
-  const [a, setA] = React.useState(false);
-  const style = { ...s(base), ...(h ? s(hover) : {}), ...(a ? s(active) : {}) };
+// A button/element with hover + active styling. The hover/active styles are
+// applied via real CSS pseudo-classes (:hover / :active) rather than JS state,
+// so they can never get "stuck" if a mouseleave is missed (which happened when
+// a card shifted up on hover via translateY).
+const _hoverReg = new Map();
+let _hoverSeq = 0;
+
+function _important(css) {
+  return String(css).split(';').map((p) => {
+    const i = p.indexOf(':');
+    if (i === -1) return '';
+    const k = p.slice(0, i).trim();
+    const val = p.slice(i + 1).trim();
+    if (!k || !val) return '';
+    return k + ':' + val + ' !important;';
+  }).join('');
+}
+
+function _hoverClass(hover, active) {
+  const key = hover + '@@' + active;
+  let cls = _hoverReg.get(key);
+  if (!cls) { cls = 'rh' + (++_hoverSeq); _hoverReg.set(key, cls); }
+  return cls;
+}
+
+function _injectHover(cls, hover, active) {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('rh-' + cls)) return;
+  let body = '';
+  if (hover) body += '.' + cls + ':hover{' + _important(hover) + '}';
+  if (active) body += '.' + cls + ':active{' + _important(active) + '}';
+  if (!body) return;
+  const el = document.createElement('style');
+  el.id = 'rh-' + cls;
+  el.textContent = body;
+  document.head.appendChild(el);
+}
+
+function Hover({ tag = 'button', base = '', hover = '', active = '', className = '', children, ...rest }) {
+  const cls = _hoverClass(hover, active);
+  React.useEffect(() => { _injectHover(cls, hover, active); }, [cls, hover, active]);
   const Tag = tag;
   return (
-    <Tag
-      {...rest}
-      style={style}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => { setH(false); setA(false); }}
-      onMouseDown={() => setA(true)}
-      onMouseUp={() => setA(false)}
-    >
+    <Tag {...rest} className={(className ? className + ' ' : '') + cls} style={s(base)}>
       {children}
     </Tag>
   );
