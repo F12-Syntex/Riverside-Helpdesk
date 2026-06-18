@@ -653,7 +653,7 @@ class Riva extends React.Component {
       prompt += 'Conversation so far (so you can understand follow-up questions):\n"""\n' + history + '\n"""\n\n';
     }
     const catalogue = this.allGuides().map((g) => '- ' + g.id + ': ' + g.question).join('\n');
-    prompt += 'Here are the practice’s existing guides. If ONE of them already answers the question, return its id in "guideId" and leave steps and message empty — the full guide (with screenshots) will be shown to the reader instead:\nGUIDES:\n' + catalogue + '\n\n';
+    prompt += 'Here are the practice’s existing guides. Only return a "guideId" when ONE of these guides DIRECTLY and FULLY answers the staff member’s actual question — that is, the guide is about the same specific task, not merely the same topic or area. If the closest guide only partly answers it, covers a related but different task, or you are at all unsure, do NOT return a guideId: compose your own answer in "steps" or "message" instead. Showing a guide that does not really answer the question is worse than writing a short, focused answer yourself. When you do return a guideId, leave steps and message empty — the full guide (with screenshots) is shown to the reader instead:\nGUIDES:\n' + catalogue + '\n\n';
     if (candidateImages.length) {
       prompt += 'Screenshots available from the source guides above. If one of them directly illustrates your answer, include its exact filename in the "images" array (you may include up to 3, most relevant first); otherwise use an empty array. Only use filenames from this list:\n'
         + candidateImages.map((im) => '- ' + im).join('\n') + '\n\n';
@@ -662,7 +662,7 @@ class Riva extends React.Component {
       + 'If it is a follow-up, answer in the context of what was already shown above rather than repeating a whole guide.\n'
       + 'Decide how to respond and return ONLY valid JSON, no markdown fences, with this exact shape:\n'
       + '{"guideId":"id of a guide above or empty string","intro":"one short sentence","steps":["step one","step two"],"message":"wording to send to a patient or colleague, or empty string","tip":"one short tip or empty string","images":["exact filename from the list above, or leave empty"]}\n'
-      + 'Rules: use "guideId" when an existing guide fits. Otherwise use "steps" for a how-to (1 to 6 steps), OR use "message" when the reader asks for wording to give or send to a patient or colleague (you may draft routine administrative messages such as appointment or review invitations, but never clinical or medical advice). '
+      + 'Rules: only use "guideId" when an existing guide directly and fully answers this specific question; if in doubt, answer it yourself rather than returning a guide. Use "steps" for a how-to (1 to 6 steps), OR use "message" when the reader asks for wording to give or send to a patient or colleague (you may draft routine administrative messages such as appointment or review invitations, but never clinical or medical advice). '
       + 'If you are unsure or it is outside a receptionist’s role, say so in the intro and advise passing it to a clinician or the practice lead.';
     try {
       const raw = await this.askLLM(prompt);
