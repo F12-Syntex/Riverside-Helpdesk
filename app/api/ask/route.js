@@ -1,6 +1,7 @@
 // Server-side proxy to OpenRouter. The OPENROUTER_API_KEY never reaches the
-// browser — the client sends a fully-built prompt and we relay it to the model
-// named in OPENROUTER_AI_MODEL, returning just the model's text.
+// browser — the client sends either a single `prompt` string or a full
+// `messages` array (system + the whole conversation), and we relay it to the
+// model named in OPENROUTER_AI_MODEL, returning just the model's text.
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -18,13 +19,32 @@ export async function POST(request) {
   }
 
   let prompt = '';
+  let messages = null;
   try {
     const body = await request.json();
     prompt = typeof body?.prompt === 'string' ? body.prompt : '';
+    if (Array.isArray(body?.messages)) {
+      // Keep only well-formed turns with a known role and non-empty text, so
+      // the whole conversation reaches the model as real multi-turn context.
+      messages = body.messages
+        .filter(
+          (m) =>
+            m &&
+            (m.role === 'system' || m.role === 'user' || m.role === 'assistant') &&
+            typeof m.content === 'string' &&
+            m.content.trim(),
+        )
+        .map((m) => ({ role: m.role, content: m.content }));
+    }
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
-  if (!prompt.trim()) {
+
+  // Prefer the full conversation when provided; otherwise fall back to the
+  // single-prompt shape so older callers keep working.
+  const outgoing =
+    messages && messages.length ? messages : prompt.trim() ? [{ role: 'user', content: prompt }] : null;
+  if (!outgoing) {
     return NextResponse.json({ error: 'Empty prompt.' }, { status: 400 });
   }
 
@@ -41,7 +61,7 @@ export async function POST(request) {
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        messages: [{ role: 'user', content: prompt }],
+        messages: outgoing,
       }),
     });
 
