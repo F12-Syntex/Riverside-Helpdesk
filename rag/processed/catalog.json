@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-06-19T04:58:48.316Z",
+  "model": "openai/text-embedding-3-small",
+  "documents": [
+    {
+      "docId": "emis-web-guides",
+      "title": "EMIS Web guides (imported from practice PDFs)",
+      "summary": "Guide to logging in, navigating, and using EMIS Web features.",
+      "tags": [
+        "emis web",
+        "user guide",
+        "navigation",
+        "login",
+        "admin"
+      ],
+      "chunks": 172,
+      "source": "lib/emis-knowledge.js"
+    }
+  ]
+}

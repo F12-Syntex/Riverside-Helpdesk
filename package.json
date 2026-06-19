@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "rag:status": "node rag/status.mjs",
+    "rag:ingest": "node rag/ingest.mjs",
+    "rag:migrate-legacy": "node rag/migrate-legacy.mjs"
   },
   "dependencies": {
     "next": "^14.2.35",

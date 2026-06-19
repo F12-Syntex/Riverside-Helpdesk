@@ -1,0 +1,1 @@
+Drop source documents here (pdf, docx, png, jpg, txt, md). Then: npm run rag:ingest

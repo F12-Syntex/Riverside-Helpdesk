@@ -1,0 +1,13 @@
+{
+  "documents": {
+    "emis-web-guides": {
+      "path": "lib/emis-knowledge.js",
+      "sha256": "legacy-import",
+      "size": 0,
+      "mtime": 0,
+      "chunks": 172,
+      "title": "EMIS Web guides (imported from practice PDFs)",
+      "processedAt": "2026-06-19T04:58:48.289Z"
+    }
+  }
+}
