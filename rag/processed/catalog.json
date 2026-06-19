@@ -1,20 +1,48 @@
 {
-  "generatedAt": "2026-06-19T04:58:48.316Z",
+  "generatedAt": "2026-06-19T05:03:51.585Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
       "docId": "emis-web-guides",
       "title": "EMIS Web guides (imported from practice PDFs)",
-      "summary": "Guide to logging in, navigating, and using EMIS Web features.",
+      "summary": "Guide to logging in, navigating, and using EMIS Web features for admin and clinical users.",
       "tags": [
         "emis web",
         "user guide",
-        "navigation",
-        "login",
-        "admin"
+        "gp system",
+        "admin",
+        "clinical"
       ],
       "chunks": 172,
       "source": "lib/emis-knowledge.js"
+    },
+    {
+      "docId": "ucr-guidance",
+      "title": "UCR guidance",
+      "summary": "Urgent Community Response provides same-day home-based crisis care to prevent hospital admissions.",
+      "tags": [
+        "ucr",
+        "urgent care",
+        "community response",
+        "home care",
+        "nhs"
+      ],
+      "chunks": 14,
+      "source": "lib/ucr-knowledge.js"
+    },
+    {
+      "docId": "employee-handbook",
+      "title": "Employee handbook",
+      "summary": "Covers employee induction, policies, patient complaints, record access, and workplace conduct.",
+      "tags": [
+        "induction",
+        "policies",
+        "complaints",
+        "conduct",
+        "equality"
+      ],
+      "chunks": 44,
+      "source": "lib/handbook-knowledge.js"
     }
   ]
 }
