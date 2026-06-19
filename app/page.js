@@ -141,8 +141,12 @@ class Riva extends React.Component {
       draft: this.blankDraft(),
       copiedIdx: null,
       draftError: false,
+      viewer: null,
     };
   }
+
+  openViewer(citation) { this.setState({ viewer: citation }); }
+  closeViewer() { this.setState({ viewer: null }); }
 
   blankDraft() {
     return { question: '', category: 'appointments', intro: '', steps: ['', ''], tip: '' };
@@ -230,7 +234,7 @@ class Riva extends React.Component {
         return;
       }
       if (!data.steps.length && !data.message) { this.updateAi(idx, { status: 'error' }); return; }
-      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images: data.images || [] });
+      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images: data.images || [], citations: data.citations || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
     }
@@ -424,6 +428,8 @@ class Riva extends React.Component {
           tip: m.tip || '',
           images: (m.images || []).map((src) => ({ src: assetSrc(src) })),
           hasImages: !!(m.images && m.images.length),
+          citations: (m.citations || []).map((c) => ({ ...c, onOpen: () => self.openViewer(c) })),
+          hasCitations: !!(m.citations && m.citations.length),
           onCopy: () => self.copyAi(m, idx),
           copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy steps',
           onSave: () => self.prefillFromAi(m),
@@ -707,6 +713,22 @@ class Riva extends React.Component {
               {v.hasTip && (
                 <div style={s('margin:0 22px 16px;border-left:4px solid #330072;background:#ebe6f1;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {v.tip}</div>
               )}
+              {v.hasCitations && (
+                <div style={s('margin:0 22px 16px;')}>
+                  <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>Sources</div>
+                  <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+                    {v.citations.map((c, i) => (
+                      <Hover key={i} onClick={c.onOpen} base="display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;background:#f7fbff;border:1px solid #cfe1f0;border-radius:10px;padding:10px 14px;cursor:pointer;font:inherit;" hover="border-color:#005eb8;background:#eef6fd;">
+                        <span style={s('font-size:15px;font-weight:600;color:#005eb8;display:flex;align-items:center;gap:7px;')}>
+                          <span className="riva-ico" style={s('flex:none;')}><Svg w={15} stroke="#005eb8">{Icons.file}</Svg></span>
+                          <span>{c.docTitle}{c.location ? ' — ' + c.location : ''}</span>
+                        </span>
+                        {c.snippet && <span style={s('font-size:13px;color:#768692;line-height:1.45;')}>{c.snippet}</span>}
+                      </Hover>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
                 <span style={s('font-size:14px;color:#768692;')}>Always check AI answers before you act on them.</span>
                 <div style={s('margin-left:auto;display:flex;gap:10px;')}>
@@ -718,6 +740,46 @@ class Riva extends React.Component {
               </div>
             </>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // In-page viewer for a citation's source — opens the document without leaving
+  // the browser. PDFs jump to the cited page (#page=N); images and HTML
+  // renditions are shown inline; otherwise the cited snippet is shown.
+  renderViewer() {
+    const c = this.state.viewer;
+    const view = c.view || {};
+    const url = view.url ? assetSrc(view.url) : '';
+    const isPdf = view.kind === 'pdf';
+    const isImage = view.kind === 'image';
+    const isHtml = view.kind === 'html';
+    const src = isPdf && view.page ? url + '#page=' + view.page : url;
+    return (
+      <div onClick={() => this.closeViewer()} style={s('position:fixed;inset:0;background:rgba(33,43,50,.55);display:flex;align-items:center;justify-content:center;padding:24px;z-index:60;')}>
+        <div onClick={(e) => e.stopPropagation()} style={s('width:100%;max-width:920px;height:90vh;background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(33,43,50,.3);display:flex;flex-direction:column;overflow:hidden;')}>
+          <div style={s('flex:none;display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #d8dde0;')}>
+            <span className="riva-ico" style={s('flex:none;color:#005eb8;')}><Svg w={18}>{Icons.file}</Svg></span>
+            <div style={s('min-width:0;')}>
+              <div style={s('font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{c.docTitle}</div>
+              {c.location && <div style={s('font-size:13px;color:#768692;')}>{c.location}</div>}
+            </div>
+            <button onClick={() => this.closeViewer()} aria-label="Close" style={s('margin-left:auto;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;')}>
+              <span className="riva-ico"><Svg w={24}>{Icons.close}</Svg></span>
+            </button>
+          </div>
+          <div style={s('flex:1;min-height:0;background:#f0f4f5;overflow:auto;')}>
+            {url && isImage && (
+              <div style={s('padding:16px;')}><img src={url} alt="Source" style={s('display:block;max-width:100%;margin:0 auto;border:1px solid #d8dde0;border-radius:6px;')} /></div>
+            )}
+            {url && !isImage && (
+              <iframe src={src} title="Source document" style={s('width:100%;height:100%;border:none;background:#fff;')} />
+            )}
+            {!url && (
+              <div style={s('padding:22px;font-size:16px;line-height:1.6;color:#212b32;white-space:pre-wrap;')}>{c.snippet || 'This source is not available to open.'}</div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -827,6 +889,8 @@ class Riva extends React.Component {
             </form>
           </div>
         </div>
+
+        {this.state.viewer && this.renderViewer()}
 
         {v.showAdd && (
           <div style={s('position:fixed;inset:0;background:rgba(33,43,50,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;')}>

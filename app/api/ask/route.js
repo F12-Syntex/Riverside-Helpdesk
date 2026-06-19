@@ -1,8 +1,11 @@
 // Server-side Q&A endpoint for Riva. The browser sends only the question, a
 // short history string and any locally-stored custom guides; everything else —
-// retrieving knowledge-base chunks, building the prompt, calling the model and
-// parsing its JSON — happens here, so the OPENROUTER_API_KEY and the full
-// knowledge base never reach the client.
+// retrieving knowledge-base chunks, building the prompt, calling the model,
+// parsing its JSON and resolving citations — happens here, so the API key and
+// the full knowledge base never reach the client.
+//
+// Answers are grounded strictly in the practice's documents, and the response
+// includes `citations` the UI can open in-browser at the exact page/section.
 import { NextResponse } from 'next/server';
 import { allGuides, guideCatalog } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson } from '@/lib/ai/prompt';
@@ -10,6 +13,20 @@ import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const TOP_K = 5;
+
+function locationOf(chunk) {
+  if (chunk.view && chunk.view.page) return 'Page ' + chunk.view.page;
+  if (chunk.section) return chunk.section;
+  if (chunk.headingPath && chunk.headingPath.length) return chunk.headingPath.join(' › ');
+  return '';
+}
+
+function citationKey(c) {
+  const v = c.view || {};
+  return [c.docId, v.url || '', v.page || '', v.anchor || ''].join('|');
+}
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -37,32 +54,28 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
 
-  // Tier B — semantically retrieve the most relevant chunks. Never fatal: if the
-  // index is missing or embedding fails, we just answer from the guides alone.
+  // Tier B — semantically retrieve the most relevant chunks. Never fatal.
   let chunks = [];
-  try { chunks = await retrieve(question, 4); } catch (e) { chunks = []; }
+  try { chunks = await retrieve(question, TOP_K); } catch (e) { chunks = []; }
+
+  // Number the extracts so the model can cite them, and keep a ref -> chunk map.
+  const refMap = new Map();
+  const extracts = chunks.map((c, i) => {
+    const ref = i + 1;
+    refMap.set(ref, c);
+    return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
+  });
 
   const candidateImages = [];
   chunks.forEach((c) => (c.images || []).forEach((im) => {
     if (im && !candidateImages.includes(im)) candidateImages.push(im);
   }));
 
-  // Tier A — the catalogue is always present so the model is aware of the whole
-  // knowledge base even when a specific chunk wasn't retrieved.
-  let context = '';
-  const cat = catalogText();
-  if (cat) context += 'The practice knowledge base contains these documents:\n' + cat + '\n\n';
-  if (chunks.length) {
-    context += 'Most relevant extracts:\n' + chunks.map((c) => {
-      const loc = c.section || (c.headingPath && c.headingPath.length ? c.headingPath.join(' › ') : '');
-      return '[' + c.docTitle + (loc && loc !== c.docTitle ? ' — ' + loc : '') + ']\n' + c.text;
-    }).join('\n\n');
-  }
-
   const validIds = new Set(allGuides(customGuides).map((g) => g.id));
   const prompt = buildAskPrompt({
     question,
-    context,
+    catalog: catalogText(),
+    extracts,
     history,
     guideCatalog: guideCatalog(customGuides),
     candidateImages,
@@ -100,8 +113,32 @@ export async function POST(request) {
 
     const parsed = parseAiJson(text);
     const guideId = parsed.guideId && validIds.has(parsed.guideId) ? parsed.guideId : '';
-    // Only allow images the model was actually offered from the retrieved set.
     const images = (parsed.images || []).filter((im) => candidateImages.includes(im)).slice(0, 3);
+
+    // Resolve the cited extract numbers into clickable source locators. If the
+    // model gave an answer from the documents but didn't cite, fall back to the
+    // single best-matching extract so an answer always shows its source.
+    let refs = parsed.citations.filter((n) => refMap.has(n));
+    if (!refs.length && !guideId && (parsed.steps.length || parsed.message) && refMap.size) refs = [1];
+
+    const seen = new Set();
+    const citations = [];
+    for (const ref of refs) {
+      const c = refMap.get(ref);
+      if (!c) continue;
+      const cit = {
+        docId: c.docId,
+        docTitle: c.docTitle,
+        location: locationOf(c),
+        snippet: (c.text || '').replace(/\s+/g, ' ').trim().slice(0, 240),
+        view: c.view || null,
+      };
+      const key = citationKey(cit);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      citations.push(cit);
+      if (citations.length >= 4) break;
+    }
 
     return NextResponse.json({
       guideId,
@@ -110,6 +147,7 @@ export async function POST(request) {
       message: parsed.message,
       tip: parsed.tip,
       images,
+      citations,
     });
   } catch (e) {
     return NextResponse.json(
