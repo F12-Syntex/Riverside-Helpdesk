@@ -1,49 +1,34 @@
 {
-  "generatedAt": "2026-06-19T05:28:39.184Z",
+  "generatedAt": "2026-06-19T06:06:58.021Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
-      "docId": "emis-web-guides",
-      "title": "EMIS Web guides (imported from practice PDFs)",
-      "summary": "Guide to logging in, navigating, and using EMIS Web for admin and clinical users.",
+      "docId": "emis-web-how-to",
+      "title": "EMIS WEB how to",
+      "summary": "Guide to EMIS Web features, templates, and common clinical tasks.",
       "tags": [
         "emis web",
-        "user guide",
-        "login",
-        "navigation",
+        "guide",
+        "templates",
+        "clinical",
+        "gp"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/EMIS-WEB-how-to.pdf"
+    },
+    {
+      "docId": "lpug0019-emis-web-introduction-admin-clinical",
+      "title": "LPUG0019 Emis Web Introduction Admin Clinical",
+      "summary": "Guide to Emis Web administration and clinical functions, including login and navigation.",
+      "tags": [
+        "emis web",
         "admin",
-        "clinical"
+        "clinical",
+        "user guide",
+        "navigation"
       ],
-      "chunks": 172,
-      "source": "lib/emis-knowledge.js"
-    },
-    {
-      "docId": "ucr-guidance",
-      "title": "UCR guidance",
-      "summary": "Urgent Community Response provides same-day crisis care at home, preventing hospital admissions.",
-      "tags": [
-        "ucr",
-        "urgent care",
-        "community response",
-        "home care",
-        "nhs"
-      ],
-      "chunks": 14,
-      "source": "lib/ucr-knowledge.js"
-    },
-    {
-      "docId": "employee-handbook",
-      "title": "Employee handbook",
-      "summary": "Covers employee induction, policies, patient complaints, record access, and workplace conduct.",
-      "tags": [
-        "induction",
-        "policies",
-        "complaints",
-        "conduct",
-        "equality"
-      ],
-      "chunks": 44,
-      "source": "lib/handbook-knowledge.js"
+      "chunks": 167,
+      "source": "rag/sources/LPUG0019-Emis-Web-Introduction-Admin-Clinical.pdf"
     }
   ]
 }

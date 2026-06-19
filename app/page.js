@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { SEED_GUIDES, CATEGORIES, BROWSE_AREAS as BROWSE, POPULAR_IDS, QUICK_IDS } from '../lib/guides';
+import { SEED_GUIDES, CATEGORIES, POPULAR_IDS } from '../lib/guides';
 import { askQuestion } from '../lib/ai/client';
 
 /* ------------------------------------------------------------------ *
@@ -25,10 +25,7 @@ function s(str) {
   return o;
 }
 
-// A button/element with hover + active styling. The hover/active styles are
-// applied via real CSS pseudo-classes (:hover / :active) rather than JS state,
-// so they can never get "stuck" if a mouseleave is missed (which happened when
-// a card shifted up on hover via translateY).
+// Hover/active styling via real CSS pseudo-classes (so it can never get "stuck").
 const _hoverReg = new Map();
 let _hoverSeq = 0;
 
@@ -74,21 +71,10 @@ function Hover({ tag = 'button', base = '', hover = '', active = '', className =
   );
 }
 
-// Inline SVG wrapper — applies the root attributes (the inner path/line/etc.
-// elements are already valid JSX).
+// Inline SVG wrapper — the inner path/line/etc. geometry is supplied as children.
 function Svg({ w = 24, h, stroke = 'currentColor', sw = 2, fill = 'none', style, children }) {
   return (
-    <svg
-      width={w}
-      height={h || w}
-      viewBox="0 0 24 24"
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={sw}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-    >
+    <svg width={w} height={h || w} viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={style}>
       {children}
     </svg>
   );
@@ -96,29 +82,23 @@ function Svg({ w = 24, h, stroke = 'currentColor', sw = 2, fill = 'none', style,
 
 // Reusable icon glyphs (the inner geometry only).
 const Icons = {
-  bot: (<><path d="M4 13v-1a8 8 0 0 1 16 0v1" /><rect x="2.5" y="13" width="4" height="6" rx="1.5" /><rect x="17.5" y="13" width="4" height="6" rx="1.5" /><path d="M19.5 19v1a2 2 0 0 1-2 2H13" /></>),
   triangle: (<><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>),
-  play: (<><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></>),
-  calendar: (<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>),
-  pill: (<><path d="M10.5 20.5a4.95 4.95 0 0 1-7-7l6-6a4.95 4.95 0 0 1 7 7z" /><line x1="8.5" y1="8.5" x2="15.5" y2="15.5" /></>),
-  pen: (<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" /></>),
-  file: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>),
-  userplus: (<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></>),
-  send: (<><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>),
-  keyboard: (<><rect x="2" y="6" width="20" height="12" rx="2" /><line x1="6" y1="10" x2="6" y2="10" /><line x1="10" y1="10" x2="10" y2="10" /><line x1="14" y1="10" x2="14" y2="10" /><line x1="8" y1="14" x2="16" y2="14" /></>),
-  arrow: (<><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>),
   alertCircle: (<><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>),
   infoCircle: (<><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></>),
   phone: (<><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" /></>),
   image: (<><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></>),
   copy: (<><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>),
-  banner: (<><path d="M12 3v3" /><rect x="5" y="6" width="14" height="12" rx="2" /><path d="M9 12h.01M15 12h.01" /><path d="M2 12h3M19 12h3" /></>),
   up: (<><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></>),
   close: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
   plus: (<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>),
+  arrow: (<><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>),
+  arrowLeft: (<><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>),
+  chevronRight: (<><polyline points="9 18 15 12 9 6" /></>),
+  shield: (<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><polyline points="9 12 11 14 15 10" /></>),
+  refresh: (<><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></>),
+  fileLines: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="13" y2="17" /></>),
+  file: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>),
 };
-
-// Browse-by-area cards come from lib/guides (imported above as BROWSE).
 
 function assetSrc(p) {
   if (!p) return p;
@@ -141,12 +121,10 @@ class RiversidePracticeQA extends React.Component {
       draft: this.blankDraft(),
       copiedIdx: null,
       draftError: false,
+      hoveredArea: null,
       viewer: null,
     };
   }
-
-  openViewer(citation) { this.setState({ viewer: citation }); }
-  closeViewer() { this.setState({ viewer: null }); }
 
   blankDraft() {
     return { question: '', category: 'appointments', intro: '', steps: ['', ''], tip: '' };
@@ -156,34 +134,8 @@ class RiversidePracticeQA extends React.Component {
     try {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       const m = JSON.parse(localStorage.getItem('riva-chat-v1') || '[]');
-      this.setState({
-        customGuides: Array.isArray(g) ? g : [],
-        messages: Array.isArray(m) ? m : [],
-      });
+      this.setState({ customGuides: Array.isArray(g) ? g : [], messages: Array.isArray(m) ? m : [] });
     } catch (e) {}
-  }
-
-  // Build a short transcript of the conversation so the AI understands follow-ups.
-  buildHistory(upto) {
-    const all = this.allGuides();
-    const msgs = this.state.messages.slice(0, upto).slice(-8);
-    const lines = [];
-    for (const m of msgs) {
-      if (m.role === 'user') { lines.push('Staff member: ' + m.text); continue; }
-      if (m.kind === 'answer') {
-        const g = all.find((x) => x.id === m.guideId);
-        if (g) {
-          const steps = (g.steps || []).map((st, i) => (st.kbd ? st.kbd + ' = ' + st.text : (i + 1) + ') ' + st.text)).join('  ');
-          lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
-        }
-      } else if (m.kind === 'ai') {
-        const steps = (m.steps || []).map((t, i) => (i + 1) + ') ' + t).join('  ');
-        if (steps) lines.push('The assistant answered: ' + steps);
-      } else if (m.kind === 'suggest') {
-        lines.push('The assistant: ' + m.text);
-      }
-    }
-    return lines.join('\n');
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -201,23 +153,38 @@ class RiversidePracticeQA extends React.Component {
   }
 
   cats() { return CATEGORIES; }
-
   seed() { return SEED_GUIDES; }
-
-  allGuides() {
-    return this.seed().concat(this.state.customGuides || []);
-  }
-
+  allGuides() { return this.seed().concat(this.state.customGuides || []); }
   popularIds() { return POPULAR_IDS; }
-  quickIds() { return QUICK_IDS; }
+
+  // Build a short transcript so the AI understands follow-up questions.
+  buildHistory(upto) {
+    const all = this.allGuides();
+    const msgs = this.state.messages.slice(0, upto).slice(-8);
+    const lines = [];
+    for (const m of msgs) {
+      if (m.role === 'user') { lines.push('Staff member: ' + m.text); continue; }
+      if (m.kind === 'answer') {
+        const g = all.find((x) => x.id === m.guideId);
+        if (g) {
+          const steps = (g.steps || []).map((st, i) => (st.kbd ? st.kbd + ' = ' + st.text : (i + 1) + ') ' + st.text)).join('  ');
+          lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
+        }
+      } else if (m.kind === 'ai') {
+        const steps = (m.steps || []).map((t, i) => (i + 1) + ') ' + (t && t.text ? t.text : t)).join('  ');
+        if (steps) lines.push('The assistant answered: ' + steps);
+      } else if (m.kind === 'suggest') {
+        lines.push('The assistant: ' + m.text);
+      }
+    }
+    return lines.join('\n');
+  }
 
   ask(text) {
     const t = (text || '').trim();
     if (!t) return;
     const userMsg = { role: 'user', text: t };
-    // Every typed question is routed through the AI assistant, which decides
-    // whether to surface an existing guide or compose an answer.
-    const aiMsg = { role: 'bot', kind: 'ai', question: t, status: 'loading', intro: '', steps: null, tip: '', message: '' };
+    const aiMsg = { role: 'bot', kind: 'ai', question: t, status: 'loading', intro: '', steps: null, tip: '', message: '', messageCite: null, citations: [] };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     this.setState({ messages, input: '' }, () => { this.save(); this.fetchAI(t, aiIdx); });
@@ -227,25 +194,33 @@ class RiversidePracticeQA extends React.Component {
     const history = this.buildHistory(idx);
     try {
       const data = await askQuestion({ question, history, customGuides: this.state.customGuides });
-      if (data.guideId && this.allGuides().some((g) => g.id === data.guideId)) {
-        const messages = this.state.messages.slice();
-        messages[idx] = { role: 'bot', kind: 'answer', guideId: data.guideId, feedback: null };
-        this.setState({ messages }, () => this.save());
+      if (!data.answerable || (!data.steps.length && !data.message)) {
+        this.updateAi(idx, { status: 'declined', intro: data.intro || 'I could not find this in the practice’s documents.', steps: [], message: '', messageCite: null, tip: '', citations: [] });
         return;
       }
-      // An intro with no steps/message means it isn't in the documents —
-      // show it rather than treating it as an error.
-      if (!data.steps.length && !data.message && !data.intro) { this.updateAi(idx, { status: 'error' }); return; }
-      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images: data.images || [], citations: data.citations || [] });
+      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
     }
+  }
+
+  retryAi(idx) {
+    const m = this.state.messages[idx];
+    if (!m || m.kind !== 'ai') return;
+    this.updateAi(idx, { status: 'loading' });
+    this.fetchAI(m.question, idx);
   }
 
   updateAi(idx, patch) {
     const messages = this.state.messages.slice();
     if (messages[idx]) messages[idx] = Object.assign({}, messages[idx], patch);
     this.setState({ messages }, () => this.save());
+  }
+
+  flagCopied(idx) {
+    this.setState({ copiedIdx: idx });
+    clearTimeout(this._ct);
+    this._ct = setTimeout(() => this.setState({ copiedIdx: null }), 1800);
   }
 
   copyAi(m, idx) {
@@ -255,17 +230,15 @@ class RiversidePracticeQA extends React.Component {
       return;
     }
     const lines = [m.question, ''];
-    (m.steps || []).forEach((t, i) => lines.push((i + 1) + '. ' + t));
+    (m.steps || []).forEach((t, i) => {
+      const txt = t && t.text ? t.text : t;
+      const src = t && t.cite ? '  [' + t.cite.docTitle + ' — ' + t.cite.location + ']' : '';
+      lines.push((i + 1) + '. ' + txt + src);
+    });
     if (m.tip) lines.push('', 'Tip: ' + m.tip);
-    lines.push('', '(AI answer — not from the practice knowledge base.)');
+    lines.push('', 'Answered from the practice’s documents.');
     try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
     this.flagCopied(idx);
-  }
-
-  flagCopied(idx) {
-    this.setState({ copiedIdx: idx });
-    clearTimeout(this._ct);
-    this._ct = setTimeout(() => this.setState({ copiedIdx: null }), 1800);
   }
 
   prefillFromAi(m) {
@@ -276,7 +249,7 @@ class RiversidePracticeQA extends React.Component {
         question: m.question || '',
         category: 'appointments',
         intro: m.intro || '',
-        steps: (m.steps && m.steps.length) ? m.steps.slice() : ['', ''],
+        steps: (m.steps && m.steps.length) ? m.steps.map((s2) => (s2 && s2.text ? s2.text : s2)) : ['', ''],
         tip: m.tip || '',
       },
     });
@@ -291,11 +264,7 @@ class RiversidePracticeQA extends React.Component {
   browse(catId) {
     const guides = this.allGuides().filter((x) => x.category === catId);
     const cat = this.cats().find((c) => c.id === catId) || { label: '' };
-    const bot = {
-      role: 'bot', kind: 'suggest',
-      text: 'Here are the ' + cat.label.toLowerCase() + ' guides:',
-      guideIds: guides.map((g) => g.id),
-    };
+    const bot = { role: 'bot', kind: 'suggest', text: 'Here are the ' + cat.label.toLowerCase() + ' guides:', guideIds: guides.map((g) => g.id) };
     this.setState({ messages: this.state.messages.concat([bot]) }, () => this.save());
   }
 
@@ -313,8 +282,36 @@ class RiversidePracticeQA extends React.Component {
     this.flagCopied(idx);
   }
 
-  newChat() {
-    this.setState({ messages: [] }, () => this.save());
+  newChat() { this.setState({ messages: [] }, () => this.save()); }
+
+  hoverArea(id) { if (this.state.hoveredArea !== id) this.setState({ hoveredArea: id }); }
+  leaveArea(id) { if (this.state.hoveredArea === id) this.setState({ hoveredArea: null }); }
+
+  openViewer(citation) { this.setState({ viewer: citation }); }
+  closeViewer() { this.setState({ viewer: null }); }
+
+  buildViewerVM() {
+    const c = this.state.viewer;
+    if (!c) return { docTitle: '', location: '', isImage: false, isPdf: false, isHtml: false, isText: false, text: '', imageEl: null, pdfEl: null, htmlEl: null };
+    const v = c.view || {};
+    const url = v.url ? assetSrc(v.url) : '';
+    const isImage = v.kind === 'image' && !!url;
+    const isPdf = v.kind === 'pdf' && !!url;
+    const isFrame = (v.kind === 'html' || v.kind === 'markdown' || v.kind === 'text') && !!url;
+    const isText = !url; // no openable file — show the snippet/text inline
+    const pdfSrc = isPdf ? (url + (v.page ? '#page=' + v.page : '')) : '';
+    return {
+      docTitle: c.docTitle || 'Document',
+      location: c.location || '',
+      isImage,
+      isPdf,
+      isHtml: isFrame,
+      isText,
+      text: v.text || c.snippet || 'This source has no preview.',
+      imageEl: isImage ? React.createElement('img', { src: url, alt: c.docTitle, style: { display: 'block', maxWidth: '100%', height: 'auto', margin: '0 auto' } }) : null,
+      pdfEl: isPdf ? React.createElement('iframe', { src: pdfSrc, title: c.docTitle, style: { width: '100%', height: '78vh', border: 'none', display: 'block' } }) : null,
+      htmlEl: isFrame ? React.createElement('iframe', { src: url, title: c.docTitle, style: { width: '100%', height: '78vh', border: 'none', display: 'block' } }) : null,
+    };
   }
 
   setDraftField(k, v) { this.setState({ draft: Object.assign({}, this.state.draft, { [k]: v }) }); }
@@ -333,23 +330,12 @@ class RiversidePracticeQA extends React.Component {
   saveGuide() {
     const d = this.state.draft;
     const steps = d.steps.map((st) => st.trim()).filter(Boolean);
-    if (!d.question.trim() || steps.length === 0) {
-      this.setState({ draftError: true });
-      return;
-    }
+    if (!d.question.trim() || steps.length === 0) { this.setState({ draftError: true }); return; }
     const id = 'custom-' + Date.now();
     const keywords = d.question.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
-    const guide = {
-      id, category: d.category, question: d.question.trim(),
-      keywords, intro: d.intro.trim(),
-      steps: steps.map((t) => ({ text: t, img: true })),
-      tip: d.tip.trim() || null, warning: null, related: [],
-    };
+    const guide = { id, category: d.category, question: d.question.trim(), keywords, intro: d.intro.trim(), steps: steps.map((t) => ({ text: t, img: true })), tip: d.tip.trim() || null, warning: null, related: [] };
     const customGuides = (this.state.customGuides || []).concat([guide]);
-    this.setState({ customGuides, showAdd: false, draft: this.blankDraft(), draftError: false }, () => {
-      this.save();
-      this.askGuide(guide);
-    });
+    this.setState({ customGuides, showAdd: false, draft: this.blankDraft(), draftError: false }, () => { this.save(); this.askGuide(guide); });
   }
 
   buildGuideVM(g) {
@@ -368,9 +354,7 @@ class RiversidePracticeQA extends React.Component {
         notKbd: !st.kbd,
         text: st.text,
         hasShot: showShots && !!st.image,
-        shotEl: (showShots && st.image)
-          ? React.createElement('img', { src: assetSrc(st.image), alt: 'EMIS Web screenshot', style: { display: 'block', width: '100%', height: 'auto' } })
-          : null,
+        shotEl: (showShots && st.image) ? React.createElement('img', { src: assetSrc(st.image), alt: 'EMIS Web screenshot', style: { display: 'block', width: '100%', height: 'auto' } }) : null,
         hasSlot: showShots && !!st.img && !st.image,
         slotId: 'slot-' + g.id + '-' + i,
       })),
@@ -381,12 +365,9 @@ class RiversidePracticeQA extends React.Component {
       hasCards: !!(g.cards && g.cards.length),
       cards: (g.cards || []).map((c) => ({
         title: c.title,
-        body: c.body || '',
-        hasBody: !!c.body,
-        sub: c.sub || '',
-        hasSub: !!c.sub,
-        phone: c.phone || '',
-        hasPhone: !!c.phone,
+        body: c.body || '', hasBody: !!c.body,
+        sub: c.sub || '', hasSub: !!c.sub,
+        phone: c.phone || '', hasPhone: !!c.phone,
         phoneLabel: c.phoneLabel || 'Call',
         isEmergency: c.level === 'emergency',
         isUrgent: c.level === 'urgent',
@@ -403,35 +384,52 @@ class RiversidePracticeQA extends React.Component {
   renderVals() {
     const self = this;
     const all = this.allGuides();
-    const counts = {}, browse = {};
+    const areas = [];
     for (const c of this.cats()) {
-      counts[c.id] = all.filter((g) => g.category === c.id).length;
-      browse[c.id] = () => self.browse(c.id);
+      const inCat = all.filter((g) => g.category === c.id);
+      areas.push({
+        id: c.id,
+        label: c.label,
+        count: inCat.length,
+        desc: c.desc || '',
+        hovered: this.state.hoveredArea === c.id,
+        onEnter: () => self.hoverArea(c.id),
+        onLeave: () => self.leaveArea(c.id),
+        questions: inCat.map((g) => ({ question: g.question, onClick: () => self.askGuide(g) })),
+      });
     }
 
     const messages = this.state.messages.map((m, idx) => {
-      if (m.role === 'user') {
-        return { isUser: true, text: m.text };
-      }
+      if (m.role === 'user') return { isUser: true, text: m.text };
       if (m.kind === 'ai') {
         return {
           isAi: true,
           aiLoading: m.status === 'loading',
           aiError: m.status === 'error',
+          aiDeclined: m.status === 'declined',
           aiDone: m.status === 'done',
           question: m.question,
           intro: m.intro || '',
           hasIntro: !!(m.intro && m.intro.length),
-          steps: (m.steps || []).map((t, i) => ({ num: i + 1, text: t })),
+          steps: (m.steps || []).map((t, i) => {
+            const cite = (t && t.cite) ? t.cite : null;
+            return {
+              num: i + 1,
+              text: (t && t.text != null) ? t.text : t,
+              hasCite: !!cite,
+              citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
+              onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
+            };
+          }),
           hasSteps: !!(m.steps && m.steps.length),
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
+          hasMessageCite: !!m.messageCite,
+          messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ' — ' + m.messageCite.location) : '',
+          onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
           hasTip: !!(m.tip && m.tip.length),
           tip: m.tip || '',
-          images: (m.images || []).map((src) => ({ src: assetSrc(src) })),
-          hasImages: !!(m.images && m.images.length),
-          citations: (m.citations || []).map((c) => ({ ...c, onOpen: () => self.openViewer(c) })),
-          hasCitations: !!(m.citations && m.citations.length),
+          onRetry: () => self.retryAi(idx),
           onCopy: () => self.copyAi(m, idx),
           copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy steps',
           onSave: () => self.prefillFromAi(m),
@@ -439,9 +437,7 @@ class RiversidePracticeQA extends React.Component {
       }
       if (m.kind === 'answer') {
         const g = all.find((x) => x.id === m.guideId);
-        if (!g) {
-          return { isSuggest: true, text: 'That guide is no longer available.', suggestions: [] };
-        }
+        if (!g) return { isSuggest: true, text: 'That guide is no longer available.', suggestions: [] };
         return {
           isAnswer: true,
           guide: this.buildGuideVM(g),
@@ -469,34 +465,28 @@ class RiversidePracticeQA extends React.Component {
       return g ? { question: g.question, onClick: () => self.askGuide(g) } : null;
     }).filter(Boolean);
 
-    const quick = this.quickIds().map((id) => {
-      const g = all.find((x) => x.id === id);
-      return g ? { question: g.question, onClick: () => self.askGuide(g) } : null;
-    }).filter(Boolean);
-
     const draftSteps = this.state.draft.steps.map((v, i) => ({
-      num: i + 1,
-      value: v,
+      num: i + 1, value: v,
       onChange: (e) => self.setDraftStep(i, e.target.value),
       onRemove: () => self.removeStep(i),
       canRemove: self.state.draft.steps.length > 1,
     }));
 
     return {
-      botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A bot',
-      welcome: this.props.welcome != null ? this.props.welcome : 'For reception. Ask how to do something in EMIS, or what to do at the front desk — I’ll guide you step by step.',
+      botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice reception help',
+      welcome: this.props.welcome != null ? this.props.welcome : 'For reception. Ask how to do something in EMIS, or what to do at the front desk.',
       isEmpty: this.state.messages.length === 0,
+      notEmpty: this.state.messages.length > 0,
       input: this.state.input,
-      messages,
-      popular,
-      quick,
-      counts,
-      browse,
+      messages, popular, areas,
       cats: this.cats(),
       showAdd: this.state.showAdd,
       draft: this.state.draft,
       draftSteps,
       draftError: this.state.draftError,
+      viewerOpen: !!this.state.viewer,
+      viewer: this.buildViewerVM(),
+      onCloseViewer: () => self.closeViewer(),
       onInput: (e) => self.setState({ input: e.target.value }),
       onSubmit: (e) => { e.preventDefault(); self.ask(self.state.input); },
       onNewChat: () => self.newChat(),
@@ -511,12 +501,14 @@ class RiversidePracticeQA extends React.Component {
     };
   }
 
+  /* ----------------------------- render parts ----------------------------- */
+
   renderGuide(v) {
     const g = v.guide;
     return (
       <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
         <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-          <img src="/assets/logo.png" alt="" style={s('width:24px;height:24px;display:block;')} />
+          <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
         </div>
         <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
           <div style={s('padding:18px 22px 0;')}>
@@ -524,36 +516,20 @@ class RiversidePracticeQA extends React.Component {
             <h3 style={s('font-size:23px;margin:6px 0 0;letter-spacing:-0.01em;')}>{g.title}</h3>
             {g.hasIntro && <p style={s('margin:8px 0 0;font-size:17px;color:#4c6272;')}>{g.intro}</p>}
           </div>
-
           {g.hasCards && (
             <div style={s('padding:16px 22px 4px;display:flex;flex-direction:column;gap:12px;')}>
               {g.cards.map((c, i) => (
                 <div key={i} style={s('border:1px solid #d8dde0;border-radius:10px;overflow:hidden;')}>
-                  {c.isEmergency && (
-                    <div style={s('background:#8a1538;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}>
-                      <span className="riva-ico"><Svg w={17} stroke="#fff" sw={2.2}>{Icons.triangle}</Svg></span>{c.title}
-                    </div>
-                  )}
-                  {c.isUrgent && (
-                    <div style={s('background:#d5281b;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}>
-                      <span className="riva-ico"><Svg w={17} stroke="#fff" sw={2.2}>{Icons.alertCircle}</Svg></span>{c.title}
-                    </div>
-                  )}
-                  {c.isInfo && (
-                    <div style={s('background:#005eb8;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}>
-                      <span className="riva-ico"><Svg w={17} stroke="#fff" sw={2.2}>{Icons.infoCircle}</Svg></span>{c.title}
-                    </div>
-                  )}
+                  {c.isEmergency && <div style={s('background:#8a1538;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}><Svg w={17} stroke="#fff" sw={2.2}>{Icons.triangle}</Svg>{c.title}</div>}
+                  {c.isUrgent && <div style={s('background:#d5281b;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}><Svg w={17} stroke="#fff" sw={2.2}>{Icons.alertCircle}</Svg>{c.title}</div>}
+                  {c.isInfo && <div style={s('background:#005eb8;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}><Svg w={17} stroke="#fff" sw={2.2}>{Icons.infoCircle}</Svg>{c.title}</div>}
                   <div style={s('padding:14px 16px;background:#fff;')}>
                     {c.hasBody && <div style={s('font-size:16px;line-height:1.5;')}>{c.body}</div>}
                     {c.hasSub && <div style={s('margin-top:6px;font-size:14px;color:#768692;line-height:1.45;')}>{c.sub}</div>}
                     {c.hasPhone && (
                       <div style={s('margin-top:12px;display:flex;align-items:center;gap:10px;')}>
-                        <span className="riva-ico" style={s('flex:none;width:34px;height:34px;border-radius:50%;background:#e8f1f8;color:#005eb8;')}><Svg w={17}>{Icons.phone}</Svg></span>
-                        <span>
-                          <span style={s('display:block;font-size:12px;color:#768692;')}>{c.phoneLabel}</span>
-                          <span style={s('display:block;font-size:22px;font-weight:800;letter-spacing:.01em;')}>{c.phone}</span>
-                        </span>
+                        <span style={s('flex:none;width:34px;height:34px;border-radius:50%;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={17}>{Icons.phone}</Svg></span>
+                        <span><span style={s('display:block;font-size:12px;color:#768692;')}>{c.phoneLabel}</span><span style={s('display:block;font-size:22px;font-weight:800;letter-spacing:.01em;')}>{c.phone}</span></span>
                       </div>
                     )}
                   </div>
@@ -561,46 +537,25 @@ class RiversidePracticeQA extends React.Component {
               ))}
             </div>
           )}
-
           <div style={s('padding:18px 22px;display:flex;flex-direction:column;gap:18px;')}>
             {g.steps.map((st, i) => (
               <div key={i} style={s('display:flex;gap:14px;align-items:flex-start;')}>
-                {st.notKbd && (
-                  <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#005eb8;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{st.badge}</div>
-                )}
-                {st.isKbd && (
-                  <div style={s('flex:none;min-width:42px;height:30px;padding:0 10px;border-radius:6px;background:#fff;color:#212b32;border:1px solid #aeb7bd;border-bottom-width:3px;font-weight:700;font-size:15px;font-family:ui-monospace,Menlo,Consolas,monospace;display:flex;align-items:center;justify-content:center;')}>{st.badge}</div>
-                )}
+                {st.notKbd && <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#005eb8;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{st.badge}</div>}
+                {st.isKbd && <div style={s('flex:none;min-width:42px;height:30px;padding:0 10px;border-radius:6px;background:#fff;color:#212b32;border:1px solid #aeb7bd;border-bottom-width:3px;font-weight:700;font-size:15px;font-family:ui-monospace,Menlo,Consolas,monospace;display:flex;align-items:center;justify-content:center;')}>{st.badge}</div>}
                 <div style={s('flex:1;min-width:0;')}>
                   <div style={s('font-size:17px;line-height:1.5;')}>{st.text}</div>
                   {st.hasShot && (
                     <div style={s('margin-top:10px;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;background:#fff;')}>
-                      <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#f7fbff;display:flex;align-items:center;gap:6px;')}>
-                        <span className="riva-ico"><Svg w={13} stroke="#768692">{Icons.image}</Svg></span>From the EMIS Web guide
-                      </div>
+                      <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#f7fbff;display:flex;align-items:center;gap:6px;')}><Svg w={13} stroke="#768692">{Icons.image}</Svg>From the EMIS Web guide</div>
                       {st.shotEl}
-                    </div>
-                  )}
-                  {st.hasSlot && (
-                    <div style={s('margin-top:10px;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;background:#f0f4f5;')}>
-                      <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#fff;display:flex;align-items:center;gap:6px;')}>
-                        <span className="riva-ico"><Svg w={13} stroke="#768692">{Icons.image}</Svg></span>EMIS Web
-                      </div>
-                      <div style={s('width:100%;height:120px;display:flex;align-items:center;justify-content:center;color:#aeb7bd;font-size:13px;')}>Screenshot can be added later</div>
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
-
-          {g.hasTip && (
-            <div style={s('margin:0 22px 16px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {g.tip}</div>
-          )}
-          {g.hasWarning && (
-            <div style={s('margin:0 22px 16px;border-left:4px solid #ffb81c;background:#fff6cc;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Important:</strong> {g.warning}</div>
-          )}
-
+          {g.hasTip && <div style={s('margin:0 22px 16px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {g.tip}</div>}
+          {g.hasWarning && <div style={s('margin:0 22px 16px;border-left:4px solid #ffb81c;background:#fff6cc;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Important:</strong> {g.warning}</div>}
           <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
             {v.showFeedbackButtons && (
               <>
@@ -610,18 +565,13 @@ class RiversidePracticeQA extends React.Component {
               </>
             )}
             {v.feedbackGiven && <span style={s('font-size:15px;color:#007f3b;font-weight:600;')}>{v.thanksText}</span>}
-            <Hover onClick={v.onCopy} base="margin-left:auto;background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;">
-              <span className="riva-ico"><Svg w={15}>{Icons.copy}</Svg></span>{v.copyLabel}
-            </Hover>
+            <Hover onClick={v.onCopy} base="margin-left:auto;background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;"><Svg w={15}>{Icons.copy}</Svg>{v.copyLabel}</Hover>
           </div>
-
           {g.hasRelated && (
             <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;background:#f7fbff;')}>
               <div style={s('font-size:13px;color:#768692;margin-bottom:8px;')}>Related</div>
               <div style={s('display:flex;gap:8px;flex-wrap:wrap;')}>
-                {g.related.map((r) => (
-                  <Hover key={r.id} onClick={r.onClick} base="background:#e8f1f8;color:#005eb8;border:1px solid #cfe1f0;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;" hover="background:#005eb8;color:#fff;border-color:#005eb8;">{r.question}</Hover>
-                ))}
+                {g.related.map((r) => <Hover key={r.id} onClick={r.onClick} base="background:#e8f1f8;color:#005eb8;border:1px solid #cfe1f0;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;" hover="background:#005eb8;color:#fff;border-color:#005eb8;">{r.question}</Hover>)}
               </div>
             </div>
           )}
@@ -634,15 +584,14 @@ class RiversidePracticeQA extends React.Component {
     return (
       <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
         <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-          <img src="/assets/logo.png" alt="" style={s('width:24px;height:24px;display:block;')} />
+          <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
         </div>
         <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;padding:16px 20px;box-shadow:0 1px 3px rgba(33,43,50,.08);')}>
           <p style={s('margin:0 0 12px;font-size:17px;line-height:1.45;')}>{v.text}</p>
           <div style={s('display:flex;flex-direction:column;gap:8px;')}>
             {(v.suggestions || []).map((sug) => (
               <Hover key={sug.id} onClick={sug.onClick} base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:12px 14px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;" hover="border-color:#005eb8;background:#f7fbff;">
-                <span className="riva-ico" style={s('flex:none;')}><Svg w={17}>{Icons.arrow}</Svg></span>
-                <span>{sug.question}</span>
+                <span style={s('flex:none;')}><Svg w={17}>{Icons.arrow}</Svg></span><span>{sug.question}</span>
               </Hover>
             ))}
           </div>
@@ -651,16 +600,24 @@ class RiversidePracticeQA extends React.Component {
     );
   }
 
+  renderCiteChip(label, onClick) {
+    return (
+      <Hover onClick={onClick} base="margin-top:8px;display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#fff;border:1px solid #cfe1f0;border-radius:999px;padding:4px 12px 4px 9px;font:inherit;font-size:12.5px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#f7fbff;border-color:#005eb8;">
+        <Svg w={13} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>
+        <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{label}</span>
+      </Hover>
+    );
+  }
+
   renderAi(v) {
     return (
       <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
         <div style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-          <img src="/assets/logo.png" alt="" style={s('width:24px;height:24px;display:block;')} />
+          <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
         </div>
         <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
-          <div style={s('background:#ebe6f1;color:#330072;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #ddd4e8;')}>
-            <span className="riva-ico" style={s('flex:none;')}><Svg w={16}>{Icons.banner}</Svg></span>
-            AI answer &mdash; based on the practice guides, please double-check
+          <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
+            <span style={s('flex:none;')}><Svg w={16}>{Icons.fileLines}</Svg></span>Based on the practice&rsquo;s documents &mdash; open the sources below to check
           </div>
 
           {v.aiLoading && (
@@ -670,12 +627,25 @@ class RiversidePracticeQA extends React.Component {
                 <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .2s;')} />
                 <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .4s;')} />
               </span>
-              <span>Checking for an answer&hellip;</span>
+              <span>Checking the documents&hellip;</span>
             </div>
           )}
 
           {v.aiError && (
-            <div style={s('padding:18px 22px;font-size:17px;line-height:1.5;color:#212b32;')}>Sorry, I couldn&rsquo;t generate an answer right now. Try rephrasing your question, or add a guide so the next person gets a verified answer.</div>
+            <div style={s('padding:18px 22px;font-size:17px;line-height:1.5;color:#212b32;')}>
+              <p style={s('margin:0 0 14px;')}>Sorry, something went wrong reaching the documents. Please try again.</p>
+              <Hover onClick={v.onRetry} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 0 #002a52;" active="transform:translateY(4px);box-shadow:none;"><Svg w={16} sw={2.2}>{Icons.refresh}</Svg>Try again</Hover>
+            </div>
+          )}
+
+          {v.aiDeclined && (
+            <div style={s('padding:18px 22px;display:flex;gap:13px;align-items:flex-start;')}>
+              <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
+              <div style={s('flex:1;min-width:0;')}>
+                <p style={s('margin:0;font-size:17px;line-height:1.5;color:#212b32;')}>{v.intro}</p>
+                <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
+              </div>
+            </div>
           )}
 
           {v.aiDone && (
@@ -687,61 +657,31 @@ class RiversidePracticeQA extends React.Component {
               {v.hasMessage && (
                 <div style={s('margin:14px 22px 4px;')}>
                   <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Suggested message</div>
-                  <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #330072;border-radius:0 8px 8px 0;font-size:16px;line-height:1.55;white-space:pre-wrap;')}>{v.message}</div>
+                  <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.55;white-space:pre-wrap;')}>{v.message}</div>
+                  {v.hasMessageCite && this.renderCiteChip(v.messageCiteLabel, v.onMessageCite)}
                 </div>
               )}
               {v.hasSteps && (
-                <div style={s('padding:18px 22px;display:flex;flex-direction:column;gap:16px;')}>
+                <div style={s('padding:18px 22px;display:flex;flex-direction:column;gap:18px;')}>
                   {v.steps.map((st) => (
                     <div key={st.num} style={s('display:flex;gap:14px;align-items:flex-start;')}>
-                      <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#330072;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{st.num}</div>
-                      <div style={s('flex:1;min-width:0;font-size:17px;line-height:1.5;')}>{st.text}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {v.hasImages && (
-                <div style={s('padding:0 22px 4px;display:flex;flex-direction:column;gap:12px;')}>
-                  {v.images.map((im, i) => (
-                    <div key={i} style={s('border:1px solid #d8dde0;border-radius:8px;overflow:hidden;background:#fff;')}>
-                      <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#f7fbff;display:flex;align-items:center;gap:6px;')}>
-                        <span className="riva-ico"><Svg w={13} stroke="#768692">{Icons.image}</Svg></span>From the EMIS Web guide
+                      <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#005eb8;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{st.num}</div>
+                      <div style={s('flex:1;min-width:0;')}>
+                        <div style={s('font-size:17px;line-height:1.5;')}>{st.text}</div>
+                        {st.hasCite && this.renderCiteChip(st.citeLabel, st.onCite)}
                       </div>
-                      <img src={im.src} alt="EMIS Web screenshot" style={s('display:block;width:100%;height:auto;')} />
                     </div>
                   ))}
                 </div>
               )}
-              {v.hasTip && (
-                <div style={s('margin:0 22px 16px;border-left:4px solid #330072;background:#ebe6f1;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {v.tip}</div>
-              )}
-              {v.hasCitations && (
-                <div style={s('margin:0 22px 16px;')}>
-                  <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>Sources</div>
-                  <div style={s('display:flex;flex-direction:column;gap:8px;')}>
-                    {v.citations.map((c, i) => (
-                      <Hover key={i} onClick={c.onOpen} base="display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;background:#f7fbff;border:1px solid #cfe1f0;border-radius:10px;padding:10px 14px;cursor:pointer;font:inherit;" hover="border-color:#005eb8;background:#eef6fd;">
-                        <span style={s('font-size:15px;font-weight:600;color:#005eb8;display:flex;align-items:center;gap:7px;')}>
-                          <span className="riva-ico" style={s('flex:none;')}><Svg w={15} stroke="#005eb8">{Icons.file}</Svg></span>
-                          <span>{c.docTitle}{c.location ? ' — ' + c.location : ''}</span>
-                        </span>
-                        {c.snippet && <span style={s('font-size:13px;color:#768692;line-height:1.45;')}>{c.snippet}</span>}
-                      </Hover>
-                    ))}
-                  </div>
+              {v.hasTip && <div style={s('margin:0 22px 16px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {v.tip}</div>}
+              <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
+                <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Each step is backed by a practice document</span>
+                <div style={s('margin-left:auto;display:flex;gap:10px;')}>
+                  <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;"><Svg w={15}>{Icons.copy}</Svg>{v.copyLabel}</Hover>
+                  <Hover onClick={v.onSave} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Save to knowledge base</Hover>
                 </div>
-              )}
-              {(v.hasSteps || v.hasMessage) && (
-                <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-                  <span style={s('font-size:14px;color:#768692;')}>Always check AI answers before you act on them.</span>
-                  <div style={s('margin-left:auto;display:flex;gap:10px;')}>
-                    <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;">
-                      <span className="riva-ico"><Svg w={15}>{Icons.copy}</Svg></span>{v.copyLabel}
-                    </Hover>
-                    <Hover onClick={v.onSave} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Save to knowledge base</Hover>
-                  </div>
-                </div>
-              )}
+              </div>
             </>
           )}
         </div>
@@ -749,40 +689,24 @@ class RiversidePracticeQA extends React.Component {
     );
   }
 
-  // In-page viewer for a citation's source — opens the document without leaving
-  // the browser. PDFs jump to the cited page (#page=N); images and HTML
-  // renditions are shown inline; otherwise the cited snippet is shown.
-  renderViewer() {
-    const c = this.state.viewer;
-    const view = c.view || {};
-    const url = view.url ? assetSrc(view.url) : '';
-    const isPdf = view.kind === 'pdf';
-    const isImage = view.kind === 'image';
-    const isHtml = view.kind === 'html';
-    const src = isPdf && view.page ? url + '#page=' + view.page : url;
+  renderViewer(v) {
+    const vm = v.viewer;
     return (
-      <div onClick={() => this.closeViewer()} style={s('position:fixed;inset:0;background:rgba(33,43,50,.55);display:flex;align-items:center;justify-content:center;padding:24px;z-index:60;')}>
-        <div onClick={(e) => e.stopPropagation()} style={s('width:100%;max-width:920px;height:90vh;background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(33,43,50,.3);display:flex;flex-direction:column;overflow:hidden;')}>
-          <div style={s('flex:none;display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #d8dde0;')}>
-            <span className="riva-ico" style={s('flex:none;color:#005eb8;')}><Svg w={18}>{Icons.file}</Svg></span>
-            <div style={s('min-width:0;')}>
-              <div style={s('font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{c.docTitle}</div>
-              {c.location && <div style={s('font-size:13px;color:#768692;')}>{c.location}</div>}
+      <div onClick={v.onCloseViewer} style={s('position:fixed;inset:0;background:rgba(33,43,50,.5);display:flex;align-items:stretch;justify-content:flex-end;z-index:60;')}>
+        <div onClick={(e) => e.stopPropagation()} style={s('width:100%;max-width:680px;background:#fff;height:100%;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(33,43,50,.2);')}>
+          <div style={s('flex:none;display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid #d8dde0;')}>
+            <span style={s('flex:none;width:34px;height:34px;border-radius:8px;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={18}>{Icons.file}</Svg></span>
+            <div style={s('flex:1;min-width:0;')}>
+              <div style={s('font-size:17px;font-weight:700;line-height:1.25;text-wrap:pretty;')}>{vm.docTitle}</div>
+              <div style={s('font-size:13px;color:#768692;')}>{vm.location}</div>
             </div>
-            <button onClick={() => this.closeViewer()} aria-label="Close" style={s('margin-left:auto;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;')}>
-              <span className="riva-ico"><Svg w={24}>{Icons.close}</Svg></span>
-            </button>
+            <Hover tag="button" onClick={v.onCloseViewer} aria-label="Close" base="flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;" hover="color:#212b32;"><Svg w={24}>{Icons.close}</Svg></Hover>
           </div>
-          <div style={s('flex:1;min-height:0;background:#f0f4f5;overflow:auto;')}>
-            {url && isImage && (
-              <div style={s('padding:16px;')}><img src={url} alt="Source" style={s('display:block;max-width:100%;margin:0 auto;border:1px solid #d8dde0;border-radius:6px;')} /></div>
-            )}
-            {url && !isImage && (
-              <iframe src={src} title="Source document" style={s('width:100%;height:100%;border:none;background:#fff;')} />
-            )}
-            {!url && (
-              <div style={s('padding:22px;font-size:16px;line-height:1.6;color:#212b32;white-space:pre-wrap;')}>{c.snippet || 'This source is not available to open.'}</div>
-            )}
+          <div style={s('flex:1;min-height:0;overflow-y:auto;background:#f0f4f5;padding:20px;')}>
+            {vm.isImage && <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:8px;padding:12px;')}>{vm.imageEl}</div>}
+            {vm.isPdf && <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;')}>{vm.pdfEl}</div>}
+            {vm.isHtml && <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;')}>{vm.htmlEl}</div>}
+            {vm.isText && <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:8px;padding:20px 22px;font-size:16px;line-height:1.6;color:#212b32;text-wrap:pretty;')}>{vm.text}</div>}
           </div>
         </div>
       </div>
@@ -808,37 +732,52 @@ class RiversidePracticeQA extends React.Component {
           </div>
         </header>
 
+        {v.notEmpty && (
+          <div style={s('flex:none;background:#fff;border-bottom:1px solid #d8dde0;padding:10px 24px;display:flex;')}>
+            <Hover tag="button" onClick={v.onNewChat} base="display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:8px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#005eb8;color:#fff;"><Svg w={18} sw={2.2}>{Icons.arrowLeft}</Svg>Back to all topics</Hover>
+          </div>
+        )}
+
         <div id="riva-scroll" style={s('flex:1;overflow-y:auto;')}>
           <div style={s('max-width:820px;margin:0 auto;padding:32px 24px 28px;display:flex;flex-direction:column;gap:20px;')}>
 
             {v.isEmpty && (
               <>
                 <div style={s('text-align:center;padding:20px 0 4px;')}>
-                  <div style={s('width:64px;height:64px;border-radius:18px;background:#fff;border:1px solid #d8dde0;display:inline-flex;align-items:center;justify-content:center;')}>
-                    <img src="/assets/logo.png" alt="" style={s('width:42px;height:42px;display:block;')} />
+                  <div style={s('width:72px;height:72px;border-radius:18px;background:#fff;border:1px solid #d8dde0;box-shadow:0 1px 3px rgba(33,43,50,.08);display:inline-flex;align-items:center;justify-content:center;')}>
+                    <img src="/assets/logo.png" alt="The Riverside Practice" style={s('width:44px;height:44px;display:block;')} />
                   </div>
                   <h1 style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
                   <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
+                  <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Never enter patient information. Ask about the process only.</p>
                 </div>
 
                 <div>
-                  <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;')}>Browse by area</div>
-                  <div style={s('display:grid;grid-template-columns:repeat(3,1fr);gap:12px;')}>
-                    {BROWSE.map((b) => {
-                      const border = b.border || '#d8dde0';
-                      const hoverBorder = b.hoverBorder || '#005eb8';
-                      return (
-                        <Hover key={b.id} tag="button" onClick={v.browse[b.id]}
-                          base={`text-align:left;display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid ${border};border-radius:12px;padding:16px;cursor:pointer;font:inherit;color:inherit;`}
-                          hover={`border-color:${hoverBorder};box-shadow:0 4px 12px rgba(33,43,50,.12);transform:translateY(-2px);`}>
-                          <span className="riva-ico" style={s(`width:40px;height:40px;border-radius:10px;background:${b.bg};color:${b.color};`)}><Svg w={22}>{Icons[b.icon]}</Svg></span>
-                          <span>
-                            <span style={s('display:block;font-weight:600;font-size:17px;')}>{b.label}</span>
-                            <span style={s('display:block;font-size:14px;color:#768692;')}>{v.counts[b.id]} guides</span>
-                          </span>
+                  <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;')}>
+                    <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;')}>Browse by area</div>
+                    <span style={s('font-size:13.5px;color:#aeb7bd;')}>Hover an area to see what&rsquo;s inside</span>
+                  </div>
+                  <div style={s('display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:12px;')}>
+                    {v.areas.map((a) => (
+                      <div key={a.id} onMouseEnter={a.onEnter} onMouseLeave={a.onLeave} style={s('position:relative;height:100%;')}>
+                        <Hover tag="div" base="background:#fff;border:1px solid #d8dde0;border-radius:12px;padding:16px 18px;height:100%;cursor:default;display:flex;flex-direction:column;gap:7px;" hover="border-color:#005eb8;box-shadow:0 6px 18px rgba(33,43,50,.12);transform:translateY(-2px);">
+                          <div style={s('display:flex;align-items:flex-start;justify-content:space-between;gap:10px;')}>
+                            <span style={s('font-weight:600;font-size:17px;line-height:1.25;')}>{a.label}</span>
+                            <span style={s('flex:none;font-size:12.5px;font-weight:600;color:#768692;background:#f0f4f5;border-radius:999px;padding:2px 9px;margin-top:1px;')}>{a.count}</span>
+                          </div>
+                          <span style={s('font-size:14px;color:#4c6272;line-height:1.45;text-wrap:pretty;')}>{a.desc}</span>
                         </Hover>
-                      );
-                    })}
+                        {a.hovered && a.questions.length > 0 && (
+                          <div style={s('position:absolute;left:0;right:0;top:calc(100% - 4px);z-index:20;background:#fff;border:1px solid #005eb8;border-radius:12px;box-shadow:0 12px 30px rgba(33,43,50,.18);padding:6px;display:flex;flex-direction:column;gap:1px;')}>
+                            {a.questions.map((q, i) => (
+                              <Hover key={i} onClick={q.onClick} base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:9px 11px;border-radius:8px;cursor:pointer;font:inherit;font-size:14.5px;line-height:1.35;color:#005eb8;font-weight:500;" hover="background:#e8f1f8;">
+                                <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.chevronRight}</Svg><span style={s('flex:1;min-width:0;text-wrap:pretty;')}>{q.question}</span>
+                              </Hover>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -847,8 +786,7 @@ class RiversidePracticeQA extends React.Component {
                   <div style={s('display:flex;flex-direction:column;gap:8px;')}>
                     {v.popular.map((p, i) => (
                       <Hover key={i} tag="button" onClick={p.onClick} base="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:13px 16px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;" hover="border-color:#005eb8;background:#f7fbff;">
-                        <span className="riva-ico" style={s('flex:none;')}><Svg w={18}>{Icons.arrow}</Svg></span>
-                        <span>{p.question}</span>
+                        <span style={s('flex:none;')}><Svg w={18}>{Icons.arrow}</Svg></span><span>{p.question}</span>
                       </Hover>
                     ))}
                   </div>
@@ -873,37 +811,21 @@ class RiversidePracticeQA extends React.Component {
 
         <div style={s('flex:none;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;')}>
-            <div style={s('display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;')}>
-              <span style={s('font-size:14px;color:#768692;')}>Try:</span>
-              {v.quick.map((q, i) => (
-                <Hover key={i} tag="button" onClick={q.onClick} base="background:#e8f1f8;color:#005eb8;border:1px solid #cfe1f0;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;" hover="background:#005eb8;color:#fff;border-color:#005eb8;">{q.question}</Hover>
-              ))}
-            </div>
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input
-                className="riva-input"
-                value={v.input}
-                onChange={v.onInput}
-                placeholder="Ask a question, or describe the situation…"
-                style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')}
-              />
-              <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
-                <span className="riva-ico"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></span>
-              </Hover>
+              <input className="riva-input" value={v.input} onChange={v.onInput} placeholder="Ask a question, or describe the situation…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
         </div>
 
-        {this.state.viewer && this.renderViewer()}
+        {v.viewerOpen && this.renderViewer(v)}
 
         {v.showAdd && (
           <div style={s('position:fixed;inset:0;background:rgba(33,43,50,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;')}>
             <div style={s('width:100%;max-width:560px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(33,43,50,.18);overflow:hidden;')}>
               <div style={s('display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid #d8dde0;')}>
                 <h3 style={s('font-size:21px;margin:0;')}>Add a guide</h3>
-                <button onClick={v.onCloseAdd} aria-label="Close" style={s('margin-left:auto;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;')}>
-                  <span className="riva-ico"><Svg w={24}>{Icons.close}</Svg></span>
-                </button>
+                <button onClick={v.onCloseAdd} aria-label="Close" style={s('margin-left:auto;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;')}><span><Svg w={24}>{Icons.close}</Svg></span></button>
               </div>
               <div style={s('padding:22px;display:flex;flex-direction:column;gap:18px;max-height:70vh;overflow-y:auto;')}>
                 <div>
@@ -927,17 +849,11 @@ class RiversidePracticeQA extends React.Component {
                       <div key={i} style={s('display:flex;gap:8px;align-items:center;')}>
                         <span style={s('flex:none;width:26px;height:26px;border-radius:50%;background:#e8f1f8;color:#005eb8;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;')}>{st.num}</span>
                         <input className="riva-form-field" value={st.value} onChange={st.onChange} placeholder="Describe this step" style={s('flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 12px;border:2px solid #4c6272;border-radius:4px;background:#fff;outline:none;')} />
-                        {st.canRemove && (
-                          <button onClick={st.onRemove} aria-label="Remove step" style={s('flex:none;background:none;border:none;cursor:pointer;color:#768692;padding:4px;display:flex;')}>
-                            <span className="riva-ico"><Svg w={20}>{Icons.close}</Svg></span>
-                          </button>
-                        )}
+                        {st.canRemove && <button onClick={st.onRemove} aria-label="Remove step" style={s('flex:none;background:none;border:none;cursor:pointer;color:#768692;padding:4px;display:flex;')}><span><Svg w={20}>{Icons.close}</Svg></span></button>}
                       </div>
                     ))}
                   </div>
-                  <button onClick={v.onAddStep} style={s('margin-top:10px;background:none;border:none;color:#005eb8;font:inherit;font-size:15px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:6px;')}>
-                    <span className="riva-ico"><Svg w={17}>{Icons.plus}</Svg></span>Add step
-                  </button>
+                  <button onClick={v.onAddStep} style={s('margin-top:10px;background:none;border:none;color:#005eb8;font:inherit;font-size:15px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:6px;')}><span><Svg w={17}>{Icons.plus}</Svg></span>Add step</button>
                 </div>
                 <div>
                   <label style={s('display:block;font-weight:600;font-size:16px;margin-bottom:6px;')}>Tip <span style={s('font-weight:400;color:#768692;')}>(optional)</span></label>

@@ -1,13 +1,14 @@
-// Server-side Q&A endpoint. The browser sends only the question, a
-// short history string and any locally-stored custom guides; everything else —
-// retrieving knowledge-base chunks, building the prompt, calling the model,
-// parsing its JSON and resolving citations — happens here, so the API key and
-// the full knowledge base never reach the client.
+// Server-side Q&A endpoint. The browser sends only the question, a short history
+// string and any locally-stored custom guides; retrieval, prompt building, the
+// model call, parsing and citation resolution all happen here, so the API key
+// and the full knowledge base never reach the client.
 //
-// Answers are grounded strictly in the practice's documents, and the response
-// includes `citations` the UI can open in-browser at the exact page/section.
+// Answers are grounded strictly in the practice's documents: every step names
+// the Source that backs it, resolved here into a clickable citation the UI opens
+// in its in-page viewer. If the documents don't cover the question, the response
+// is `answerable: false` and the UI shows a decline.
 import { NextResponse } from 'next/server';
-import { allGuides, guideCatalog } from '@/lib/guides';
+import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson } from '@/lib/ai/prompt';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
@@ -20,12 +21,18 @@ function locationOf(chunk) {
   if (chunk.view && chunk.view.page) return 'Page ' + chunk.view.page;
   if (chunk.section) return chunk.section;
   if (chunk.headingPath && chunk.headingPath.length) return chunk.headingPath.join(' › ');
-  return '';
+  return 'Document';
 }
 
-function citationKey(c) {
-  const v = c.view || {};
-  return [c.docId, v.url || '', v.page || '', v.anchor || ''].join('|');
+function citationFor(chunk) {
+  const body = (chunk.text || '').replace(/\s+/g, ' ').trim();
+  return {
+    docId: chunk.docId,
+    docTitle: chunk.docTitle,
+    location: locationOf(chunk),
+    snippet: body.length > 220 ? body.slice(0, 218).trim() + '…' : body,
+    view: chunk.view || null,
+  };
 }
 
 export async function POST(request) {
@@ -54,11 +61,11 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
 
-  // Tier B — semantically retrieve the most relevant chunks. Never fatal.
+  // Tier B — semantically retrieve the most relevant chunks (never fatal).
   let chunks = [];
   try { chunks = await retrieve(question, TOP_K); } catch (e) { chunks = []; }
 
-  // Number the extracts so the model can cite them, and keep a ref -> chunk map.
+  // Number them as Sources and keep a ref -> chunk map for citation resolution.
   const refMap = new Map();
   const extracts = chunks.map((c, i) => {
     const ref = i + 1;
@@ -66,20 +73,8 @@ export async function POST(request) {
     return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
   });
 
-  const candidateImages = [];
-  chunks.forEach((c) => (c.images || []).forEach((im) => {
-    if (im && !candidateImages.includes(im)) candidateImages.push(im);
-  }));
-
-  const validIds = new Set(allGuides(customGuides).map((g) => g.id));
-  const prompt = buildAskPrompt({
-    question,
-    catalog: catalogText(),
-    extracts,
-    history,
-    guideCatalog: guideCatalog(customGuides),
-    candidateImages,
-  });
+  const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
+  const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog });
 
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -90,11 +85,7 @@ export async function POST(request) {
         'HTTP-Referer': 'https://riverside-practice.local',
         'X-Title': 'Riverside Practice Q&A',
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }),
     });
 
     if (!res.ok) {
@@ -112,43 +103,44 @@ export async function POST(request) {
     }
 
     const parsed = parseAiJson(text);
-    const guideId = parsed.guideId && validIds.has(parsed.guideId) ? parsed.guideId : '';
-    let images = (parsed.images || []).filter((im) => candidateImages.includes(im)).slice(0, 3);
 
-    // Resolve the cited extract numbers into clickable source locators.
-    const refs = parsed.citations.filter((n) => refMap.has(n));
+    // Strict grounding: if the model can't answer from the documents, decline.
+    if (parsed.answerable === false || (!parsed.steps.length && !parsed.message)) {
+      return NextResponse.json({
+        answerable: false,
+        intro: parsed.intro || 'I could not find this in the practice’s documents.',
+        steps: [],
+        message: '',
+        messageCite: null,
+        tip: '',
+        citations: [],
+      });
+    }
 
+    const at = (n) => (refMap.has(n) ? citationFor(refMap.get(n)) : null);
+    const steps = parsed.steps.map((s) => ({ text: s.text, cite: at(s.source) }));
+    const messageCite = at(parsed.messageSource);
+
+    // The distinct sources this answer relied on (for any list/summary use).
     const seen = new Set();
     const citations = [];
-    for (const ref of refs) {
-      const c = refMap.get(ref);
+    for (const c of steps.map((s) => s.cite).concat([messageCite])) {
       if (!c) continue;
-      const cit = {
-        docId: c.docId,
-        docTitle: c.docTitle,
-        location: locationOf(c),
-        snippet: (c.text || '').replace(/\s+/g, ' ').trim().slice(0, 240),
-        view: c.view || null,
-      };
-      const key = citationKey(cit);
+      const key = [c.docId, c.location].join('|');
       if (seen.has(key)) continue;
       seen.add(key);
-      citations.push(cit);
-      if (citations.length >= 4) break;
+      citations.push(c);
     }
 
-    // Strict grounding: never present an answer that isn't backed by a cited
-    // source (or an existing guide). An uncited answer is treated as "not found"
-    // so it never answers from outside the practice's documents.
-    let { intro, steps, message, tip } = parsed;
-    if (!guideId && !citations.length && (steps.length || message)) {
-      intro = 'I could not find this in the practice’s documents, so I can’t answer it reliably. Please check with the relevant lead — or a clinician if it is a clinical question.';
-      steps = [];
-      message = '';
-      images = [];
-    }
-
-    return NextResponse.json({ guideId, intro, steps, message, tip, images, citations });
+    return NextResponse.json({
+      answerable: true,
+      intro: parsed.intro,
+      steps,
+      message: parsed.message,
+      messageCite,
+      tip: parsed.tip,
+      citations,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: 'Could not reach OpenRouter.', detail: String(e).slice(0, 300) },
