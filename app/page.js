@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { EMIS_KB } from '../lib/emis-knowledge';
-import { UCR_KB } from '../lib/ucr-knowledge';
-import { HANDBOOK_KB } from '../lib/handbook-knowledge';
+import { SEED_GUIDES, CATEGORIES, BROWSE_AREAS as BROWSE, POPULAR_IDS, QUICK_IDS } from '../lib/guides';
+import { askRiva } from '../lib/ai/client';
 
 /* ------------------------------------------------------------------ *
  * Small helpers that let us keep the design's inline-style strings
@@ -119,18 +118,7 @@ const Icons = {
   plus: (<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>),
 };
 
-// Browse-by-area cards (icon + colour scheme per the design).
-const BROWSE = [
-  { id: 'urgent', label: 'Urgent & emergency', icon: 'triangle', bg: '#f6dedc', color: '#d5281b', border: '#f1c7c2', hoverBorder: '#d5281b' },
-  { id: 'started', label: 'Getting started', icon: 'play', bg: '#e8f1f8', color: '#005eb8' },
-  { id: 'appointments', label: 'Appointments', icon: 'calendar', bg: '#e8f1f8', color: '#005eb8' },
-  { id: 'prescriptions', label: 'Prescriptions', icon: 'pill', bg: '#e3efe6', color: '#007f3b' },
-  { id: 'consultations', label: 'Consultations', icon: 'pen', bg: '#e0f3f1', color: '#00a499' },
-  { id: 'documents', label: 'Documents', icon: 'file', bg: '#fcefdb', color: '#ed8b00' },
-  { id: 'registrations', label: 'Registrations', icon: 'userplus', bg: '#ebe6f1', color: '#330072' },
-  { id: 'tasks', label: 'Tasks & messages', icon: 'send', bg: '#e8edee', color: '#4c6272' },
-  { id: 'shortcuts', label: 'Shortcuts & templates', icon: 'keyboard', bg: '#ebe6f1', color: '#330072' },
-];
+// Browse-by-area cards come from lib/guides (imported above as BROWSE).
 
 function assetSrc(p) {
   if (!p) return p;
@@ -154,7 +142,6 @@ class Riva extends React.Component {
       copiedIdx: null,
       draftError: false,
     };
-    this._kb = [...(EMIS_KB || []), ...(UCR_KB || []), ...(HANDBOOK_KB || [])];
   }
 
   blankDraft() {
@@ -170,30 +157,6 @@ class Riva extends React.Component {
         messages: Array.isArray(m) ? m : [],
       });
     } catch (e) {}
-  }
-
-  // Turn the curated guides into searchable passages too, so the AI can cite them.
-  guideChunks() {
-    return this.allGuides().map((g) => {
-      const steps = (g.steps || []).map((st, i) => (st.kbd ? st.kbd + ' = ' + st.text : (i + 1) + ') ' + st.text)).join('  ');
-      const cards = (g.cards || []).map((c) => c.title + (c.phone ? ' (' + c.phoneLabel + ': ' + c.phone + ')' : '') + ' — ' + (c.body || '')).join('  ');
-      return { s: 'Practice guide: ' + g.question, t: g.question + ' ' + (g.keywords || []).join(' '), x: [g.intro, cards, steps, g.tip, g.warning].filter(Boolean).join('  ') };
-    });
-  }
-
-  // Pick the most relevant passages from the practice guides and PDFs for a question.
-  retrieve(query, n) {
-    const kb = (this._kb || []).concat(this.guideChunks());
-    if (!kb.length) return [];
-    const words = (query || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
-    if (!words.length) return [];
-    const scored = kb.map((c) => {
-      const hay = (c.t + ' ' + c.x).toLowerCase();
-      let score = 0;
-      for (const w of words) { let i = hay.indexOf(w); while (i !== -1) { score++; i = hay.indexOf(w, i + 1); } }
-      return { c, score };
-    }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
-    return scored.slice(0, n || 3).map((x) => x.c);
   }
 
   // Build a short transcript of the conversation so the AI understands follow-ups.
@@ -233,380 +196,16 @@ class Riva extends React.Component {
     } catch (e) {}
   }
 
-  cats() {
-    return [
-      { id: 'started', label: 'Getting started' },
-      { id: 'appointments', label: 'Appointments' },
-      { id: 'prescriptions', label: 'Prescriptions' },
-      { id: 'consultations', label: 'Consultations & coding' },
-      { id: 'documents', label: 'Documents' },
-      { id: 'registrations', label: 'Registrations' },
-      { id: 'tasks', label: 'Tasks & messages' },
-      { id: 'shortcuts', label: 'Shortcuts & templates' },
-      { id: 'urgent', label: 'Urgent & emergency' },
-    ];
-  }
+  cats() { return CATEGORIES; }
 
-  seed() {
-    return [
-      {
-        id: 'log-on', category: 'started',
-        question: 'How do I log on to EMIS Web?',
-        keywords: ['log on', 'logon', 'log in', 'login', 'sign in', 'smartcard', 'smart card', 'password', 'access', 'open emis'],
-        intro: 'Log on with your NHS smartcard, or with a username and password.',
-        steps: [
-          { text: 'Put your NHS smartcard into the card reader before you open EMIS Web.', image: 'assets/emis/p8_1.png' },
-          { text: 'When prompted, associate your smartcard and enter your passcode, then select Associate.', image: 'assets/emis/p9_1.png' },
-          { text: 'If you are not using a smartcard, type your username, password and your organisation (CDB) number, then select Log on.', img: false },
-          { text: 'EMIS Web opens on your homepage.', img: false },
-        ],
-        tip: 'Never use the system on someone else’s smartcard — your smartcard records who opened each record.',
-        warning: null, related: ['homepage', 'find-patient'],
-      },
-      {
-        id: 'homepage', category: 'started',
-        question: 'How do I find my way around the homepage?',
-        keywords: ['homepage', 'home page', 'navigate', 'navigation', 'screen', 'layout', 'emis button', 'modules', 'around', 'menu'],
-        intro: 'The homepage is the first screen you see. It is split into panes you can configure.',
-        steps: [
-          { text: 'The homepage shows your Quick Launch Menu, the Organisation Notepad and the latest EMIS news.', image: 'assets/emis/p10_1.png' },
-          { text: 'Use the Quick Launch Menu on the left to jump to the areas you use most.', img: false },
-          { text: 'Select the EMIS button (top left) to reach any module from anywhere in EMIS Web.', image: 'assets/emis/p12_1.png' },
-          { text: 'Select Configure Homepage (top right) to add or remove panes.', img: false },
-        ],
-        tip: 'Function keys are the fastest way to move around — see the function key shortcuts guide.',
-        warning: null, related: ['find-patient', 'function-keys'],
-      },
-      {
-        id: 'find-patient', category: 'started',
-        question: 'How do I find a patient?',
-        keywords: ['find patient', 'find a patient', 'search patient', 'patient find', 'open record', 'lookup', 'select patient', 'search'],
-        intro: 'Search for a patient by name, date of birth or NHS number.',
-        steps: [
-          { text: 'Select the EMIS button, then Find Patient (or press F4).', image: 'assets/emis/p12_1.png' },
-          { text: 'Type the patient’s surname, date of birth or NHS number.', img: false },
-          { text: 'Check the matches carefully, then select the correct patient to open their record.', image: 'assets/emis/p16_1.png' },
-          { text: 'Recently selected patients are listed so you can reopen them quickly.', img: false },
-        ],
-        tip: null,
-        warning: 'Always check name and date of birth before you open or add to a record.',
-        related: ['homepage', 'book-appt'],
-      },
-      {
-        id: 'book-appt', category: 'appointments',
-        question: 'How do I book an appointment?',
-        keywords: ['book', 'appointment', 'booking', 'slot', 'appt', 'schedule'],
-        intro: 'Book a patient into a free slot from the appointment book.',
-        steps: [
-          { text: 'Select the EMIS button, point to Appointments, then Appointment Book.', img: false },
-          { text: 'Use the calendar to choose the date, then find the right session and clinician.', image: 'assets/emis/p32_1.png' },
-          { text: 'Double-click a free (green) slot.', img: false },
-          { text: 'Search for the patient, select them, choose the slot type, then Save.', img: false },
-        ],
-        tip: 'Green slots are free, amber are booked and red are blocked. Hover over a slot to see its details.',
-        warning: null, related: ['cancel-appt', 'find-patient'],
-      },
-      {
-        id: 'cancel-appt', category: 'appointments',
-        question: 'How do I cancel or reschedule an appointment?',
-        keywords: ['cancel', 'reschedule', 'move', 'delete', 'appointment', 'dna', 'rebook'],
-        intro: 'Cancel a booked slot, or move it to a new time.',
-        steps: [
-          { text: 'Open the Appointment Book and find the booked slot.', image: 'assets/emis/p32_1.png' },
-          { text: 'Right-click the slot and choose Cancel Appointment (or Move to reschedule).', img: false },
-          { text: 'Enter the reason for cancelling, choose whether to notify the patient, then select Cancel Appointment.', image: 'assets/emis/p40_1.png' },
-          { text: 'To reschedule instead, use Move and pick the new slot.', img: false },
-        ],
-        tip: null,
-        warning: 'Always record the correct cancellation reason — it affects DNA reporting.',
-        related: ['book-appt'],
-      },
-      {
-        id: 'repeat-rx', category: 'prescriptions',
-        question: 'How do I issue a repeat prescription?',
-        keywords: ['repeat', 'prescription', 'medication', 'issue', 'reauthorise', 'script', 'rx', 'eps', 'prescribe'],
-        intro: 'Issue one or more repeat items from a patient’s medication record.',
-        steps: [
-          { text: 'Open the patient record, select the EMIS button, point to Care Record, then Medication (or press F9).', img: false },
-          { text: 'Select the repeat item or items you want to issue.', img: false },
-          { text: 'On the Medication ribbon, select Issue, then choose to print or send by EPS.', image: 'assets/emis/p23_1.png' },
-          { text: 'Check the prescriber and pharmacy, then approve.', img: false },
-        ],
-        tip: 'Use EPS where the patient has a nominated pharmacy — it is faster and safer than printing.',
-        warning: null, related: ['add-consultation', 'add-fit-note'],
-      },
-      {
-        id: 'add-consultation', category: 'consultations',
-        question: 'How do I add a consultation note?',
-        keywords: ['consultation', 'note', 'clinical', 'record', 'write', 'history', 'add', 'encounter'],
-        intro: 'Record a new clinical consultation in the patient record.',
-        steps: [
-          { text: 'Open the patient record, select Add, then Consultation (or press F6).', img: false },
-          { text: 'Check the date, consulter and consultation type, then select OK.', img: false },
-          { text: 'Type into the relevant fields — history, examination and plan.', img: false },
-          { text: 'Add any codes or medication, then select Save on the ribbon.', img: false },
-        ],
-        tip: 'Free text is searchable, but always add a SNOMED code for anything reportable.',
-        warning: null, related: ['add-code', 'use-template'],
-      },
-      {
-        id: 'add-code', category: 'consultations',
-        question: 'How do I add a clinical code?',
-        keywords: ['code', 'snomed', 'read', 'qof', 'coding', 'diagnosis', 'add code'],
-        intro: 'Add a SNOMED code to a consultation for diagnoses, reviews and QOF.',
-        steps: [
-          { text: 'Within a consultation, select Add, then Code.', img: false },
-          { text: 'Type the term (for example, “asthma review”) and pick the matching SNOMED code.', img: false },
-          { text: 'Set the date, value or numeric reading if you are prompted.', img: false },
-          { text: 'Save the code into the consultation.', img: false },
-        ],
-        tip: 'If you are completing QOF, use the relevant template — it prompts every code you need.',
-        warning: null, related: ['add-consultation', 'use-template'],
-      },
-      {
-        id: 'use-template', category: 'consultations',
-        question: 'How do I run a template?',
-        keywords: ['template', 'run template', 'templates', 'igs', 'quick', 'data entry', 'form', 'lightning bolt'],
-        intro: 'Templates guide you through recording a set of codes for a condition or task.',
-        steps: [
-          { text: 'Within a consultation, select Run Template (the lightning bolt) at the top of the screen.', img: false },
-          { text: 'Search for the template by name, or browse to it — in-house templates sit under IGS.', img: false },
-          { text: 'Choose the template; recently used templates are listed for quick access.', img: false },
-          { text: 'Complete the fields, then Save into the consultation.', img: false },
-        ],
-        tip: 'For example, a blood pressure template is at Run Template > IGS > Cardiovascular > Quick Blood Pressure.',
-        warning: null, related: ['add-code', 'find-template'],
-      },
-      {
-        id: 'add-fit-note', category: 'consultations',
-        question: 'How do I add a fit note (MED3)?',
-        keywords: ['fit note', 'med3', 'sick note', 'sicknote', 'fitness for work', 'statement', 'med 3'],
-        intro: 'Record and print a fit note from the patient record.',
-        steps: [
-          { text: 'Open the patient record and start or open a consultation.', img: false },
-          { text: 'Select the Add Fit Note button.', img: false },
-          { text: 'Complete the fit note details, including the dates and advice.', img: false },
-          { text: 'Save and print the fit note for the patient.', img: false },
-        ],
-        tip: 'For a private sick note, use Procedure > lightning bolt > Private Sicknote instead.',
-        warning: null, related: ['use-template'],
-      },
-      {
-        id: 'blood-test', category: 'consultations',
-        question: 'How do I request a blood test?',
-        keywords: ['blood test', 'blood tests', 'bloods', 'test request', 'ice', 'pathology', 'phlebotomy', 'blood', 'request a test', 'order bloods'],
-        intro: 'Request bloods through the online test request (ICE), or with a pathology form.',
-        steps: [
-          { text: 'Open the patient record and start a consultation.', img: false },
-          { text: 'Select Test request, then Online Test Request for ICE.', img: false },
-          { text: 'Or, for a paper form, use Document > Create Letter > Pathology Blood (Derby) form.', img: false },
-          { text: 'Choose the tests you need, add the clinical details, then send or print.', img: false },
-        ],
-        tip: 'For urgent blood results, go to Results > lightning bolt > Blood Results, or use the Blood Results template (IGS > Standard).',
-        warning: null, related: ['add-consultation', 'find-template'],
-      },
-      {
-        id: 'file-document', category: 'documents',
-        question: 'How do I scan and file a document?',
-        keywords: ['document', 'scan', 'file', 'letter', 'attach', 'workflow', 'docman', 'filing', 'upload'],
-        intro: 'Bring a document into EMIS, attach it to the right patient and file it.',
-        steps: [
-          { text: 'Select the EMIS button, point to Care Record, then Documents.', img: false },
-          { text: 'Use Add on the ribbon to scan or import the document.', image: 'assets/emis/p30_1.png' },
-          { text: 'Select the patient, then code the document type and date.', img: false },
-          { text: 'Assign it to the right workflow or person, then file it.', img: false },
-        ],
-        tip: null,
-        warning: 'Match the document to the correct patient carefully — check name and date of birth.',
-        related: ['send-task'],
-      },
-      {
-        id: 'register-patient', category: 'registrations',
-        question: 'How do I register a new patient?',
-        keywords: ['register', 'registration', 'new patient', 'gms', 'add patient', 'register patient', 'join'],
-        intro: 'Add a new patient and complete their registration.',
-        steps: [
-          { text: 'Select the EMIS button, point to Registration, then Add patient.', img: true },
-          { text: 'Enter the patient’s details — name, date of birth, NHS number and address.', img: true },
-          { text: 'Set the registration type (for example, GMS) and the registered GP.', img: false },
-          { text: 'Complete the registration and print any forms needed.', img: false },
-        ],
-        tip: 'Use the NHS number trace to pull through verified demographics and avoid duplicates.',
-        warning: null, related: ['book-appt'],
-      },
-      {
-        id: 'send-task', category: 'tasks',
-        question: 'How do I send a task or message to a colleague?',
-        keywords: ['task', 'message', 'send', 'colleague', 'workflow', 'tasks', 'mailbox', 'action', 'forward', 'screen message'],
-        intro: 'Send a task to a colleague or team, linked to a patient if needed.',
-        steps: [
-          { text: 'Select the EMIS button, point to Workflow, then Tasks.', img: true },
-          { text: 'Select New task and choose the recipient or team.', img: true },
-          { text: 'Link the patient if the task is about a record, and set a priority.', img: false },
-          { text: 'Write a clear, short message, then send.', img: false },
-        ],
-        tip: 'Link the patient so the recipient can open the record in one click.',
-        warning: null, related: ['file-document'],
-      },
-      {
-        id: 'function-keys', category: 'shortcuts',
-        question: 'What are the function key shortcuts?',
-        keywords: ['function keys', 'f keys', 'fkeys', 'shortcuts', 'keyboard', 'f1', 'f3', 'f5', 'f9', 'hotkeys', 'shortcut'],
-        intro: 'Function keys are the fastest way to move around EMIS Web.',
-        steps: [
-          { kbd: 'F1', text: 'Help in EMIS Web' },
-          { kbd: 'F3', text: 'Summary of the patient' },
-          { kbd: 'F4', text: 'Find a patient' },
-          { kbd: 'F5', text: 'Swap between open patients' },
-          { kbd: 'F6', text: 'Consultations' },
-          { kbd: 'F8', text: 'Filed work and documents' },
-          { kbd: 'F9', text: 'Medication' },
-          { kbd: 'F10', text: 'Appointments quick view' },
-          { kbd: 'F11', text: 'Investigations and values' },
-          { kbd: 'F12', text: 'Macros' },
-        ],
-        tip: 'Press F1 at any time to open EMIS Web’s own help.',
-        warning: null, related: ['consultation-shortcuts'],
-      },
-      {
-        id: 'consultation-shortcuts', category: 'shortcuts',
-        question: 'What are the consultation mode shortcuts?',
-        keywords: ['consultation shortcuts', 'tab', 'consultation mode', 'quick keys', 'add data', 'shortcut keys', 'fields'],
-        intro: 'In a consultation, press TAB then a letter to jump straight to a field.',
-        steps: [
-          { kbd: 'P', text: 'Problem title' },
-          { kbd: 'E', text: 'Examination' },
-          { kbd: 'C', text: 'Comment' },
-          { kbd: 'A', text: 'Allergy' },
-          { kbd: 'L', text: 'Result' },
-          { kbd: 'F', text: 'Family history' },
-          { kbd: 'S', text: 'Social' },
-          { kbd: 'M', text: 'Medication' },
-          { kbd: 'O', text: 'Procedure' },
-          { kbd: 'U', text: 'Follow-up' },
-          { kbd: 'T', text: 'Test request' },
-          { kbd: 'R', text: 'Referral' },
-          { kbd: 'D', text: 'Document' },
-        ],
-        tip: 'Press TAB first, then the key — for example TAB then M to add medication.',
-        warning: null, related: ['function-keys'],
-      },
-      {
-        id: 'find-template', category: 'shortcuts',
-        question: 'Where do I find the template for a task?',
-        keywords: ['where', 'find template', 'location', 'template location', 'igs', 'how to get there', 'which template', 'where do i find', 'blood pressure', 'smoking', 'diabetes'],
-        intro: 'Most tasks have an in-house (IGS) template. Open Run Template, then browse to the area.',
-        steps: [
-          { text: 'Blood pressure — Run Template > IGS > Cardiovascular > Quick Blood Pressure.', img: false },
-          { text: 'Smoking — Run Template > IGS > Standard > Quick Smoking.', img: false },
-          { text: 'Diabetes review — Run Template > IGS > Diabetes > Quick Diabetes.', img: false },
-          { text: 'Respiratory (asthma or COPD) — Run Template > IGS > Respiratory > Quick Respiratory.', img: false },
-          { text: 'Mental health — Run Template > IGS > Mental Health & Neurology > Quick Mental Health.', img: false },
-          { text: 'Recall code — Run Template > IGS > Admin > Recall System.', img: false },
-        ],
-        tip: 'Can’t see it? Type the condition into the template search, or ask me and I’ll check.',
-        warning: null, related: ['use-template', 'alerts'],
-      },
-      {
-        id: 'alerts', category: 'shortcuts',
-        question: 'What do the patient alerts mean?',
-        keywords: ['alert', 'alerts', 'pop-up', 'popup', 'warning', 'flags', 'patient safety', 'reminders', 'pop ups'],
-        intro: 'Alerts pop up to improve patient safety. A lightning bolt in an alert means you can code the action.',
-        steps: [
-          { text: 'Named GP — reminds you who the patient’s named GP is.', img: false },
-          { text: 'Flu jab status — shows if the patient is eligible, has had it, or declined.', img: false },
-          { text: 'DNACPR in place — shows if there is a current DNACPR and its date.', img: false },
-          { text: 'Safeguarding risk — shows safeguarding codes and whether the patient is currently at risk.', img: false },
-          { text: 'QOF diaries — shows if QOF diaries need updating.', img: false },
-        ],
-        tip: 'Where an alert shows a lightning bolt, select it to code the action — for example coding a flu jab refusal.',
-        warning: null, related: ['find-template'],
-      },
-      {
-        id: 'emergency-overview', category: 'urgent',
-        question: 'Where do I send a patient in an emergency?',
-        keywords: ['emergency', 'a&e', 'ae', 'a and e', 'accident', 'urgent', '999', '111', 'where to send', 'hospital', 'casualty', 'chest pain', 'chest pains', 'heart attack', 'stroke', 'collapse', 'collapsed', 'unconscious', 'not breathing', 'difficulty breathing', 'breathless', 'choking', 'severe bleeding', 'anaphylaxis', 'seizure', 'fitting', 'overdose'],
-        intro: 'As reception, your job is to get help fast — not to assess the patient. If it could be life-threatening, call 999 and alert a duty clinician straight away.',
-        cards: [
-          { level: 'emergency', title: 'Life-threatening emergency', body: 'Call 999 now and alert a duty clinician. Stay with the patient and do not leave them alone.', sub: 'Chest pain, severe bleeding, difficulty breathing, signs of a stroke, collapse, or loss of consciousness.', phone: '999', phoneLabel: 'Call' },
-          { level: 'urgent', title: 'Urgent, but not life-threatening', body: 'Ask a clinician for advice, or signpost the patient to NHS 111 or 111 online.', phone: '111', phoneLabel: 'Call' },
-          { level: 'info', title: 'Eye emergency', body: 'Signpost to Moorfields Eye Hospital A&E — 24 hours, eye emergencies only. See the eye emergency guide.', phone: '020 7253 3411', phoneLabel: 'A&E / out of hours' },
-          { level: 'info', title: 'Dental emergency', body: 'Royal London Dental Hospital — by referral via a dentist or NHS 111. See the dental emergency guide.', phone: '111', phoneLabel: 'Call' },
-        ],
-        steps: [
-          { text: 'Call 999 immediately — do not try to assess or treat the patient yourself.', img: false },
-          { text: 'Alert a duty clinician or the practice’s emergency lead straight away.', img: false },
-          { text: 'Stay with the patient, keep them calm, and do not leave them alone.', img: false },
-          { text: 'Be ready to direct the ambulance crew and clear the way to the patient.', img: false },
-        ],
-        tip: 'Follow your practice’s emergency protocol. If you are ever unsure and it could be serious, treat it as a 999 emergency.',
-        warning: 'You are not expected to give clinical care — your role is to get help quickly and stay with the patient.',
-        related: ['eye-emergency', 'dental-emergency'],
-      },
-      {
-        id: 'eye-emergency', category: 'urgent',
-        question: 'Where do I send someone with an eye emergency?',
-        keywords: ['eye', 'eyes', 'moorfields', 'ophthalmic', 'vision', 'sight', 'eye emergency', 'eye a&e', 'eye casualty', 'eye injury'],
-        intro: 'Moorfields Eye Hospital runs a 24-hour eye A&E for eye emergencies only.',
-        cards: [
-          { level: 'emergency', title: 'Moorfields eye A&E — 24 hours, eye emergencies only', body: 'Moorfields Eye Hospital, 162 City Road, London, EC1V 2PD.', phone: '020 7253 3411', phoneLabel: 'A&E / out of hours' },
-          { level: 'info', title: 'Moorfields Direct nurse helpline', body: 'Speak to an ophthalmic nurse for advice. 9am to 9pm Mon to Fri, 9am to 5pm Sat.', phone: '020 7566 2345', phoneLabel: 'Helpline' },
-        ],
-        steps: [
-          { text: 'It is for eye emergencies only — not dry eyes, hay fever, or routine problems.', img: false },
-          { text: 'A video consultation service runs 9am to 9pm every day, with no appointment.', img: false },
-          { text: 'If the patient is already under another eye hospital, they should contact that hospital first.', img: false },
-        ],
-        tip: 'Not sure if it is an emergency? The nurse helpline can advise before you send the patient in.',
-        warning: 'For a general (non-eye) emergency, call 999 or use the nearest general A&E instead.',
-        related: ['emergency-overview', 'dental-emergency'],
-      },
-      {
-        id: 'dental-emergency', category: 'urgent',
-        question: 'Where do I send someone with a dental emergency?',
-        keywords: ['dental', 'teeth', 'tooth', 'toothache', 'dentist', 'royal london', 'dental emergency', 'dental a&e', 'oral', 'mouth', 'abscess'],
-        intro: 'Most urgent dental problems are handled by a dentist or NHS 111 — not a hospital walk-in.',
-        cards: [
-          { level: 'urgent', title: 'Urgent dental advice', body: 'Call the patient’s own dentist first. If they are closed or the patient is not registered, call NHS 111.', phone: '111', phoneLabel: 'Call' },
-          { level: 'info', title: 'Royal London Dental Hospital', body: 'Whitechapel, east London (New Road entrance). Specialist dental and oral care, by referral via a dentist or NHS 111. Not currently a walk-in service.', phone: '020 7377 7000', phoneLabel: 'Switchboard' },
-        ],
-        steps: [
-          { text: 'A knocked-out adult tooth needs a dentist as soon as possible — hold it by the crown and keep it in milk.', img: false },
-          { text: 'Never put a baby tooth back in.', img: false },
-        ],
-        tip: null,
-        warning: 'Call 999 or go to A&E if there is difficulty breathing, significant mouth swelling, or swelling affecting the eye or vision.',
-        related: ['emergency-overview', 'eye-emergency'],
-      },
-    ];
-  }
+  seed() { return SEED_GUIDES; }
 
   allGuides() {
     return this.seed().concat(this.state.customGuides || []);
   }
 
-  matchGuide(text) {
-    const STOP = { 'what': 1, 'when': 1, 'how': 1, 'the': 1, 'and': 1, 'for': 1, 'with': 1, 'where': 1, 'who': 1, 'can': 1, 'should': 1, 'need': 1, 'want': 1, 'ask': 1, 'asks': 1, 'asked': 1, 'please': 1, 'help': 1, 'patient': 1, 'patients': 1, 'someone': 1, 'they': 1, 'them': 1, 'you': 1, 'your': 1, 'this': 1, 'that': 1, 'are': 1, 'does': 1, 'about': 1, 'from': 1 };
-    const q = (text || '').toLowerCase();
-    const words = q.split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP[w]);
-    let best = null, bestScore = 0;
-    for (const g of this.allGuides()) {
-      let kwScore = 0, overlap = 0;
-      for (const kw of (g.keywords || [])) {
-        if (q.indexOf(kw) !== -1) kwScore += (kw.indexOf(' ') !== -1 ? 4 : 2);
-      }
-      const ql = g.question.toLowerCase();
-      for (const w of words) {
-        if (ql.indexOf(w) !== -1) overlap += 1;
-      }
-      const score = kwScore + (overlap >= 2 ? overlap : 0);
-      if (score > bestScore) { bestScore = score; best = g; }
-    }
-    return bestScore >= 2 ? best : null;
-  }
-
-  popularIds() { return ['find-patient', 'book-appt', 'repeat-rx', 'function-keys']; }
-  quickIds() { return ['log-on', 'find-patient', 'function-keys']; }
+  popularIds() { return POPULAR_IDS; }
+  quickIds() { return QUICK_IDS; }
 
   ask(text) {
     const t = (text || '').trim();
@@ -620,55 +219,10 @@ class Riva extends React.Component {
     this.setState({ messages, input: '' }, () => { this.save(); this.fetchAI(t, aiIdx); });
   }
 
-  // Call the OpenRouter-backed API route and return the model's text.
-  async askLLM(prompt) {
-    const res = await fetch('/api/ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    if (!res.ok) throw new Error('AI request failed (' + res.status + ')');
-    const data = await res.json();
-    if (!data || typeof data.text !== 'string') throw new Error('Bad AI response');
-    return data.text;
-  }
-
   async fetchAI(question, idx) {
-    const passages = this.retrieve(question, 3);
-    const context = passages.length
-      ? passages.map((p) => '[' + p.s + ']\n' + p.x).join('\n\n')
-      : '';
-    // Screenshots that came from the retrieved passages — the model may pick
-    // the ones that illustrate its answer (validated against this list below).
-    const candidateImages = [];
-    passages.forEach((p) => (p.img || []).forEach((im) => { if (!candidateImages.includes(im)) candidateImages.push(im); }));
     const history = this.buildHistory(idx);
-    let prompt = 'You are the Riverside Practice Q&A assistant, a help tool for RECEPTION and ADMIN staff at an NHS GP practice. '
-      + 'The reader is a receptionist, not a clinician. Help with front-desk and administrative tasks: using EMIS Web, booking and cancelling appointments, registrations, documents and scanning, tasks and messages, repeat prescription requests, and knowing who to pass things to. '
-      + 'Answer in plain British English in the NHS style: calm, sentence case, no emoji, no marketing words like "simply" or "easy". Address the reader as "you".\n\n'
-      + 'IMPORTANT: Do NOT give clinical or medical advice, diagnoses, symptom assessment, or treatment steps — that is a clinician’s job. If a question needs clinical judgement, tell the receptionist to pass it to a clinician (for example the duty doctor). '
-      + 'If the message could be a medical emergency (for example chest pain, difficulty breathing, signs of a stroke, severe bleeding, collapse, anaphylaxis or a seizure), the answer must be: call 999 now, alert a duty clinician immediately, and stay with the patient — do not try to assess or treat them.\n\n';
-    if (context) {
-      prompt += 'Use the following extracts from the practice’s own guides as your main source. Prefer them over general knowledge, point the reader to the relevant guide where one exists, and do not invent menu paths or contact details that are not supported by them:\n"""\n' + context + '\n"""\n\n';
-    }
-    if (history) {
-      prompt += 'Conversation so far (so you can understand follow-up questions):\n"""\n' + history + '\n"""\n\n';
-    }
-    const catalogue = this.allGuides().map((g) => '- ' + g.id + ': ' + g.question).join('\n');
-    prompt += 'Here are the practice’s existing guides. Only return a "guideId" when ONE of these guides DIRECTLY and FULLY answers the staff member’s actual question — that is, the guide is about the same specific task, not merely the same topic or area. If the closest guide only partly answers it, covers a related but different task, or you are at all unsure, do NOT return a guideId: compose your own answer in "steps" or "message" instead. Showing a guide that does not really answer the question is worse than writing a short, focused answer yourself. When you do return a guideId, leave steps and message empty — the full guide (with screenshots) is shown to the reader instead:\nGUIDES:\n' + catalogue + '\n\n';
-    if (candidateImages.length) {
-      prompt += 'Screenshots available from the source guides above. If one of them directly illustrates your answer, include its exact filename in the "images" array (you may include up to 3, most relevant first); otherwise use an empty array. Only use filenames from this list:\n'
-        + candidateImages.map((im) => '- ' + im).join('\n') + '\n\n';
-    }
-    prompt += 'The staff member’s latest message is: "' + question + '"\n'
-      + 'If it is a follow-up, answer in the context of what was already shown above rather than repeating a whole guide.\n'
-      + 'Decide how to respond and return ONLY valid JSON, no markdown fences, with this exact shape:\n'
-      + '{"guideId":"id of a guide above or empty string","intro":"one short sentence","steps":["step one","step two"],"message":"wording to send to a patient or colleague, or empty string","tip":"one short tip or empty string","images":["exact filename from the list above, or leave empty"]}\n'
-      + 'Rules: only use "guideId" when an existing guide directly and fully answers this specific question; if in doubt, answer it yourself rather than returning a guide. Use "steps" for a how-to (1 to 6 steps), OR use "message" when the reader asks for wording to give or send to a patient or colleague (you may draft routine administrative messages such as appointment or review invitations, but never clinical or medical advice). '
-      + 'If you are unsure or it is outside a receptionist’s role, say so in the intro and advise passing it to a clinician or the practice lead.';
     try {
-      const raw = await this.askLLM(prompt);
-      const data = this.parseAI(raw);
+      const data = await askRiva({ question, history, customGuides: this.state.customGuides });
       if (data.guideId && this.allGuides().some((g) => g.id === data.guideId)) {
         const messages = this.state.messages.slice();
         messages[idx] = { role: 'bot', kind: 'answer', guideId: data.guideId, feedback: null };
@@ -676,31 +230,9 @@ class Riva extends React.Component {
         return;
       }
       if (!data.steps.length && !data.message) { this.updateAi(idx, { status: 'error' }); return; }
-      // Only keep images the model picked from the offered, retrieved set.
-      const images = (data.images || []).filter((im) => candidateImages.includes(im)).slice(0, 3);
-      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images });
+      this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images: data.images || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
-    }
-  }
-
-  parseAI(raw) {
-    let str = (raw || '').trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-    const a = str.indexOf('{'), b = str.lastIndexOf('}');
-    if (a !== -1 && b !== -1) str = str.slice(a, b + 1);
-    try {
-      const o = JSON.parse(str);
-      return {
-        guideId: typeof o.guideId === 'string' ? o.guideId.trim() : '',
-        intro: typeof o.intro === 'string' ? o.intro : '',
-        steps: Array.isArray(o.steps) ? o.steps.map((x) => String(x).trim()).filter(Boolean) : [],
-        message: typeof o.message === 'string' ? o.message.trim() : '',
-        tip: typeof o.tip === 'string' ? o.tip : '',
-        images: Array.isArray(o.images) ? o.images.map((x) => String(x).trim()).filter(Boolean) : [],
-      };
-    } catch (e) {
-      const lines = (raw || '').split(/\n+/).map((x) => x.replace(/^[-*\d.\)\s]+/, '').trim()).filter(Boolean);
-      return { guideId: '', intro: '', steps: lines.slice(0, 6), message: '', tip: '', images: [] };
     }
   }
 
