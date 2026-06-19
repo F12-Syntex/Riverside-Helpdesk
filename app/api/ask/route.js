@@ -113,13 +113,10 @@ export async function POST(request) {
 
     const parsed = parseAiJson(text);
     const guideId = parsed.guideId && validIds.has(parsed.guideId) ? parsed.guideId : '';
-    const images = (parsed.images || []).filter((im) => candidateImages.includes(im)).slice(0, 3);
+    let images = (parsed.images || []).filter((im) => candidateImages.includes(im)).slice(0, 3);
 
-    // Resolve the cited extract numbers into clickable source locators. If the
-    // model gave an answer from the documents but didn't cite, fall back to the
-    // single best-matching extract so an answer always shows its source.
-    let refs = parsed.citations.filter((n) => refMap.has(n));
-    if (!refs.length && !guideId && (parsed.steps.length || parsed.message) && refMap.size) refs = [1];
+    // Resolve the cited extract numbers into clickable source locators.
+    const refs = parsed.citations.filter((n) => refMap.has(n));
 
     const seen = new Set();
     const citations = [];
@@ -140,15 +137,18 @@ export async function POST(request) {
       if (citations.length >= 4) break;
     }
 
-    return NextResponse.json({
-      guideId,
-      intro: parsed.intro,
-      steps: parsed.steps,
-      message: parsed.message,
-      tip: parsed.tip,
-      images,
-      citations,
-    });
+    // Strict grounding: never present an answer that isn't backed by a cited
+    // source (or an existing guide). An uncited answer is treated as "not found"
+    // so Riva never answers from outside the practice's documents.
+    let { intro, steps, message, tip } = parsed;
+    if (!guideId && !citations.length && (steps.length || message)) {
+      intro = 'I could not find this in the practice’s documents, so I can’t answer it reliably. Please check with the relevant lead — or a clinician if it is a clinical question.';
+      steps = [];
+      message = '';
+      images = [];
+    }
+
+    return NextResponse.json({ guideId, intro, steps, message, tip, images, citations });
   } catch (e) {
     return NextResponse.json(
       { error: 'Could not reach OpenRouter.', detail: String(e).slice(0, 300) },

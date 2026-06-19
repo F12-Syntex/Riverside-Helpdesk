@@ -233,7 +233,9 @@ class Riva extends React.Component {
         this.setState({ messages }, () => this.save());
         return;
       }
-      if (!data.steps.length && !data.message) { this.updateAi(idx, { status: 'error' }); return; }
+      // An intro with no steps/message is Riva saying it isn't in the documents —
+      // show it rather than treating it as an error.
+      if (!data.steps.length && !data.message && !data.intro) { this.updateAi(idx, { status: 'error' }); return; }
       this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images: data.images || [], citations: data.citations || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
@@ -729,15 +731,17 @@ class Riva extends React.Component {
                   </div>
                 </div>
               )}
-              <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-                <span style={s('font-size:14px;color:#768692;')}>Always check AI answers before you act on them.</span>
-                <div style={s('margin-left:auto;display:flex;gap:10px;')}>
-                  <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;">
-                    <span className="riva-ico"><Svg w={15}>{Icons.copy}</Svg></span>{v.copyLabel}
-                  </Hover>
-                  <Hover onClick={v.onSave} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Save to knowledge base</Hover>
+              {(v.hasSteps || v.hasMessage) && (
+                <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
+                  <span style={s('font-size:14px;color:#768692;')}>Always check AI answers before you act on them.</span>
+                  <div style={s('margin-left:auto;display:flex;gap:10px;')}>
+                    <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;">
+                      <span className="riva-ico"><Svg w={15}>{Icons.copy}</Svg></span>{v.copyLabel}
+                    </Hover>
+                    <Hover onClick={v.onSave} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Save to knowledge base</Hover>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>
