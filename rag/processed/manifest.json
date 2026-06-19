@@ -7,7 +7,7 @@
       "mtime": 0,
       "chunks": 172,
       "title": "EMIS Web guides (imported from practice PDFs)",
-      "processedAt": "2026-06-19T05:03:48.189Z"
+      "processedAt": "2026-06-19T05:28:34.399Z"
     },
     "ucr-guidance": {
       "path": "lib/ucr-knowledge.js",
@@ -16,7 +16,7 @@
       "mtime": 0,
       "chunks": 14,
       "title": "UCR guidance",
-      "processedAt": "2026-06-19T05:03:49.662Z"
+      "processedAt": "2026-06-19T05:28:36.097Z"
     },
     "employee-handbook": {
       "path": "lib/handbook-knowledge.js",
@@ -25,7 +25,7 @@
       "mtime": 0,
       "chunks": 44,
       "title": "Employee handbook",
-      "processedAt": "2026-06-19T05:03:51.557Z"
+      "processedAt": "2026-06-19T05:28:39.157Z"
     }
   }
 }

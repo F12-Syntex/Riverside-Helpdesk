@@ -2,6 +2,7 @@
 // each chunk carries a heading path (good for retrieval and citation).
 import fs from 'node:fs';
 import path from 'node:path';
+import { slugify } from '../lib/chunk.mjs';
 
 export const exts = ['.txt', '.md', '.markdown'];
 
@@ -18,10 +19,12 @@ export async function parse(filePath) {
     const body = buf.join('\n').trim();
     if (body) {
       const prefix = headingPath.length ? headingPath.join(' › ') + '\n' : '';
+      const last = headingPath[headingPath.length - 1] || '';
       sections.push({
         text: prefix + body,
         headingPath: headingPath.slice(),
-        section: headingPath[headingPath.length - 1] || '',
+        section: last,
+        view: last ? { anchor: slugify(last) } : undefined,
       });
     }
     buf = [];

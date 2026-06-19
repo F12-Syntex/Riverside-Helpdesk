@@ -17,20 +17,18 @@ export function isImage(ext) {
   return Object.prototype.hasOwnProperty.call(MIME, ext.toLowerCase());
 }
 
-export async function describeImage(filePath, hint = '') {
-  const { apiKey, chatModel, base, referer, title } = config();
-  if (!apiKey || !chatModel) throw new Error('OPENROUTER_API_KEY / OPENROUTER_AI_MODEL not set');
-
-  const ext = path.extname(filePath).toLowerCase();
-  const mime = MIME[ext] || 'image/png';
-  const b64 = fs.readFileSync(filePath).toString('base64');
-
-  const instruction =
-    'You are building a searchable knowledge base for NHS GP reception staff using EMIS Web. '
+function instructionFor(hint) {
+  return 'You are building a searchable knowledge base for NHS GP reception staff using EMIS Web. '
     + 'Transcribe and describe this image so it can be found and fully understood from the text alone. '
     + 'Capture any visible on-screen text, menu paths, button and field labels, and the order of steps. '
     + 'Do not invent anything that is not visible. Reply with plain text only, no preamble.'
     + (hint ? ('\nContext: ' + hint) : '');
+}
+
+// Core call — describes an image given as a data URL.
+async function describeDataUrl(dataUrl, hint = '') {
+  const { apiKey, chatModel, base, referer, title } = config();
+  if (!apiKey || !chatModel) throw new Error('OPENROUTER_API_KEY / OPENROUTER_AI_MODEL not set');
 
   const res = await fetch(base + '/chat/completions', {
     method: 'POST',
@@ -46,8 +44,8 @@ export async function describeImage(filePath, hint = '') {
       messages: [{
         role: 'user',
         content: [
-          { type: 'text', text: instruction },
-          { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
+          { type: 'text', text: instructionFor(hint) },
+          { type: 'image_url', image_url: { url: dataUrl } },
         ],
       }],
     }),
@@ -58,4 +56,15 @@ export async function describeImage(filePath, hint = '') {
   }
   const data = await res.json();
   return (data?.choices?.[0]?.message?.content || '').trim();
+}
+
+export async function describeImageBuffer(buffer, mime = 'image/png', hint = '') {
+  const b64 = Buffer.from(buffer).toString('base64');
+  return describeDataUrl(`data:${mime};base64,${b64}`, hint);
+}
+
+export async function describeImage(filePath, hint = '') {
+  const ext = path.extname(filePath).toLowerCase();
+  const mime = MIME[ext] || 'image/png';
+  return describeImageBuffer(fs.readFileSync(filePath), mime, hint);
 }

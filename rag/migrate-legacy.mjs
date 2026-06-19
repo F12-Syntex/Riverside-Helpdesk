@@ -38,6 +38,9 @@ async function migrateOne(store, { file, docId, title }) {
     const section = entry.s || '';
     const body = [entry.t, entry.x].filter(Boolean).join('\n');
     const images = Array.isArray(entry.img) ? entry.img : [];
+    // No original file to open for imported content — the screenshot is the
+    // viewable source; otherwise the citation just shows the text snippet.
+    const view = images.length ? { kind: 'image', url: images[0] } : { kind: 'text' };
     for (const piece of chunkText(body)) {
       records.push({
         id: makeChunkId(docId, ci++),
@@ -48,6 +51,7 @@ async function migrateOne(store, { file, docId, title }) {
         section,
         text: piece,
         images,
+        view,
         tokens: estTokens(piece),
       });
     }

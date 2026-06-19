@@ -24,6 +24,17 @@ function publicCopyFactory(docId) {
   };
 }
 
+// Lets a parser write a derived asset (a rendered PDF page, an extracted DOCX
+// image, an HTML rendition) into public/ so the browser can load it.
+function publicWriteFactory(docId) {
+  return (filename, buffer) => {
+    const destDir = path.join(PUBLIC_ASSETS_RAG, docId);
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(path.join(destDir, filename), buffer);
+    return `assets/rag/${docId}/${filename}`;
+  };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const force = args.includes('--force') || args.includes('-f');
@@ -58,22 +69,50 @@ async function main() {
     process.stdout.write(`INGEST ${rel}  … `);
     try {
       const title = docTitleFor(file);
-      const ctx = { docId, docTitle: title, sourcePath: file, publicCopy: publicCopyFactory(docId) };
+      const ctx = {
+        docId,
+        docTitle: title,
+        sourcePath: file,
+        publicCopy: publicCopyFactory(docId),
+        publicWrite: publicWriteFactory(docId),
+      };
       const sections = await parser.parse(file, ctx);
+
+      // Serve the original document (or rendition) once so the UI can open it
+      // in-browser, and give every chunk a "view" locator pointing at it.
+      const e = ext.replace('.', '');
+      const isImg = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(e);
+      let originalUrl = null;
+      const ensureOriginal = () => { if (!originalUrl) originalUrl = ctx.publicCopy(file); return originalUrl; };
+      const buildView = (sec) => {
+        if (sec.view && sec.view.url) {
+          const v = { kind: sec.view.kind || 'file', url: sec.view.url };
+          if (sec.view.anchor) v.anchor = sec.view.anchor;
+          if (sec.page) v.page = sec.page;
+          return v;
+        }
+        if (e === 'pdf') { const v = { kind: 'pdf', url: ensureOriginal() }; if (sec.page) v.page = sec.page; return v; }
+        if (isImg) return { kind: 'image', url: (sec.images && sec.images[0]) || ensureOriginal() };
+        if (e === 'md' || e === 'markdown') { const v = { kind: 'markdown', url: ensureOriginal() }; if (sec.view && sec.view.anchor) v.anchor = sec.view.anchor; return v; }
+        if (e === 'txt') { const v = { kind: 'text', url: ensureOriginal() }; if (sec.view && sec.view.anchor) v.anchor = sec.view.anchor; return v; }
+        return { kind: 'file', url: ensureOriginal() };
+      };
 
       const records = [];
       let ci = 0;
       for (const sec of sections) {
+        const view = buildView(sec);
         for (const piece of chunkText(sec.text)) {
           records.push({
             id: makeChunkId(docId, ci++),
             docId,
             docTitle: title,
-            source: { type: ext.replace('.', ''), path: 'rag/sources/' + rel, ...(sec.page ? { page: sec.page } : {}) },
+            source: { type: e, path: 'rag/sources/' + rel, ...(sec.page ? { page: sec.page } : {}) },
             headingPath: sec.headingPath || [],
             section: sec.section || '',
             text: piece,
             images: sec.images || [],
+            view,
             tokens: estTokens(piece),
           });
         }

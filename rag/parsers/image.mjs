@@ -15,5 +15,6 @@ export async function parse(filePath, ctx) {
     images: web ? [web] : [],
     headingPath: [],
     section: path.basename(filePath),
+    view: web ? { kind: 'image', url: web } : undefined,
   }];
 }

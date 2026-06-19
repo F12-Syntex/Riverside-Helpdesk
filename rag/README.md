@@ -71,12 +71,35 @@ array of `{ text, headingPath?, section?, page?, images? }`. Register it in
 - **Images** (`.png/.jpg/.jpeg/.gif/.webp`) — read by the vision-capable chat
   model (`OPENROUTER_AI_MODEL`). **No OCR engine**, for consistency: one model
   understands every input. A display copy is written to `public/assets/rag/`.
-- **Text / Markdown** (`.txt/.md`) — Markdown is split on headings.
-- **PDF** (`.pdf`) — text extraction via `pdfjs-dist` (install on demand:
-  `npm i pdfjs-dist`). This is extraction, not OCR; a scanned/image-only PDF has
-  no selectable text — export its pages as images and ingest those, or add a
-  page renderer here.
-- **DOCX** (`.docx`) — raw text via `mammoth` (`npm i mammoth`).
+- **Text / Markdown** (`.txt/.md`) — Markdown is split on headings (each chunk
+  carries a heading anchor for citation links).
+- **PDF** (`.pdf`) — per page: text via `pdfjs-dist` **and** the page rendered to
+  a PNG (via `@napi-rs/canvas`) so answers can show the page and link to it. A
+  page with no selectable text (scanned) is read by the vision model instead.
+- **DOCX** (`.docx`) — text via `mammoth`, embedded images extracted, and an
+  HTML rendition written so the viewer can open it.
+
+`pdfjs-dist`, `@napi-rs/canvas` and `mammoth` are installed as dependencies. If
+absent, PDF/DOCX ingest degrades gracefully and prints an install hint.
+
+## Images, citations and the in-page viewer
+
+Every chunk records the images extracted from its source and a `view` locator:
+
+```jsonc
+"images": ["assets/rag/<docId>/page-3.png"],
+"view": { "kind": "pdf", "url": "assets/rag/<docId>/<file>.pdf", "page": 3 }
+```
+
+`kind` is `pdf` (opens at `#page=N`), `image`, `html`, `text`/`markdown`
+(opens with a heading `anchor`). The original document (or a rendition) is copied
+into `public/assets/rag/<docId>/` so it can be opened **in-browser**.
+
+Answers are **grounded strictly** in the retrieved extracts: the model must cite
+the extract numbers it used, and the API resolves those into `citations`
+(`{ docTitle, location, snippet, view }`). The UI lists them as clickable sources
+that open the viewer at the exact page/section, without leaving the app. If the
+documents don't contain the answer, Riva says so rather than guessing.
 
 ## Storage: when to change approach
 
