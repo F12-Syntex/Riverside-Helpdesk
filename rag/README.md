@@ -1,7 +1,7 @@
 # Riverside knowledge base (RAG)
 
 This folder is the practice's knowledge base. Drop documents of any type into
-`sources/`, run one command, and the app's AI assistant (Riva) can find and cite
+`sources/`, run one command, and the app's AI assistant can find and cite
 them. Raw documents live here, **outside** `public/`, so they are never served to
 the browser.
 
@@ -55,7 +55,7 @@ Embeddings are stored separately (`embeddings.json`) keyed by chunk `id`.
 ## How retrieval works (two tiers)
 
 - **Tier A — catalogue.** Every request includes the compact `catalog.json`
-  (title + summary + tags per document), so Riva is *aware of everything* even
+  (title + summary + tags per document), so it is *aware of everything* even
   when a specific chunk wasn't retrieved.
 - **Tier B — semantic retrieval.** The question is embedded and the top few
   chunks by cosine similarity are pulled in full (with their images).
@@ -99,7 +99,7 @@ Answers are **grounded strictly** in the retrieved extracts: the model must cite
 the extract numbers it used, and the API resolves those into `citations`
 (`{ docTitle, location, snippet, view }`). The UI lists them as clickable sources
 that open the viewer at the exact page/section, without leaving the app. If the
-documents don't contain the answer, Riva says so rather than guessing.
+documents don't contain the answer, it says so rather than guessing.
 
 ## Storage: when to change approach
 

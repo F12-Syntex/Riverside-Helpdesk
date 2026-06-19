@@ -1,4 +1,4 @@
-// Server-side Q&A endpoint for Riva. The browser sends only the question, a
+// Server-side Q&A endpoint. The browser sends only the question, a
 // short history string and any locally-stored custom guides; everything else —
 // retrieving knowledge-base chunks, building the prompt, calling the model,
 // parsing its JSON and resolving citations — happens here, so the API key and
@@ -88,7 +88,7 @@ export async function POST(request) {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://riverside-practice.local',
-        'X-Title': 'Riva - EMIS Helper',
+        'X-Title': 'Riverside Practice Q&A',
       },
       body: JSON.stringify({
         model,
@@ -139,7 +139,7 @@ export async function POST(request) {
 
     // Strict grounding: never present an answer that isn't backed by a cited
     // source (or an existing guide). An uncited answer is treated as "not found"
-    // so Riva never answers from outside the practice's documents.
+    // so it never answers from outside the practice's documents.
     let { intro, steps, message, tip } = parsed;
     if (!guideId && !citations.length && (steps.length || message)) {
       intro = 'I could not find this in the practice’s documents, so I can’t answer it reliably. Please check with the relevant lead — or a clinician if it is a clinical question.';

@@ -43,6 +43,6 @@ export function config() {
     embedModel: process.env.OPENROUTER_EMBED_MODEL || 'openai/text-embedding-3-small',
     base: 'https://openrouter.ai/api/v1',
     referer: 'https://riverside-practice.local',
-    title: 'Riva - EMIS Helper',
+    title: 'Riverside Practice Q&A',
   };
 }

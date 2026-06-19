@@ -2,7 +2,7 @@
   "name": "riverside-emis-helper",
   "version": "1.0.0",
   "private": true,
-  "description": "Riva — EMIS Helper: a reception Q&A assistant for The Riverside Practice, with an OpenRouter-backed AI fallback.",
+  "description": "Riverside Practice Q&A: a document-grounded reception assistant for The Riverside Practice, using OpenRouter.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

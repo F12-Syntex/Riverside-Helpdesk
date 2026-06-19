@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SEED_GUIDES, CATEGORIES, BROWSE_AREAS as BROWSE, POPULAR_IDS, QUICK_IDS } from '../lib/guides';
-import { askRiva } from '../lib/ai/client';
+import { askQuestion } from '../lib/ai/client';
 
 /* ------------------------------------------------------------------ *
  * Small helpers that let us keep the design's inline-style strings
@@ -127,10 +127,10 @@ function assetSrc(p) {
 }
 
 /* ------------------------------------------------------------------ *
- * The Riva component — logic ported from the Claude Design source.
+ * The Riverside Practice Q&A component.
  * ------------------------------------------------------------------ */
 
-class Riva extends React.Component {
+class RiversidePracticeQA extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -226,14 +226,14 @@ class Riva extends React.Component {
   async fetchAI(question, idx) {
     const history = this.buildHistory(idx);
     try {
-      const data = await askRiva({ question, history, customGuides: this.state.customGuides });
+      const data = await askQuestion({ question, history, customGuides: this.state.customGuides });
       if (data.guideId && this.allGuides().some((g) => g.id === data.guideId)) {
         const messages = this.state.messages.slice();
         messages[idx] = { role: 'bot', kind: 'answer', guideId: data.guideId, feedback: null };
         this.setState({ messages }, () => this.save());
         return;
       }
-      // An intro with no steps/message is Riva saying it isn't in the documents —
+      // An intro with no steps/message means it isn't in the documents —
       // show it rather than treating it as an error.
       if (!data.steps.length && !data.message && !data.intro) { this.updateAi(idx, { status: 'error' }); return; }
       this.updateAi(idx, { status: 'done', intro: data.intro, steps: data.steps, message: data.message, tip: data.tip, images: data.images || [], citations: data.citations || [] });
@@ -958,5 +958,5 @@ class Riva extends React.Component {
 }
 
 export default function Page() {
-  return <Riva />;
+  return <RiversidePracticeQA />;
 }
