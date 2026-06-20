@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server';
 import { getSql, ensureSchema } from '@/lib/db';
 import { buildRotaChatPrompt, parseGridResponse } from '@/lib/ai/rota';
-import { sanitiseGrid, analyze, DEFAULT_TIMES } from '@/lib/rota/logic';
+import { sanitiseGrid, analyze, rebalance, changedKeys, DEFAULT_TIMES } from '@/lib/rota/logic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,7 +61,11 @@ export async function POST(request) {
     const parsed = parseGridResponse(data?.choices?.[0]?.message?.content || '');
     if (!parsed) return NextResponse.json({ error: "Sorry, I couldn't work out that change. Try rephrasing it." }, { status: 502 });
 
-    const newGrid = sanitiseGrid(parsed.grid, staff, week);
+    // Apply the manager's change, then rebalance coverage around it: the cells
+    // the AI changed are locked, and the rest are nudged back to full cover.
+    const aiGrid = sanitiseGrid(parsed.grid, staff, week);
+    const locked = changedKeys(grid, aiGrid, staff);
+    const newGrid = rebalance(aiGrid, staff, locked);
     const schedule = { grid: newGrid, times: parsed.times || times };
     const saved = await sql`
       INSERT INTO rotas (week_starting, schedule) VALUES (${week}, ${JSON.stringify(schedule)}::jsonb)

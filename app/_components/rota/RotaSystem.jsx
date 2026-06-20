@@ -9,16 +9,18 @@ import {
 } from '../../../lib/rota/logic';
 
 /* ------------------------------------------------------------------ *
- * Staff rota system — adapted from the Claude design (Rota.dc.html) to our
- * stack: Neon-backed staff and weekly grids, deterministic auto-generation,
- * and a natural-language chat bar wired to our AI. Popups use a shared Sheet
- * that centres on desktop and slides up from the bottom on mobile.
+ * Staff rota system — adapted from the Claude design (Rota.dc.html).
+ * Neon-backed staff and weekly grids, deterministic auto-generation, a
+ * natural-language chat bar (AI, applies then rebalances), per-week undo/redo,
+ * a desktop grid + a per-staff card view on mobile, and bottom-sheet popups.
+ * The Rota/Staff switch lives in the header; `page` is passed in.
  * ------------------------------------------------------------------ */
 
 const PRACTICE = 'The Riverside Practice';
 const CARD = 'background:#fff;border:1px solid #d8dde0;border-radius:16px;';
 const FIELD = 'width:100%;font-family:inherit;font-size:16px;padding:10px 12px;border:2px solid #4c6272;border-radius:4px;background:#fff;color:#212b32;';
 const GREEN_BTN = 'font-family:inherit;font-weight:700;color:#fff;background:#007f3b;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #003419;';
+const ICON_BTN = 'width:40px;height:40px;border-radius:8px;border:1px solid #aeb7bd;background:#fff;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;';
 
 function api(url, opts) {
   return fetch(url, opts).then(async (r) => {
@@ -28,7 +30,6 @@ function api(url, opts) {
   });
 }
 
-// Popup wrapper: dialog on desktop, bottom sheet on mobile (see globals.css).
 function Sheet({ maxWidth = 460, onClose, children }) {
   return (
     <div className="riva-modal-overlay" onClick={onClose}>
@@ -39,20 +40,19 @@ function Sheet({ maxWidth = 460, onClose, children }) {
   );
 }
 
-export default function RotaSystem() {
-  const [page, setPage] = React.useState('rota');
+export default function RotaSystem({ page = 'rota' }) {
   const [weekOffset, setWeekOffset] = React.useState(0);
   const [staff, setStaff] = React.useState([]);
   const [staffStatus, setStaffStatus] = React.useState('loading');
-  const [cache, setCache] = React.useState({});       // weekISO -> schedule {grid,times} | null
-  const [status, setStatus] = React.useState({});     // weekISO -> 'loading'|'done'|'error'
+  const [cache, setCache] = React.useState({});   // weekISO -> schedule | null
+  const [status, setStatus] = React.useState({});  // weekISO -> 'loading'|'done'|'error'
+  const [hist, setHist] = React.useState({});      // weekISO -> { stack:[schedule], ptr }
   const [busy, setBusy] = React.useState(false);
   const [toast, setToast] = React.useState(null);
-  const [warning, setWarning] = React.useState(null); // { issues, undo }
+  const [warning, setWarning] = React.useState(null);
   const [confirm, setConfirm] = React.useState(null);
   const [chatInput, setChatInput] = React.useState('');
 
-  // staff page editing
   const [showAdd, setShowAdd] = React.useState(false);
   const [draft, setDraft] = React.useState({ name: '', about: '' });
   const [editId, setEditId] = React.useState(null);
@@ -62,7 +62,7 @@ export default function RotaSystem() {
   function flash(msg) {
     setToast(msg);
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 5000);
+    toastTimer.current = setTimeout(() => setToast(null), 6000);
   }
 
   const weekISO = isoOf(mondayPlusWeeks(weekOffset));
@@ -74,6 +74,10 @@ export default function RotaSystem() {
   const hasRota = !!grid;
   const canEdit = hasRota && !isReadOnly;
   const days = weekDays(weekISO);
+  const h = hist[weekISO];
+  const canUndo = !!h && h.ptr > 0 && canEdit;
+  const canRedo = !!h && h.ptr < h.stack.length - 1 && canEdit;
+  const curStatus = status[weekISO];
 
   React.useEffect(() => { loadStaff(); }, []);
   React.useEffect(() => { if (status[weekISO] === undefined) loadRota(weekISO); /* eslint-disable-next-line */ }, [weekISO]);
@@ -91,62 +95,96 @@ export default function RotaSystem() {
     setStatus((m) => ({ ...m, [iso]: 'loading' }));
     try {
       const d = await api('/api/rota?week=' + iso);
-      setCache((c) => ({ ...c, [iso]: d.rota ? d.rota.schedule : null }));
+      const sched = d.rota ? d.rota.schedule : null;
+      setCache((c) => ({ ...c, [iso]: sched }));
+      setHist((x) => (x[iso] !== undefined ? x : { ...x, [iso]: sched ? { stack: [sched], ptr: 0 } : { stack: [], ptr: -1 } }));
       setStatus((m) => ({ ...m, [iso]: 'done' }));
     } catch (e) { setStatus((m) => ({ ...m, [iso]: 'error' })); }
+  }
+
+  function pushHist(iso, sched) {
+    setHist((x) => {
+      const cur = x[iso] || { stack: [], ptr: -1 };
+      const stack = cur.stack.slice(0, cur.ptr + 1).concat([sched]).slice(-40);
+      return { ...x, [iso]: { stack, ptr: stack.length - 1 } };
+    });
+  }
+
+  function persist(sched) {
+    api('/api/rota', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, grid: sched.grid, times: sched.times }) }).catch(() => {});
   }
 
   async function generate() {
     setBusy(true);
     try {
       const d = await api('/api/rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO }) });
-      setCache((c) => ({ ...c, [weekISO]: d.rota.schedule }));
-      const issues = analyze(d.rota.schedule.grid, staff);
-      flash(issues.length ? 'Generated — a few things could be tidied. Ask me to “rebalance”.' : 'Generated a balanced week.');
+      const sched = d.rota.schedule;
+      setCache((c) => ({ ...c, [weekISO]: sched }));
+      pushHist(weekISO, sched);
+      const issues = analyze(sched.grid, staff);
+      flash(issues.length ? 'Generated — a couple of things could be tidied.' : 'Generated a balanced week.');
     } catch (e) { flash(e.message); } finally { setBusy(false); }
   }
 
-  async function saveGrid(newGrid, prevSchedule) {
-    setCache((c) => ({ ...c, [weekISO]: { grid: newGrid, times } }));
-    try {
-      await api('/api/rota', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, grid: newGrid, times }) });
-    } catch (e) {
-      setCache((c) => ({ ...c, [weekISO]: prevSchedule })); // roll back on failure
-      flash(e.message);
-    }
+  function applyGrid(newGrid) {
+    const sched = { grid: newGrid, times };
+    setCache((c) => ({ ...c, [weekISO]: sched }));
+    pushHist(weekISO, sched);
+    persist(sched);
+    return sched;
   }
 
   function cycleCell(id, d) {
     if (!canEdit) return;
     const cur = grid[id] ? grid[id][d] : null;
-    if (cur === 'AL') return; // leave is fixed
+    if (cur === 'AL') return;
     const order = ['E', 'L', 'OFF'];
-    let idx = order.indexOf(cur);
-    const next = order[(idx + 1) % 3];
-    const prevSchedule = schedule;
+    const next = order[(order.indexOf(cur) + 1) % 3];
     const newGrid = {};
     Object.keys(grid).forEach((k) => { newGrid[k] = grid[k].slice(); });
     if (!newGrid[id]) newGrid[id] = ['OFF', 'OFF', 'OFF', 'OFF', 'OFF'];
     newGrid[id][d] = next;
-    saveGrid(newGrid, prevSchedule);
+    applyGrid(newGrid);
     const issues = analyze(newGrid, staff);
-    if (issues.length) setWarning({ issues, undo: () => saveGrid(prevSchedule.grid, prevSchedule) });
+    if (issues.length) setWarning({ issues });
   }
 
-  async function sendChat() {
+  function undo() {
+    const hh = hist[weekISO];
+    if (!hh || hh.ptr <= 0) return;
+    const ptr = hh.ptr - 1;
+    const sched = hh.stack[ptr];
+    setHist((x) => ({ ...x, [weekISO]: { ...hh, ptr } }));
+    setCache((c) => ({ ...c, [weekISO]: sched }));
+    persist(sched);
+  }
+  function redo() {
+    const hh = hist[weekISO];
+    if (!hh || hh.ptr >= hh.stack.length - 1) return;
+    const ptr = hh.ptr + 1;
+    const sched = hh.stack[ptr];
+    setHist((x) => ({ ...x, [weekISO]: { ...hh, ptr } }));
+    setCache((c) => ({ ...c, [weekISO]: sched }));
+    persist(sched);
+  }
+
+  async function sendChat(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const message = chatInput.trim();
     if (!message) return;
-    if (isReadOnly) { flash('This is a published past week and is locked. Switch to a current or future week to make changes.'); return; }
+    if (isReadOnly) { flash('This week is locked. Switch to a current or future week to make changes.'); return; }
     if (!hasRota) { flash('Generate a rota for this week first.'); return; }
     setChatInput('');
     setBusy(true);
     flash('Working on it…');
     try {
       const d = await api('/api/rota/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, message }) });
-      setCache((c) => ({ ...c, [weekISO]: d.rota.schedule }));
-      flash(d.reply || 'Done.');
-      if (Array.isArray(d.issues) && d.issues.length) setWarning({ issues: d.issues, undo: null });
-    } catch (e) { flash(e.message); } finally { setBusy(false); }
+      const sched = d.rota.schedule;
+      setCache((c) => ({ ...c, [weekISO]: sched }));
+      pushHist(weekISO, sched);
+      const note = Array.isArray(d.issues) && d.issues.length ? ' (Heads up: ' + d.issues[0] + ')' : '';
+      flash((d.reply || 'Done.') + note);
+    } catch (e2) { flash(e2.message); } finally { setBusy(false); }
   }
 
   function copyWhatsApp() {
@@ -156,7 +194,7 @@ export default function RotaSystem() {
     } else flash("Copying isn't available here.");
   }
 
-  // ---- staff actions ----
+  // staff actions
   async function addStaff() {
     const name = draft.name.trim();
     if (!name) { flash('Enter a name.'); return; }
@@ -168,16 +206,11 @@ export default function RotaSystem() {
       flash(firstName(name) + ' added.');
     } catch (e) { flash(e.message); }
   }
-
-  function startEdit(p) {
-    setEditId(p.id);
-    setEditDraft({ name: p.name, about: p.about || '', leave: (p.leave || []).slice(), start: '', end: '' });
-  }
+  function startEdit(p) { setEditId(p.id); setEditDraft({ name: p.name, about: p.about || '', leave: (p.leave || []).slice(), start: '', end: '' }); }
   function addLeave() {
     const { start, end } = editDraft;
     if (!start) return;
-    const lv = { start, end: end || start };
-    setEditDraft((d) => ({ ...d, leave: [...d.leave, lv].sort((a, b) => a.start.localeCompare(b.start)), start: '', end: '' }));
+    setEditDraft((d) => ({ ...d, leave: [...d.leave, { start, end: end || start }].sort((a, b) => a.start.localeCompare(b.start)), start: '', end: '' }));
   }
   function removeLeave(i) { setEditDraft((d) => ({ ...d, leave: d.leave.filter((_, j) => j !== i) })); }
   async function saveEdit() {
@@ -192,51 +225,32 @@ export default function RotaSystem() {
   }
   function askRemove(p) {
     setConfirm({
-      title: 'Remove staff member', message: 'Remove ' + p.name + " from the team? This can't be undone.",
-      confirmLabel: 'Remove', noLabel: 'Cancel',
-      onConfirm: async () => {
-        setConfirm(null);
-        try { await api('/api/staff?id=' + p.id, { method: 'DELETE' }); setStaff((prev) => prev.filter((x) => x.id !== p.id)); flash('Removed.'); }
-        catch (e) { flash(e.message); }
-      },
+      title: 'Remove staff member', message: 'Remove ' + p.name + " from the team? This can't be undone.", confirmLabel: 'Remove', noLabel: 'Cancel',
+      onConfirm: async () => { setConfirm(null); try { await api('/api/staff?id=' + p.id, { method: 'DELETE' }); setStaff((prev) => prev.filter((x) => x.id !== p.id)); flash('Removed.'); } catch (e) { flash(e.message); } },
     });
   }
 
   const weekLabel = weekOffset === 0 ? 'This week' : weekOffset === -1 ? 'Last week' : weekOffset === 1 ? 'Next week' : (weekOffset < 0 ? Math.abs(weekOffset) + ' weeks ago' : 'In ' + weekOffset + ' weeks');
-  const curStatus = status[weekISO];
 
   return (
     <div>
-      {/* Sub-navigation */}
-      <div style={s('display:inline-flex;gap:3px;background:#fff;border:1px solid #d8dde0;border-radius:999px;padding:3px;margin-bottom:24px;')}>
-        {[{ k: 'rota', label: 'Rota', icon: Icons.calendar }, { k: 'staff', label: 'Staff', icon: Icons.book }].map((t) => {
-          const active = page === t.k;
-          return (
-            <Hover key={t.k} tag="button" onClick={() => setPage(t.k)}
-              base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:8px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;' + (active ? 'background:#005eb8;color:#fff;' : 'background:none;color:#4c6272;')}
-              hover={active ? '' : 'color:#212b32;'}>
-              <Svg w={16} sw={2}>{t.icon}</Svg>{t.label}
-            </Hover>
-          );
-        })}
-      </div>
-
       {page === 'rota' ? renderRota() : renderStaff()}
 
-      {/* Toast + chat bar (rota page) */}
-      {page === 'rota' && (
-        <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:50;pointer-events:none;')}>
-          <div style={s('max-width:1000px;margin:0 auto;padding:0 16px 16px;display:flex;flex-direction:column;')}>
-            {toast && <div style={s('pointer-events:auto;align-self:flex-start;background:#212b32;color:#fff;border-radius:10px;padding:11px 16px;font-size:14px;line-height:1.45;margin-bottom:10px;box-shadow:0 6px 20px rgba(33,43,50,.22);white-space:pre-wrap;max-width:560px;')}>{toast}</div>}
-            {hasRota && !isReadOnly && (
-              <div style={s('pointer-events:auto;display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:6px 6px 6px 18px;box-shadow:0 4px 16px rgba(33,43,50,.12);')}>
-                <Svg w={20} stroke="#005eb8" sw={2} style={s('flex:none;')}>{Icons.sparkle}</Svg>
-                <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendChat(); }} placeholder="Ask for any change — move shifts, days off, swaps…" style={s('flex:1;border:none;outline:none;background:transparent;font:inherit;font-size:16px;color:#212b32;min-width:0;')} />
-                <Hover tag="button" onClick={sendChat} aria-label="Send" disabled={busy} base={'flex:none;width:42px;height:42px;border-radius:999px;border:none;background:#005eb8;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;' + (busy ? 'opacity:.6;' : '')} hover="background:#004a93;"><Svg w={20} sw={2.2}>{Icons.arrow}</Svg></Hover>
-              </div>
-            )}
+      {page === 'rota' && hasRota && !isReadOnly && (
+        <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid #d8dde0;')}>
+          <div style={s('max-width:1000px;margin:0 auto;padding:14px 24px 18px;')}>
+            {toast && <div style={s('background:#212b32;color:#fff;border-radius:10px;padding:11px 16px;font-size:14px;line-height:1.45;margin-bottom:12px;white-space:pre-wrap;max-width:560px;')}>{toast}</div>}
+            <form onSubmit={sendChat} style={s('display:flex;gap:10px;align-items:center;')}>
+              <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask for any change, or describe the situation…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <Hover tag="button" type="submit" aria-label="Send" disabled={busy} base={'flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;' + (busy ? 'opacity:.6;' : '')} hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
+            </form>
           </div>
         </div>
+      )}
+
+      {/* Toast on staff page / when no chat bar is shown */}
+      {toast && !(page === 'rota' && hasRota && !isReadOnly) && (
+        <div style={s('position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:60;background:#212b32;color:#fff;border-radius:10px;padding:11px 16px;font-size:14px;max-width:90%;white-space:pre-wrap;')}>{toast}</div>
       )}
 
       {warning && (
@@ -252,7 +266,7 @@ export default function RotaSystem() {
           </div>
           <div style={s('display:flex;gap:10px;padding:0 24px 22px;flex-wrap:wrap;')}>
             <Hover tag="button" onClick={() => { setWarning(null); generate(); }} base={GREEN_BTN + 'font-size:15px;padding:11px 18px;'} active="transform:translateY(4px);box-shadow:none;">Auto-rebalance</Hover>
-            {warning.undo && <Hover tag="button" onClick={() => { warning.undo(); setWarning(null); flash('Change undone.'); }} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:11px 18px;cursor:pointer;" hover="background:#f0f4f5;">Undo change</Hover>}
+            {canUndo && <Hover tag="button" onClick={() => { setWarning(null); undo(); }} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:11px 18px;cursor:pointer;" hover="background:#f0f4f5;">Undo change</Hover>}
             <Hover tag="button" onClick={() => setWarning(null)} base="font-family:inherit;font-size:15px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 14px;cursor:pointer;" hover="color:#212b32;">Keep anyway</Hover>
           </div>
         </Sheet>
@@ -283,13 +297,13 @@ export default function RotaSystem() {
             <h1 className="riva-hero-h1" style={s('font-size:36px;font-weight:700;margin:0;letter-spacing:-0.01em;')}>Duty rota</h1>
             <p style={s('font-size:17px;color:#4c6272;margin:6px 0 0;')}>2 staff minimum on every shift · early and late shared evenly</p>
           </div>
-          <div style={s('display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d8dde0;border-radius:999px;padding:4px;')}>
-            <Hover tag="button" onClick={() => setWeekOffset((w) => w - 1)} aria-label="Previous week" base="width:40px;height:40px;border-radius:999px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronLeft}</Svg></Hover>
-            <div style={s('text-align:center;min-width:172px;padding:0 6px;')}>
+          <div style={s('display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:4px;')}>
+            <Hover tag="button" onClick={() => setWeekOffset((w) => w - 1)} aria-label="Previous week" base="width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronLeft}</Svg></Hover>
+            <div style={s('text-align:center;min-width:160px;padding:0 6px;')}>
               <div style={s('font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#768692;')}>{weekLabel}</div>
               <div style={s('font-size:16px;font-weight:700;color:#212b32;font-variant-numeric:tabular-nums;')}>{weekRangeLabel(weekISO)}</div>
             </div>
-            <Hover tag="button" onClick={() => setWeekOffset((w) => w + 1)} aria-label="Next week" base="width:40px;height:40px;border-radius:999px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronRight}</Svg></Hover>
+            <Hover tag="button" onClick={() => setWeekOffset((w) => w + 1)} aria-label="Next week" base="width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronRight}</Svg></Hover>
           </div>
         </div>
 
@@ -312,59 +326,102 @@ export default function RotaSystem() {
           </div>
         )}
 
-        {hasRota && renderGrid()}
+        {hasRota && (
+          <>
+            {renderToolbar()}
+            {renderGridDesktop()}
+            {renderGridMobile()}
+          </>
+        )}
       </div>
     );
   }
 
-  function renderGrid() {
+  function renderToolbar() {
+    return (
+      <div style={s('display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;')}>
+        <div style={s('display:flex;align-items:center;gap:16px;flex-wrap:wrap;')}>
+          <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.E.bg + ';')} />Early {shiftRange(times, 'E')}</span>
+          <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.L.bg + ';')} />Late {shiftRange(times, 'L')}</span>
+          <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.AL.bg + ';')} />Leave</span>
+        </div>
+        <div style={s('display:flex;align-items:center;gap:8px;flex-wrap:wrap;')}>
+          {canEdit && <Hover tag="button" onClick={undo} disabled={!canUndo} aria-label="Undo" base={ICON_BTN + (canUndo ? '' : 'opacity:.4;cursor:default;')} hover={canUndo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.undo}</Svg></Hover>}
+          {canEdit && <Hover tag="button" onClick={redo} disabled={!canRedo} aria-label="Redo" base={ICON_BTN + (canRedo ? '' : 'opacity:.4;cursor:default;')} hover={canRedo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.redo}</Svg></Hover>}
+          {canEdit && <Hover tag="button" onClick={generate} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg>Regenerate</Hover>}
+          <Hover tag="button" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg>Copy for WhatsApp</Hover>
+        </div>
+      </div>
+    );
+  }
+
+  function renderGridDesktop() {
     const cols = `64px repeat(${staff.length}, minmax(64px, 1fr))`;
     return (
-      <>
-        <div style={s('display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;')}>
-          <div style={s('display:flex;align-items:center;gap:16px;flex-wrap:wrap;')}>
-            <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.E.bg + ';')} />Early {shiftRange(times, 'E')}</span>
-            <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.L.bg + ';')} />Late {shiftRange(times, 'L')}</span>
-            <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.AL.bg + ';')} />Leave</span>
-          </div>
-          <div style={s('display:flex;align-items:center;gap:10px;')}>
-            {canEdit && <Hover tag="button" onClick={generate} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg>Regenerate</Hover>}
-            <Hover tag="button" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg>Copy for WhatsApp</Hover>
-          </div>
+      <div className="riva-grid-desktop" style={s(CARD + 'padding:4px 8px;overflow-x:auto;')}>
+        <div style={{ display: 'grid', gridTemplateColumns: cols, gap: '6px', padding: '12px 8px' }}>
+          <div />
+          {staff.map((p) => (
+            <div key={p.id} style={s('display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;')}>
+              <span style={s('flex:none;width:34px;height:34px;border-radius:50%;background:#e8f1f8;color:#003087;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;')}>{initials(p.name)}</span>
+              <span style={s('max-width:100%;font-size:13px;font-weight:600;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{firstName(p.name)}</span>
+            </div>
+          ))}
         </div>
-
-        <div style={s(CARD + 'padding:4px 8px;overflow-x:auto;')}>
-          <div style={{ display: 'grid', gridTemplateColumns: cols, gap: '6px', padding: '12px 8px' }}>
-            <div />
-            {staff.map((p) => (
-              <div key={p.id} style={s('display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;')}>
-                <span style={s('flex:none;width:34px;height:34px;border-radius:50%;background:#e8f1f8;color:#003087;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;')}>{initials(p.name)}</span>
-                <span style={s('max-width:100%;font-size:13px;font-weight:600;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{firstName(p.name)}</span>
-              </div>
-            ))}
+        {days.map((day, d) => (
+          <div key={d} style={{ display: 'grid', gridTemplateColumns: cols, gap: '6px', padding: '4px 8px', borderTop: '1px solid #eef1f2', alignItems: 'stretch' }}>
+            <div style={s('display:flex;flex-direction:column;justify-content:center;min-width:0;padding:4px 2px;')}>
+              <b style={s('font-size:15px;line-height:1.2;color:#212b32;')}>{day.short}</b>
+              <span style={s('font-size:12px;color:#768692;font-variant-numeric:tabular-nums;')}>{day.date}</span>
+            </div>
+            {staff.map((p) => {
+              const code = grid[p.id] ? grid[p.id][d] : null;
+              const cv = cellView(code, times);
+              const clickable = canEdit && code !== 'AL';
+              return (
+                <Hover key={p.id} tag="button" onClick={() => cycleCell(p.id, d)} title={firstName(p.name)} disabled={!clickable}
+                  base={'display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;min-height:46px;text-align:center;border:none;background:' + cv.bg + ';cursor:' + (clickable ? 'pointer' : 'default') + ';'}
+                  hover={clickable ? 'box-shadow:inset 0 0 0 2px rgba(0,94,184,.28);' : ''}>
+                  <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>
+                </Hover>
+              );
+            })}
           </div>
-          {days.map((day, d) => (
-            <div key={d} style={{ display: 'grid', gridTemplateColumns: cols, gap: '6px', padding: '4px 8px', borderTop: '1px solid #eef1f2', alignItems: 'stretch' }}>
-              <div style={s('display:flex;flex-direction:column;justify-content:center;min-width:0;padding:4px 2px;')}>
-                <b style={s('font-size:15px;line-height:1.2;color:#212b32;')}>{day.short}</b>
-                <span style={s('font-size:12px;color:#768692;font-variant-numeric:tabular-nums;')}>{day.date}</span>
-              </div>
-              {staff.map((p) => {
+        ))}
+      </div>
+    );
+  }
+
+  // Mobile: one card per staff member showing their week.
+  function renderGridMobile() {
+    return (
+      <div className="riva-grid-mobile" style={s('flex-direction:column;gap:14px;')}>
+        {staff.map((p) => (
+          <div key={p.id} style={s(CARD + 'overflow:hidden;')}>
+            <div style={s('display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #eef1f2;')}>
+              <span style={s('flex:none;width:40px;height:40px;border-radius:50%;background:#005eb8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;')}>{initials(p.name)}</span>
+              <b style={s('font-size:17px;font-weight:700;')}>{p.name}</b>
+            </div>
+            <div>
+              {days.map((day, d) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
                 const clickable = canEdit && code !== 'AL';
                 return (
-                  <Hover key={p.id} tag="button" onClick={() => cycleCell(p.id, d)} title={firstName(p.name)} disabled={!clickable}
-                    base={'display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;min-height:46px;text-align:center;border:none;background:' + cv.bg + ';cursor:' + (clickable ? 'pointer' : 'default') + ';'}
-                    hover={clickable ? 'box-shadow:inset 0 0 0 2px rgba(0,94,184,.28);' : ''}>
-                    <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>
-                  </Hover>
+                  <button key={d} onClick={() => cycleCell(p.id, d)} disabled={!clickable}
+                    style={s('display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:none;background:#fff;padding:11px 16px;cursor:' + (clickable ? 'pointer' : 'default') + ';' + (d ? 'border-top:1px solid #f3f6f7;' : ''))}>
+                    <span style={s('flex:1;min-width:0;')}>
+                      <b style={s('font-size:15px;color:#212b32;')}>{day.long}</b>
+                      <span style={s('font-size:12.5px;color:#768692;')}>{'  ·  ' + day.date}</span>
+                    </span>
+                    <span style={s('flex:none;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;background:' + cv.bg + ';color:' + cv.color + ';')}>{cv.main || 'Off'}</span>
+                  </button>
                 );
               })}
             </div>
-          ))}
-        </div>
-      </>
+          </div>
+        ))}
+      </div>
     );
   }
 

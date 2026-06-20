@@ -11,7 +11,7 @@ const TABS = [
   { key: 'dpia', label: 'DPIA', icon: Icons.shield },
 ];
 
-export default function AppHeader({ v, subtitle = 'Reception help & guidance' }) {
+export default function AppHeader({ v, subtitle = 'Reception help & guidance', tabs = null }) {
   const showTabs = !!(v && v.onSetView);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -34,6 +34,22 @@ export default function AppHeader({ v, subtitle = 'Reception help & guidance' })
               return (
                 <Hover key={t.key} tag="button" onClick={() => v.onSetView(t.key)} className="riva-tab"
                   base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
+                  hover={active ? '' : 'color:#212b32;'}>
+                  <Svg w={16} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
+                </Hover>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Page tabs (e.g. Rota / Staff) — segmented control, shown all sizes. */}
+        {tabs && (
+          <div className="riva-page-tabs" style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:3px;')}>
+            {tabs.items.map((t) => {
+              const active = tabs.active === t.key;
+              return (
+                <Hover key={t.key} tag="button" onClick={() => tabs.onSelect(t.key)} className="riva-tab"
+                  base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:7px;padding:7px 14px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
                   hover={active ? '' : 'color:#212b32;'}>
                   <Svg w={16} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
                 </Hover>

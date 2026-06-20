@@ -68,7 +68,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* Drop the bot avatar on phones so answers use the full width. */
   .riva-bot-avatar { display: none !important; }
+
+  /* Rota: the wide grid becomes one card per staff member on phones. */
+  .riva-grid-desktop { display: none !important; }
+  .riva-grid-mobile { display: flex !important; }
 }
+
+/* Rota grid: desktop shows the grid, mobile shows per-staff cards. */
+.riva-grid-mobile { display: none; }
 
 /* Popups: centered dialog on desktop, bottom sheet on mobile. The inner panel
  * carries .riva-sheet (and its own max-width inline); on phones it goes
