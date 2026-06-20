@@ -9,13 +9,48 @@
 // is `answerable: false` and the UI shows a decline.
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
-import { buildAskPrompt, parseAiJson } from '@/lib/ai/prompt';
+import { buildAskPrompt, parseAiJson, buildCondenseQuery } from '@/lib/ai/prompt';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const TOP_K = 5;
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_HEADERS = (apiKey) => ({
+  Authorization: `Bearer ${apiKey}`,
+  'Content-Type': 'application/json',
+  'HTTP-Referer': 'https://riverside-practice.local',
+  'X-Title': 'Riverside Practice Q&A',
+});
+
+// Resolve a follow-up ("how is this done") into a standalone search query using
+// the conversation so far, so retrieval looks in the right documents. Best-effort:
+// any failure falls back to the original question, so a hiccup here never blocks
+// an answer.
+async function condenseQuery({ question, history, apiKey, model }) {
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: OPENROUTER_HEADERS(apiKey),
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        max_tokens: 64,
+        messages: [{ role: 'user', content: buildCondenseQuery({ history, question }) }],
+      }),
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    const out = (data?.choices?.[0]?.message?.content || '')
+      .replace(/^["'`]+|["'`]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return out;
+  } catch (e) {
+    return '';
+  }
+}
 
 function locationOf(chunk) {
   if (chunk.view && chunk.view.page) return 'Page ' + chunk.view.page;
@@ -61,9 +96,17 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
 
+  // Resolve follow-ups against the conversation before retrieving, so e.g.
+  // "how is this done" searches for the actual subject, not the literal words.
+  let searchQuery = question;
+  if (history.trim()) {
+    const condensed = await condenseQuery({ question, history, apiKey, model });
+    if (condensed) searchQuery = condensed;
+  }
+
   // Tier B — semantically retrieve the most relevant chunks (never fatal).
   let chunks = [];
-  try { chunks = await retrieve(question, TOP_K); } catch (e) { chunks = []; }
+  try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
 
   // Number them as Sources and keep a ref -> chunk map for citation resolution.
   const refMap = new Map();
@@ -77,14 +120,9 @@ export async function POST(request) {
   const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog });
 
   try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://riverside-practice.local',
-        'X-Title': 'Riverside Practice Q&A',
-      },
+      headers: OPENROUTER_HEADERS(apiKey),
       body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }),
     });
 
