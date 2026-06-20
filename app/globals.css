@@ -45,11 +45,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-head-text { flex: 1; min-width: 0; }
 .riva-head-title { overflow: hidden; text-overflow: ellipsis; }
 
+/* The mobile menu button is hidden on desktop (the tab pills are used there). */
+.riva-nav-btn { display: none; }
+
 @media (max-width: 600px) {
-  /* Tighter header; tabs collapse to icon-only so all three always fit. */
   .riva-header { padding: 0 14px !important; gap: 10px !important; }
-  .riva-tab { padding: 7px 11px !important; }
-  .riva-tab-label { display: none !important; }
+
+  /* Swap the tab pills for a single menu button that opens the nav overlay. */
+  .riva-tabs-desktop { display: none !important; }
+  .riva-nav-btn { display: inline-flex !important; }
 
   /* Multi-column blocks stack into a single column. */
   .riva-grid-2 { grid-template-columns: 1fr !important; }
@@ -57,6 +61,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* Ease the largest hero headings down a notch on phones. */
   .riva-hero-h1 { font-size: 27px !important; }
+
+  /* Scroll without a visible scrollbar (native-app feel). Scrolling still works. */
+  body, #riva-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+  body::-webkit-scrollbar, #riva-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
 }
 
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
