@@ -28,10 +28,13 @@ function publicCopyFactory(docId) {
 // image, an HTML rendition) into public/ so the browser can load it.
 function publicWriteFactory(docId) {
   return (filename, buffer) => {
+    // Never let a parser-supplied name escape the document's asset directory.
+    const safeName = path.basename(String(filename));
+    if (!safeName || safeName === '.' || safeName === '..') throw new Error(`Invalid asset filename: ${filename}`);
     const destDir = path.join(PUBLIC_ASSETS_RAG, docId);
     fs.mkdirSync(destDir, { recursive: true });
-    fs.writeFileSync(path.join(destDir, filename), buffer);
-    return `assets/rag/${docId}/${filename}`;
+    fs.writeFileSync(path.join(destDir, safeName), buffer);
+    return `assets/rag/${docId}/${safeName}`;
   };
 }
 

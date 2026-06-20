@@ -6,8 +6,11 @@ import * as text from './text.mjs';
 import * as image from './image.mjs';
 import * as pdf from './pdf.mjs';
 import * as docx from './docx.mjs';
+import * as doc from './doc.mjs';
+import * as rtf from './rtf.mjs';
+import * as pptx from './pptx.mjs';
 
-const PARSERS = [text, image, pdf, docx];
+const PARSERS = [text, image, pdf, docx, doc, rtf, pptx];
 
 const byExt = new Map();
 for (const mod of PARSERS) {
