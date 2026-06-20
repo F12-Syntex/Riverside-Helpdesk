@@ -32,8 +32,8 @@ export default function MobileNav({ v, onClose }) {
 
   return (
     <div style={s('position:fixed;inset:0;z-index:80;background:#fff;display:flex;flex-direction:column;')}>
-      <div style={s('flex:none;height:72px;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid #d8dde0;')}>
-        <img src="/assets/nhs-logo.png" alt="NHS" style={s('height:30px;width:auto;display:block;')} />
+      <div className="riva-header" style={s('flex:none;height:72px;display:flex;align-items:center;gap:14px;padding:0 24px;border-bottom:1px solid #d8dde0;')}>
+        <img src="/assets/nhs-logo.png" alt="NHS" style={s('height:30px;width:auto;display:block;flex:none;')} />
         <span style={s('flex:1;min-width:0;font-weight:700;font-size:17px;')}>Menu</span>
         <Hover tag="button" onClick={onClose} aria-label="Close menu" base="flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:6px;display:flex;" hover="color:#212b32;"><Svg w={26}>{Icons.close}</Svg></Hover>
       </div>
