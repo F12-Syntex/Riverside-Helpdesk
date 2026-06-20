@@ -10,7 +10,10 @@ let _index = null;
 
 function loadIndex() {
   if (_index) return _index;
-  const idx = { chunks: new Map(), ids: [], vectors: [], dim: 0, catalog: [] };
+  // entries: one {id, vec} per chunk that has an embedding, ready for scoring.
+  // Vectors are stored once per unique contentHash, so several chunks may share
+  // the same vector — we resolve that mapping here at load time.
+  const idx = { chunks: new Map(), entries: [], dim: 0, catalog: [] };
   try {
     if (fs.existsSync(CHUNKS_PATH)) {
       for (const line of fs.readFileSync(CHUNKS_PATH, 'utf8').split(/\n/)) {
@@ -22,9 +25,18 @@ function loadIndex() {
     }
     if (fs.existsSync(EMBEDDINGS_PATH)) {
       const e = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf8'));
-      idx.ids = e.ids || [];
-      idx.vectors = e.vectors || [];
       idx.dim = e.dim || 0;
+      if (e.hashes) {
+        const vecByHash = new Map();
+        e.hashes.forEach((h, i) => vecByHash.set(h, e.vectors[i]));
+        for (const c of idx.chunks.values()) {
+          const v = c.contentHash && vecByHash.get(c.contentHash);
+          if (v) idx.entries.push({ id: c.id, vec: v });
+        }
+      } else if (e.ids) {
+        // Legacy index keyed by chunk id (pre content-addressing).
+        (e.ids || []).forEach((id, i) => { if (e.vectors[i]) idx.entries.push({ id, vec: e.vectors[i] }); });
+      }
     }
     if (fs.existsSync(CATALOG_PATH)) {
       idx.catalog = (JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8')).documents) || [];
@@ -38,7 +50,7 @@ function loadIndex() {
 }
 
 export function isReady() {
-  return loadIndex().ids.length > 0;
+  return loadIndex().entries.length > 0;
 }
 
 // Tier A — the always-on catalogue, so the model is aware of everything that
@@ -57,23 +69,32 @@ function cosine(a, b) {
   return dot / (Math.sqrt(na) * Math.sqrt(nb) + 1e-8);
 }
 
-// Tier B — semantic retrieval of the most relevant chunks for a query.
+// Two near-identical chunks above this cosine similarity are treated as the same
+// fact for retrieval. Documents that repeat the same information then contribute
+// it to the answer once — sparing the model's context window — while every
+// distinct source is still surfaced for citation (nothing is dropped from disk).
+const NEAR_DUP_SIM = 0.95;
+
+// Tier B — semantic retrieval of the most relevant chunks for a query, with
+// near-duplicate passages collapsed so overlapping documents don't crowd out
+// other relevant content.
 export async function retrieve(query, k = 4) {
   const i = loadIndex();
-  if (!i.ids.length) return [];
+  if (!i.entries.length) return [];
   let qv;
   try { qv = await embedOne(query); } catch (e) { return []; }
   if (!qv) return [];
   const scored = [];
-  for (let j = 0; j < i.ids.length; j++) {
-    const v = i.vectors[j];
-    if (v) scored.push({ id: i.ids[j], score: cosine(qv, v) });
-  }
+  for (const en of i.entries) scored.push({ id: en.id, vec: en.vec, score: cosine(qv, en.vec) });
   scored.sort((a, b) => b.score - a.score);
+
   const out = [];
-  for (const s of scored.slice(0, k)) {
+  const kept = [];
+  for (const s of scored) {
+    if (out.length >= k) break;
+    if (kept.some((v) => cosine(v, s.vec) >= NEAR_DUP_SIM)) continue; // redundant with one already chosen
     const c = i.chunks.get(s.id);
-    if (c) out.push({ ...c, score: s.score });
+    if (c) { out.push({ ...c, score: s.score }); kept.push(s.vec); }
   }
   return out;
 }

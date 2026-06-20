@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config, ROOT } from './lib/config.mjs';
-import { chunkText, makeChunkId, estTokens } from './lib/chunk.mjs';
+import { chunkText, makeChunkId, estTokens, contentHashOf } from './lib/chunk.mjs';
 import { embedTexts } from './lib/embed.mjs';
 import { summariseDoc } from './lib/summarize.mjs';
 import { loadStore, upsertDoc, writeStore } from './lib/index-io.mjs';
@@ -53,6 +53,7 @@ async function migrateOne(store, { file, docId, title }) {
         images,
         view,
         tokens: estTokens(piece),
+        contentHash: contentHashOf(piece),
       });
     }
   }

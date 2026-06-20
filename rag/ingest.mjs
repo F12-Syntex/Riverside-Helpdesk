@@ -8,10 +8,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config, PUBLIC_ASSETS_RAG } from './lib/config.mjs';
 import { getParser, SUPPORTED_EXTS } from './parsers/index.mjs';
-import { chunkText, makeChunkId, estTokens } from './lib/chunk.mjs';
+import { chunkText, makeChunkId, estTokens, contentHashOf } from './lib/chunk.mjs';
 import { embedTexts } from './lib/embed.mjs';
 import { summariseDoc } from './lib/summarize.mjs';
-import { loadStore, upsertDoc, writeStore } from './lib/index-io.mjs';
+import { loadStore, upsertDoc, writeStore, cachedVector } from './lib/index-io.mjs';
 import { listSourceFiles, relPath, docIdFor, docTitleFor, sha256 } from './lib/sources.mjs';
 
 function publicCopyFactory(docId) {
@@ -114,12 +114,37 @@ async function main() {
             images: sec.images || [],
             view,
             tokens: estTokens(piece),
+            contentHash: contentHashOf(piece),
           });
         }
       }
       if (!records.length) { console.log('no text extracted, skipped'); skipped++; continue; }
 
-      const vectors = await embedTexts(records.map((r) => r.text));
+      // Embed only passages we have never embedded before. Reuse cached vectors
+      // for text already in the index (shared boilerplate, or paragraphs that
+      // survived an edit elsewhere in this file) so re-ingest stays cheap and the
+      // store never holds two copies of the same vector.
+      const vectors = new Array(records.length);
+      const toEmbed = [];
+      const toEmbedIdx = [];
+      const localByHash = new Map();
+      records.forEach((r, i) => {
+        const hit = cachedVector(store, r.contentHash) || localByHash.get(r.contentHash);
+        if (hit) { vectors[i] = hit; return; }
+        localByHash.set(r.contentHash, null); // reserve so duplicates within this doc embed once
+        toEmbed.push(r.text);
+        toEmbedIdx.push(i);
+      });
+      if (toEmbed.length) {
+        const fresh = await embedTexts(toEmbed);
+        fresh.forEach((v, k) => {
+          const i = toEmbedIdx[k];
+          vectors[i] = v;
+          localByHash.set(records[i].contentHash, v);
+        });
+        // Backfill any same-doc duplicates that reserved before their vector existed.
+        records.forEach((r, i) => { if (!vectors[i]) vectors[i] = localByHash.get(r.contentHash); });
+      }
       const sample = records.map((r) => r.text).join('\n\n').slice(0, 4000);
       const { summary, tags } = await summariseDoc(title, sample);
 
@@ -131,7 +156,8 @@ async function main() {
         catalog: { docId, title, summary, tags, chunks: records.length, source: 'rag/sources/' + rel },
         manifest: { path: 'rag/sources/' + rel, sha256: hash, size: st.size, mtime: st.mtimeMs, chunks: records.length, title, processedAt: new Date().toISOString() },
       });
-      console.log(`${records.length} chunks`);
+      const reused = records.length - toEmbed.length;
+      console.log(`${records.length} chunks` + (reused ? ` (${toEmbed.length} embedded, ${reused} reused)` : ''));
       processed++;
     } catch (e) {
       console.log('FAILED: ' + e.message);

@@ -1,8 +1,22 @@
 // Turning cleaned text into retrieval-sized chunks, plus small id/token helpers.
 // One chunking strategy for every source type keeps the data standard uniform.
+import crypto from 'node:crypto';
 
 export function estTokens(text) {
   return Math.ceil((text || '').length / 4);
+}
+
+// Content-addressing: a stable fingerprint of a chunk's *meaning-bearing* text,
+// so the same passage appearing in several documents shares a single embedding
+// instead of bloating the index. Normalised (lowercased, whitespace collapsed)
+// so trivial formatting differences fold together — but nothing semantic is
+// guessed at; only text that is identical after normalisation is merged.
+export function normalizeForHash(text) {
+  return String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+export function contentHashOf(text) {
+  return crypto.createHash('sha256').update(normalizeForHash(text)).digest('hex');
 }
 
 export function slugify(s) {
