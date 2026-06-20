@@ -850,12 +850,6 @@ class RiversidePracticeQA extends React.Component {
             <span style={s('font-size:13px;color:#4c6272;')}>Reception help &amp; guidance</span>
           </div>
           <div style={s('margin-left:auto;display:flex;gap:12px;align-items:center;')}>
-            {!v.isKb && (
-              <>
-                <Hover tag="button" onClick={v.onNewChat} base="background:#fff;color:#005eb8;border:2px solid #005eb8;border-radius:8px;padding:8px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#e8f1f8;">New chat</Hover>
-                <Hover tag="button" onClick={v.onOpenAdd} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #002a52;" active="transform:translateY(4px);box-shadow:none;">Add a guide</Hover>
-              </>
-            )}
             <div style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:999px;padding:3px;')}>
               <Hover tag="button" onClick={() => v.onSetView('assistant')}
                 base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:none;color:#4c6272;' : 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);')}
