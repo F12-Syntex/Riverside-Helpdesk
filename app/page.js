@@ -141,6 +141,9 @@ class RiversidePracticeQA extends React.Component {
       const m = JSON.parse(localStorage.getItem('riva-chat-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [], messages: Array.isArray(m) ? m : [] });
     } catch (e) {}
+    // Load the document library up front so "Browse by area" can surface the
+    // full knowledge base, not just the curated guides.
+    this.loadKb();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -423,6 +426,31 @@ class RiversidePracticeQA extends React.Component {
         onEnter: () => self.hoverArea(c.id),
         onLeave: () => self.leaveArea(c.id),
         questions: inCat.map((g) => ({ question: g.question, onClick: () => self.askGuide(g) })),
+      });
+    }
+
+    // Append the knowledge-base document groups as browsable areas. Each one
+    // lists its documents; selecting a document opens it in the source viewer.
+    const KB_DESC = {
+      emis: 'Official EMIS Web reference guides.',
+      policy: 'Practice policies.',
+      protocol: 'Clinical and operational protocols and procedures.',
+      guide: 'How-to guides, references and handbooks.',
+      form: 'Forms, posters, checklists and templates.',
+      other: 'Other practice documents.',
+    };
+    const kbGroupsRaw = (this.state.kb && this.state.kb.groups) || [];
+    for (const g of kbGroupsRaw) {
+      const id = 'kb-' + g.key;
+      areas.push({
+        id,
+        label: g.label,
+        count: g.docs.length,
+        desc: KB_DESC[g.key] || 'Practice documents.',
+        hovered: this.state.hoveredArea === id,
+        onEnter: () => self.hoverArea(id),
+        onLeave: () => self.leaveArea(id),
+        questions: g.docs.map((d) => ({ question: d.title, onClick: () => self.openDoc(d) })),
       });
     }
 
@@ -902,7 +930,7 @@ class RiversidePracticeQA extends React.Component {
                           <span style={s('font-size:14px;color:#4c6272;line-height:1.45;text-wrap:pretty;')}>{a.desc}</span>
                         </Hover>
                         {a.hovered && a.questions.length > 0 && (
-                          <div style={s('position:absolute;left:0;right:0;top:calc(100% - 4px);z-index:20;background:#fff;border:1px solid #005eb8;border-radius:12px;box-shadow:0 12px 30px rgba(33,43,50,.18);padding:6px;display:flex;flex-direction:column;gap:1px;')}>
+                          <div style={s('position:absolute;left:0;right:0;top:calc(100% - 4px);z-index:20;background:#fff;border:1px solid #005eb8;border-radius:12px;box-shadow:0 12px 30px rgba(33,43,50,.18);padding:6px;display:flex;flex-direction:column;gap:1px;max-height:340px;overflow-y:auto;')}>
                             {a.questions.map((q, i) => (
                               <Hover key={i} onClick={q.onClick} base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:9px 11px;border-radius:8px;cursor:pointer;font:inherit;font-size:14.5px;line-height:1.35;color:#005eb8;font-weight:500;" hover="background:#e8f1f8;">
                                 <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.chevronRight}</Svg><span style={s('flex:1;min-width:0;text-wrap:pretty;')}>{q.question}</span>
