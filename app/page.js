@@ -938,6 +938,8 @@ class RiversidePracticeQA extends React.Component {
           <span>·</span>
           <span>Controller: {d.controller.name}</span>
           <span>·</span>
+          <span>Responsible: {d.controller.responsible}</span>
+          <span>·</span>
           <Hover tag="a" href={'/' + d.templateUrl} base="color:#005eb8;text-decoration:underline;text-underline-offset:.12em;" hover="color:#003087;text-decoration-thickness:2px;">Open the blank ICO template</Hover>
         </div>
         <p style={s('font-size:12.5px;color:#aeb7bd;text-align:center;line-height:1.5;max-width:560px;margin:0 auto;text-wrap:pretty;')}>A working self-assessment to support the practice’s data protection process — not a substitute for review and sign-off by the Data Protection Officer.</p>
