@@ -13,7 +13,6 @@ import { s, Hover, Svg, Icons } from './ui';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
-  { href: '/', label: 'Practice tools' },
   { href: '/helpbot', label: 'Reception help & guidance' },
   { href: '/rota', label: 'Staff rota generator' },
 ];
