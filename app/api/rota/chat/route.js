@@ -62,7 +62,7 @@ export async function POST(request) {
     if (!parsed) return NextResponse.json({ error: "Sorry, I couldn't work out that change. Try rephrasing it." }, { status: 502 });
 
     const newGrid = sanitiseGrid(parsed.grid, staff, week);
-    const schedule = { grid: newGrid, times };
+    const schedule = { grid: newGrid, times: parsed.times || times };
     const saved = await sql`
       INSERT INTO rotas (week_starting, schedule) VALUES (${week}, ${JSON.stringify(schedule)}::jsonb)
       ON CONFLICT (week_starting) DO UPDATE SET schedule = EXCLUDED.schedule, updated_at = now()
