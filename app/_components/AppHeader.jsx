@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { s, Hover, Svg, Icons } from './ui';
 
 const TABS = [
@@ -11,8 +12,8 @@ const TABS = [
 export default function AppHeader({ v }) {
   return (
     <header style={s('flex:none;height:72px;display:flex;align-items:center;gap:14px;padding:0 24px;background:#fff;border-bottom:1px solid #d8dde0;')}>
-      <Hover tag="button" onClick={v.onNewChat} aria-label="Start a new chat" base="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;" hover="opacity:.85;">
-        <img src="/assets/nhs-logo.png" alt="NHS — start a new chat" style={s('height:30px;width:auto;display:block;')} />
+      <Hover tag={Link} href="/" aria-label="Back to practice tools" base="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;" hover="opacity:.85;">
+        <img src="/assets/nhs-logo.png" alt="NHS — back to practice tools" style={s('height:30px;width:auto;display:block;')} />
       </Hover>
       <div style={s('display:flex;flex-direction:column;line-height:1.15;')}>
         <span style={s('font-weight:700;font-size:18px;white-space:nowrap;')}>The Riverside Practice</span>
