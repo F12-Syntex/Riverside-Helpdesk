@@ -17,6 +17,11 @@ const TOOLS = [
     title: 'Reception help & guidance',
     description: 'Ask how to do something in EMIS, or what to do at the front desk.',
   },
+  {
+    href: '/rota',
+    title: 'Staff rota generator',
+    description: 'Build and balance staff rotas with help from the practice assistant.',
+  },
 ];
 
 export default function Page() {
