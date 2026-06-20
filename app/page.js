@@ -15,7 +15,7 @@ const TOOLS = [
   {
     href: '/helpbot',
     title: 'Reception help & guidance',
-    description: 'Ask how to do something in EMIS, or what to do at the front desk.',
+    description: 'Ask anything covered by the practice’s documents — policies, processes, EMIS steps and front-desk guidance.',
   },
   {
     href: '/rota',
