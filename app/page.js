@@ -98,6 +98,8 @@ const Icons = {
   refresh: (<><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></>),
   fileLines: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="13" y2="17" /></>),
   file: (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>),
+  chat: (<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></>),
+  book: (<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>),
 };
 
 function assetSrc(p) {
@@ -123,6 +125,9 @@ class RiversidePracticeQA extends React.Component {
       draftError: false,
       hoveredArea: null,
       viewer: null,
+      view: 'assistant',   // 'assistant' | 'kb'
+      kb: null,            // loaded knowledge-base groups
+      kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
     };
   }
 
@@ -282,7 +287,29 @@ class RiversidePracticeQA extends React.Component {
     this.flagCopied(idx);
   }
 
-  newChat() { this.setState({ messages: [] }, () => this.save()); }
+  newChat() { this.setState({ messages: [], view: 'assistant' }, () => this.save()); }
+
+  setView(view) {
+    this.setState({ view });
+    if (view === 'kb' && this.state.kbStatus === 'idle') this.loadKb();
+  }
+
+  async loadKb() {
+    this.setState({ kbStatus: 'loading' });
+    try {
+      const res = await fetch('/api/kb');
+      if (!res.ok) throw new Error('bad status');
+      const data = await res.json();
+      this.setState({ kb: data, kbStatus: 'done' });
+    } catch (e) {
+      this.setState({ kbStatus: 'error' });
+    }
+  }
+
+  openDoc(doc) {
+    if (!doc.view) return;
+    this.openViewer({ docTitle: doc.title, location: doc.subtitle || '', view: doc.view });
+  }
 
   hoverArea(id) { if (this.state.hoveredArea !== id) this.setState({ hoveredArea: id }); }
   leaveArea(id) { if (this.state.hoveredArea === id) this.setState({ hoveredArea: null }); }
@@ -472,9 +499,31 @@ class RiversidePracticeQA extends React.Component {
       canRemove: self.state.draft.steps.length > 1,
     }));
 
+    const kb = this.state.kb || { groups: [], total: 0 };
+    const kbGroups = (kb.groups || []).map((g) => ({
+      key: g.key,
+      label: g.label,
+      docs: (g.docs || []).map((d) => ({
+        docId: d.docId,
+        title: d.title,
+        subtitle: d.subtitle || '',
+        summary: d.summary || '',
+        thumbs: (d.thumbs || []).map((t) => assetSrc(t)),
+        hasThumbs: !!(d.thumbs && d.thumbs.length),
+        canOpen: !!d.view,
+        onOpen: () => self.openDoc(d),
+      })),
+    }));
+
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice reception help',
       welcome: this.props.welcome != null ? this.props.welcome : 'For reception. Ask how to do something in EMIS, or what to do at the front desk.',
+      view: this.state.view,
+      isKb: this.state.view === 'kb',
+      kbStatus: this.state.kbStatus,
+      kbGroups,
+      kbTotal: kb.total || 0,
+      onSetView: (vw) => self.setView(vw),
       isEmpty: this.state.messages.length === 0,
       notEmpty: this.state.messages.length > 0,
       input: this.state.input,
@@ -713,6 +762,80 @@ class RiversidePracticeQA extends React.Component {
     );
   }
 
+  renderKbCard(d) {
+    return (
+      <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:14px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
+        <div style={s('display:flex;align-items:center;gap:14px;padding:16px 20px;')}>
+          <span style={s('flex:none;width:38px;height:38px;border-radius:9px;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={20}>{Icons.file}</Svg></span>
+          <div style={s('flex:1;min-width:0;')}>
+            <div style={s('font-size:17px;font-weight:700;line-height:1.25;text-wrap:pretty;')}>{d.title}</div>
+            <div style={s('font-size:13.5px;color:#768692;margin-top:2px;')}>{d.subtitle}</div>
+          </div>
+          {d.canOpen && (
+            <Hover tag="button" onClick={d.onOpen} base="flex:none;display:inline-flex;align-items:center;gap:6px;background:none;border:none;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;padding:6px 4px;" hover="color:#003087;">
+              View <Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg>
+            </Hover>
+          )}
+        </div>
+        {d.hasThumbs && (
+          <div style={s('display:flex;gap:8px;overflow-x:auto;padding:0 20px 16px;')}>
+            {d.thumbs.map((src, i) => (
+              <Hover key={i} tag="button" onClick={d.onOpen} base="flex:none;width:88px;height:62px;border:1px solid #d8dde0;border-radius:6px;overflow:hidden;background:#f7fbff;cursor:pointer;padding:0;" hover="border-color:#005eb8;">
+                <img src={src} alt="" loading="lazy" style={s('width:100%;height:100%;object-fit:cover;object-position:top;display:block;')} />
+              </Hover>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  renderKb(v) {
+    return (
+      <div style={s('max-width:820px;margin:0 auto;padding:32px 24px 48px;display:flex;flex-direction:column;gap:22px;')}>
+        <div style={s('text-align:center;padding:20px 0 4px;')}>
+          <div style={s('width:72px;height:72px;border-radius:18px;background:#fff;border:1px solid #d8dde0;box-shadow:0 1px 3px rgba(33,43,50,.08);display:inline-flex;align-items:center;justify-content:center;')}>
+            <img src="/assets/logo.png" alt="The Riverside Practice" style={s('width:44px;height:44px;display:block;')} />
+          </div>
+          <h1 style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>Knowledge base</h1>
+          <p style={s('font-size:19px;color:#4c6272;max-width:560px;margin:0 auto;text-wrap:pretty;')}>Every answer I give comes from these practice documents. I never use outside information.</p>
+          {v.kbTotal > 0 && <p style={s('font-size:14px;color:#768692;margin:12px 0 0;')}>{v.kbTotal} documents indexed</p>}
+        </div>
+
+        {v.kbStatus === 'loading' && (
+          <div style={s('display:flex;align-items:center;justify-content:center;gap:12px;color:#4c6272;font-size:17px;padding:30px 0;')}>
+            <span style={s('display:inline-flex;gap:5px;align-items:center;')}>
+              <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite;')} />
+              <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .2s;')} />
+              <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .4s;')} />
+            </span>
+            Loading the document library&hellip;
+          </div>
+        )}
+
+        {v.kbStatus === 'error' && (
+          <div style={s('text-align:center;color:#4c6272;font-size:17px;padding:24px 0;')}>
+            <p style={s('margin:0 0 14px;')}>Could not load the document library.</p>
+            <Hover tag="button" onClick={() => v.onSetView('kb')} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Try again</Hover>
+          </div>
+        )}
+
+        {v.kbStatus === 'done' && v.kbGroups.map((g) => (
+          <div key={g.key}>
+            <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;')}>{g.label}</div>
+            <div style={s('display:flex;flex-direction:column;gap:12px;')}>
+              {g.docs.map((d) => <React.Fragment key={d.docId}>{this.renderKbCard(d)}</React.Fragment>)}
+            </div>
+          </div>
+        ))}
+
+        {v.kbStatus === 'done' && v.kbGroups.length === 0 && (
+          <div style={s('text-align:center;color:#768692;font-size:16px;padding:24px 0;')}>No documents have been added to the knowledge base yet.</div>
+        )}
+      </div>
+    );
+  }
+
   render() {
     const v = this.renderVals();
     return (
@@ -726,19 +849,36 @@ class RiversidePracticeQA extends React.Component {
             <span style={s('font-weight:700;font-size:18px;white-space:nowrap;')}>The Riverside Practice</span>
             <span style={s('font-size:13px;color:#4c6272;')}>Reception help &amp; guidance</span>
           </div>
-          <div style={s('margin-left:auto;display:flex;gap:10px;align-items:center;')}>
-            <Hover tag="button" onClick={v.onNewChat} base="background:#fff;color:#005eb8;border:2px solid #005eb8;border-radius:8px;padding:8px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#e8f1f8;">New chat</Hover>
-            <Hover tag="button" onClick={v.onOpenAdd} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #002a52;" active="transform:translateY(4px);box-shadow:none;">Add a guide</Hover>
+          <div style={s('margin-left:auto;display:flex;gap:12px;align-items:center;')}>
+            {!v.isKb && (
+              <>
+                <Hover tag="button" onClick={v.onNewChat} base="background:#fff;color:#005eb8;border:2px solid #005eb8;border-radius:8px;padding:8px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#e8f1f8;">New chat</Hover>
+                <Hover tag="button" onClick={v.onOpenAdd} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #002a52;" active="transform:translateY(4px);box-shadow:none;">Add a guide</Hover>
+              </>
+            )}
+            <div style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:999px;padding:3px;')}>
+              <Hover tag="button" onClick={() => v.onSetView('assistant')}
+                base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:none;color:#4c6272;' : 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);')}
+                hover={v.isKb ? 'color:#212b32;' : ''}>
+                <Svg w={16} sw={2}>{Icons.chat}</Svg>Assistant
+              </Hover>
+              <Hover tag="button" onClick={() => v.onSetView('kb')}
+                base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
+                hover={v.isKb ? '' : 'color:#212b32;'}>
+                <Svg w={16} sw={2}>{Icons.book}</Svg>Knowledge base
+              </Hover>
+            </div>
           </div>
         </header>
 
-        {v.notEmpty && (
+        {v.notEmpty && !v.isKb && (
           <div style={s('flex:none;background:#fff;border-bottom:1px solid #d8dde0;padding:10px 24px;display:flex;')}>
             <Hover tag="button" onClick={v.onNewChat} base="display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:8px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#005eb8;color:#fff;"><Svg w={18} sw={2.2}>{Icons.arrowLeft}</Svg>Back to all topics</Hover>
           </div>
         )}
 
         <div id="riva-scroll" style={s('flex:1;overflow-y:auto;')}>
+          {v.isKb ? this.renderKb(v) : (
           <div style={s('max-width:820px;margin:0 auto;padding:32px 24px 28px;display:flex;flex-direction:column;gap:20px;')}>
 
             {v.isEmpty && (
@@ -807,8 +947,10 @@ class RiversidePracticeQA extends React.Component {
               </React.Fragment>
             ))}
           </div>
+          )}
         </div>
 
+        {!v.isKb && (
         <div style={s('flex:none;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;')}>
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
@@ -817,6 +959,7 @@ class RiversidePracticeQA extends React.Component {
             </form>
           </div>
         </div>
+        )}
 
         {v.viewerOpen && this.renderViewer(v)}
 
