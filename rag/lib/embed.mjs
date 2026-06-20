@@ -6,7 +6,7 @@ const BATCH = 64;
 
 export async function embedTexts(texts) {
   if (!texts || !texts.length) return [];
-  const { apiKey, embedModel, base, referer, title } = config();
+  const { apiKey, embedModel, embedProvider, base, referer, title } = config();
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
   const out = [];
@@ -20,7 +20,8 @@ export async function embedTexts(texts) {
         'HTTP-Referer': referer,
         'X-Title': title,
       },
-      body: JSON.stringify({ model: embedModel, input: batch }),
+      // provider: pin to Azure (private, zero-retention) — see config.mjs.
+      body: JSON.stringify({ model: embedModel, input: batch, provider: embedProvider }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');

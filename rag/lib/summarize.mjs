@@ -4,8 +4,8 @@
 import { config } from './config.mjs';
 
 export async function summariseDoc(title, sampleText) {
-  const { apiKey, chatModel, base, referer, title: appTitle } = config();
-  if (!apiKey || !chatModel) return { summary: '', tags: [] };
+  const { apiKey, analysisModel, noRetentionProvider, base, referer, title: appTitle } = config();
+  if (!apiKey || !analysisModel) return { summary: '', tags: [] };
 
   const prompt =
     'You are cataloguing a document for an NHS GP reception knowledge base. '
@@ -22,7 +22,9 @@ export async function summariseDoc(title, sampleText) {
         'HTTP-Referer': referer,
         'X-Title': appTitle,
       },
-      body: JSON.stringify({ model: chatModel, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }),
+      // gpt-oss is a reasoning model — keep reasoning effort low for this simple
+      // cataloguing task so it returns the JSON without burning tokens.
+      body: JSON.stringify({ model: analysisModel, temperature: 0.2, reasoning: { effort: 'low' }, messages: [{ role: 'user', content: prompt }], provider: noRetentionProvider }),
     });
     if (!res.ok) return { summary: '', tags: [] };
     const data = await res.json();

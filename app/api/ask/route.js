@@ -16,6 +16,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const TOP_K = 5;
+// Cheap text analysis (follow-up condensing) runs on a small model, routed only
+// to providers that do not retain prompt data.
+const ANALYSIS_MODEL = process.env.OPENROUTER_ANALYSIS_MODEL || 'openai/gpt-oss-120b';
+const NO_RETENTION = { data_collection: 'deny' };
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_HEADERS = (apiKey) => ({
   Authorization: `Bearer ${apiKey}`,
@@ -36,8 +40,12 @@ async function condenseQuery({ question, history, apiKey, model }) {
       body: JSON.stringify({
         model,
         temperature: 0,
-        max_tokens: 64,
+        // gpt-oss is a reasoning model: leave headroom for its reasoning tokens
+        // (a tiny cap returns empty content) and keep reasoning effort low.
+        max_tokens: 400,
+        reasoning: { effort: 'low' },
         messages: [{ role: 'user', content: buildCondenseQuery({ history, question }) }],
+        provider: NO_RETENTION,
       }),
     });
     if (!res.ok) return '';
@@ -100,7 +108,7 @@ export async function POST(request) {
   // "how is this done" searches for the actual subject, not the literal words.
   let searchQuery = question;
   if (history.trim()) {
-    const condensed = await condenseQuery({ question, history, apiKey, model });
+    const condensed = await condenseQuery({ question, history, apiKey, model: ANALYSIS_MODEL });
     if (condensed) searchQuery = condensed;
   }
 
