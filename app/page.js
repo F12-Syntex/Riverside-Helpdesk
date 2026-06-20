@@ -123,7 +123,6 @@ class RiversidePracticeQA extends React.Component {
       draft: this.blankDraft(),
       copiedIdx: null,
       draftError: false,
-      hoveredArea: null,
       viewer: null,
       view: 'assistant',   // 'assistant' | 'kb'
       kbQuery: '',         // knowledge-base search text
@@ -315,9 +314,6 @@ class RiversidePracticeQA extends React.Component {
     this.openViewer({ docTitle: doc.title, location: doc.subtitle || '', view: doc.view });
   }
 
-  hoverArea(id) { if (this.state.hoveredArea !== id) this.setState({ hoveredArea: id }); }
-  leaveArea(id) { if (this.state.hoveredArea === id) this.setState({ hoveredArea: null }); }
-
   openViewer(citation) { this.setState({ viewer: citation }); }
   closeViewer() { this.setState({ viewer: null }); }
 
@@ -415,24 +411,6 @@ class RiversidePracticeQA extends React.Component {
   renderVals() {
     const self = this;
     const all = this.allGuides();
-    const areas = [];
-    for (const c of this.cats()) {
-      const inCat = all.filter((g) => g.category === c.id);
-      areas.push({
-        id: c.id,
-        label: c.label,
-        count: inCat.length,
-        desc: c.desc || '',
-        hovered: this.state.hoveredArea === c.id,
-        onEnter: () => self.hoverArea(c.id),
-        onLeave: () => self.leaveArea(c.id),
-        questions: inCat.map((g) => ({ question: g.question, onClick: () => self.askGuide(g) })),
-      });
-    }
-
-    // Areas that actually have common questions, for the simplified GOV.UK-style
-    // link list. The full document library lives in the searchable KB tab.
-    const linkAreas = areas.filter((a) => a.questions.length > 0);
 
     const messages = this.state.messages.map((m, idx) => {
       if (m.role === 'user') return { isUser: true, text: m.text };
@@ -542,12 +520,11 @@ class RiversidePracticeQA extends React.Component {
       kbHasQuery: !!q,
       kbMatchCount,
       onKbSearch: (e) => self.setState({ kbQuery: e.target.value }),
-      linkAreas,
       onSetView: (vw) => self.setView(vw),
       isEmpty: this.state.messages.length === 0,
       notEmpty: this.state.messages.length > 0,
       input: this.state.input,
-      messages, popular, areas,
+      messages, popular,
       cats: this.cats(),
       showAdd: this.state.showAdd,
       draft: this.state.draft,
@@ -914,24 +891,6 @@ class RiversidePracticeQA extends React.Component {
                   <h1 style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
                   <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
                   <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Never enter patient information. Ask about the process only.</p>
-                </div>
-
-                <div>
-                  <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px;')}>Browse by area</div>
-                  <div style={s('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 32px;')}>
-                    {v.linkAreas.map((a) => (
-                      <div key={a.id}>
-                        <div style={s('font-size:15px;font-weight:700;color:#212b32;margin-bottom:10px;')}>{a.label}</div>
-                        <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;')}>
-                          {a.questions.map((q, i) => (
-                            <li key={i}>
-                              <Hover tag="a" href="#" onClick={(e) => { e.preventDefault(); q.onClick(); }} base="color:#005eb8;text-decoration:underline;text-underline-offset:.12em;text-decoration-thickness:1px;font-size:16px;line-height:1.4;cursor:pointer;" hover="color:#003087;text-decoration-thickness:3px;">{q.question}</Hover>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <div>
