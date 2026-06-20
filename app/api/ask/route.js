@@ -131,7 +131,9 @@ export async function POST(request) {
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
       headers: OPENROUTER_HEADERS(apiKey),
-      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }),
+      // provider: only route to providers that do not retain prompt data, so the
+      // question and document extracts are never stored by the model provider.
+      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }], provider: NO_RETENTION }),
     });
 
     if (!res.ok) {
