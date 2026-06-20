@@ -38,7 +38,7 @@ export default function KbView({ v }) {
         <div style={s('width:72px;height:72px;border-radius:18px;background:#fff;border:1px solid #d8dde0;box-shadow:0 1px 3px rgba(33,43,50,.08);display:inline-flex;align-items:center;justify-content:center;')}>
           <img src="/assets/logo.png" alt="The Riverside Practice" style={s('width:44px;height:44px;display:block;')} />
         </div>
-        <h1 style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>Knowledge base</h1>
+        <h1 className="riva-hero-h1" style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>Knowledge base</h1>
         <p style={s('font-size:19px;color:#4c6272;max-width:560px;margin:0 auto;text-wrap:pretty;')}>Every answer I give comes from these practice documents. I never use outside information.</p>
         {v.kbTotal > 0 && <p style={s('font-size:14px;color:#768692;margin:12px 0 0;')}>{v.kbTotal} documents indexed</p>}
       </div>

@@ -33,3 +33,31 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* Icon wrappers render raw inline SVG; keep them flush with surrounding text. */
 .riva-ico { display: inline-flex; align-items: center; justify-content: center; }
 .riva-ico svg { display: block; }
+
+/* ------------------------------------------------------------------ *
+ * Responsive helpers. Styling is done with inline style strings, which
+ * cannot hold media queries, so the few layouts that overflow on small
+ * screens get a class here and are adjusted with !important to win over
+ * the inline rule.
+ * ------------------------------------------------------------------ */
+
+/* Header title shrinks/ellipsises instead of pushing the tabs off-screen. */
+.riva-head-text { flex: 1; min-width: 0; }
+.riva-head-title { overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 600px) {
+  /* Tighter header; tabs collapse to icon-only so all three always fit. */
+  .riva-header { padding: 0 14px !important; gap: 10px !important; }
+  .riva-tab { padding: 7px 11px !important; }
+  .riva-tab-label { display: none !important; }
+
+  /* Multi-column blocks stack into a single column. */
+  .riva-grid-2 { grid-template-columns: 1fr !important; }
+  .riva-grid-label { grid-template-columns: 1fr !important; gap: 4px !important; }
+
+  /* Ease the largest hero headings down a notch on phones. */
+  .riva-hero-h1 { font-size: 27px !important; }
+}
+
+/* Never allow a stray fixed-width child to force horizontal scrolling. */
+body { overflow-x: hidden; }

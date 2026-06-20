@@ -28,7 +28,7 @@ export default function DpiaView() {
         <div style={s('width:64px;height:64px;border-radius:16px;background:#fff;border:1px solid #d8dde0;box-shadow:0 1px 3px rgba(33,43,50,.08);display:inline-flex;align-items:center;justify-content:center;color:#005eb8;')}>
           <Svg w={32} sw={1.8}>{Icons.shield}</Svg>
         </div>
-        <h1 style={s('font-size:34px;font-weight:800;margin:16px 0 8px;letter-spacing:-0.02em;')}>{d.title}</h1>
+        <h1 className="riva-hero-h1" style={s('font-size:34px;font-weight:800;margin:16px 0 8px;letter-spacing:-0.02em;')}>{d.title}</h1>
         <p style={s('font-size:18px;color:#4c6272;max-width:560px;margin:0 auto;line-height:1.5;text-wrap:pretty;')}>{d.subtitle}</p>
       </div>
 
@@ -42,14 +42,14 @@ export default function DpiaView() {
 
       <div style={s(card)}>
         {d.plain.map((row, i) => (
-          <div key={i} style={s('display:grid;grid-template-columns:160px 1fr;gap:16px;padding:14px 20px;' + (i ? 'border-top:1px solid #eef2f4;' : ''))}>
+          <div key={i} className="riva-grid-label" style={s('display:grid;grid-template-columns:160px 1fr;gap:16px;padding:14px 20px;' + (i ? 'border-top:1px solid #eef2f4;' : ''))}>
             <div style={s('font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#768692;')}>{row.label}</div>
             <div style={s('font-size:16px;line-height:1.5;color:' + (row.danger ? '#a8071a' : '#212b32') + ';font-weight:' + (row.danger ? '600' : '400') + ';text-wrap:pretty;')}>{row.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={s('display:grid;grid-template-columns:1fr 1fr;gap:16px;')}>
+      <div className="riva-grid-2" style={s('display:grid;grid-template-columns:1fr 1fr;gap:16px;')}>
         <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:14px;padding:16px 18px;')}>
           <div style={s('font-size:14px;font-weight:700;color:#007f3b;margin-bottom:10px;')}>Protecting data now</div>
           <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;')}>

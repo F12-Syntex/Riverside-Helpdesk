@@ -12,12 +12,12 @@ const TABS = [
 export default function AppHeader({ v, subtitle = 'Reception help & guidance' }) {
   const showTabs = !!(v && v.onSetView);
   return (
-    <header style={s('flex:none;height:72px;display:flex;align-items:center;gap:14px;padding:0 24px;background:#fff;border-bottom:1px solid #d8dde0;')}>
-      <Hover tag={Link} href="/" aria-label="Back to practice tools" base="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;" hover="opacity:.85;">
+    <header className="riva-header" style={s('flex:none;height:72px;display:flex;align-items:center;gap:14px;padding:0 24px;background:#fff;border-bottom:1px solid #d8dde0;')}>
+      <Hover tag={Link} href="/" aria-label="Back to practice tools" base="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex:none;" hover="opacity:.85;">
         <img src="/assets/nhs-logo.png" alt="NHS — back to practice tools" style={s('height:30px;width:auto;display:block;')} />
       </Hover>
-      <div style={s('display:flex;flex-direction:column;line-height:1.15;')}>
-        <span style={s('font-weight:700;font-size:18px;white-space:nowrap;')}>The Riverside Practice</span>
+      <div className="riva-head-text" style={s('display:flex;flex-direction:column;line-height:1.15;')}>
+        <span className="riva-head-title" style={s('font-weight:700;font-size:18px;white-space:nowrap;')}>The Riverside Practice</span>
         <span style={s('font-size:13px;color:#4c6272;')}>{subtitle}</span>
       </div>
       {showTabs && (
@@ -26,10 +26,10 @@ export default function AppHeader({ v, subtitle = 'Reception help & guidance' })
             {TABS.map((t) => {
               const active = v.view === t.key;
               return (
-                <Hover key={t.key} tag="button" onClick={() => v.onSetView(t.key)}
+                <Hover key={t.key} tag="button" onClick={() => v.onSetView(t.key)} className="riva-tab"
                   base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
                   hover={active ? '' : 'color:#212b32;'}>
-                  <Svg w={16} sw={2}>{t.icon}</Svg>{t.label}
+                  <Svg w={16} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
                 </Hover>
               );
             })}
