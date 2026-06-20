@@ -3,6 +3,7 @@
 import React from 'react';
 import { SEED_GUIDES, CATEGORIES, POPULAR_IDS } from '../lib/guides';
 import { askQuestion } from '../lib/ai/client';
+import { DPIA } from '../lib/dpia';
 
 /* ------------------------------------------------------------------ *
  * Small helpers that let us keep the design's inline-style strings
@@ -513,6 +514,7 @@ class RiversidePracticeQA extends React.Component {
       welcome: this.props.welcome != null ? this.props.welcome : 'For reception. Ask how to do something in EMIS, or what to do at the front desk.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
+      isDpia: this.state.view === 'dpia',
       kbStatus: this.state.kbStatus,
       kbGroups,
       kbTotal: kb.total || 0,
@@ -843,6 +845,118 @@ class RiversidePracticeQA extends React.Component {
     );
   }
 
+  renderDpia() {
+    const d = DPIA;
+    const STATUS = {
+      complete: { label: 'Complete', color: '#007f3b', bg: '#e6f3ec' },
+      'in-progress': { label: 'In progress', color: '#946200', bg: '#fff6cc' },
+      pending: { label: 'Outstanding', color: '#4c6272', bg: '#eef2f4' },
+    };
+    const RISK = { High: '#d5281b', Medium: '#946200', Low: '#007f3b' };
+    const badge = (st) => {
+      const c = STATUS[st] || STATUS.pending;
+      return <span style={s('flex:none;font-size:12px;font-weight:700;color:' + c.color + ';background:' + c.bg + ';border-radius:999px;padding:3px 10px;')}>{c.label}</span>;
+    };
+    const th = s('text-align:left;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#768692;padding:8px 10px;border-bottom:1px solid #d8dde0;');
+    const td = s('font-size:15px;line-height:1.45;padding:10px;border-bottom:1px solid #eef2f4;vertical-align:top;');
+
+    return (
+      <div style={s('max-width:860px;margin:0 auto;padding:32px 24px 48px;display:flex;flex-direction:column;gap:22px;')}>
+        <div style={s('text-align:center;padding:12px 0 0;')}>
+          <div style={s('width:72px;height:72px;border-radius:18px;background:#fff;border:1px solid #d8dde0;box-shadow:0 1px 3px rgba(33,43,50,.08);display:inline-flex;align-items:center;justify-content:center;color:#005eb8;')}>
+            <Svg w={36} sw={1.8}>{Icons.shield}</Svg>
+          </div>
+          <h1 style={s('font-size:32px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{d.title}</h1>
+          <p style={s('font-size:18px;color:#4c6272;max-width:620px;margin:0 auto;text-wrap:pretty;')}>{d.subtitle}</p>
+          <div style={s('display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:14px;')}>
+            <span style={s('font-size:13px;font-weight:700;color:#946200;background:#fff6cc;border-radius:999px;padding:4px 12px;')}>{d.status}</span>
+            <span style={s('font-size:13px;color:#768692;')}>Last updated {d.updated}</span>
+            <Hover tag="a" href={'/' + d.templateUrl} base="font-size:13px;color:#005eb8;text-decoration:underline;text-underline-offset:.12em;" hover="color:#003087;text-decoration-thickness:2px;">Open the blank ICO template</Hover>
+          </div>
+        </div>
+
+        {/* Where the program currently is — step tracker */}
+        <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:14px;box-shadow:0 1px 3px rgba(33,43,50,.08);padding:16px 20px;')}>
+          <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;')}>Current progress</div>
+          <div style={s('display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;')}>
+            {d.progress.map((p) => {
+              const c = STATUS[p.status] || STATUS.pending;
+              return (
+                <div key={p.step} style={s('border:1px solid #d8dde0;border-left:4px solid ' + c.color + ';border-radius:8px;padding:9px 12px;')}>
+                  <div style={s('font-size:12px;color:#768692;')}>Step {p.step}</div>
+                  <div style={s('font-size:14px;font-weight:600;line-height:1.25;margin:2px 0 6px;')}>{p.label}</div>
+                  <span style={s('font-size:11.5px;font-weight:700;color:' + c.color + ';')}>{c.label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={s('display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#4c6272;')}>
+            <span><strong>Controller:</strong> {d.controller.name}</span>
+            <span><strong>DPO:</strong> {d.controller.dpo}</span>
+          </div>
+        </div>
+
+        {d.steps.map((st) => (
+          <div key={st.n} style={s('background:#fff;border:1px solid #d8dde0;border-radius:14px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
+            <div style={s('display:flex;align-items:flex-start;gap:14px;padding:18px 22px 0;')}>
+              <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#005eb8;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>{st.n}</span>
+              <div style={s('flex:1;min-width:0;')}>
+                <div style={s('display:flex;align-items:center;gap:10px;flex-wrap:wrap;')}>
+                  <h3 style={s('font-size:20px;margin:0;letter-spacing:-0.01em;')}>{st.title}</h3>
+                  {badge(st.status)}
+                </div>
+                <p style={s('margin:4px 0 0;font-size:14px;color:#768692;line-height:1.45;')}>{st.prompt}</p>
+              </div>
+            </div>
+            <div style={s('padding:14px 22px 20px 66px;')}>
+              {(st.body || []).map((para, i) => (
+                <p key={i} style={s('margin:0 0 10px;font-size:16px;line-height:1.55;color:#212b32;text-wrap:pretty;')}>{para}</p>
+              ))}
+
+              {st.risks && (
+                <div style={s('overflow-x:auto;')}>
+                  <table style={s('width:100%;border-collapse:collapse;')}>
+                    <thead><tr><th style={th}>Risk</th><th style={th}>Likelihood</th><th style={th}>Severity</th><th style={th}>Overall</th></tr></thead>
+                    <tbody>
+                      {st.risks.map((r, i) => (
+                        <tr key={i}>
+                          <td style={td}>{r.risk}</td>
+                          <td style={td}>{r.likelihood}</td>
+                          <td style={td}>{r.severity}</td>
+                          <td style={{ ...td, color: RISK[r.overall] || '#212b32', fontWeight: 700 }}>{r.overall}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {st.measures && (
+                <div style={s('overflow-x:auto;')}>
+                  <table style={s('width:100%;border-collapse:collapse;')}>
+                    <thead><tr><th style={th}>Measure</th><th style={th}>Effect</th><th style={th}>Residual</th><th style={th}>Status</th></tr></thead>
+                    <tbody>
+                      {st.measures.map((m, i) => (
+                        <tr key={i}>
+                          <td style={td}>{m.measure}</td>
+                          <td style={td}>{m.effect}</td>
+                          <td style={{ ...td, color: RISK[m.residual] || '#212b32', fontWeight: 700 }}>{m.residual}</td>
+                          <td style={td}>{m.approved}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <p style={s('font-size:13px;color:#768692;text-align:center;line-height:1.5;text-wrap:pretty;')}>This is a working self-assessment to support the practice’s DPIA process. It is not a substitute for review and sign-off by the practice’s Data Protection Officer.</p>
+      </div>
+    );
+  }
+
   render() {
     const v = this.renderVals();
     return (
@@ -858,28 +972,32 @@ class RiversidePracticeQA extends React.Component {
           </div>
           <div style={s('margin-left:auto;display:flex;gap:12px;align-items:center;')}>
             <div style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:999px;padding:3px;')}>
-              <Hover tag="button" onClick={() => v.onSetView('assistant')}
-                base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:none;color:#4c6272;' : 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);')}
-                hover={v.isKb ? 'color:#212b32;' : ''}>
-                <Svg w={16} sw={2}>{Icons.chat}</Svg>Assistant
-              </Hover>
-              <Hover tag="button" onClick={() => v.onSetView('kb')}
-                base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
-                hover={v.isKb ? '' : 'color:#212b32;'}>
-                <Svg w={16} sw={2}>{Icons.book}</Svg>Knowledge base
-              </Hover>
+              {[
+                { key: 'assistant', label: 'Assistant', icon: Icons.chat },
+                { key: 'kb', label: 'Knowledge base', icon: Icons.book },
+                { key: 'dpia', label: 'DPIA', icon: Icons.shield },
+              ].map((t) => {
+                const active = v.view === t.key;
+                return (
+                  <Hover key={t.key} tag="button" onClick={() => v.onSetView(t.key)}
+                    base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
+                    hover={active ? '' : 'color:#212b32;'}>
+                    <Svg w={16} sw={2}>{t.icon}</Svg>{t.label}
+                  </Hover>
+                );
+              })}
             </div>
           </div>
         </header>
 
-        {v.notEmpty && !v.isKb && (
+        {v.notEmpty && !v.isKb && !v.isDpia && (
           <div style={s('flex:none;background:#fff;border-bottom:1px solid #d8dde0;padding:10px 24px;display:flex;')}>
             <Hover tag="button" onClick={v.onNewChat} base="display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:8px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#005eb8;color:#fff;"><Svg w={18} sw={2.2}>{Icons.arrowLeft}</Svg>Back to all topics</Hover>
           </div>
         )}
 
         <div id="riva-scroll" style={s('flex:1;overflow-y:auto;')}>
-          {v.isKb ? this.renderKb(v) : (
+          {v.isDpia ? this.renderDpia(v) : v.isKb ? this.renderKb(v) : (
           <div style={s('max-width:820px;margin:0 auto;padding:32px 24px 28px;display:flex;flex-direction:column;gap:20px;')}>
 
             {v.isEmpty && (
@@ -922,7 +1040,7 @@ class RiversidePracticeQA extends React.Component {
           )}
         </div>
 
-        {!v.isKb && (
+        {!v.isKb && !v.isDpia && (
         <div style={s('flex:none;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;')}>
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
