@@ -126,6 +126,7 @@ class RiversidePracticeQA extends React.Component {
       hoveredArea: null,
       viewer: null,
       view: 'assistant',   // 'assistant' | 'kb'
+      kbQuery: '',         // knowledge-base search text
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
     };
@@ -429,30 +430,9 @@ class RiversidePracticeQA extends React.Component {
       });
     }
 
-    // Append the knowledge-base document groups as browsable areas. Each one
-    // lists its documents; selecting a document opens it in the source viewer.
-    const KB_DESC = {
-      emis: 'Official EMIS Web reference guides.',
-      policy: 'Practice policies.',
-      protocol: 'Clinical and operational protocols and procedures.',
-      guide: 'How-to guides, references and handbooks.',
-      form: 'Forms, posters, checklists and templates.',
-      other: 'Other practice documents.',
-    };
-    const kbGroupsRaw = (this.state.kb && this.state.kb.groups) || [];
-    for (const g of kbGroupsRaw) {
-      const id = 'kb-' + g.key;
-      areas.push({
-        id,
-        label: g.label,
-        count: g.docs.length,
-        desc: KB_DESC[g.key] || 'Practice documents.',
-        hovered: this.state.hoveredArea === id,
-        onEnter: () => self.hoverArea(id),
-        onLeave: () => self.leaveArea(id),
-        questions: g.docs.map((d) => ({ question: d.title, onClick: () => self.openDoc(d) })),
-      });
-    }
+    // Areas that actually have common questions, for the simplified GOV.UK-style
+    // link list. The full document library lives in the searchable KB tab.
+    const linkAreas = areas.filter((a) => a.questions.length > 0);
 
     const messages = this.state.messages.map((m, idx) => {
       if (m.role === 'user') return { isUser: true, text: m.text };
@@ -528,20 +508,27 @@ class RiversidePracticeQA extends React.Component {
     }));
 
     const kb = this.state.kb || { groups: [], total: 0 };
+    const kbQuery = this.state.kbQuery || '';
+    const q = kbQuery.trim().toLowerCase();
+    const matches = (d) => !q || (d.title + ' ' + (d.summary || '') + ' ' + (d.subtitle || '')).toLowerCase().includes(q);
+    let kbMatchCount = 0;
     const kbGroups = (kb.groups || []).map((g) => ({
       key: g.key,
       label: g.label,
-      docs: (g.docs || []).map((d) => ({
-        docId: d.docId,
-        title: d.title,
-        subtitle: d.subtitle || '',
-        summary: d.summary || '',
-        thumbs: (d.thumbs || []).map((t) => assetSrc(t)),
-        hasThumbs: !!(d.thumbs && d.thumbs.length),
-        canOpen: !!d.view,
-        onOpen: () => self.openDoc(d),
-      })),
-    }));
+      docs: (g.docs || []).filter(matches).map((d) => {
+        kbMatchCount++;
+        return {
+          docId: d.docId,
+          title: d.title,
+          subtitle: d.subtitle || '',
+          summary: d.summary || '',
+          thumbs: (d.thumbs || []).map((t) => assetSrc(t)),
+          hasThumbs: !!(d.thumbs && d.thumbs.length),
+          canOpen: !!d.view,
+          onOpen: () => self.openDoc(d),
+        };
+      }),
+    })).filter((g) => g.docs.length);
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice reception help',
@@ -551,6 +538,11 @@ class RiversidePracticeQA extends React.Component {
       kbStatus: this.state.kbStatus,
       kbGroups,
       kbTotal: kb.total || 0,
+      kbQuery,
+      kbHasQuery: !!q,
+      kbMatchCount,
+      onKbSearch: (e) => self.setState({ kbQuery: e.target.value }),
+      linkAreas,
       onSetView: (vw) => self.setView(vw),
       isEmpty: this.state.messages.length === 0,
       notEmpty: this.state.messages.length > 0,
@@ -830,6 +822,16 @@ class RiversidePracticeQA extends React.Component {
           {v.kbTotal > 0 && <p style={s('font-size:14px;color:#768692;margin:12px 0 0;')}>{v.kbTotal} documents indexed</p>}
         </div>
 
+        {v.kbStatus === 'done' && v.kbTotal > 0 && (
+          <div style={s('max-width:520px;width:100%;margin:0 auto;')}>
+            <div style={s('display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #d8dde0;border-radius:999px;padding:11px 18px;')}>
+              <Svg w={18} stroke="#768692" sw={2.2}><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></Svg>
+              <input value={v.kbQuery} onChange={v.onKbSearch} placeholder="Search documents…" aria-label="Search the knowledge base" style={s('flex:1;min-width:0;border:none;outline:none;font:inherit;font-size:16px;background:none;')} />
+            </div>
+            {v.kbHasQuery && <div style={s('text-align:center;font-size:13.5px;color:#768692;margin-top:10px;')}>{v.kbMatchCount} matching document{v.kbMatchCount === 1 ? '' : 's'}</div>}
+          </div>
+        )}
+
         {v.kbStatus === 'loading' && (
           <div style={s('display:flex;align-items:center;justify-content:center;gap:12px;color:#4c6272;font-size:17px;padding:30px 0;')}>
             <span style={s('display:inline-flex;gap:5px;align-items:center;')}>
@@ -858,7 +860,7 @@ class RiversidePracticeQA extends React.Component {
         ))}
 
         {v.kbStatus === 'done' && v.kbGroups.length === 0 && (
-          <div style={s('text-align:center;color:#768692;font-size:16px;padding:24px 0;')}>No documents have been added to the knowledge base yet.</div>
+          <div style={s('text-align:center;color:#768692;font-size:16px;padding:24px 0;')}>{v.kbHasQuery ? 'No documents match your search.' : 'No documents have been added to the knowledge base yet.'}</div>
         )}
       </div>
     );
@@ -915,29 +917,18 @@ class RiversidePracticeQA extends React.Component {
                 </div>
 
                 <div>
-                  <div style={s('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;')}>
-                    <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;')}>Browse by area</div>
-                    <span style={s('font-size:13.5px;color:#aeb7bd;')}>Hover an area to see what&rsquo;s inside</span>
-                  </div>
-                  <div style={s('display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:12px;')}>
-                    {v.areas.map((a) => (
-                      <div key={a.id} onMouseEnter={a.onEnter} onMouseLeave={a.onLeave} style={s('position:relative;height:100%;')}>
-                        <Hover tag="div" base="background:#fff;border:1px solid #d8dde0;border-radius:12px;padding:16px 18px;height:100%;cursor:default;display:flex;flex-direction:column;gap:7px;" hover="border-color:#005eb8;box-shadow:0 6px 18px rgba(33,43,50,.12);transform:translateY(-2px);">
-                          <div style={s('display:flex;align-items:flex-start;justify-content:space-between;gap:10px;')}>
-                            <span style={s('font-weight:600;font-size:17px;line-height:1.25;')}>{a.label}</span>
-                            <span style={s('flex:none;font-size:12.5px;font-weight:600;color:#768692;background:#f0f4f5;border-radius:999px;padding:2px 9px;margin-top:1px;')}>{a.count}</span>
-                          </div>
-                          <span style={s('font-size:14px;color:#4c6272;line-height:1.45;text-wrap:pretty;')}>{a.desc}</span>
-                        </Hover>
-                        {a.hovered && a.questions.length > 0 && (
-                          <div style={s('position:absolute;left:0;right:0;top:calc(100% - 4px);z-index:20;background:#fff;border:1px solid #005eb8;border-radius:12px;box-shadow:0 12px 30px rgba(33,43,50,.18);padding:6px;display:flex;flex-direction:column;gap:1px;max-height:340px;overflow-y:auto;')}>
-                            {a.questions.map((q, i) => (
-                              <Hover key={i} onClick={q.onClick} base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:9px 11px;border-radius:8px;cursor:pointer;font:inherit;font-size:14.5px;line-height:1.35;color:#005eb8;font-weight:500;" hover="background:#e8f1f8;">
-                                <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.chevronRight}</Svg><span style={s('flex:1;min-width:0;text-wrap:pretty;')}>{q.question}</span>
-                              </Hover>
-                            ))}
-                          </div>
-                        )}
+                  <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin-bottom:16px;')}>Browse by area</div>
+                  <div style={s('display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 32px;')}>
+                    {v.linkAreas.map((a) => (
+                      <div key={a.id}>
+                        <div style={s('font-size:15px;font-weight:700;color:#212b32;margin-bottom:10px;')}>{a.label}</div>
+                        <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;')}>
+                          {a.questions.map((q, i) => (
+                            <li key={i}>
+                              <Hover tag="a" href="#" onClick={(e) => { e.preventDefault(); q.onClick(); }} base="color:#005eb8;text-decoration:underline;text-underline-offset:.12em;text-decoration-thickness:1px;font-size:16px;line-height:1.4;cursor:pointer;" hover="color:#003087;text-decoration-thickness:3px;">{q.question}</Hover>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ))}
                   </div>
