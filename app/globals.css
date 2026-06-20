@@ -65,6 +65,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   /* Scroll without a visible scrollbar (native-app feel). Scrolling still works. */
   body, #riva-scroll { scrollbar-width: none; -ms-overflow-style: none; }
   body::-webkit-scrollbar, #riva-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+  /* Drop the bot avatar on phones so answers use the full width. */
+  .riva-bot-avatar { display: none !important; }
 }
 
 /* Popups: centered dialog on desktop, bottom sheet on mobile. The inner panel
