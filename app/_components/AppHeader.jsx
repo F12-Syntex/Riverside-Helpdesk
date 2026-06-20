@@ -44,7 +44,7 @@ export default function AppHeader({ v, subtitle = 'Reception help & guidance', t
 
         {/* Page tabs (e.g. Rota / Staff) — segmented control, shown all sizes. */}
         {tabs && (
-          <div className="riva-page-tabs" style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:3px;')}>
+          <div className="riva-page-tabs riva-tabs-desktop" style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:3px;')}>
             {tabs.items.map((t) => {
               const active = tabs.active === t.key;
               return (
@@ -65,7 +65,7 @@ export default function AppHeader({ v, subtitle = 'Reception help & guidance', t
         </Hover>
       </div>
 
-      {menuOpen && <MobileNav v={v} onClose={() => setMenuOpen(false)} />}
+      {menuOpen && <MobileNav v={v} tabs={tabs} onClose={() => setMenuOpen(false)} />}
     </header>
   );
 }

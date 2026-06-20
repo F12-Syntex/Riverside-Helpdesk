@@ -27,8 +27,9 @@ const GROUP_LABEL = 'font-size:13px;font-weight:700;color:#768692;text-transform
 const LINK_BASE = 'font-size:20px;font-weight:600;color:#005eb8;text-decoration:underline;text-underline-offset:.12em;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;text-align:left;';
 const LINK_HOVER = 'color:#003087;text-decoration-thickness:2px;';
 
-export default function MobileNav({ v, onClose }) {
+export default function MobileNav({ v, tabs, onClose }) {
   const showViews = !!(v && v.onSetView);
+  const showTabs = !!(tabs && tabs.items && tabs.items.length);
 
   return (
     <div style={s('position:fixed;inset:0;z-index:80;background:#fff;display:flex;flex-direction:column;')}>
@@ -45,6 +46,17 @@ export default function MobileNav({ v, onClose }) {
             <Hover key={t.href} tag={Link} href={t.href} onClick={onClose} base={LINK_BASE} hover={LINK_HOVER}>{t.label}</Hover>
           ))}
         </nav>
+
+        {showTabs && (
+          <>
+            <div style={s(GROUP_LABEL + 'margin-top:30px;')}>This tool</div>
+            <nav style={s('display:flex;flex-direction:column;gap:18px;align-items:flex-start;')}>
+              {tabs.items.map((t) => (
+                <Hover key={t.key} tag="button" onClick={() => { tabs.onSelect(t.key); onClose(); }} base={LINK_BASE} hover={LINK_HOVER}>{t.label}</Hover>
+              ))}
+            </nav>
+          </>
+        )}
 
         {showViews && (
           <>

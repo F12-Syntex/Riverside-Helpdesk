@@ -16,7 +16,6 @@ import {
  * The Rota/Staff switch lives in the header; `page` is passed in.
  * ------------------------------------------------------------------ */
 
-const PRACTICE = 'The Riverside Practice';
 const CARD = 'background:#fff;border:1px solid #d8dde0;border-radius:16px;';
 const FIELD = 'width:100%;font-family:inherit;font-size:16px;padding:10px 12px;border:2px solid #4c6272;border-radius:4px;background:#fff;color:#212b32;';
 const GREEN_BTN = 'font-family:inherit;font-weight:700;color:#fff;background:#007f3b;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #003419;';
@@ -188,7 +187,7 @@ export default function RotaSystem({ page = 'rota' }) {
   }
 
   function copyWhatsApp() {
-    const text = buildWhatsApp(grid, staff, weekISO, times, PRACTICE);
+    const text = buildWhatsApp(grid, staff, weekISO, times);
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => flash('Copied — paste it straight into WhatsApp.')).catch(() => flash("Couldn't copy automatically."));
     } else flash("Copying isn't available here.");

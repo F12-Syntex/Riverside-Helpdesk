@@ -60,7 +60,9 @@ export async function POST(request) {
     const staff = await loadStaff(sql);
     if (!staff.length) return NextResponse.json({ error: 'Add at least one staff member before generating a rota.' }, { status: 400 });
 
-    const grid = generateGrid(staff, week, minStaff);
+    // Random seed so each "Regenerate" produces a different balanced week.
+    const seed = Math.floor(Math.random() * 100000);
+    const grid = generateGrid(staff, week, minStaff, seed);
     const schedule = { grid, times: DEFAULT_TIMES };
     const saved = await upsert(sql, week, schedule);
     return NextResponse.json({ rota: saved });
