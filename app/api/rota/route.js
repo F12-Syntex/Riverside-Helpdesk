@@ -1,108 +1,89 @@
-// Rota generation + history.
-//   GET  /api/rota  — list recent saved rotas
-//   POST /api/rota  — generate a rota for a week from the current staff and the
-//                     given constraints, save it, and return it.
+// Rota persistence + generation for one week.
+//   GET  /api/rota?week=YYYY-MM-DD  — load the saved grid for that week (or null)
+//   POST /api/rota                  — auto-generate a balanced grid and save it
+//   PUT  /api/rota                  — save a manually edited grid
 //
-// Generation calls the same OpenRouter model used by the Q&A bot, routed only to
-// providers that do not retain prompt data (the staff list is personal data).
+// A rota is a grid keyed by staff id → 5 shift codes (Mon–Fri), stored in the
+// `rotas.schedule` jsonb as { grid, times }. Generation is deterministic
+// (instant, always valid coverage); natural-language edits go through
+// /api/rota/chat, which uses the AI.
 import { NextResponse } from 'next/server';
 import { getSql, ensureSchema } from '@/lib/db';
-import { buildRotaPrompt, parseRotaJson } from '@/lib/ai/rota';
+import { generateGrid, sanitiseGrid, DEFAULT_TIMES } from '@/lib/rota/logic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_HEADERS = (apiKey) => ({
-  Authorization: `Bearer ${apiKey}`,
-  'Content-Type': 'application/json',
-  'HTTP-Referer': 'https://riverside-practice.local',
-  'X-Title': 'Riverside Practice Rota',
-});
-
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export async function GET() {
+async function loadStaff(sql) {
+  return sql`SELECT id, name, about, leave FROM staff ORDER BY name ASC`;
+}
+
+async function upsert(sql, weekStarting, schedule) {
+  const rows = await sql`
+    INSERT INTO rotas (week_starting, schedule)
+    VALUES (${weekStarting}, ${JSON.stringify(schedule)}::jsonb)
+    ON CONFLICT (week_starting)
+    DO UPDATE SET schedule = EXCLUDED.schedule, updated_at = now()
+    RETURNING week_starting::text AS "weekStarting", schedule, updated_at AS "updatedAt"
+  `;
+  return rows[0];
+}
+
+export async function GET(request) {
+  const week = new URL(request.url).searchParams.get('week') || '';
+  if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid ?week=YYYY-MM-DD is required.' }, { status: 400 });
   try {
     await ensureSchema();
     const sql = getSql();
-    const rotas = await sql`
-      SELECT id, week_starting::text AS "weekStarting", notes, schedule, created_at AS "createdAt"
-      FROM rotas ORDER BY created_at DESC LIMIT 20
+    const rows = await sql`
+      SELECT week_starting::text AS "weekStarting", schedule, updated_at AS "updatedAt"
+      FROM rotas WHERE week_starting = ${week}
     `;
-    return NextResponse.json({ rotas });
+    return NextResponse.json({ rota: rows[0] || null });
   } catch (e) {
-    return NextResponse.json({ error: 'Could not load rotas.', detail: String(e).slice(0, 300) }, { status: 500 });
+    return NextResponse.json({ error: 'Could not load the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
   }
 }
 
 export async function POST(request) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_AI_MODEL;
-  if (!apiKey || !model) {
-    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY or OPENROUTER_AI_MODEL.' }, { status: 500 });
-  }
-
   let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
-  }
-
-  const weekStarting = String(body?.weekStarting || '').trim();
-  if (!ISO_DATE.test(weekStarting)) {
-    return NextResponse.json({ error: 'A valid week start date (YYYY-MM-DD) is required.' }, { status: 400 });
-  }
-  const openingHours = String(body?.openingHours || '').trim();
-  const requirements = String(body?.requirements || '').trim();
+  try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
+  const week = String(body?.weekStarting || '').trim();
+  if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid week start date (YYYY-MM-DD) is required.' }, { status: 400 });
+  const minStaff = Number.isFinite(body?.minStaff) ? Math.max(1, Math.min(4, Math.round(body.minStaff))) : 2;
 
   try {
     await ensureSchema();
     const sql = getSql();
+    const staff = await loadStaff(sql);
+    if (!staff.length) return NextResponse.json({ error: 'Add at least one staff member before generating a rota.' }, { status: 400 });
 
-    const staff = await sql`
-      SELECT name, role, hours_per_week AS "hoursPerWeek", notes
-      FROM staff ORDER BY name ASC
-    `;
-    if (!staff.length) {
-      return NextResponse.json({ error: 'Add at least one staff member before generating a rota.' }, { status: 400 });
-    }
-
-    const prompt = buildRotaPrompt({ staff, weekStarting, openingHours, requirements });
-
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
-      body: JSON.stringify({
-        model,
-        temperature: 0.3,
-        messages: [{ role: 'user', content: prompt }],
-        provider: NO_RETENTION,
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      return NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 });
-    }
-
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content || '';
-    const parsed = parseRotaJson(text);
-    if (!parsed) {
-      return NextResponse.json({ error: 'The model did not return a usable rota. Please try again.' }, { status: 502 });
-    }
-
-    const schedule = { days: parsed.days, notes: parsed.notes };
-    const rows = await sql`
-      INSERT INTO rotas (week_starting, notes, schedule)
-      VALUES (${weekStarting}, ${requirements}, ${JSON.stringify(schedule)})
-      RETURNING id, week_starting::text AS "weekStarting", notes, schedule, created_at AS "createdAt"
-    `;
-    return NextResponse.json({ rota: rows[0] });
+    const grid = generateGrid(staff, week, minStaff);
+    const schedule = { grid, times: DEFAULT_TIMES };
+    const saved = await upsert(sql, week, schedule);
+    return NextResponse.json({ rota: saved });
   } catch (e) {
-    return NextResponse.json({ error: 'Could not generate the rota.', detail: String(e).slice(0, 300) }, { status: 502 });
+    return NextResponse.json({ error: 'Could not generate the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
+  }
+}
+
+export async function PUT(request) {
+  let body;
+  try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
+  const week = String(body?.weekStarting || '').trim();
+  if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid week start date (YYYY-MM-DD) is required.' }, { status: 400 });
+
+  try {
+    await ensureSchema();
+    const sql = getSql();
+    const staff = await loadStaff(sql);
+    const grid = sanitiseGrid(body?.grid, staff, week);
+    const times = (body?.times && body.times.E && body.times.L) ? body.times : DEFAULT_TIMES;
+    const saved = await upsert(sql, week, { grid, times });
+    return NextResponse.json({ rota: saved });
+  } catch (e) {
+    return NextResponse.json({ error: 'Could not save the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
   }
 }
