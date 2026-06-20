@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T07:10:54.802Z",
+  "generatedAt": "2026-06-20T07:38:55.229Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
@@ -15,20 +15,6 @@
       ],
       "chunks": 237,
       "source": "rag/sources/B0128-clinical-guidelines-for-use-in-a-major-incident-v2-2020.pdf"
-    },
-    {
-      "docId": "emis-web-how-to",
-      "title": "EMIS WEB how to",
-      "summary": "Guide to EMIS Web features, templates, and common clinical tasks.",
-      "tags": [
-        "emis web",
-        "guide",
-        "templates",
-        "clinical",
-        "how to"
-      ],
-      "chunks": 5,
-      "source": "rag/sources/EMIS-WEB-how-to.pdf"
     },
     {
       "docId": "lpug0019-emis-web-introduction-admin-clinical",
@@ -223,19 +209,6 @@
       ],
       "chunks": 2,
       "source": "rag/sources/Data Protection Guidance for staff.docx"
-    },
-    {
-      "docId": "data-protection-policy",
-      "title": "Data Protection Policy",
-      "summary": "This policy outlines staff responsibilities for protecting patient and colleague personal data under UK GDPR.",
-      "tags": [
-        "data protection",
-        "uk gdpr",
-        "patient data",
-        "staff responsibilities"
-      ],
-      "chunks": 16,
-      "source": "rag/sources/Data Protection Policy.docx"
     },
     {
       "docId": "data-quality-policy-1",
@@ -858,6 +831,1803 @@
       ],
       "chunks": 7,
       "source": "rag/sources/Zero Tolerance Policy The Riverside practice.docx"
+    },
+    {
+      "docId": "access-to-medical-records-data-protection-policy-2026",
+      "title": "access to medical records data protection policy 2026",
+      "summary": "Policy on accessing medical records and protecting patient data under UK GDPR.",
+      "tags": [
+        "medical records",
+        "data protection",
+        "uk gdpr",
+        "patient access",
+        "confidentiality"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/access-to-medical-records-data-protection-policy_2026.doc"
+    },
+    {
+      "docId": "access-to-medical-records-desk-aid-flow-chart-1",
+      "title": "access to medical records desk aid flow chart[1]",
+      "summary": "Flowchart for processing patient requests for access to their medical records.",
+      "tags": [
+        "medical records",
+        "access",
+        "patient data",
+        "gdpr",
+        "flowchart"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/access-to-medical-records-desk-aid-flow-chart[1].doc"
+    },
+    {
+      "docId": "access-to-medical-records-leaflet-for-patients-1",
+      "title": "access to medical records leaflet for patients[1]",
+      "summary": "Explains patient rights to access medical records, CCTV usage, and complaint procedures.",
+      "tags": [
+        "medical records",
+        "data protection",
+        "complaints",
+        "cctv",
+        "patient rights"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/access-to-medical-records-leaflet-for-patients[1].doc"
+    },
+    {
+      "docId": "access-to-medical-reports-1",
+      "title": "access to medical reports[1]",
+      "summary": "Patient rights to access medical reports for insurance or employment purposes.",
+      "tags": [
+        "medical reports",
+        "patient access",
+        "insurance",
+        "employment",
+        "consent"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/access-to-medical-reports[1].doc"
+    },
+    {
+      "docId": "accessible-information-standard-policy-for-patient-informati",
+      "title": "Accessible Information Standard   Policy for Patient Information",
+      "summary": "Policy for ensuring disabled patients receive accessible information and communication support.",
+      "tags": [
+        "accessible information",
+        "patient communication",
+        "disability support",
+        "nhs policy"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/Accessible Information Standard - Policy for Patient Information.doc"
+    },
+    {
+      "docId": "advocacy-policy-1",
+      "title": "advocacy policy[1]",
+      "summary": "Policy outlining how patients can access advocacy support for benefits, health, and social services.",
+      "tags": [
+        "advocacy",
+        "patient support",
+        "vulnerable patients",
+        "social services",
+        "benefits"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/advocacy-policy[1].doc"
+    },
+    {
+      "docId": "being-open-policy",
+      "title": "being open policy",
+      "summary": "Policy for open communication with patients about safety incidents and errors.",
+      "tags": [
+        "patient safety",
+        "openness",
+        "communication",
+        "incidents",
+        "errors"
+      ],
+      "chunks": 14,
+      "source": "rag/sources/being-open-policy.doc"
+    },
+    {
+      "docId": "blame-free-culture-policy",
+      "title": "blame free culture policy",
+      "summary": "Establishes principles for a blame-free culture to encourage reporting and learning from errors.",
+      "tags": [
+        "blame-free culture",
+        "patient safety",
+        "incident reporting",
+        "learning from errors"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/blame-free-culture-policy.doc"
+    },
+    {
+      "docId": "bribery-act-policy",
+      "title": "bribery act policy",
+      "summary": "Policy on accepting and handling gifts to prevent bribery and comply with the Bribery Act 2010.",
+      "tags": [
+        "bribery act",
+        "gifts policy",
+        "nhs",
+        "compliance",
+        "practice policy"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/bribery-act-policy.doc"
+    },
+    {
+      "docId": "bruising-or-suspected-non-accidental-in-children-ch-v2",
+      "title": "Bruising or suspected non accidental in children CH V2",
+      "summary": "Guide for GPs on suspected non-accidental injury in children, including referral pathways.",
+      "tags": [
+        "nai",
+        "child protection",
+        "gp guide",
+        "referral",
+        "hackney"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Bruising or suspected non accidental in children CH V2.pptx"
+    },
+    {
+      "docId": "building-maintenance-policy",
+      "title": "building maintenance policy",
+      "summary": "This policy outlines the management, maintenance, and repair of the surgery premises.",
+      "tags": [
+        "building maintenance",
+        "policy",
+        "responsibilities",
+        "repairs",
+        "health and safety"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/building-maintenance-policy.doc"
+    },
+    {
+      "docId": "bullying-and-harassment-policy-1",
+      "title": "bullying and harassment policy(1)",
+      "summary": "This policy defines bullying and harassment and outlines the practice's commitment to a respectful workplace.",
+      "tags": [
+        "bullying",
+        "harassment",
+        "policy",
+        "equality act",
+        "workplace"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/bullying-and-harassment-policy(1).doc"
+    },
+    {
+      "docId": "business-plan-2",
+      "title": "Business Plan(2)",
+      "summary": "Riverside Practice's 2021-2026 business plan outlines objectives, practice overview, and development strategies.",
+      "tags": [
+        "business plan",
+        "gp practice",
+        "development",
+        "objectives",
+        "strategy"
+      ],
+      "chunks": 13,
+      "source": "rag/sources/Business Plan(2).doc"
+    },
+    {
+      "docId": "caldicott-protocol",
+      "title": "caldicott protocol",
+      "summary": "Covers the Caldicott principles, their purpose, and the role of the Information Governance Lead.",
+      "tags": [
+        "caldicott",
+        "confidentiality",
+        "data protection",
+        "information governance"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/caldicott-protocol.doc"
+    },
+    {
+      "docId": "carers-identification-protocol-1",
+      "title": "carers identification protocol[1]",
+      "summary": "Protocol for identifying and referring unpaid carers to Adult Care Services for assessment.",
+      "tags": [
+        "carers",
+        "identification",
+        "protocol",
+        "referral",
+        "adult care"
+      ],
+      "chunks": 14,
+      "source": "rag/sources/carers-identification-protocol[1].doc"
+    },
+    {
+      "docId": "cervical-screening-protocol",
+      "title": "cervical screening protocol",
+      "summary": "Protocol for cervical screening, including HPV testing, to reduce cervical disease and promote sexual health.",
+      "tags": [
+        "cervical screening",
+        "hpv testing",
+        "protocol",
+        "sexual health",
+        "cytology"
+      ],
+      "chunks": 23,
+      "source": "rag/sources/cervical-screening-protocol.doc"
+    },
+    {
+      "docId": "chaperone-poster",
+      "title": "chaperone poster",
+      "summary": "Requesting a chaperone at Riverside Practice for consultations.",
+      "tags": [
+        "chaperone",
+        "riverside practice",
+        "appointment",
+        "consultation"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/chaperone-poster.doc"
+    },
+    {
+      "docId": "chaperone-poster-1",
+      "title": "chaperone poster[1]",
+      "summary": "Information on how to request a chaperone during a GP consultation.",
+      "tags": [
+        "chaperone",
+        "appointment",
+        "consultation",
+        "riverside practice"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/chaperone-poster[1].doc"
+    },
+    {
+      "docId": "cleaning-and-decontamination-of-surfaces-protocol-1-copy",
+      "title": "cleaning and decontamination of surfaces protocol[1]   Copy",
+      "summary": "Protocol for cleaning and decontaminating surfaces in clinical areas to prevent infections.",
+      "tags": [
+        "cleaning",
+        "decontamination",
+        "infection control",
+        "gp practice",
+        "surfaces"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/cleaning-and-decontamination-of-surfaces-protocol[1] - Copy.doc"
+    },
+    {
+      "docId": "clinical-governance-policy",
+      "title": "clinical governance policy",
+      "summary": "This policy outlines the practice's approach to clinical governance, aiming to improve patient service, safety, and well-being.",
+      "tags": [
+        "clinical governance",
+        "patient safety",
+        "quality improvement",
+        "staff development",
+        "risk management"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/clinical-governance-policy.doc"
+    },
+    {
+      "docId": "clinical-guidance-of-staff",
+      "title": "clinical guidance of staff",
+      "summary": "Guidance for ongoing clinical supervision of trainees in a GP practice.",
+      "tags": [
+        "clinical supervision",
+        "trainee support",
+        "patient safety",
+        "gp practice",
+        "staff guidance"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/clinical-guidance-of-staff.doc"
+    },
+    {
+      "docId": "clinical-waste-management-protocol-1",
+      "title": "clinical waste management protocol[1]",
+      "summary": "Protocol for safe handling, segregation, and disposal of clinical waste at The Riverside Practice.",
+      "tags": [
+        "clinical waste",
+        "protocol",
+        "disposal",
+        "segregation",
+        "health and safety"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/clinical-waste-management-protocol[1].doc"
+    },
+    {
+      "docId": "cold-chain-audit-1",
+      "title": "cold chain audit[1]",
+      "summary": "Audit form for vaccine storage and cold chain management at a GP practice.",
+      "tags": [
+        "cold chain",
+        "vaccine storage",
+        "audit",
+        "gp practice",
+        "protocol"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/cold-chain-audit[1].doc"
+    },
+    {
+      "docId": "cold-chain-policy-1-0",
+      "title": "cold chain policy[1](0)",
+      "summary": "Policy for maintaining vaccine temperature and handling procedures to prevent spoilage.",
+      "tags": [
+        "vaccine",
+        "cold chain",
+        "fridge",
+        "storage",
+        "policy"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/cold-chain-policy[1](0).doc"
+    },
+    {
+      "docId": "complaint-form-england-1",
+      "title": "complaint form england[1]",
+      "summary": "Guidance on how to make a formal complaint about NHS GP practice services.",
+      "tags": [
+        "complaints",
+        "patient rights",
+        "nhs",
+        "gp practice",
+        "feedback"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/complaint-form-england[1].doc"
+    },
+    {
+      "docId": "complaints-handling-desk-aid-england-1",
+      "title": "complaints handling desk aid england[1]",
+      "summary": "Guidance for NHS practices in England on handling patient complaints, including procedures and timelines.",
+      "tags": [
+        "complaints",
+        "nhs",
+        "gp practice",
+        "procedure",
+        "desk aid"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/complaints-handling-desk-aid-england[1].doc"
+    },
+    {
+      "docId": "complaints-procedure-england",
+      "title": "complaints procedure england",
+      "summary": "Details the NHS complaints procedure for patients and their representatives in England.",
+      "tags": [
+        "complaints",
+        "nhs",
+        "procedure",
+        "patients",
+        "england"
+      ],
+      "chunks": 17,
+      "source": "rag/sources/complaints-procedure-england.doc"
+    },
+    {
+      "docId": "complaints-procedure-leaflet",
+      "title": "complaints procedure leaflet",
+      "summary": "Details how to make a formal complaint and where to seek further assistance.",
+      "tags": [
+        "complaints",
+        "nhs",
+        "procedure",
+        "advocacy",
+        "ombudsman"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/complaints-procedure-leaflet.doc"
+    },
+    {
+      "docId": "computer-and-data-security-procedure-2026",
+      "title": "computer and data security procedure 2026",
+      "summary": "Procedure for computer and data security, including backups and remote work.",
+      "tags": [
+        "data security",
+        "backups",
+        "encryption",
+        "remote work",
+        "confidentiality"
+      ],
+      "chunks": 24,
+      "source": "rag/sources/computer-and-data-security-procedure 2026.doc"
+    },
+    {
+      "docId": "computer-internet-and-email-usage-policy-draft",
+      "title": "computer internet and email usage policy DRAFT",
+      "summary": "Policy for responsible and secure use of practice computers, internet, and email, including personal devices.",
+      "tags": [
+        "it policy",
+        "computer use",
+        "internet use",
+        "email policy",
+        "data security"
+      ],
+      "chunks": 18,
+      "source": "rag/sources/computer-internet-and-email-usage-policy DRAFT.doc"
+    },
+    {
+      "docId": "computer-security",
+      "title": "computer security",
+      "summary": "Policy for secure use of computers, passwords, virus protection, and email at the practice.",
+      "tags": [
+        "computer security",
+        "password policy",
+        "virus protection",
+        "email policy"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/computer_security.doc"
+    },
+    {
+      "docId": "confidentiality-agreement-third-party",
+      "title": "confidentiality agreement third party",
+      "summary": "Confidentiality agreement for third parties accessing practice premises and information.",
+      "tags": [
+        "confidentiality",
+        "third party",
+        "agreement",
+        "data protection",
+        "visitors"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/confidentiality-agreement-third-party.doc"
+    },
+    {
+      "docId": "confidentiality-policy-and-agreement-staff",
+      "title": "confidentiality policy and agreement staff",
+      "summary": "Policy and agreement for staff on maintaining confidentiality of patient and practice information.",
+      "tags": [
+        "confidentiality",
+        "patient data",
+        "staff agreement",
+        "nhs policy",
+        "data protection"
+      ],
+      "chunks": 11,
+      "source": "rag/sources/confidentiality-policy-and-agreement-staff.doc"
+    },
+    {
+      "docId": "confidentiality-policy-teenagers",
+      "title": "confidentiality policy teenagers",
+      "summary": "Confidentiality policy for under-18s, including parental involvement and Gillick competency.",
+      "tags": [
+        "confidentiality",
+        "teenagers",
+        "gillick competency",
+        "fraser guidelines",
+        "consent"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/confidentiality-policy-teenagers.doc"
+    },
+    {
+      "docId": "consent-form-for-sharing-medical-records-signed-by-patient",
+      "title": "CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT.",
+      "summary": "Patient consent form for sharing medical records with authorised family members.",
+      "tags": [
+        "consent",
+        "medical records",
+        "data sharing",
+        "patient information",
+        "family access"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT..rtf"
+    },
+    {
+      "docId": "consent-protocol",
+      "title": "consent protocol",
+      "summary": "This protocol outlines the practice's approach to obtaining informed consent for treatments and procedures.",
+      "tags": [
+        "consent",
+        "patient rights",
+        "medical procedures",
+        "informed consent",
+        "gp practice"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/consent-protocol.doc"
+    },
+    {
+      "docId": "control-of-substances-hazardous-to-health-policy",
+      "title": "control of substances hazardous to health policy",
+      "summary": "Policy for controlling hazardous substances in the practice, including risk assessment and safety data sheets.",
+      "tags": [
+        "coshh",
+        "health and safety",
+        "risk assessment",
+        "hazardous substances",
+        "policy"
+      ],
+      "chunks": 11,
+      "source": "rag/sources/control-of-substances-hazardous-to-health-policy.doc"
+    },
+    {
+      "docId": "data-sharing-policy-1-v-0-0",
+      "title": "Data Sharing Policy 1 v 0.0",
+      "summary": "Policy for sharing patient data with third parties via fax or secure email.",
+      "tags": [
+        "data sharing",
+        "policy",
+        "patient data",
+        "nhs net",
+        "secure email"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Data Sharing Policy-1__v_0.0.rtf"
+    },
+    {
+      "docId": "data-management-policy-1",
+      "title": "data management policy[1]",
+      "summary": "This policy outlines data management, coding, and quality control responsibilities within the practice.",
+      "tags": [
+        "data management",
+        "coding",
+        "quality control",
+        "it lead",
+        "practice manager"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/data-management-policy[1].doc"
+    },
+    {
+      "docId": "data-protection-policy",
+      "title": "data protection policy",
+      "summary": "This policy outlines the practice's commitment to data protection and compliance with the Data Protection Act 2018.",
+      "tags": [
+        "data protection",
+        "gdpr",
+        "policy",
+        "information security",
+        "patient data"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/data-protection-policy.doc"
+    },
+    {
+      "docId": "data-sharing-agreement",
+      "title": "data sharing agreement",
+      "summary": "This agreement outlines lawful data sharing between NHS GP practices and other organisations.",
+      "tags": [
+        "data sharing",
+        "gdpr",
+        "nhs",
+        "agreement",
+        "data controller",
+        "data processor"
+      ],
+      "chunks": 14,
+      "source": "rag/sources/data-sharing-agreement.doc"
+    },
+    {
+      "docId": "decontamination-of-medical-equipment",
+      "title": "Decontamination of medical equipment",
+      "summary": "This policy outlines the procedures for cleaning, disinfecting, and sterilizing medical equipment to prevent infection transmission.",
+      "tags": [
+        "decontamination",
+        "medical equipment",
+        "infection control",
+        "cleaning",
+        "disinfection",
+        "sterilisation"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/Decontamination of medical equipment.rtf"
+    },
+    {
+      "docId": "display-screen-equipment-health-surveillance-questionnaire",
+      "title": "display screen equipment health surveillance questionnaire",
+      "summary": "Questionnaire for display screen equipment users to assess health and workstation ergonomics.",
+      "tags": [
+        "dse",
+        "health surveillance",
+        "ergonomics",
+        "questionnaire",
+        "workstation"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/display-screen-equipment-health-surveillance-questionnaire.doc"
+    },
+    {
+      "docId": "display-screen-equipment-risk-assessment",
+      "title": "display screen equipment risk assessment",
+      "summary": "This document outlines a risk assessment checklist for display screen equipment workstations.",
+      "tags": [
+        "dse",
+        "risk assessment",
+        "workstation",
+        "health and safety"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/display-screen-equipment-risk-assessment.doc"
+    },
+    {
+      "docId": "electronic-transfer-of-patient-data-procedure",
+      "title": "electronic transfer of patient data procedure",
+      "summary": "Procedure for secure electronic transfer of patient data, outlining methods and security standards.",
+      "tags": [
+        "patient data",
+        "electronic transfer",
+        "nhs procedure",
+        "data security",
+        "gp practice"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/electronic-transfer-of-patient-data-procedure.doc"
+    },
+    {
+      "docId": "email-guidelines-for-the-use-of-protocol-1-draft",
+      "title": "email guidelines for the use of protocol 1 DRAFT",
+      "summary": "Guidelines for efficient and professional use of email for non-social communication.",
+      "tags": [
+        "email",
+        "guidelines",
+        "protocol",
+        "communication",
+        "nhs"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/email-guidelines-for-the-use-of-protocol-1 DRAFT.doc"
+    },
+    {
+      "docId": "emergency-drugs-checking-procedure-1",
+      "title": "emergency drugs checking procedure[1]",
+      "summary": "Procedure for checking emergency drug expiry dates and quantities monthly.",
+      "tags": [
+        "emergency drugs",
+        "stock check",
+        "procedure",
+        "gp practice",
+        "cqc"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/emergency-drugs-checking-procedure[1].doc"
+    },
+    {
+      "docId": "emergency-handling-patient-flowchart-oct-2022",
+      "title": "emergency handling patient flowchart OCT 2022",
+      "summary": "Flowchart for reception and clinical teams responding to patients in distress on premises.",
+      "tags": [
+        "emergency",
+        "patient distress",
+        "flowchart",
+        "protocol",
+        "reception",
+        "nurse"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/emergency-handling-patient-flowchart_OCT 2022.doc"
+    },
+    {
+      "docId": "emergency-incident-procedure",
+      "title": "emergency incident procedure",
+      "summary": "Procedure for staff to follow during emergency situations, including aggression and patient deterioration.",
+      "tags": [
+        "emergency",
+        "procedure",
+        "aggression",
+        "patient care",
+        "staff safety"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/emergency-incident-procedure.doc"
+    },
+    {
+      "docId": "emergency-telephone-call-handling-protocol",
+      "title": "emergency telephone call handling protocol",
+      "summary": "Protocol for handling urgent medical attention telephone calls at a GP practice.",
+      "tags": [
+        "emergency calls",
+        "protocol",
+        "gp reception",
+        "patient care",
+        "triage"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/emergency-telephone-call-handling-protocol.doc"
+    },
+    {
+      "docId": "emis-reception-reference",
+      "title": "EMIS Reception Reference",
+      "summary": "Guide for reception staff on using EMIS for patient details, referrals, and document management.",
+      "tags": [
+        "emis",
+        "reception",
+        "sop",
+        "referrals",
+        "documentation"
+      ],
+      "chunks": 22,
+      "source": "rag/sources/EMIS-Reception-Reference.pdf"
+    },
+    {
+      "docId": "fire-drill-sheet-2023",
+      "title": "FIRE DRILL SHEET 2023",
+      "summary": "Record of monthly fire drill dates, locations, and reset details for 2023.",
+      "tags": [
+        "fire drill",
+        "record sheet",
+        "safety",
+        "maintenance"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/FIRE DRILL SHEET 2023.rtf"
+    },
+    {
+      "docId": "fire-risk-assessment-checklist",
+      "title": "fire risk assessment checklist",
+      "summary": "Checklist for conducting a fire risk assessment in a GP practice.",
+      "tags": [
+        "fire safety",
+        "risk assessment",
+        "gp practice",
+        "checklist",
+        "hazards"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/fire-risk-assessment-checklist.doc"
+    },
+    {
+      "docId": "fire-safety-policy",
+      "title": "fire safety policy",
+      "summary": "This policy outlines fire safety procedures, evacuation plans, and staff training for the Riverside Practice.",
+      "tags": [
+        "fire safety",
+        "evacuation",
+        "policy",
+        "training",
+        "risk assessment"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/fire-safety-policy.doc"
+    },
+    {
+      "docId": "first-aid-policy",
+      "title": "first aid policy",
+      "summary": "This policy outlines first aid provision for staff, covering minor injuries and illnesses, based on risk assessment.",
+      "tags": [
+        "first aid",
+        "policy",
+        "staff safety",
+        "risk assessment",
+        "health and safety"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/first-aid-policy.doc"
+    },
+    {
+      "docId": "first-aid-risk-assessment",
+      "title": "first aid risk assessment",
+      "summary": "Guidance on assessing first aid risks in a GP practice, considering staffing, hazards, and specific scenarios.",
+      "tags": [
+        "first aid",
+        "risk assessment",
+        "gp practice",
+        "staffing",
+        "hazards"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/first-aid-risk-assessment.doc"
+    },
+    {
+      "docId": "fraud-prevention-policy",
+      "title": "fraud prevention policy",
+      "summary": "Policy for reporting and investigating suspected fraud and illegal acts within the practice.",
+      "tags": [
+        "fraud",
+        "policy",
+        "reporting",
+        "investigation",
+        "nhs"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/fraud-prevention-policy.doc"
+    },
+    {
+      "docId": "friends-and-family-test-1",
+      "title": "friends and family test[1]",
+      "summary": "Explains the NHS Friends and Family Test, its aims, and how to collect feedback, including for patients with disabilities.",
+      "tags": [
+        "friends and family test",
+        "patient feedback",
+        "nhs services",
+        "gp practice",
+        "quality improvement"
+      ],
+      "chunks": 13,
+      "source": "rag/sources/friends-and-family-test[1].doc"
+    },
+    {
+      "docId": "gdpr-compliant-data-protection-policy-for-staff",
+      "title": "GDPR Compliant Data Protection Policy for Staff",
+      "summary": "Policy for staff data protection, compliant with GDPR and Data Protection Act 2018.",
+      "tags": [
+        "gdpr",
+        "data protection",
+        "policy",
+        "staff",
+        "nhs"
+      ],
+      "chunks": 19,
+      "source": "rag/sources/GDPR-Compliant-Data-Protection-Policy-for-Staff.doc"
+    },
+    {
+      "docId": "gifts-and-donations-policy",
+      "title": "GIFTS AND DONATIONS POLICY",
+      "summary": "Policy on accepting and registering gifts and donations to the practice and staff.",
+      "tags": [
+        "gifts",
+        "donations",
+        "policy",
+        "declaration",
+        "nhs"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/GIFTS_AND_DONATIONS_POLICY.rtf"
+    },
+    {
+      "docId": "handwashing-and-hygiene-protocol-1",
+      "title": "handwashing and hygiene protocol[1]",
+      "summary": "Protocol for handwashing and hygiene, including levels, facilities, and when to perform hand hygiene.",
+      "tags": [
+        "handwashing",
+        "hygiene",
+        "infection control",
+        "protocol",
+        "gp practice"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/handwashing-and-hygiene-protocol[1].doc"
+    },
+    {
+      "docId": "handwashing-techniques-1",
+      "title": "handwashing techniques[1]",
+      "summary": "Guidance on effective handwashing techniques and alcohol gel use for infection prevention.",
+      "tags": [
+        "handwashing",
+        "infection control",
+        "alcohol gel",
+        "nhs practice"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/handwashing-techniques[1].doc"
+    },
+    {
+      "docId": "health-and-safety-policy-1",
+      "title": "health and safety policy[1]",
+      "summary": "This policy outlines the practice's commitment to health and safety for staff, visitors, and the public.",
+      "tags": [
+        "health and safety",
+        "policy",
+        "staff responsibilities",
+        "practice responsibilities",
+        "data protection"
+      ],
+      "chunks": 20,
+      "source": "rag/sources/health-and-safety-policy[1].doc"
+    },
+    {
+      "docId": "hiv-aids-policy-staff",
+      "title": "HIV AIDS policy staff",
+      "summary": "Policy for staff regarding HIV/AIDS, ensuring non-discrimination and confidentiality.",
+      "tags": [
+        "hiv",
+        "aids",
+        "policy",
+        "staff",
+        "confidentiality"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/HIV-AIDS-policy-staff.doc"
+    },
+    {
+      "docId": "hiv-policy-patients",
+      "title": "HIV policy patients",
+      "summary": "This policy outlines the practice's approach to caring for patients with HIV, ensuring confidentiality and equal treatment.",
+      "tags": [
+        "hiv",
+        "patient care",
+        "confidentiality",
+        "equality",
+        "nhs"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/HIV-policy-patients.doc"
+    },
+    {
+      "docId": "igsoc-version-14-may-2016",
+      "title": "IGSoC version 14 May 2016",
+      "summary": "Guidance on the Information Governance Statement of Compliance (IGSoC) process for NHS GP practices.",
+      "tags": [
+        "information governance",
+        "ig toolkit",
+        "nhs",
+        "gp practice",
+        "compliance"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/IGSoC-version-14-May-2016.doc"
+    },
+    {
+      "docId": "incident-management-procedure-1",
+      "title": "incident management procedure[1]",
+      "summary": "Procedure for managing and reporting incidents at the practice.",
+      "tags": [
+        "incident management",
+        "reporting",
+        "procedure",
+        "significant event",
+        "cqc",
+        "ccg"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/incident-management-procedure[1].doc"
+    },
+    {
+      "docId": "induction-programme-2026",
+      "title": "Induction Programme 2026",
+      "summary": "Covers the preparation, content, and review of a new employee induction programme.",
+      "tags": [
+        "induction",
+        "onboarding",
+        "new staff",
+        "gp practice",
+        "hr"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Induction Programme 2026.rtf"
+    },
+    {
+      "docId": "infection-prevention-and-control-audit-checklist",
+      "title": "infection prevention and control AUDIT checklist",
+      "summary": "Checklist for infection prevention and control audits in NHS GP practices.",
+      "tags": [
+        "infection control",
+        "audit",
+        "gp practice",
+        "checklist",
+        "cqc"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/infection prevention and control_AUDIT_checklist.doc"
+    },
+    {
+      "docId": "infection-control-biological-substances-protocol-1",
+      "title": "infection control biological substances protocol[1]",
+      "summary": "Protocol for infection control with biological substances, including spillages and specimen handling.",
+      "tags": [
+        "infection control",
+        "biological substances",
+        "spillages",
+        "specimens",
+        "ppe"
+      ],
+      "chunks": 20,
+      "source": "rag/sources/infection-control-biological-substances-protocol[1].doc"
+    },
+    {
+      "docId": "infection-control-policy",
+      "title": "infection control policy",
+      "summary": "This policy outlines the practice's commitment to infection control, including cleaning, training, and responsibilities.",
+      "tags": [
+        "infection control",
+        "policy",
+        "cleaning",
+        "training",
+        "ppe"
+      ],
+      "chunks": 11,
+      "source": "rag/sources/infection-control-policy.doc"
+    },
+    {
+      "docId": "information-governance-policy",
+      "title": "Information Governance Policy",
+      "summary": "This policy outlines the practice's approach to information governance, responsibilities, and compliance with national standards.",
+      "tags": [
+        "information governance",
+        "policy",
+        "compliance",
+        "nhs",
+        "data protection"
+      ],
+      "chunks": 15,
+      "source": "rag/sources/Information_Governance_Policy.doc"
+    },
+    {
+      "docId": "learning-disabilities-identification-of-patients-with-1-1",
+      "title": "learning disabilities identification of patients with[1] (1)",
+      "summary": "Protocol for identifying and managing patients with learning disabilities, including phlebotomy.",
+      "tags": [
+        "learning disabilities",
+        "identification",
+        "protocol",
+        "phlebotomy",
+        "gp practice"
+      ],
+      "chunks": 19,
+      "source": "rag/sources/learning-disabilities-identification-of-patients-with[1] (1).doc"
+    },
+    {
+      "docId": "legionella-management-policy-record-sheet",
+      "title": "Legionella management Policy & Record sheet",
+      "summary": "Policy for managing Legionella risks in water systems and record-keeping requirements.",
+      "tags": [
+        "legionella",
+        "water safety",
+        "risk assessment",
+        "policy",
+        "health and safety"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/Legionella management Policy & Record sheet.doc"
+    },
+    {
+      "docId": "locking-up-procedure-1",
+      "title": "locking up procedure[1]",
+      "summary": "Outlines procedures for securing the GP practice premises at the end of the day.",
+      "tags": [
+        "security",
+        "closing",
+        "procedure",
+        "staff",
+        "premises"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/locking-up-procedure[1].doc"
+    },
+    {
+      "docId": "locum-appointment-protocol-1",
+      "title": "locum appointment protocol[1]",
+      "summary": "Protocol for vetting locum GPs to ensure patient safety and statutory compliance.",
+      "tags": [
+        "locum",
+        "gp",
+        "protocol",
+        "vetting",
+        "nhs"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/locum-appointment-protocol[1].doc"
+    },
+    {
+      "docId": "lone-worker-policy-1",
+      "title": "lone worker policy(1)",
+      "summary": "Policy for ensuring safety of staff working alone, either in the surgery or on home visits.",
+      "tags": [
+        "lone worker",
+        "safety",
+        "policy",
+        "gp practice",
+        "home visits"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/lone-worker-policy(1).doc"
+    },
+    {
+      "docId": "management-of-patient-safety-alerts-2025",
+      "title": "Management of Patient Safety Alerts 2025",
+      "summary": "Protocol for managing patient safety alerts received via the Central Alerting System.",
+      "tags": [
+        "patient safety",
+        "alerts",
+        "protocol",
+        "nhs",
+        "gp practice"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Management of Patient Safety Alerts 2025.doc"
+    },
+    {
+      "docId": "manual-handling-policy",
+      "title": "manual handling policy",
+      "summary": "Policy for safe manual handling of objects and patients, including risk assessments and training.",
+      "tags": [
+        "manual handling",
+        "policy",
+        "risk assessment",
+        "patient handling",
+        "training"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/manual-handling-policy.doc"
+    },
+    {
+      "docId": "medicine-reconciliation-and-discharge-policy-1",
+      "title": "medicine reconciliation and discharge policy (1)",
+      "summary": "Policy for managing medication changes after hospital visits and patient discharges.",
+      "tags": [
+        "medicine reconciliation",
+        "discharge",
+        "policy",
+        "medication changes",
+        "gp practice"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/medicine-reconciliation-and-discharge-policy (1).doc"
+    },
+    {
+      "docId": "mental-capacity-act-policy",
+      "title": "mental capacity act policy",
+      "summary": "Policy for empowering and protecting adults lacking capacity to make decisions.",
+      "tags": [
+        "mental capacity",
+        "policy",
+        "nhs",
+        "decision making",
+        "adults"
+      ],
+      "chunks": 26,
+      "source": "rag/sources/mental-capacity-act-policy.doc"
+    },
+    {
+      "docId": "needlestick-injuries-protocol",
+      "title": "Needlestick Injuries PROTOCOL",
+      "summary": "Protocol for immediate treatment and follow-up of needlestick injuries in a GP practice.",
+      "tags": [
+        "needlestick injury",
+        "protocol",
+        "sharps",
+        "gp practice",
+        "first aid"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/Needlestick_Injuries PROTOCOL.doc"
+    },
+    {
+      "docId": "new-patient-registration-policy-1",
+      "title": "new patient registration policy[1]",
+      "summary": "Policy on accepting new patients, including open/closed lists and grounds for refusal.",
+      "tags": [
+        "new patients",
+        "registration",
+        "policy",
+        "gp practice"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/new-patient-registration-policy[1].doc"
+    },
+    {
+      "docId": "notification-of-infectious-diseases-2",
+      "title": "notification of infectious diseases (2)",
+      "summary": "Guidance for GPs on notifying suspected infectious diseases and contamination to local authorities.",
+      "tags": [
+        "infectious disease",
+        "notification",
+        "gp guidance",
+        "public health"
+      ],
+      "chunks": 17,
+      "source": "rag/sources/notification-of-infectious-diseases (2).doc"
+    },
+    {
+      "docId": "online-video-consultations-policy",
+      "title": "online video consultations policy",
+      "summary": "Policy for online video consultations, including digital-first care, AI advice, and security measures.",
+      "tags": [
+        "online consultations",
+        "video consultations",
+        "digital health",
+        "information governance",
+        "cyber security"
+      ],
+      "chunks": 21,
+      "source": "rag/sources/online-video-consultations-policy.doc"
+    },
+    {
+      "docId": "oxygen-and-defibrillator-checklist",
+      "title": "Oxygen and Defibrillator checklist",
+      "summary": "Weekly and daily checklist for oxygen cylinders and defibrillators, outlining responsibilities and basic checks.",
+      "tags": [
+        "oxygen",
+        "defibrillator",
+        "checklist",
+        "safety",
+        "protocol"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Oxygen and Defibrillator-checklist.doc"
+    },
+    {
+      "docId": "oxygen-handling-and-storage-protocol",
+      "title": "oxygen handling and storage protocol",
+      "summary": "Safe handling, storage, and transportation of oxygen cylinders within the practice.",
+      "tags": [
+        "oxygen",
+        "storage",
+        "handling",
+        "transportation",
+        "safety"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/oxygen-handling-and-storage-protocol.doc"
+    },
+    {
+      "docId": "panic-alarms-procedure-1",
+      "title": "panic alarms procedure[1]",
+      "summary": "Procedure for using and responding to panic alarms in a GP practice.",
+      "tags": [
+        "panic alarm",
+        "procedure",
+        "aggression",
+        "safety",
+        "staff"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/panic-alarms-procedure[1].doc"
+    },
+    {
+      "docId": "patient-access-to-online-services-terms-and-conditions",
+      "title": "patient access to online services terms and conditions",
+      "summary": "Patient access to online services requires agreement to terms and conditions, including identity verification.",
+      "tags": [
+        "online access",
+        "terms and conditions",
+        "patient services",
+        "gp practice",
+        "identity verification"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/patient-access-to-online-services-terms-and-conditions.doc"
+    },
+    {
+      "docId": "patient-data-recording-of-policy",
+      "title": "patient data recording of policy",
+      "summary": "Policy for recording all patient contacts and data digitally on the practice computer system.",
+      "tags": [
+        "patient data",
+        "recording",
+        "policy",
+        "digital records",
+        "gp practice"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/patient-data-recording-of-policy.doc"
+    },
+    {
+      "docId": "patients-access-to-online-medical-records",
+      "title": "patients access to online medical records",
+      "summary": "Details patient access to online medical records, including eligibility and identity checks.",
+      "tags": [
+        "online records",
+        "patient access",
+        "gp contract",
+        "eligibility",
+        "identity checks"
+      ],
+      "chunks": 14,
+      "source": "rag/sources/patients_access_to_online_medical_records.doc"
+    },
+    {
+      "docId": "phlebotomy-protocol",
+      "title": "phlebotomy protocol",
+      "summary": "Protocol for safe and effective blood-taking procedures by qualified staff.",
+      "tags": [
+        "phlebotomy",
+        "blood sample",
+        "patient care",
+        "staff training",
+        "procedure"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/phlebotomy-protocol.doc"
+    },
+    {
+      "docId": "phone-lines-down-doc1",
+      "title": "Phone lines down Doc1",
+      "summary": "Procedure for when GP practice phone lines are unavailable.",
+      "tags": [
+        "phone lines",
+        "outage",
+        "procedure",
+        "emergency"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Phone lines down-Doc1.rtf"
+    },
+    {
+      "docId": "portable-appliance-testing-pat-policy",
+      "title": "portable appliance testing PAT policy",
+      "summary": "This policy outlines the practice's procedures for portable appliance testing to ensure electrical safety.",
+      "tags": [
+        "pat testing",
+        "electrical safety",
+        "health and safety",
+        "policy",
+        "nhs practice"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/portable-appliance-testing-PAT-policy.doc"
+    },
+    {
+      "docId": "ppe-policy",
+      "title": "PPE Policy",
+      "summary": "Policy on the use of Personal Protective Equipment (PPE) in a GP setting for infection control.",
+      "tags": [
+        "ppe",
+        "infection control",
+        "gp practice",
+        "safety policy",
+        "healthcare"
+      ],
+      "chunks": 13,
+      "source": "rag/sources/PPE Policy.doc"
+    },
+    {
+      "docId": "practice-security-procedures",
+      "title": "practice security procedures",
+      "summary": "Procedures for opening, closing, and securing the GP practice during the day and in emergencies.",
+      "tags": [
+        "security",
+        "opening",
+        "closing",
+        "emergencies",
+        "practice procedures"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/practice-security-procedures.doc"
+    },
+    {
+      "docId": "premises-standards-audit",
+      "title": "premises standards audit",
+      "summary": "Ensures GP premises meet CQC standards for safety, suitability, and accessibility.",
+      "tags": [
+        "premises",
+        "cqc",
+        "audit",
+        "accessibility",
+        "standards"
+      ],
+      "chunks": 17,
+      "source": "rag/sources/premises-standards audit.doc"
+    },
+    {
+      "docId": "prescription-recording-procedure",
+      "title": "prescription recording procedure",
+      "summary": "Details the procedure for issuing and recording electronic and manual prescriptions.",
+      "tags": [
+        "prescriptions",
+        "recording",
+        "emr",
+        "eps",
+        "gp practice"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/prescription-recording-procedure.doc"
+    },
+    {
+      "docId": "prescription-security-protocol",
+      "title": "prescription security protocol",
+      "summary": "Protocol for securing prescription forms against theft and forgery, detailing tracking and storage procedures.",
+      "tags": [
+        "prescriptions",
+        "security",
+        "protocol",
+        "forms",
+        "storage"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/prescription-security-protocol.doc"
+    },
+    {
+      "docId": "ra01-conditions-for-staff-information-smartcards",
+      "title": "RA01 conditions for staff information smartcards",
+      "summary": "Conditions for NHS staff smartcard applications and use of patient data.",
+      "tags": [
+        "smartcard",
+        "nhs staff",
+        "data access",
+        "registration",
+        "patient data"
+      ],
+      "chunks": 14,
+      "source": "rag/sources/RA01-conditions-for-staff-information-smartcards.doc"
+    },
+    {
+      "docId": "records-retention-policy-db",
+      "title": "Records Retention Policy DB",
+      "summary": "NHS GP records retention periods for various document types.",
+      "tags": [
+        "records retention",
+        "nhs",
+        "policy",
+        "gp",
+        "document management"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/Records Retention Policy DB.doc"
+    },
+    {
+      "docId": "recruitment-policy",
+      "title": "recruitment policy",
+      "summary": "This policy outlines the Riverside Practice's procedure for recruiting staff, ensuring fairness and compliance.",
+      "tags": [
+        "recruitment",
+        "policy",
+        "nhs",
+        "employment",
+        "hr"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/recruitment-policy.doc"
+    },
+    {
+      "docId": "recruitment-qualification-checking-policy",
+      "title": "recruitment qualification checking policy",
+      "summary": "Policy for checking health professional qualifications and registration for NHS recruitment.",
+      "tags": [
+        "recruitment",
+        "qualifications",
+        "policy",
+        "nhs",
+        "registration"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/recruitment-qualification-checking-policy.doc"
+    },
+    {
+      "docId": "repeat-prescribing-policy-1",
+      "title": "repeat prescribing policy(1)",
+      "summary": "Sets out the process and responsibilities for issuing repeat prescriptions within the practice.",
+      "tags": [
+        "repeat prescribing",
+        "policy",
+        "gp practice",
+        "patient requests",
+        "medication management"
+      ],
+      "chunks": 20,
+      "source": "rag/sources/repeat-prescribing-policy(1).doc"
+    },
+    {
+      "docId": "riddor-policy",
+      "title": "riddor policy",
+      "summary": "This policy outlines the practice's responsibilities for reporting work-related injuries, diseases, and dangerous occurrences.",
+      "tags": [
+        "riddor",
+        "health and safety",
+        "reporting",
+        "policy",
+        "incidents"
+      ],
+      "chunks": 13,
+      "source": "rag/sources/riddor-policy.doc"
+    },
+    {
+      "docId": "risk-assessment-and-employment-checks-staff",
+      "title": "risk assessment and employment checks staff",
+      "summary": "Policy on risk assessments and employment checks for NHS GP practice staff, including DBS and right to work.",
+      "tags": [
+        "employment checks",
+        "risk assessment",
+        "dbs",
+        "right to work",
+        "nhs staff"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/risk-assessment-and-employment-checks-staff.doc"
+    },
+    {
+      "docId": "risk-assessment-toolkit-building",
+      "title": "risk assessment toolkit (building)",
+      "summary": "Provides a toolkit for conducting health and safety risk assessments in a GP practice.",
+      "tags": [
+        "risk assessment",
+        "health and safety",
+        "toolkit",
+        "gp practice"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/risk_assessment_toolkit (building).doc"
+    },
+    {
+      "docId": "riverside-practice-business-continuity-plan-2025-2",
+      "title": "Riverside Practice Business Continuity Plan 2025 (2)",
+      "summary": "This plan outlines Riverside Practice's procedures for responding to and managing various disruptive events.",
+      "tags": [
+        "business continuity",
+        "emergency response",
+        "practice management",
+        "risk assessment"
+      ],
+      "chunks": 38,
+      "source": "rag/sources/Riverside Practice Business Continuity Plan 2025 (2).doc"
+    },
+    {
+      "docId": "safeguarding-policy-for-children-and-young-persons-1",
+      "title": "safeguarding policy for children and young persons[1]",
+      "summary": "This policy outlines the practice's commitment to safeguarding children and young persons from abuse and neglect.",
+      "tags": [
+        "safeguarding",
+        "child protection",
+        "abuse",
+        "neglect",
+        "policy"
+      ],
+      "chunks": 55,
+      "source": "rag/sources/safeguarding-policy-for-children-and-young-persons[1].doc"
+    },
+    {
+      "docId": "safety-alerts-protocol",
+      "title": "safety alerts protocol",
+      "summary": "Protocol for handling medical device, drug, and patient safety alerts from official bodies.",
+      "tags": [
+        "safety alerts",
+        "mhra",
+        "medical devices",
+        "drug alerts",
+        "reporting incidents"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/safety-alerts-protocol.doc"
+    },
+    {
+      "docId": "sample-handling-protocol-1",
+      "title": "sample handling protocol[1]",
+      "summary": "Protocol for reception staff on safe handling and disposal of patient samples.",
+      "tags": [
+        "sample handling",
+        "reception",
+        "clinical waste",
+        "patient safety",
+        "protocols"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/sample-handling-protocol[1].doc"
+    },
+    {
+      "docId": "scanning-documents-into-clinical-record-protocol-1",
+      "title": "scanning documents into clinical record protocol[1]",
+      "summary": "Protocol for scanning patient documents into clinical records, ensuring accuracy and completeness.",
+      "tags": [
+        "scanning",
+        "protocol",
+        "clinical records",
+        "document management",
+        "nhs"
+      ],
+      "chunks": 11,
+      "source": "rag/sources/scanning-documents-into-clinical-record-protocol[1].doc"
+    },
+    {
+      "docId": "sepsis-identification-management-policy",
+      "title": "sepsis identification management policy",
+      "summary": "Policy for identifying and managing sepsis, including staff training and triage processes.",
+      "tags": [
+        "sepsis",
+        "policy",
+        "management",
+        "identification",
+        "training",
+        "triage"
+      ],
+      "chunks": 18,
+      "source": "rag/sources/sepsis-identification-management-policy.doc"
+    },
+    {
+      "docId": "sharps-safe-use-and-disposal-eu-directive",
+      "title": "sharps safe use and disposal eu directive",
+      "summary": "Outlines EU directive on safe use and disposal of sharps, including employer and employee responsibilities.",
+      "tags": [
+        "sharps",
+        "disposal",
+        "eu directive",
+        "safety",
+        "needle stick"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/sharps-safe-use-and-disposal-eu-directive.doc"
+    },
+    {
+      "docId": "sharps-safe-use-and-disposal-protocol",
+      "title": "sharps safe use and disposal protocol",
+      "summary": "Protocol for safe handling and disposal of sharps to prevent injury and infection.",
+      "tags": [
+        "sharps",
+        "safety",
+        "disposal",
+        "protocol",
+        "infection control"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/sharps-safe-use-and-disposal-protocol.doc"
+    },
+    {
+      "docId": "significant-event-policy",
+      "title": "Significant Event Policy",
+      "summary": "Policy for recording and reviewing significant/critical events to improve patient care and staff support.",
+      "tags": [
+        "significant events",
+        "policy",
+        "patient safety",
+        "learning culture",
+        "incident reporting"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/Significant Event Policy.doc"
+    },
+    {
+      "docId": "smoking-services-0",
+      "title": "Smoking Services(0)",
+      "summary": "Riverside Practice promotes and refers patients to local stop smoking services, offering support and resources.",
+      "tags": [
+        "smoking cessation",
+        "gp practice",
+        "referral",
+        "support services",
+        "nhs"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Smoking Services(0).doc"
+    },
+    {
+      "docId": "stress-at-work-policy",
+      "title": "stress at work policy",
+      "summary": "Policy to identify, assess, and minimise work-related stress for all practice staff.",
+      "tags": [
+        "stress",
+        "workplace wellbeing",
+        "policy",
+        "nhs",
+        "support"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/stress-at-work-policy.doc"
+    },
+    {
+      "docId": "subject-access-request-policy",
+      "title": "subject access request policy",
+      "summary": "Policy for managing requests for personal health information under DPA and GDPR.",
+      "tags": [
+        "subject access request",
+        "gdpr",
+        "data protection",
+        "patient records",
+        "access to information"
+      ],
+      "chunks": 30,
+      "source": "rag/sources/subject-access-request-policy.doc"
+    },
+    {
+      "docId": "summarising-policy",
+      "title": "Summarising Policy",
+      "summary": "Policy for summarising patient records, including coding rules and criteria for significant and minor conditions.",
+      "tags": [
+        "record summarising",
+        "coding policy",
+        "gp practice",
+        "patient records"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/Summarising Policy.doc"
+    },
+    {
+      "docId": "telephone-answering-policy",
+      "title": "telephone answering policy",
+      "summary": "Sets standards for telephone service, staff conduct, and message taking for patient calls.",
+      "tags": [
+        "telephone",
+        "patient service",
+        "reception",
+        "protocol",
+        "communication"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/telephone answering policy.doc"
+    },
+    {
+      "docId": "text-messaging-patients-protocol",
+      "title": "text messaging patients protocol",
+      "summary": "Protocol for using ACCURx SMS for patient communication, including responsible individuals and staff access.",
+      "tags": [
+        "sms",
+        "protocol",
+        "patient communication",
+        "accrux",
+        "gp practice"
+      ],
+      "chunks": 12,
+      "source": "rag/sources/text-messaging-patients-protocol.doc"
+    },
+    {
+      "docId": "the-riverside-pracdtice-data-content-policy",
+      "title": "The Riverside Pracdtice Data content Policy",
+      "summary": "This policy outlines the Riverside Practice's procedures for scanning and managing patient data content.",
+      "tags": [
+        "data sharing",
+        "scanning",
+        "patient records",
+        "document management",
+        "nhs practice"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/The Riverside Pracdtice Data content Policy.rtf"
+    },
+    {
+      "docId": "the-riverside-practice-fy2-induction-signature-sheet",
+      "title": "The Riverside Practice FY2 INDUCTION SIGNATURE SHEET",
+      "summary": "Induction checklist for FY2 doctors at The Riverside Practice covering EMIS, pathways, and referrals.",
+      "tags": [
+        "induction",
+        "fy2",
+        "riverside practice",
+        "emis",
+        "pathways",
+        "referrals"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/The Riverside Practice FY2 INDUCTION SIGNATURE SHEET.rtf"
+    },
+    {
+      "docId": "transfer-of-patient-records-protocol",
+      "title": "transfer of patient records protocol",
+      "summary": "Protocol for transferring physical patient records in and out of the practice.",
+      "tags": [
+        "patient records",
+        "transfer",
+        "protocol",
+        "administration",
+        "nhs"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/transfer-of-patient-records-protocol.doc"
+    },
+    {
+      "docId": "violence-and-aggression-policy",
+      "title": "violence and aggression policy",
+      "summary": "Policy for addressing violence and aggression towards staff and patients within the practice.",
+      "tags": [
+        "violence",
+        "aggression",
+        "policy",
+        "staff safety",
+        "patient safety"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/violence-and-aggression-policy.doc"
+    },
+    {
+      "docId": "vulnerable-adults-policy-1-0",
+      "title": "vulnerable adults policy[1](0)",
+      "summary": "Policy for protecting vulnerable adults from abuse, outlining definitions, forms of abuse, indications, and required actions.",
+      "tags": [
+        "vulnerable adults",
+        "safeguarding",
+        "abuse",
+        "policy",
+        "gp practice"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/vulnerable-adults-policy[1](0).doc"
+    },
+    {
+      "docId": "waste-management-disposal-protocol-1",
+      "title": "waste management disposal protocol[1]",
+      "summary": "This protocol outlines safe procedures for managing and disposing of healthcare waste.",
+      "tags": [
+        "waste management",
+        "disposal",
+        "protocol",
+        "healthcare",
+        "safety"
+      ],
+      "chunks": 12,
+      "source": "rag/sources/waste-management-disposal-protocol[1].doc"
+    },
+    {
+      "docId": "whistleblowing-policy-2",
+      "title": "whistleblowing policy(2)",
+      "summary": "Policy for employees to report concerns about fraud, danger, or unethical conduct within the practice.",
+      "tags": [
+        "whistleblowing",
+        "policy",
+        "concerns",
+        "reporting",
+        "ethics"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/whistleblowing-policy(2).doc"
     }
   ]
 }
