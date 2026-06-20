@@ -90,5 +90,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .riva-sheet { max-width: none !important; border-radius: 18px 18px 0 0; animation: rivaSheetUp .22s ease; padding-bottom: env(safe-area-inset-bottom); }
 }
 
+/* Notifications: top-right under the header on desktop, full-width under the
+ * header on mobile. */
+.riva-notify-host {
+  position: fixed; top: 84px; right: 16px; z-index: 90;
+  display: flex; flex-direction: column; gap: 10px;
+  width: 360px; max-width: calc(100vw - 32px); pointer-events: none;
+}
+.riva-notify { pointer-events: auto; animation: rivaNotifyIn .2s ease; }
+@keyframes rivaNotifyIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) {
+  .riva-notify-host { top: 80px; left: 12px; right: 12px; width: auto; max-width: none; }
+  @keyframes rivaNotifyIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+}
+
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
 body { overflow-x: hidden; }

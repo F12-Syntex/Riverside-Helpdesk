@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../ui';
+import { notify } from '../notify';
 import {
   weekDays, weekRangeLabel, mondayPlusWeeks, isoOf, currentMonday,
   initials, firstName, cellView, analyze, buildWhatsApp, shiftRange,
@@ -47,7 +48,6 @@ export default function RotaSystem({ page = 'rota' }) {
   const [status, setStatus] = React.useState({});  // weekISO -> 'loading'|'done'|'error'
   const [hist, setHist] = React.useState({});      // weekISO -> { stack:[schedule], ptr }
   const [busy, setBusy] = React.useState(false);
-  const [toast, setToast] = React.useState(null);
   const [warning, setWarning] = React.useState(null);
   const [confirm, setConfirm] = React.useState(null);
   const [chatInput, setChatInput] = React.useState('');
@@ -57,12 +57,7 @@ export default function RotaSystem({ page = 'rota' }) {
   const [editId, setEditId] = React.useState(null);
   const [editDraft, setEditDraft] = React.useState({ name: '', about: '', leave: [], start: '', end: '' });
 
-  const toastTimer = React.useRef(null);
-  function flash(msg) {
-    setToast(msg);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 6000);
-  }
+  function flash(msg, type) { notify(msg, type || 'info'); }
 
   const weekISO = isoOf(mondayPlusWeeks(weekOffset));
   const todayMondayISO = isoOf(currentMonday());
@@ -122,7 +117,7 @@ export default function RotaSystem({ page = 'rota' }) {
       pushHist(weekISO, sched);
       const issues = analyze(sched.grid, staff);
       flash(issues.length ? 'Generated — a couple of things could be tidied.' : 'Generated a balanced week.');
-    } catch (e) { flash(e.message); } finally { setBusy(false); }
+    } catch (e) { flash(e.message, 'error'); } finally { setBusy(false); }
   }
 
   function applyGrid(newGrid) {
@@ -183,7 +178,7 @@ export default function RotaSystem({ page = 'rota' }) {
       pushHist(weekISO, sched);
       const note = Array.isArray(d.issues) && d.issues.length ? ' (Heads up: ' + d.issues[0] + ')' : '';
       flash((d.reply || 'Done.') + note);
-    } catch (e2) { flash(e2.message); } finally { setBusy(false); }
+    } catch (e2) { flash(e2.message, 'error'); } finally { setBusy(false); }
   }
 
   function copyWhatsApp() {
@@ -203,7 +198,7 @@ export default function RotaSystem({ page = 'rota' }) {
       setDraft({ name: '', about: '' });
       setShowAdd(false);
       flash(firstName(name) + ' added.');
-    } catch (e) { flash(e.message); }
+    } catch (e) { flash(e.message, 'error'); }
   }
   function startEdit(p) { setEditId(p.id); setEditDraft({ name: p.name, about: p.about || '', leave: (p.leave || []).slice(), start: '', end: '' }); }
   function addLeave() {
@@ -220,12 +215,12 @@ export default function RotaSystem({ page = 'rota' }) {
       setStaff((prev) => prev.map((x) => (x.id === editId ? d.staff : x)).sort((a, b) => a.name.localeCompare(b.name)));
       setEditId(null);
       flash('Saved.');
-    } catch (e) { flash(e.message); }
+    } catch (e) { flash(e.message, 'error'); }
   }
   function askRemove(p) {
     setConfirm({
       title: 'Remove staff member', message: 'Remove ' + p.name + " from the team? This can't be undone.", confirmLabel: 'Remove', noLabel: 'Cancel',
-      onConfirm: async () => { setConfirm(null); try { await api('/api/staff?id=' + p.id, { method: 'DELETE' }); setStaff((prev) => prev.filter((x) => x.id !== p.id)); flash('Removed.'); } catch (e) { flash(e.message); } },
+      onConfirm: async () => { setConfirm(null); try { await api('/api/staff?id=' + p.id, { method: 'DELETE' }); setStaff((prev) => prev.filter((x) => x.id !== p.id)); flash('Removed.'); } catch (e) { flash(e.message, 'error'); } },
     });
   }
 
@@ -238,18 +233,12 @@ export default function RotaSystem({ page = 'rota' }) {
       {page === 'rota' && hasRota && !isReadOnly && (
         <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:1000px;margin:0 auto;padding:14px 24px 18px;')}>
-            {toast && <div style={s('background:#212b32;color:#fff;border-radius:10px;padding:11px 16px;font-size:14px;line-height:1.45;margin-bottom:12px;white-space:pre-wrap;max-width:560px;')}>{toast}</div>}
             <form onSubmit={sendChat} style={s('display:flex;gap:10px;align-items:center;')}>
               <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask for any change, or describe the situation…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" disabled={busy} base={'flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;' + (busy ? 'opacity:.6;' : '')} hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
         </div>
-      )}
-
-      {/* Toast on staff page / when no chat bar is shown */}
-      {toast && !(page === 'rota' && hasRota && !isReadOnly) && (
-        <div style={s('position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:60;background:#212b32;color:#fff;border-radius:10px;padding:11px 16px;font-size:14px;max-width:90%;white-space:pre-wrap;')}>{toast}</div>
       )}
 
       {warning && (

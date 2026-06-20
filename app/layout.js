@@ -1,4 +1,5 @@
 import './globals.css';
+import Notifications from './_components/Notifications';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
@@ -21,7 +22,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>{children}<Notifications /></body>
     </html>
   );
 }
