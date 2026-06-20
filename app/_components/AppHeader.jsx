@@ -28,12 +28,12 @@ export default function AppHeader({ v, subtitle = 'Reception help & guidance', t
       <div style={s('margin-left:auto;display:flex;gap:12px;align-items:center;flex:none;')}>
         {/* Desktop: tab pills for the bot views. Hidden on mobile. */}
         {showTabs && (
-          <div className="riva-tabs-desktop" style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:999px;padding:3px;')}>
+          <div className="riva-tabs-desktop" style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:3px;')}>
             {TABS.map((t) => {
               const active = v.view === t.key;
               return (
                 <Hover key={t.key} tag="button" onClick={() => v.onSetView(t.key)} className="riva-tab"
-                  base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
+                  base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:7px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
                   hover={active ? '' : 'color:#212b32;'}>
                   <Svg w={16} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
                 </Hover>
