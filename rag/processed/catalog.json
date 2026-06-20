@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T06:37:55.330Z",
+  "generatedAt": "2026-06-20T07:10:54.802Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
@@ -43,6 +43,821 @@
       ],
       "chunks": 167,
       "source": "rag/sources/LPUG0019-Emis-Web-Introduction-Admin-Clinical.pdf"
+    },
+    {
+      "docId": "2023-nel-gp-sg-contacts-train-july-23-v10-07",
+      "title": "2023 NEL GP SG Contacts & Train July 23 v10.07",
+      "summary": "North-East London GP safeguarding contacts, referral procedures, and training schedules for children and adults.",
+      "tags": [
+        "safeguarding",
+        "nel icb",
+        "gp contacts",
+        "referral",
+        "training"
+      ],
+      "chunks": 35,
+      "source": "rag/sources/2023 NEL GP SG Contacts & Train July 23 v10.07.pdf"
+    },
+    {
+      "docId": "absence-management-policy-1",
+      "title": "Absence Management Policy 1",
+      "summary": "Policy for managing employee absence, focusing on attendance monitoring and support.",
+      "tags": [
+        "absence management",
+        "attendance",
+        "policy",
+        "employees",
+        "reporting"
+      ],
+      "chunks": 39,
+      "source": "rag/sources/Absence Management Policy_1.docx"
+    },
+    {
+      "docId": "ahra-application-form",
+      "title": "AHRA Application Form",
+      "summary": "Form for applying to access deceased patients' health records under the AHRA 1990.",
+      "tags": [
+        "deceased records",
+        "ahra",
+        "access request",
+        "patient data",
+        "application form"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/AHRA-Application-Form.docx"
+    },
+    {
+      "docId": "appointment-management-policy-0",
+      "title": "Appointment Management Policy(0)",
+      "summary": "Policy for fair appointment creation, availability, and workload distribution for clinical staff.",
+      "tags": [
+        "appointments",
+        "policy",
+        "gp practice",
+        "workload",
+        "scheduling"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/Appointment Management Policy(0).docx"
+    },
+    {
+      "docId": "appointment-management-policy",
+      "title": "Appointment Management Policy",
+      "summary": "This policy outlines the practice's approach to appointment creation, availability, and resource planning.",
+      "tags": [
+        "appointments",
+        "policy",
+        "gp practice",
+        "resource planning",
+        "availability"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/Appointment Management Policy.docx"
+    },
+    {
+      "docId": "blood-test-protocol",
+      "title": "Blood test Protocol",
+      "summary": "Protocol for requesting, reviewing, and actioning blood test results for clinical and administrative staff.",
+      "tags": [
+        "blood tests",
+        "results",
+        "protocol",
+        "gp practice",
+        "patient communication"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/Blood test Protocol.docx"
+    },
+    {
+      "docId": "chscp-letter-to-sg-leads",
+      "title": "CHSCP letter to SG leads",
+      "summary": "Guidance for GPs on improving safeguarding reports for children's social care.",
+      "tags": [
+        "safeguarding",
+        "gp",
+        "children",
+        "reporting",
+        "mash"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/CHSCP letter to SG leads.docx"
+    },
+    {
+      "docId": "clear-desk-policy-1",
+      "title": "Clear desk policy (1)",
+      "summary": "Ensures confidentiality and integrity of data by securing documents and screens when unattended.",
+      "tags": [
+        "confidentiality",
+        "data security",
+        "clear desk",
+        "clear screen",
+        "nhs policy"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Clear desk policy (1).docx"
+    },
+    {
+      "docId": "community-infection-prevention-and-control-guidance-for-gene",
+      "title": "Community Infection Prevention and Control Guidance for General Practice",
+      "summary": "Guidance on notifiable infectious diseases and reporting requirements for GPs.",
+      "tags": [
+        "notifiable diseases",
+        "infection control",
+        "gp guidance",
+        "public health",
+        "reporting"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Community Infection Prevention and Control Guidance for General Practice.docx"
+    },
+    {
+      "docId": "confidentiality-poster-1",
+      "title": "Confidentiality poster(1)",
+      "summary": "Poster reminding patients to respect privacy by waiting behind the line.",
+      "tags": [
+        "confidentiality",
+        "privacy",
+        "waiting",
+        "patients"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Confidentiality poster(1).docx"
+    },
+    {
+      "docId": "confidentiality-poster",
+      "title": "Confidentiality poster",
+      "summary": "Poster reminding patients to respect privacy and wait behind the line.",
+      "tags": [
+        "confidentiality",
+        "privacy",
+        "waiting",
+        "patients"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Confidentiality poster.docx"
+    },
+    {
+      "docId": "covid-19-non-agp-donning-and-doffing-ppe-droplet-precautions",
+      "title": "COVID 19 Non AGP Donning and doffing PPE droplet precautions",
+      "summary": "Guide to putting on and taking off PPE for droplet precautions in healthcare settings.",
+      "tags": [
+        "ppe",
+        "droplet precautions",
+        "donning",
+        "doffing",
+        "covid-19"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/COVID-19_Non_AGP_Donning_and_doffing_PPE_droplet_precautions.pdf"
+    },
+    {
+      "docId": "data-protection-guidance-for-staff",
+      "title": "Data Protection Guidance for staff",
+      "summary": "Guidance on ensuring data quality and proper records management for staff.",
+      "tags": [
+        "data quality",
+        "records management",
+        "staff guidance",
+        "accuracy",
+        "integrity"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Data Protection Guidance for staff.docx"
+    },
+    {
+      "docId": "data-protection-policy",
+      "title": "Data Protection Policy",
+      "summary": "This policy outlines staff responsibilities for protecting patient and colleague personal data under UK GDPR.",
+      "tags": [
+        "data protection",
+        "uk gdpr",
+        "patient data",
+        "staff responsibilities"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/Data Protection Policy.docx"
+    },
+    {
+      "docId": "data-quality-policy-1",
+      "title": "Data Quality Policy  (1)",
+      "summary": "Ensures accuracy, completeness, and integrity of all patient and staff data, both digital and hardcopy.",
+      "tags": [
+        "data quality",
+        "record keeping",
+        "patient safety",
+        "information governance"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/Data Quality Policy  (1).docx"
+    },
+    {
+      "docId": "data-quality-policy",
+      "title": "Data Quality Policy",
+      "summary": "Ensures accuracy, completeness, and timeliness of patient data for quality healthcare and operational efficiency.",
+      "tags": [
+        "data quality",
+        "patient records",
+        "nhs policy",
+        "data accuracy",
+        "information governance"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/Data Quality Policy.docx"
+    },
+    {
+      "docId": "dbs-staff-self-declaration-form",
+      "title": "DBS Staff self declaration form",
+      "summary": "Form for staff to declare unspent convictions, cautions, or pending charges.",
+      "tags": [
+        "dbs",
+        "self-declaration",
+        "convictions",
+        "cautions",
+        "staff"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/DBS Staff self-declaration form.docx"
+    },
+    {
+      "docId": "duty-of-candour-policy-1",
+      "title": "Duty of Candour Policy[1]",
+      "summary": "Policy on acknowledging, apologising, and explaining when patient safety incidents occur.",
+      "tags": [
+        "candour",
+        "patient safety",
+        "openness",
+        "transparency",
+        "incidents"
+      ],
+      "chunks": 17,
+      "source": "rag/sources/Duty-of-Candour-Policy[1].docx"
+    },
+    {
+      "docId": "employee-covid-risk-and-environment-assessment-form-final-ve",
+      "title": "Employee Covid Risk and Environment Assessment Form Final Version   16th June 2020",
+      "summary": "Assesses employee COVID-19 risks and environmental factors for mitigation.",
+      "tags": [
+        "covid-19",
+        "risk assessment",
+        "employee health",
+        "social distancing",
+        "nhs"
+      ],
+      "chunks": 11,
+      "source": "rag/sources/Employee Covid Risk and Environment Assessment Form Final Version - 16th June 2020.docx"
+    },
+    {
+      "docId": "f2-how-to-guide-v1-1",
+      "title": "F2  How to guide v1 (1)",
+      "summary": "Guide for common admin tasks like ordering tests, referrals, and sending tasks at Riverside Practice.",
+      "tags": [
+        "admin tasks",
+        "referrals",
+        "ordering tests",
+        "riverside practice"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/F2  How to guide v1 (1).docx"
+    },
+    {
+      "docId": "freedom-of-information-act-2019-2020",
+      "title": "Freedom of information act 2019 2020",
+      "summary": "Guidance on handling Freedom of Information requests for NHS GP practices.",
+      "tags": [
+        "foi",
+        "data protection",
+        "gp practice",
+        "information requests"
+      ],
+      "chunks": 21,
+      "source": "rag/sources/Freedom of information act 2019-2020.docx"
+    },
+    {
+      "docId": "general-practice-privacy-notice-direct-care-v12-april-22-002",
+      "title": "General Practice Privacy Notice Direct Care v12 April 22 (002)(1)",
+      "summary": "Explains how GP practice collects, stores, and shares patient data under GDPR.",
+      "tags": [
+        "privacy",
+        "gdpr",
+        "data protection",
+        "nhs",
+        "patient information"
+      ],
+      "chunks": 23,
+      "source": "rag/sources/General Practice Privacy Notice Direct Care v12 April 22 (002)(1).docx"
+    },
+    {
+      "docId": "guidance-on-individual-rights",
+      "title": "Guidance on Individual rights",
+      "summary": "Guidance on individual rights under GDPR, including access, erasure, and objection rights.",
+      "tags": [
+        "gdpr",
+        "individual rights",
+        "data protection",
+        "patient rights",
+        "subject access request"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/Guidance on Individual rights.docx"
+    },
+    {
+      "docId": "immunisation-policy",
+      "title": "Immunisation policy",
+      "summary": "Policy for staff immunisation and screening against communicable diseases in a GP practice.",
+      "tags": [
+        "immunisation",
+        "screening",
+        "policy",
+        "staff health",
+        "gp practice"
+      ],
+      "chunks": 15,
+      "source": "rag/sources/Immunisation policy.docx"
+    },
+    {
+      "docId": "late-arrivals-protocol-patients-late-for-the-appointment",
+      "title": "Late arrivals Protocol (patients late for the appointment)",
+      "summary": "Protocol for handling patients arriving late for GP appointments, with varying procedures based on lateness duration.",
+      "tags": [
+        "late arrivals",
+        "appointment protocol",
+        "patient management",
+        "gp surgery"
+      ],
+      "chunks": 4,
+      "source": "rag/sources/Late arrivals Protocol (patients late for the appointment).docx"
+    },
+    {
+      "docId": "mandatory-assessment-schedule",
+      "title": "Mandatory assessment Schedule",
+      "summary": "Schedule of mandatory assessments, their due dates, and responsible owners.",
+      "tags": [
+        "assessments",
+        "audits",
+        "schedule",
+        "compliance",
+        "maintenance"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Mandatory assessment Schedule.docx"
+    },
+    {
+      "docId": "monthly-high-risk-drug-monitoring-protocol-v2",
+      "title": "Monthly High Risk Drug Monitoring Protocol v2",
+      "summary": "Protocol for monthly monitoring of patients on high-risk medications and their blood tests.",
+      "tags": [
+        "high risk drugs",
+        "monitoring",
+        "blood tests",
+        "protocol",
+        "pharmacy"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/Monthly High Risk Drug Monitoring Protocol v2.docx"
+    },
+    {
+      "docId": "nel-childrens-safeguarding-information-sharing-proforma-for-",
+      "title": "NEL Childrens safeguarding information sharing proforma FOR WEBSITE v3",
+      "summary": "Proforma for sharing children's safeguarding information between GP practices and social care.",
+      "tags": [
+        "safeguarding",
+        "children",
+        "information sharing",
+        "gp",
+        "social care"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/NEL Childrens safeguarding information sharing proforma FOR WEBSITE v3.docx"
+    },
+    {
+      "docId": "opioid-practice-prescribing-policy",
+      "title": "Opioid practice prescribing policy",
+      "summary": "Policy for prescribing opioids for chronic pain, focusing on risks, patient agreements, and prescription limits.",
+      "tags": [
+        "opioids",
+        "chronic pain",
+        "prescribing",
+        "policy",
+        "gp"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/Opioid practice prescribing policy.docx"
+    },
+    {
+      "docId": "oxygen-use-in-the-workplace",
+      "title": "Oxygen use in the workplace",
+      "summary": "This document outlines fire and explosion hazards associated with workplace oxygen use and necessary safety precautions.",
+      "tags": [
+        "oxygen",
+        "workplace safety",
+        "fire hazards",
+        "risk assessment"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/Oxygen use in the workplace.pdf"
+    },
+    {
+      "docId": "patient-safety-hackney-downs-pcn-complete",
+      "title": "Patient Safety   Hackney Downs PCN complete",
+      "summary": "Protocol for ensuring patient safety across Hackney Downs PCN practices, covering incident reporting and learning.",
+      "tags": [
+        "patient safety",
+        "protocol",
+        "incident reporting",
+        "hackney downs pcn",
+        "learning"
+      ],
+      "chunks": 6,
+      "source": "rag/sources/Patient Safety - Hackney Downs PCN complete.docx"
+    },
+    {
+      "docId": "patients-online-appointment-booking-policy",
+      "title": "Patients Online Appointment booking Policy",
+      "summary": "Policy for patients booking GP appointments online, including registration, booking, cancellation, and misuse.",
+      "tags": [
+        "online booking",
+        "appointments",
+        "policy",
+        "patients",
+        "gp"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Patients Online Appointment booking Policy.docx"
+    },
+    {
+      "docId": "patient-registration-guide",
+      "title": "Patient Registration Guide",
+      "summary": "Guide for practice staff on patient registration policies, procedures, and refusal grounds.",
+      "tags": [
+        "patient registration",
+        "nhs policies",
+        "gp practice",
+        "staff guide",
+        "registration refusal"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/Patient_Registration_Guide.docx"
+    },
+    {
+      "docId": "protecting-your-confidentiality-privacy-notice",
+      "title": "Protecting your confidentiality   Privacy Notice",
+      "summary": "Explains why GP practices collect patient data and how it is kept confidential and secure.",
+      "tags": [
+        "confidentiality",
+        "privacy",
+        "data protection",
+        "patient information",
+        "nhs"
+      ],
+      "chunks": 22,
+      "source": "rag/sources/Protecting your confidentiality - Privacy Notice.docx"
+    },
+    {
+      "docId": "quality-assurance-policy-1",
+      "title": "Quality Assurance Policy[1]",
+      "summary": "This policy outlines procedures for ensuring accurate, complete, and timely patient data for effective care.",
+      "tags": [
+        "data quality",
+        "patient records",
+        "nhs policy",
+        "information governance"
+      ],
+      "chunks": 21,
+      "source": "rag/sources/Quality_Assurance_Policy[1].docx"
+    },
+    {
+      "docId": "reception-guide-2025",
+      "title": "Reception guide 2025",
+      "summary": "Covers doctor schedules, task escalation, prescription handling, and triage guidelines for common conditions.",
+      "tags": [
+        "reception",
+        "triage",
+        "schedule",
+        "prescriptions",
+        "guidelines"
+      ],
+      "chunks": 17,
+      "source": "rag/sources/Reception guide 2025.docx"
+    },
+    {
+      "docId": "referral-protocol-1",
+      "title": "Referral protocol (1)",
+      "summary": "Protocol for making patient referrals, including documentation, patient choice, and safeguarding.",
+      "tags": [
+        "referrals",
+        "patient choice",
+        "safeguarding",
+        "documentation",
+        "nhs"
+      ],
+      "chunks": 5,
+      "source": "rag/sources/Referral protocol (1).docx"
+    },
+    {
+      "docId": "registration-form-2025",
+      "title": "REgistration form 2025",
+      "summary": "New patient registration form and health questionnaire for The Riverside Practice.",
+      "tags": [
+        "registration",
+        "new patient",
+        "health questionnaire",
+        "riverside practice"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/REgistration form 2025.docx"
+    },
+    {
+      "docId": "riverside-duty-doctor-protocol-2025",
+      "title": "Riverside Duty Doctor Protocol 2025",
+      "summary": "Protocol for Riverside Practice's Duty Doctor service, outlining urgent call handling and response times.",
+      "tags": [
+        "duty doctor",
+        "urgent calls",
+        "protocol",
+        "riverside practice",
+        "gp"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/Riverside Duty Doctor Protocol 2025.docx"
+    },
+    {
+      "docId": "riverside-practice-health-inequality-policy",
+      "title": "Riverside Practice Health Inequality Policy",
+      "summary": "This policy outlines Riverside Practice's commitment to reducing health inequalities and providing equitable care.",
+      "tags": [
+        "health inequalities",
+        "equity",
+        "access",
+        "inclusion",
+        "patient care"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Riverside Practice Health Inequality Policy.docx"
+    },
+    {
+      "docId": "riverside-practice-sop-for-prescribing-a-controlled-drug-and",
+      "title": "Riverside Practice SOP for Prescribing a Controlled Drug and the Collectio",
+      "summary": "Procedure for prescribing and collecting controlled drug prescriptions at Riverside Practice.",
+      "tags": [
+        "controlled drugs",
+        "prescribing",
+        "sop",
+        "riverside practice",
+        "collection"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/Riverside Practice SOP for Prescribing a Controlled Drug and the Collectio.docx"
+    },
+    {
+      "docId": "riverside-practice-spillages-policy",
+      "title": "RIVERSIDE PRACTICE SPILLAGES POLICY",
+      "summary": "Policy for safe management of blood and body fluid spillages in care homes.",
+      "tags": [
+        "spillages",
+        "infection control",
+        "care homes",
+        "blood",
+        "body fluids"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/RIVERSIDE PRACTICE SPILLAGES POLICY.pdf"
+    },
+    {
+      "docId": "sexual-misconduct-and-sexual-safety-policy",
+      "title": "Sexual Misconduct and Sexual Safety Policy",
+      "summary": "Policy on zero tolerance for sexual misconduct, outlining reporting, management, and support for staff and patients.",
+      "tags": [
+        "sexual misconduct",
+        "safety policy",
+        "zero tolerance",
+        "reporting",
+        "staff wellbeing"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/Sexual Misconduct and Sexual Safety Policy.docx"
+    },
+    {
+      "docId": "shared-care-policy",
+      "title": "Shared Care Policy",
+      "summary": "Ensures safe shared care with other providers, aligning with local ICB and CCG protocols.",
+      "tags": [
+        "shared care",
+        "policy",
+        "protocols",
+        "gp",
+        "nhs"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Shared Care Policy.docx"
+    },
+    {
+      "docId": "staff-data-code-of-conduct",
+      "title": "Staff data code of conduct",
+      "summary": "Code of conduct for staff handling sensitive patient and employee data.",
+      "tags": [
+        "data security",
+        "confidentiality",
+        "code of conduct",
+        "patient data",
+        "staff data"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Staff data code of conduct  .docx"
+    },
+    {
+      "docId": "staff-guidance-on-data-breaches",
+      "title": "Staff Guidance on Data Breaches",
+      "summary": "Guidance for staff on identifying, reporting, and managing data breaches and incidents.",
+      "tags": [
+        "data breach",
+        "data incident",
+        "confidentiality",
+        "integrity",
+        "availability",
+        "reporting"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Staff Guidance on Data Breaches.docx"
+    },
+    {
+      "docId": "statement-of-purpose-0",
+      "title": "Statement of Purpose (0)",
+      "summary": "Statement of Purpose for Riverside Practice detailing services, aims, and patient care approach.",
+      "tags": [
+        "statement of purpose",
+        "riverside practice",
+        "gp services",
+        "patient care",
+        "primary care"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/Statement_of_Purpose_-(0).docx"
+    },
+    {
+      "docId": "the-riverside-practice-portable-heaters-safety-policy",
+      "title": "The Riverside Practice   Portable Heaters Safety Policy",
+      "summary": "Policy for safe use, storage, and management of portable heaters at The Riverside Practice.",
+      "tags": [
+        "portable heaters",
+        "safety",
+        "fire risk",
+        "electrical safety",
+        "nhs practice"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/The Riverside Practice - Portable Heaters Safety Policy.docx"
+    },
+    {
+      "docId": "the-riverside-practice-2-week-referrals-protocol",
+      "title": "THE RIVERSIDE PRACTICE 2 WEEK REFERRALS PROTOCOL",
+      "summary": "Protocol for managing 2-week wait referrals to ensure timely diagnosis and follow-up.",
+      "tags": [
+        "2 week wait",
+        "referrals",
+        "cancer",
+        "protocol",
+        "gp"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/THE RIVERSIDE PRACTICE 2 WEEK REFERRALS PROTOCOL.docx"
+    },
+    {
+      "docId": "the-riverside-practice-cancer-safety-netting-protocol",
+      "title": "The Riverside Practice Cancer Safety Netting Protocol",
+      "summary": "Protocol for cancer safety netting and bowel cancer screening at Riverside Practice.",
+      "tags": [
+        "cancer screening",
+        "bowel cancer",
+        "safety netting",
+        "referrals",
+        "protocol"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/The Riverside Practice Cancer Safety Netting Protocol.docx"
+    },
+    {
+      "docId": "the-riverside-practice-locum-induction-guide-2025",
+      "title": "The Riverside Practice Locum Induction Guide 2025",
+      "summary": "Guide for locum doctors at Riverside Practice, covering induction, contacts, duties, and emergency procedures.",
+      "tags": [
+        "locum",
+        "induction",
+        "riverside practice",
+        "gp",
+        "guide"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/The Riverside Practice Locum Induction Guide 2025.docx"
+    },
+    {
+      "docId": "the-riverside-practice-reception-and-admin-staff-guide",
+      "title": "The Riverside Practice Reception and Admin Staff Guide",
+      "summary": "Guide for Riverside Practice reception and admin staff covering operations, contacts, and procedures.",
+      "tags": [
+        "reception",
+        "admin",
+        "guide",
+        "nhs",
+        "practice"
+      ],
+      "chunks": 12,
+      "source": "rag/sources/The Riverside Practice Reception and Admin Staff Guide.docx"
+    },
+    {
+      "docId": "the-riverside-practice-sharps-injury-poster",
+      "title": "THE RIVERSIDE PRACTICE sharps injury poster",
+      "summary": "Procedure for staff injured by sharps, needlesticks, or splashes with blood/body fluids.",
+      "tags": [
+        "sharps injury",
+        "needlestick",
+        "first aid",
+        "occupational health",
+        "post exposure prophylaxis"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/THE RIVERSIDE PRACTICE sharps injury poster.docx"
+    },
+    {
+      "docId": "the-riverside-practice-updated-chaperone-policy-2026",
+      "title": "THE RIVERSIDE PRACTICE updated Chaperone Policy 2026",
+      "summary": "This policy outlines the Riverside Practice's procedures for offering and using chaperones during patient examinations.",
+      "tags": [
+        "chaperone policy",
+        "patient safety",
+        "examinations",
+        "riverside practice"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/THE RIVERSIDE PRACTICE updated Chaperone Policy 2026.docx"
+    },
+    {
+      "docId": "travel-vaccines-drop-list-1",
+      "title": "Travel vaccines drop list (1)",
+      "summary": "Clarifies which travel vaccines are NHS-funded and which require private prescription.",
+      "tags": [
+        "travel vaccines",
+        "nhs prescribing",
+        "private prescription",
+        "vaccination policy"
+      ],
+      "chunks": 14,
+      "source": "rag/sources/Travel-vaccines-drop-list (1).pdf"
+    },
+    {
+      "docId": "urgent-emergency-appointment-request",
+      "title": "Urgent Emergency appointment request",
+      "summary": "Guide for receptionists on handling urgent and emergency appointment requests, including triage and symptom recognition.",
+      "tags": [
+        "appointments",
+        "urgent care",
+        "triage",
+        "reception",
+        "gp"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/Urgent Emergency appointment request.docx"
+    },
+    {
+      "docId": "was-not-brought-v2",
+      "title": "Was not brought v2",
+      "summary": "Guidance for handling 'Was Not Brought' appointments and safeguarding concerns for children.",
+      "tags": [
+        "was not brought",
+        "safeguarding",
+        "child health",
+        "gp reception",
+        "appointments"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/Was not brought v2.docx"
+    },
+    {
+      "docId": "workplace-health-and-safety-guide",
+      "title": "Workplace Health and safety guide",
+      "summary": "Outlines the Workplace (Health, Safety and Welfare) Regulations 1992 for employers and employees.",
+      "tags": [
+        "workplace safety",
+        "health regulations",
+        "employer duties",
+        "employee welfare",
+        "hse"
+      ],
+      "chunks": 24,
+      "source": "rag/sources/Workplace Health and safety guide.pdf"
+    },
+    {
+      "docId": "zero-tolerance-policy-the-riverside-practice",
+      "title": "Zero Tolerance Policy The Riverside practice",
+      "summary": "Policy on zero tolerance for aggressive, abusive, or disrespectful behaviour towards staff and patients.",
+      "tags": [
+        "zero tolerance",
+        "patient conduct",
+        "staff safety",
+        "practice policy",
+        "abuse"
+      ],
+      "chunks": 7,
+      "source": "rag/sources/Zero Tolerance Policy The Riverside practice.docx"
     }
   ]
 }

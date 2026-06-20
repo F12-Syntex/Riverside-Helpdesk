@@ -26,6 +26,537 @@
       "chunks": 167,
       "title": "LPUG0019 Emis Web Introduction Admin Clinical",
       "processedAt": "2026-06-20T06:37:55.283Z"
+    },
+    "2023-nel-gp-sg-contacts-train-july-23-v10-07": {
+      "path": "rag/sources/2023 NEL GP SG Contacts & Train July 23 v10.07.pdf",
+      "sha256": "43031bb5624218551810aafe5af855361318979422819e8064d2f84f4fcbe510",
+      "size": 5551787,
+      "mtime": 1781939101195.157,
+      "chunks": 35,
+      "title": "2023 NEL GP SG Contacts & Train July 23 v10.07",
+      "processedAt": "2026-06-20T07:09:37.956Z"
+    },
+    "absence-management-policy-1": {
+      "path": "rag/sources/Absence Management Policy_1.docx",
+      "sha256": "eda6c9ccbe7fa1992ed5a49eae121874dca58fa24956320a61ea4111a77b76bf",
+      "size": 57016,
+      "mtime": 1781938688163.6748,
+      "chunks": 39,
+      "title": "Absence Management Policy 1",
+      "processedAt": "2026-06-20T07:09:42.162Z"
+    },
+    "ahra-application-form": {
+      "path": "rag/sources/AHRA-Application-Form.docx",
+      "sha256": "7fbd8ccd0731cf750b436c6af83f1726709f695c40dc4efe2babd607e13a348a",
+      "size": 70685,
+      "mtime": 1781938987170.9714,
+      "chunks": 5,
+      "title": "AHRA Application Form",
+      "processedAt": "2026-06-20T07:09:43.706Z"
+    },
+    "appointment-management-policy-0": {
+      "path": "rag/sources/Appointment Management Policy(0).docx",
+      "sha256": "f7df0580aa5adb4b0d08ecd9ca7a9706df042bb7003074fc25651836bf56093b",
+      "size": 17909,
+      "mtime": 1781938990733.3452,
+      "chunks": 5,
+      "title": "Appointment Management Policy(0)",
+      "processedAt": "2026-06-20T07:09:44.656Z"
+    },
+    "appointment-management-policy": {
+      "path": "rag/sources/Appointment Management Policy.docx",
+      "sha256": "8229f6c3a68a0a148c7a350e4127a4c5d13a9240681b3f906c3a9aecc9ab8966",
+      "size": 17716,
+      "mtime": 1781938990231.4636,
+      "chunks": 4,
+      "title": "Appointment Management Policy",
+      "processedAt": "2026-06-20T07:09:45.665Z"
+    },
+    "blood-test-protocol": {
+      "path": "rag/sources/Blood test Protocol.docx",
+      "sha256": "65a701316a2c3303b480866346f2a1c82fab4fef1e0347027c803c77701a8e85",
+      "size": 24302,
+      "mtime": 1781938992266.0425,
+      "chunks": 10,
+      "title": "Blood test Protocol",
+      "processedAt": "2026-06-20T07:09:47.142Z"
+    },
+    "chscp-letter-to-sg-leads": {
+      "path": "rag/sources/CHSCP letter to SG leads.docx",
+      "sha256": "c7a12990b25ea57fb4c31864dc2b3301b6fdce90fc09a824986cc1091db7d9a2",
+      "size": 15785,
+      "mtime": 1781938999360.8032,
+      "chunks": 7,
+      "title": "CHSCP letter to SG leads",
+      "processedAt": "2026-06-20T07:09:48.327Z"
+    },
+    "clear-desk-policy-1": {
+      "path": "rag/sources/Clear desk policy (1).docx",
+      "sha256": "3f7e5e89fde6c656f7b6986c1217c698d30f53847bd680c94ccaf5059da7ab58",
+      "size": 18443,
+      "mtime": 1781939000303.8584,
+      "chunks": 3,
+      "title": "Clear desk policy (1)",
+      "processedAt": "2026-06-20T07:09:49.408Z"
+    },
+    "community-infection-prevention-and-control-guidance-for-gene": {
+      "path": "rag/sources/Community Infection Prevention and Control Guidance for General Practice.docx",
+      "sha256": "653a1d84ada98bb0eaa456014226b588f5302bfe4bcefc546251e0331913c91c",
+      "size": 20091,
+      "mtime": 1781939003946.9536,
+      "chunks": 3,
+      "title": "Community Infection Prevention and Control Guidance for General Practice",
+      "processedAt": "2026-06-20T07:09:50.294Z"
+    },
+    "confidentiality-poster-1": {
+      "path": "rag/sources/Confidentiality poster(1).docx",
+      "sha256": "b20ae624d2769b59e6f10c9d06bb9e372ce02035b2c0974630359fdbe4c05fa4",
+      "size": 14720,
+      "mtime": 1781939008968.6226,
+      "chunks": 1,
+      "title": "Confidentiality poster(1)",
+      "processedAt": "2026-06-20T07:09:51.106Z"
+    },
+    "confidentiality-poster": {
+      "path": "rag/sources/Confidentiality poster.docx",
+      "sha256": "c91db64992f3c1b937b5ef4a2439dfb03fc08e8f1faf0ecad35a06655b05d9d4",
+      "size": 14719,
+      "mtime": 1781939008258.0396,
+      "chunks": 1,
+      "title": "Confidentiality poster",
+      "processedAt": "2026-06-20T07:09:51.483Z"
+    },
+    "covid-19-non-agp-donning-and-doffing-ppe-droplet-precautions": {
+      "path": "rag/sources/COVID-19_Non_AGP_Donning_and_doffing_PPE_droplet_precautions.pdf",
+      "sha256": "58e917af306ebf1d080f78d76bf7477cba08b2f19f254526bffb04cf7287cfd3",
+      "size": 457655,
+      "mtime": 1781939082389.3938,
+      "chunks": 2,
+      "title": "COVID 19 Non AGP Donning and doffing PPE droplet precautions",
+      "processedAt": "2026-06-20T07:09:52.695Z"
+    },
+    "data-protection-guidance-for-staff": {
+      "path": "rag/sources/Data Protection Guidance for staff.docx",
+      "sha256": "8de2021f225eba784780ecf01cefca9348e93f62c4ec426cd8865aa29e7a8214",
+      "size": 17277,
+      "mtime": 1781939012360.1536,
+      "chunks": 2,
+      "title": "Data Protection Guidance for staff",
+      "processedAt": "2026-06-20T07:09:53.559Z"
+    },
+    "data-protection-policy": {
+      "path": "rag/sources/Data Protection Policy.docx",
+      "sha256": "109054056e6f0f3c4cea77c9c6669d1e55b21bd2b113c278edf1fe9bae221150",
+      "size": 29521,
+      "mtime": 1781939013000.231,
+      "chunks": 16,
+      "title": "Data Protection Policy",
+      "processedAt": "2026-06-20T07:09:55.572Z"
+    },
+    "data-quality-policy-1": {
+      "path": "rag/sources/Data Quality Policy  (1).docx",
+      "sha256": "2225b0f481fb9dd9da37bd2da576d5adc33923765995e29f2244c6f312ab70e6",
+      "size": 21263,
+      "mtime": 1781939014323.8154,
+      "chunks": 7,
+      "title": "Data Quality Policy  (1)",
+      "processedAt": "2026-06-20T07:09:56.856Z"
+    },
+    "data-quality-policy": {
+      "path": "rag/sources/Data Quality Policy.docx",
+      "sha256": "74d5743373e9b3cf872171f8d0443c812b4030f72a96f16a64aac50447c89e0c",
+      "size": 24525,
+      "mtime": 1781939013843.1775,
+      "chunks": 7,
+      "title": "Data Quality Policy",
+      "processedAt": "2026-06-20T07:09:58.022Z"
+    },
+    "dbs-staff-self-declaration-form": {
+      "path": "rag/sources/DBS Staff self-declaration form.docx",
+      "sha256": "f91bb54cbc127b1cae913ca046e5c868d39e483c26fbfbd3ae4e11232782e33b",
+      "size": 45149,
+      "mtime": 1781939016796.0205,
+      "chunks": 8,
+      "title": "DBS Staff self declaration form",
+      "processedAt": "2026-06-20T07:09:59.580Z"
+    },
+    "duty-of-candour-policy-1": {
+      "path": "rag/sources/Duty-of-Candour-Policy[1].docx",
+      "sha256": "08c765afd77da074244526857c16a6564d99f311379950084bef6dc81461397c",
+      "size": 28856,
+      "mtime": 1781939018818.072,
+      "chunks": 17,
+      "title": "Duty of Candour Policy[1]",
+      "processedAt": "2026-06-20T07:10:01.303Z"
+    },
+    "employee-covid-risk-and-environment-assessment-form-final-ve": {
+      "path": "rag/sources/Employee Covid Risk and Environment Assessment Form Final Version - 16th June 2020.docx",
+      "sha256": "87cef3aa9a6402921f58c0059415d460e35bf0502f0711c1cefc294313f23d18",
+      "size": 58933,
+      "mtime": 1781939022480.5405,
+      "chunks": 11,
+      "title": "Employee Covid Risk and Environment Assessment Form Final Version   16th June 2020",
+      "processedAt": "2026-06-20T07:10:02.637Z"
+    },
+    "f2-how-to-guide-v1-1": {
+      "path": "rag/sources/F2  How to guide v1 (1).docx",
+      "sha256": "400e1f55fb65331506c0b4410d77a7c06c3f5a5b570c393ba43144deb0759aec",
+      "size": 824947,
+      "mtime": 1781939094292.8862,
+      "chunks": 8,
+      "title": "F2  How to guide v1 (1)",
+      "processedAt": "2026-06-20T07:10:03.776Z"
+    },
+    "freedom-of-information-act-2019-2020": {
+      "path": "rag/sources/Freedom of information act 2019-2020.docx",
+      "sha256": "27dcdce09b5586fa656bf505f75eac727a8332c43d4faa6a35e7c9e2a045ca0f",
+      "size": 37377,
+      "mtime": 1781939025958.5508,
+      "chunks": 21,
+      "title": "Freedom of information act 2019 2020",
+      "processedAt": "2026-06-20T07:10:05.277Z"
+    },
+    "general-practice-privacy-notice-direct-care-v12-april-22-002": {
+      "path": "rag/sources/General Practice Privacy Notice Direct Care v12 April 22 (002)(1).docx",
+      "sha256": "dcd52a056f487286917606e44a0e68ec8f9debfd1bceed9eeb22059cfae86560",
+      "size": 42915,
+      "mtime": 1781939027461.939,
+      "chunks": 23,
+      "title": "General Practice Privacy Notice Direct Care v12 April 22 (002)(1)",
+      "processedAt": "2026-06-20T07:10:06.812Z"
+    },
+    "guidance-on-individual-rights": {
+      "path": "rag/sources/Guidance on Individual rights.docx",
+      "sha256": "43b7efcabe38d081e04183d25d906c5f3fd3dd37c2e91448c62d7262df0dc0ae",
+      "size": 22232,
+      "mtime": 1781939028489.1147,
+      "chunks": 8,
+      "title": "Guidance on Individual rights",
+      "processedAt": "2026-06-20T07:10:07.804Z"
+    },
+    "immunisation-policy": {
+      "path": "rag/sources/Immunisation policy.docx",
+      "sha256": "1568cf7315694234afb042495580010740f6a837df846fff4cc6f3d80bdd61c0",
+      "size": 23388,
+      "mtime": 1781939032859.9717,
+      "chunks": 15,
+      "title": "Immunisation policy",
+      "processedAt": "2026-06-20T07:10:09.429Z"
+    },
+    "late-arrivals-protocol-patients-late-for-the-appointment": {
+      "path": "rag/sources/Late arrivals Protocol (patients late for the appointment).docx",
+      "sha256": "62bfd5a021944ae35ee0e026385fbf69ffc15e1927bed7ef473bf87fb8fae52c",
+      "size": 17490,
+      "mtime": 1781939037014.3472,
+      "chunks": 4,
+      "title": "Late arrivals Protocol (patients late for the appointment)",
+      "processedAt": "2026-06-20T07:10:10.429Z"
+    },
+    "mandatory-assessment-schedule": {
+      "path": "rag/sources/Mandatory assessment Schedule.docx",
+      "sha256": "4ef53191b456fdb7a65947a2113bb1d7597711503d2baff94f0fa51a4d6b11bd",
+      "size": 16582,
+      "mtime": 1781939064483.291,
+      "chunks": 1,
+      "title": "Mandatory assessment Schedule",
+      "processedAt": "2026-06-20T07:10:11.226Z"
+    },
+    "monthly-high-risk-drug-monitoring-protocol-v2": {
+      "path": "rag/sources/Monthly High Risk Drug Monitoring Protocol v2.docx",
+      "sha256": "252be8a520626aaecb5be830edf8d7e0971b981a3dd334e245714ae79bbf80d4",
+      "size": 53391,
+      "mtime": 1781939066470.1633,
+      "chunks": 6,
+      "title": "Monthly High Risk Drug Monitoring Protocol v2",
+      "processedAt": "2026-06-20T07:10:12.506Z"
+    },
+    "nel-childrens-safeguarding-information-sharing-proforma-for-": {
+      "path": "rag/sources/NEL Childrens safeguarding information sharing proforma FOR WEBSITE v3.docx",
+      "sha256": "e9ff91a59def2ce669943eaa7eb372d12e4d5db562a50af53c156050ef859dcf",
+      "size": 140274,
+      "mtime": 1781939068332.8289,
+      "chunks": 8,
+      "title": "NEL Childrens safeguarding information sharing proforma FOR WEBSITE v3",
+      "processedAt": "2026-06-20T07:10:14.097Z"
+    },
+    "opioid-practice-prescribing-policy": {
+      "path": "rag/sources/Opioid practice prescribing policy.docx",
+      "sha256": "e26e41a0b31dff21130efc33eedb702a8a46f632cb1933435c8268bc6eb2dfaf",
+      "size": 20533,
+      "mtime": 1781939073622.7026,
+      "chunks": 5,
+      "title": "Opioid practice prescribing policy",
+      "processedAt": "2026-06-20T07:10:15.429Z"
+    },
+    "oxygen-use-in-the-workplace": {
+      "path": "rag/sources/Oxygen use in the workplace.pdf",
+      "sha256": "b3dc59b70c3133435e3836a4b8006f16cc3af0b8ab1ffed985fd30d76ea2a522",
+      "size": 272389,
+      "mtime": 1781939074621.9336,
+      "chunks": 16,
+      "title": "Oxygen use in the workplace",
+      "processedAt": "2026-06-20T07:10:17.230Z"
+    },
+    "patient-safety-hackney-downs-pcn-complete": {
+      "path": "rag/sources/Patient Safety - Hackney Downs PCN complete.docx",
+      "sha256": "2a4ed148542a4ce59166eb1551a0fe77b4c58577661d29c261cf2bdd91d01b75",
+      "size": 22952,
+      "mtime": 1781939078983.37,
+      "chunks": 6,
+      "title": "Patient Safety   Hackney Downs PCN complete",
+      "processedAt": "2026-06-20T07:10:18.378Z"
+    },
+    "patients-online-appointment-booking-policy": {
+      "path": "rag/sources/Patients Online Appointment booking Policy.docx",
+      "sha256": "34d036a1b952733be75bb0b2da9227a6cf5f0fadba5df464389cee7a916a74d3",
+      "size": 16701,
+      "mtime": 1781939076873.369,
+      "chunks": 2,
+      "title": "Patients Online Appointment booking Policy",
+      "processedAt": "2026-06-20T07:10:19.328Z"
+    },
+    "patient-registration-guide": {
+      "path": "rag/sources/Patient_Registration_Guide.docx",
+      "sha256": "73add2ec496e2b63e9cb88f3e34c3030d2a9f01c77e81199e16a5974ae927d89",
+      "size": 39539,
+      "mtime": 1781939076451.5283,
+      "chunks": 9,
+      "title": "Patient Registration Guide",
+      "processedAt": "2026-06-20T07:10:20.448Z"
+    },
+    "protecting-your-confidentiality-privacy-notice": {
+      "path": "rag/sources/Protecting your confidentiality - Privacy Notice.docx",
+      "sha256": "cf31b75a50b5f3c149b3cfc1efde4accf153379efb63d182be33923de3f5e41c",
+      "size": 30600,
+      "mtime": 1781939087327.3547,
+      "chunks": 22,
+      "title": "Protecting your confidentiality   Privacy Notice",
+      "processedAt": "2026-06-20T07:10:22.030Z"
+    },
+    "quality-assurance-policy-1": {
+      "path": "rag/sources/Quality_Assurance_Policy[1].docx",
+      "sha256": "3dc3b79d0192e3011bbd6d9aa8a38ae497a745129fee0aefc50fd0d4c14a497c",
+      "size": 45886,
+      "mtime": 1781939087902.0652,
+      "chunks": 21,
+      "title": "Quality Assurance Policy[1]",
+      "processedAt": "2026-06-20T07:10:23.793Z"
+    },
+    "reception-guide-2025": {
+      "path": "rag/sources/Reception guide 2025.docx",
+      "sha256": "9ef6a630fa7904e28c06e53c42aa386264da2da67672203de8dca477d6d72b8f",
+      "size": 45295,
+      "mtime": 1781939088835.967,
+      "chunks": 17,
+      "title": "Reception guide 2025",
+      "processedAt": "2026-06-20T07:10:25.402Z"
+    },
+    "referral-protocol-1": {
+      "path": "rag/sources/Referral protocol (1).docx",
+      "sha256": "e08e3d5fe68b79ce23be522973aeb392b834f849f4ac5e89ea25481caf2ba31b",
+      "size": 21000,
+      "mtime": 1781939090984.9695,
+      "chunks": 5,
+      "title": "Referral protocol (1)",
+      "processedAt": "2026-06-20T07:10:26.396Z"
+    },
+    "registration-form-2025": {
+      "path": "rag/sources/REgistration form 2025.docx",
+      "sha256": "95ed5b931b86408cfb77295106b6535e1e628ec4bcbcf8efd9b217f822c88683",
+      "size": 3593107,
+      "mtime": 1781939071486.0735,
+      "chunks": 1,
+      "title": "REgistration form 2025",
+      "processedAt": "2026-06-20T07:10:27.913Z"
+    },
+    "riverside-duty-doctor-protocol-2025": {
+      "path": "rag/sources/Riverside Duty Doctor Protocol 2025.docx",
+      "sha256": "1cf281b18040df4e6fea0ed3c7a3812925b7ffbf00a877ebb099dd2be54c9ae7",
+      "size": 34683,
+      "mtime": 1781939122090.1956,
+      "chunks": 7,
+      "title": "Riverside Duty Doctor Protocol 2025",
+      "processedAt": "2026-06-20T07:10:29.057Z"
+    },
+    "riverside-practice-health-inequality-policy": {
+      "path": "rag/sources/Riverside Practice Health Inequality Policy.docx",
+      "sha256": "0a76a906d23637582aa721d7bc65e3969da9e8680de003591f3adb62fab6ace8",
+      "size": 17970,
+      "mtime": 1781939030314.84,
+      "chunks": 3,
+      "title": "Riverside Practice Health Inequality Policy",
+      "processedAt": "2026-06-20T07:10:29.957Z"
+    },
+    "riverside-practice-sop-for-prescribing-a-controlled-drug-and": {
+      "path": "rag/sources/Riverside Practice SOP for Prescribing a Controlled Drug and the Collectio.docx",
+      "sha256": "9f5b2249766225bc125a7cf19c96081d7a9741de03e3b2e394cb1e94ce9c9e3e",
+      "size": 31463,
+      "mtime": 1781939094726.3203,
+      "chunks": 8,
+      "title": "Riverside Practice SOP for Prescribing a Controlled Drug and the Collectio",
+      "processedAt": "2026-06-20T07:10:31.224Z"
+    },
+    "riverside-practice-spillages-policy": {
+      "path": "rag/sources/RIVERSIDE PRACTICE SPILLAGES POLICY.pdf",
+      "sha256": "999f6485cb19102616d87faf28e0c5066bcb0faa213b77260aa40b195b0eca94",
+      "size": 1723337,
+      "mtime": 1781939115798.3982,
+      "chunks": 16,
+      "title": "RIVERSIDE PRACTICE SPILLAGES POLICY",
+      "processedAt": "2026-06-20T07:10:33.224Z"
+    },
+    "sexual-misconduct-and-sexual-safety-policy": {
+      "path": "rag/sources/Sexual Misconduct and Sexual Safety Policy.docx",
+      "sha256": "33516fad5ec557ccedcce4089acf9f326d25f3802779b69a8d11b75bc5c3c980",
+      "size": 21781,
+      "mtime": 1781939111566.0244,
+      "chunks": 10,
+      "title": "Sexual Misconduct and Sexual Safety Policy",
+      "processedAt": "2026-06-20T07:10:34.325Z"
+    },
+    "shared-care-policy": {
+      "path": "rag/sources/Shared Care Policy.docx",
+      "sha256": "3c35fc9e0374b4c4108df6f4d9ee9e8d22bfc73049a0459610bb3655a96c529d",
+      "size": 18643,
+      "mtime": 1781939112021.9775,
+      "chunks": 2,
+      "title": "Shared Care Policy",
+      "processedAt": "2026-06-20T07:10:35.233Z"
+    },
+    "staff-data-code-of-conduct": {
+      "path": "rag/sources/Staff data code of conduct  .docx",
+      "sha256": "de60c7e4b819a5911f1fd2f82505cf3adf2f931c366de8d10becaa74463041d6",
+      "size": 16338,
+      "mtime": 1781939116478.068,
+      "chunks": 2,
+      "title": "Staff data code of conduct",
+      "processedAt": "2026-06-20T07:10:36.089Z"
+    },
+    "staff-guidance-on-data-breaches": {
+      "path": "rag/sources/Staff Guidance on Data Breaches.docx",
+      "sha256": "831cd75dddac51be6b8954ccfcfe55e806e10a6260a185fb55aabf526ee7441b",
+      "size": 19445,
+      "mtime": 1781939116954.6084,
+      "chunks": 3,
+      "title": "Staff Guidance on Data Breaches",
+      "processedAt": "2026-06-20T07:10:37.443Z"
+    },
+    "statement-of-purpose-0": {
+      "path": "rag/sources/Statement_of_Purpose_-(0).docx",
+      "sha256": "c7d81b3a5ea42f0f51f18f2d3aa10afe8d0c329e4d84d63b2c419562872127cd",
+      "size": 26310,
+      "mtime": 1781939117419.0376,
+      "chunks": 7,
+      "title": "Statement of Purpose (0)",
+      "processedAt": "2026-06-20T07:10:38.502Z"
+    },
+    "the-riverside-practice-portable-heaters-safety-policy": {
+      "path": "rag/sources/The Riverside Practice - Portable Heaters Safety Policy.docx",
+      "sha256": "7b5f164177c61c01da3f78599bf2ccab6b14fb379904e86e6e42877ab483ad9b",
+      "size": 17398,
+      "mtime": 1781939080854.0625,
+      "chunks": 2,
+      "title": "The Riverside Practice   Portable Heaters Safety Policy",
+      "processedAt": "2026-06-20T07:10:39.518Z"
+    },
+    "the-riverside-practice-2-week-referrals-protocol": {
+      "path": "rag/sources/THE RIVERSIDE PRACTICE 2 WEEK REFERRALS PROTOCOL.docx",
+      "sha256": "a351cfdff10f642c950937cbe502d931c3587a540471edc807dc31814dc45dd5",
+      "size": 16996,
+      "mtime": 1781939120997.5322,
+      "chunks": 2,
+      "title": "THE RIVERSIDE PRACTICE 2 WEEK REFERRALS PROTOCOL",
+      "processedAt": "2026-06-20T07:10:40.543Z"
+    },
+    "the-riverside-practice-cancer-safety-netting-protocol": {
+      "path": "rag/sources/The Riverside Practice Cancer Safety Netting Protocol.docx",
+      "sha256": "42c6098630e84d4dbf7e2cb001355e5bc71f6427ab9b01d801991b2c5b279c57",
+      "size": 18285,
+      "mtime": 1781939121509.4226,
+      "chunks": 3,
+      "title": "The Riverside Practice Cancer Safety Netting Protocol",
+      "processedAt": "2026-06-20T07:10:41.438Z"
+    },
+    "the-riverside-practice-locum-induction-guide-2025": {
+      "path": "rag/sources/The Riverside Practice Locum Induction Guide 2025.docx",
+      "sha256": "bd26c0ea4ebce471845a0d71576c965eba1ac0bc5822cb7a0b98e535a41a16dd",
+      "size": 25811,
+      "mtime": 1781939041015.08,
+      "chunks": 7,
+      "title": "The Riverside Practice Locum Induction Guide 2025",
+      "processedAt": "2026-06-20T07:10:42.936Z"
+    },
+    "the-riverside-practice-reception-and-admin-staff-guide": {
+      "path": "rag/sources/The Riverside Practice Reception and Admin Staff Guide.docx",
+      "sha256": "4c9f95dd4d377fff441c17072868312b45a23137b2e1afa320566c12af84957b",
+      "size": 31981,
+      "mtime": 1781939095200.644,
+      "chunks": 12,
+      "title": "The Riverside Practice Reception and Admin Staff Guide",
+      "processedAt": "2026-06-20T07:10:44.415Z"
+    },
+    "the-riverside-practice-sharps-injury-poster": {
+      "path": "rag/sources/THE RIVERSIDE PRACTICE sharps injury poster.docx",
+      "sha256": "2a277f3125da697affdcb7cca1bb948341aae7b50c5d85e95f809b7af3f7f9e5",
+      "size": 16628,
+      "mtime": 1781939124227.7993,
+      "chunks": 2,
+      "title": "THE RIVERSIDE PRACTICE sharps injury poster",
+      "processedAt": "2026-06-20T07:10:45.196Z"
+    },
+    "the-riverside-practice-updated-chaperone-policy-2026": {
+      "path": "rag/sources/THE RIVERSIDE PRACTICE updated Chaperone Policy 2026.docx",
+      "sha256": "935eeae3ab63c8224c8c051a4894d49561b304d424ddef2f739dba4adda5d837",
+      "size": 21110,
+      "mtime": 1781938997241.1377,
+      "chunks": 7,
+      "title": "THE RIVERSIDE PRACTICE updated Chaperone Policy 2026",
+      "processedAt": "2026-06-20T07:10:46.161Z"
+    },
+    "travel-vaccines-drop-list-1": {
+      "path": "rag/sources/Travel-vaccines-drop-list (1).pdf",
+      "sha256": "242c382919e493d462a6d1e917ed144521cb9ac83b46dcc26dfe399b76ad47be",
+      "size": 466723,
+      "mtime": 1781939125402.8691,
+      "chunks": 14,
+      "title": "Travel vaccines drop list (1)",
+      "processedAt": "2026-06-20T07:10:48.026Z"
+    },
+    "urgent-emergency-appointment-request": {
+      "path": "rag/sources/Urgent Emergency appointment request.docx",
+      "sha256": "086b9ee8ee957b778c78af6e85b45e7ce7101ccb31315fec206552b59713c780",
+      "size": 22221,
+      "mtime": 1781939126054.556,
+      "chunks": 7,
+      "title": "Urgent Emergency appointment request",
+      "processedAt": "2026-06-20T07:10:49.737Z"
+    },
+    "was-not-brought-v2": {
+      "path": "rag/sources/Was not brought v2.docx",
+      "sha256": "e118c24158472613a205815e8527aa65c1921f3dd9681bb43a7a19167cb26170",
+      "size": 44133,
+      "mtime": 1781939131605.333,
+      "chunks": 2,
+      "title": "Was not brought v2",
+      "processedAt": "2026-06-20T07:10:51.147Z"
+    },
+    "workplace-health-and-safety-guide": {
+      "path": "rag/sources/Workplace Health and safety guide.pdf",
+      "sha256": "d3e9d8838376a4b7e456bea592120e631df6d062df27c66519f026086b7d4a78",
+      "size": 109628,
+      "mtime": 1781939132932.9265,
+      "chunks": 24,
+      "title": "Workplace Health and safety guide",
+      "processedAt": "2026-06-20T07:10:53.502Z"
+    },
+    "zero-tolerance-policy-the-riverside-practice": {
+      "path": "rag/sources/Zero Tolerance Policy The Riverside practice.docx",
+      "sha256": "612d5b98d53f3253aa45450fa8c165a4ec63068e30ae4cf118614168949f377c",
+      "size": 21033,
+      "mtime": 1781939133585.7993,
+      "chunks": 7,
+      "title": "Zero Tolerance Policy The Riverside practice",
+      "processedAt": "2026-06-20T07:10:54.690Z"
     }
   }
 }
