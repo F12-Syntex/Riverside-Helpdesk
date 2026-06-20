@@ -1,7 +1,21 @@
 {
-  "generatedAt": "2026-06-19T06:06:58.021Z",
+  "generatedAt": "2026-06-20T06:37:55.330Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
+    {
+      "docId": "b0128-clinical-guidelines-for-use-in-a-major-incident-v2-202",
+      "title": "B0128 clinical guidelines for use in a major incident v2 2020",
+      "summary": "Clinical guidelines for responding to mass casualty events and major incidents.",
+      "tags": [
+        "major incidents",
+        "mass casualty",
+        "clinical guidelines",
+        "trauma",
+        "emergency preparedness"
+      ],
+      "chunks": 237,
+      "source": "rag/sources/B0128-clinical-guidelines-for-use-in-a-major-incident-v2-2020.pdf"
+    },
     {
       "docId": "emis-web-how-to",
       "title": "EMIS WEB how to",
@@ -11,7 +25,7 @@
         "guide",
         "templates",
         "clinical",
-        "gp"
+        "how to"
       ],
       "chunks": 5,
       "source": "rag/sources/EMIS-WEB-how-to.pdf"
@@ -19,13 +33,13 @@
     {
       "docId": "lpug0019-emis-web-introduction-admin-clinical",
       "title": "LPUG0019 Emis Web Introduction Admin Clinical",
-      "summary": "Guide to Emis Web administration and clinical functions, including login and navigation.",
+      "summary": "Guide to Emis Web administration and clinical features, including login and navigation.",
       "tags": [
         "emis web",
-        "admin",
+        "administration",
         "clinical",
         "user guide",
-        "navigation"
+        "nhs"
       ],
       "chunks": 167,
       "source": "rag/sources/LPUG0019-Emis-Web-Introduction-Admin-Clinical.pdf"

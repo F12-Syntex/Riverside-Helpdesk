@@ -1,5 +1,14 @@
 {
   "documents": {
+    "b0128-clinical-guidelines-for-use-in-a-major-incident-v2-202": {
+      "path": "rag/sources/B0128-clinical-guidelines-for-use-in-a-major-incident-v2-2020.pdf",
+      "sha256": "c93126d0199e942caef231ada62f9ee89e6854b8a84d09b4f873035626591c28",
+      "size": 9944749,
+      "mtime": 1781849258503.734,
+      "chunks": 237,
+      "title": "B0128 clinical guidelines for use in a major incident v2 2020",
+      "processedAt": "2026-06-20T06:37:41.299Z"
+    },
     "emis-web-how-to": {
       "path": "rag/sources/EMIS-WEB-how-to.pdf",
       "sha256": "eb66f378a4d1b98f59ef0341947bc0c4acfae01cba7fc514eeb3530575e9a521",
@@ -7,7 +16,7 @@
       "mtime": 1781762876459.2712,
       "chunks": 5,
       "title": "EMIS WEB how to",
-      "processedAt": "2026-06-19T06:06:46.141Z"
+      "processedAt": "2026-06-20T06:37:43.146Z"
     },
     "lpug0019-emis-web-introduction-admin-clinical": {
       "path": "rag/sources/LPUG0019-Emis-Web-Introduction-Admin-Clinical.pdf",
@@ -16,7 +25,7 @@
       "mtime": 1781762874117.122,
       "chunks": 167,
       "title": "LPUG0019 Emis Web Introduction Admin Clinical",
-      "processedAt": "2026-06-19T06:06:57.994Z"
+      "processedAt": "2026-06-20T06:37:55.283Z"
     }
   }
 }
