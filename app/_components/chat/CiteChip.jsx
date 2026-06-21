@@ -20,7 +20,7 @@ export default function CiteChip({ label, snippet, onClick }) {
       </Hover>
 
       {text && open && (
-        <span role="tooltip" style={s('position:absolute;left:0;bottom:calc(100% + 8px);z-index:60;width:340px;max-width:min(340px,82vw);background:#212b32;color:#fff;border-radius:10px;padding:11px 13px;font-size:13px;font-weight:400;line-height:1.5;box-shadow:0 6px 22px rgba(33,43,50,.30);text-wrap:pretty;')}>
+        <span role="tooltip" style={s('position:absolute;left:0;bottom:calc(100% + 8px);z-index:60;width:340px;max-width:min(340px,82vw);max-height:min(240px,46vh);overflow-y:auto;overscroll-behavior:contain;background:#212b32;color:#fff;border-radius:10px;padding:11px 13px;font-size:13px;font-weight:400;line-height:1.5;box-shadow:0 6px 22px rgba(33,43,50,.30);text-wrap:pretty;overflow-wrap:anywhere;')}>
           <span style={s('display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#aebfcb;margin-bottom:5px;')}>What this is based on</span>
           <span style={s('display:block;')}>&ldquo;{text}&rdquo;</span>
         </span>
