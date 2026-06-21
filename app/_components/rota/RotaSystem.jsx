@@ -344,38 +344,42 @@ export default function RotaSystem({ page = 'rota' }) {
   }
 
   function renderGridDesktop() {
-    const cols = `64px repeat(${staff.length}, minmax(64px, 1fr))`;
+    const cols = `116px repeat(${staff.length}, minmax(78px, 1fr))`;
     return (
-      <div className="riva-grid-desktop" style={s(CARD + 'padding:4px 8px;overflow-x:auto;')}>
-        <div style={{ display: 'grid', gridTemplateColumns: cols, gap: '6px', padding: '12px 8px' }}>
-          <div />
-          {staff.map((p) => (
-            <div key={p.id} style={s('display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;')}>
-              <span style={s('flex:none;width:34px;height:34px;border-radius:50%;background:#e8f1f8;color:#003087;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;')}>{initials(p.name)}</span>
-              <span style={s('max-width:100%;font-size:13px;font-weight:600;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{firstName(p.name)}</span>
+      <div className="riva-grid-desktop" style={s(CARD + 'overflow:hidden;')}>
+        <div style={{ overflowX: 'auto' }}>
+          {/* Staff header */}
+          <div style={{ display: 'grid', gridTemplateColumns: cols }}>
+            <div style={s('background:#fafbfc;border-right:1px solid #eef1f2;border-bottom:2px solid #e4e9ec;')} />
+            {staff.map((p, i) => (
+              <div key={p.id} style={s('display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 13px;min-width:0;border-bottom:2px solid #e4e9ec;' + (i ? 'border-left:1px solid #eef1f2;' : ''))}>
+                <span style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#e8f1f8;color:#003087;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;')}>{initials(p.name)}</span>
+                <span style={s('max-width:100%;font-size:13px;font-weight:600;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{firstName(p.name)}</span>
+              </div>
+            ))}
+          </div>
+          {/* Day rows */}
+          {days.map((day, d) => (
+            <div key={d} style={{ display: 'grid', gridTemplateColumns: cols }}>
+              <div style={s('display:flex;flex-direction:column;justify-content:center;padding:0 16px;background:#fafbfc;border-right:1px solid #eef1f2;' + (d ? 'border-top:1px solid #eef1f2;' : ''))}>
+                <b style={s('font-size:14px;line-height:1.2;color:#212b32;')}>{day.short}</b>
+                <span style={s('font-size:12px;color:#768692;font-variant-numeric:tabular-nums;')}>{day.date}</span>
+              </div>
+              {staff.map((p, i) => {
+                const code = grid[p.id] ? grid[p.id][d] : null;
+                const cv = cellView(code, times);
+                const clickable = canEdit && code !== 'AL';
+                return (
+                  <Hover key={p.id} tag="button" onClick={() => cycleCell(p.id, d)} title={firstName(p.name)} disabled={!clickable}
+                    base={'display:flex;align-items:center;justify-content:center;min-height:56px;border:none;text-align:center;background:' + cv.bg + ';' + (d ? 'border-top:1px solid #eef1f2;' : '') + (i ? 'border-left:1px solid #eef1f2;' : '') + 'cursor:' + (clickable ? 'pointer' : 'default') + ';'}
+                    hover={clickable ? 'box-shadow:inset 0 0 0 2px rgba(0,94,184,.30);' : ''}>
+                    <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>
+                  </Hover>
+                );
+              })}
             </div>
           ))}
         </div>
-        {days.map((day, d) => (
-          <div key={d} style={{ display: 'grid', gridTemplateColumns: cols, gap: '6px', padding: '4px 8px', borderTop: '1px solid #eef1f2', alignItems: 'stretch' }}>
-            <div style={s('display:flex;flex-direction:column;justify-content:center;min-width:0;padding:4px 2px;')}>
-              <b style={s('font-size:15px;line-height:1.2;color:#212b32;')}>{day.short}</b>
-              <span style={s('font-size:12px;color:#768692;font-variant-numeric:tabular-nums;')}>{day.date}</span>
-            </div>
-            {staff.map((p) => {
-              const code = grid[p.id] ? grid[p.id][d] : null;
-              const cv = cellView(code, times);
-              const clickable = canEdit && code !== 'AL';
-              return (
-                <Hover key={p.id} tag="button" onClick={() => cycleCell(p.id, d)} title={firstName(p.name)} disabled={!clickable}
-                  base={'display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;min-height:46px;text-align:center;border:none;background:' + cv.bg + ';cursor:' + (clickable ? 'pointer' : 'default') + ';'}
-                  hover={clickable ? 'box-shadow:inset 0 0 0 2px rgba(0,94,184,.28);' : ''}>
-                  <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>
-                </Hover>
-              );
-            })}
-          </div>
-        ))}
       </div>
     );
   }
