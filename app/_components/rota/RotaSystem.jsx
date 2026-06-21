@@ -144,29 +144,6 @@ export default function RotaSystem({ page = 'rota' }) {
     catch (e) { flash(e.message, 'error'); }
   }
 
-  function applyGrid(newGrid) {
-    const sched = { grid: newGrid, times, rules, seed };
-    setCache((c) => ({ ...c, [weekISO]: sched }));
-    pushHist(weekISO, sched);
-    persist(sched);
-    return sched;
-  }
-
-  function cycleCell(id, d) {
-    if (!canEdit) return;
-    const cur = grid[id] ? grid[id][d] : null;
-    if (cur === 'AL') return;
-    const order = ['E', 'L', 'OFF'];
-    const next = order[(order.indexOf(cur) + 1) % 3];
-    const newGrid = {};
-    Object.keys(grid).forEach((k) => { newGrid[k] = grid[k].slice(); });
-    if (!newGrid[id]) newGrid[id] = ['OFF', 'OFF', 'OFF', 'OFF', 'OFF'];
-    newGrid[id][d] = next;
-    applyGrid(newGrid);
-    const issues = analyze(newGrid, staff);
-    if (issues.length) setWarning({ issues });
-  }
-
   function undo() {
     const hh = hist[weekISO];
     if (!hh || hh.ptr <= 0) return;
@@ -405,13 +382,11 @@ export default function RotaSystem({ page = 'rota' }) {
               {staff.map((p, i) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
-                const clickable = canEdit && code !== 'AL';
                 return (
-                  <Hover key={p.id} tag="button" onClick={() => cycleCell(p.id, d)} title={firstName(p.name)} disabled={!clickable}
-                    base={'display:flex;align-items:center;justify-content:center;min-height:56px;border:none;text-align:center;background:' + cv.bg + ';' + (d ? 'border-top:1px solid #eef1f2;' : '') + (i ? 'border-left:1px solid #eef1f2;' : '') + 'cursor:' + (clickable ? 'pointer' : 'default') + ';'}
-                    hover={clickable ? 'box-shadow:inset 0 0 0 2px rgba(0,94,184,.30);' : ''}>
+                  <div key={p.id} title={firstName(p.name)}
+                    style={s('display:flex;align-items:center;justify-content:center;min-height:56px;text-align:center;background:' + cv.bg + ';' + (d ? 'border-top:1px solid #eef1f2;' : '') + (i ? 'border-left:1px solid #eef1f2;' : ''))}>
                     <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>
-                  </Hover>
+                  </div>
                 );
               })}
             </div>
@@ -435,16 +410,14 @@ export default function RotaSystem({ page = 'rota' }) {
               {days.map((day, d) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
-                const clickable = canEdit && code !== 'AL';
                 return (
-                  <button key={d} onClick={() => cycleCell(p.id, d)} disabled={!clickable}
-                    style={s('display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:none;background:#fff;padding:11px 16px;cursor:' + (clickable ? 'pointer' : 'default') + ';' + (d ? 'border-top:1px solid #f3f6f7;' : ''))}>
+                  <div key={d} style={s('display:flex;align-items:center;gap:12px;width:100%;padding:11px 16px;' + (d ? 'border-top:1px solid #f3f6f7;' : ''))}>
                     <span style={s('flex:1;min-width:0;')}>
                       <b style={s('font-size:15px;color:#212b32;')}>{day.long}</b>
                       <span style={s('font-size:12.5px;color:#768692;')}>{'  ·  ' + day.date}</span>
                     </span>
                     <span style={s('flex:none;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;background:' + cv.bg + ';color:' + cv.color + ';')}>{cv.main || 'Off'}</span>
-                  </button>
+                  </div>
                 );
               })}
             </div>
