@@ -52,7 +52,7 @@ export default function AiAnswer({ v }) {
               <div style={s('margin:14px 22px 4px;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Suggested message</div>
                 <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.55;white-space:pre-wrap;')}>{v.message}</div>
-                {v.hasMessageCite && <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} />}
+                {v.hasMessageCite && <CiteChip label={v.messageCiteLabel} snippet={v.messageCiteText} onClick={v.onMessageCite} />}
               </div>
             )}
             {v.hasSteps && (
@@ -62,7 +62,7 @@ export default function AiAnswer({ v }) {
                     <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#005eb8;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{st.num}</div>
                     <div style={s('flex:1;min-width:0;')}>
                       <div style={s('font-size:17px;line-height:1.5;')}>{st.text}</div>
-                      {st.hasCite && <CiteChip label={st.citeLabel} onClick={st.onCite} />}
+                      {st.hasCite && <CiteChip label={st.citeLabel} snippet={st.citeText} onClick={st.onCite} />}
                     </div>
                   </div>
                 ))}

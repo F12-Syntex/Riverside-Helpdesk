@@ -351,6 +351,7 @@ class RiversidePracticeQA extends React.Component {
               text: (t && t.text != null) ? t.text : t,
               hasCite: !!cite,
               citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
+              citeText: cite ? (cite.text || cite.snippet || '') : '',
               onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
             };
           }),
@@ -359,6 +360,7 @@ class RiversidePracticeQA extends React.Component {
           hasMessage: !!(m.message && m.message.length),
           hasMessageCite: !!m.messageCite,
           messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ' — ' + m.messageCite.location) : '',
+          messageCiteText: m.messageCite ? (m.messageCite.text || m.messageCite.snippet || '') : '',
           onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
           hasTip: !!(m.tip && m.tip.length),
           tip: m.tip || '',

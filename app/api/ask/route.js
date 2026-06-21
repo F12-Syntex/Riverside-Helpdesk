@@ -74,6 +74,9 @@ function citationFor(chunk) {
     docTitle: chunk.docTitle,
     location: locationOf(chunk),
     snippet: body.length > 220 ? body.slice(0, 218).trim() + '…' : body,
+    // The full extract that was given to the model as this Source — shown when
+    // the reader hovers the citation, so they can see exactly what backs a step.
+    text: body,
     view: chunk.view || null,
   };
 }
