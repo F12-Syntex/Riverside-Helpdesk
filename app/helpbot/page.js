@@ -1,8 +1,18 @@
 'use client';
 
 import React from 'react';
-import { SEED_GUIDES, CATEGORIES, POPULAR_IDS } from '../../lib/guides';
+import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askQuestion } from '../../lib/ai/client';
+
+// Suggested starter questions on the empty state — organisation-wide topics
+// answered from the practice's own policy/procedure documents.
+const POPULAR_QUESTIONS = [
+  'How do I report a significant event?',
+  'What is the complaints procedure?',
+  'What should I do if a patient is aggressive or abusive?',
+  'How do I report a data breach?',
+  'How are repeat prescription requests handled?',
+];
 import { s, Hover, Svg, Icons, assetSrc } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import ChatView from '../_components/ChatView';
@@ -72,7 +82,6 @@ class RiversidePracticeQA extends React.Component {
   cats() { return CATEGORIES; }
   seed() { return SEED_GUIDES; }
   allGuides() { return this.seed().concat(this.state.customGuides || []); }
-  popularIds() { return POPULAR_IDS; }
 
   // Build a short transcript so the AI understands follow-up questions.
   buildHistory(upto) {
@@ -382,10 +391,7 @@ class RiversidePracticeQA extends React.Component {
       };
     });
 
-    const popular = this.popularIds().map((id) => {
-      const g = all.find((x) => x.id === id);
-      return g ? { question: g.question, onClick: () => self.askGuide(g) } : null;
-    }).filter(Boolean);
+    const popular = POPULAR_QUESTIONS.map((q) => ({ question: q, onClick: () => self.ask(q) }));
 
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
