@@ -3,7 +3,7 @@ import Notifications from './_components/Notifications';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
-  description: 'Reception help & guidance for The Riverside Practice — using EMIS Web and front-desk tasks.',
+  description: 'Practice Q&A for The Riverside Practice — answers for all staff, grounded only in the organisation’s own documents.',
   icons: { icon: '/assets/logo.png', shortcut: '/assets/logo.png', apple: '/assets/logo.png' },
 };
 

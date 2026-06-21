@@ -14,8 +14,8 @@ import AppHeader from './_components/AppHeader';
 const TOOLS = [
   {
     href: '/helpbot',
-    title: 'Reception help & guidance',
-    description: 'Ask anything covered by the practice’s documents — policies, processes, EMIS steps and front-desk guidance.',
+    title: 'Practice Q&A',
+    description: 'Ask anything about how the practice works — answers come only from the organisation’s own documents. For all staff.',
   },
   {
     href: '/rota',

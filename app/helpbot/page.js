@@ -418,8 +418,8 @@ class RiversidePracticeQA extends React.Component {
     })).filter((g) => g.docs.length);
 
     return {
-      botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice reception help',
-      welcome: this.props.welcome != null ? this.props.welcome : 'For reception. Ask how to do something in EMIS, or what to do at the front desk.',
+      botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
+      welcome: this.props.welcome != null ? this.props.welcome : 'Ask anything about how the practice works. Answers come only from the organisation’s own documents — helpful for all staff.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       isDpia: this.state.view === 'dpia',

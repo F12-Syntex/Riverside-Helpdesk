@@ -11,7 +11,7 @@ const TABS = [
   { key: 'dpia', label: 'DPIA', icon: Icons.shield },
 ];
 
-export default function AppHeader({ v, subtitle = 'Reception help & guidance', tabs = null }) {
+export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null }) {
   const showTabs = !!(v && v.onSetView);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
