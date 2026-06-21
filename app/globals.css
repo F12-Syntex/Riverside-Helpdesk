@@ -52,6 +52,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * is hidden on phones, where the reader gets Open / Download buttons instead. */
 .riva-doc-embed { display: block; }
 
+/* When the document is highlighted in place (HTML on desktop) the standalone
+ * passage block is redundant, so it's hidden there and revealed on phones. */
+.riva-doc-passage { display: none; }
+
 @media (max-width: 600px) {
   /* Keep the header in view while the page scrolls. */
   .riva-header { padding: 0 14px !important; gap: 10px !important; position: sticky; top: 0; z-index: 40; }
@@ -75,8 +79,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .riva-bot-avatar { display: none !important; }
 
   /* Don't hand a whole document to a phone — hide the embedded preview; the
-   * Open / Download buttons in the citation panel remain. */
+   * passage text and the Open / Download buttons in the citation panel remain. */
   .riva-doc-embed { display: none !important; }
+  .riva-doc-passage { display: block !important; }
 
   /* Rota: the wide grid becomes one card per staff member on phones. */
   .riva-grid-desktop { display: none !important; }

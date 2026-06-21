@@ -239,7 +239,7 @@ class RiversidePracticeQA extends React.Component {
 
   buildViewerVM() {
     const c = this.state.viewer;
-    if (!c) return { docTitle: '', location: '', isImage: false, isPdf: false, isHtml: false, isText: false, hasFile: false, fileUrl: '', text: '', imageEl: null, pdfEl: null, htmlEl: null };
+    if (!c) return { docTitle: '', location: '', isImage: false, isPdf: false, isHtml: false, isText: false, hasFile: false, fileUrl: '', pdfSrc: '', text: '' };
     const v = c.view || {};
     const url = v.url ? assetSrc(v.url) : '';
     const isImage = v.kind === 'image' && !!url;
@@ -258,11 +258,11 @@ class RiversidePracticeQA extends React.Component {
       hasFile: !!url,
       fileUrl: url,
       // The exact extract that backs the statement (full text, not the short
-      // preview) — always shown, and the only thing shown on mobile.
+      // preview) — used to find and highlight the passage inside the document,
+      // and shown on its own on mobile.
       text: v.text || c.text || c.snippet || 'This source has no preview.',
-      imageEl: isImage ? React.createElement('img', { src: url, alt: c.docTitle, style: { display: 'block', maxWidth: '100%', height: 'auto', margin: '0 auto' } }) : null,
-      pdfEl: isPdf ? React.createElement('iframe', { src: pdfSrc, title: c.docTitle, style: { width: '100%', height: '78vh', border: 'none', display: 'block' } }) : null,
-      htmlEl: isFrame ? React.createElement('iframe', { src: url, title: c.docTitle, style: { width: '100%', height: '78vh', border: 'none', display: 'block' } }) : null,
+      // The document URL to open/download; pdfSrc also jumps to the right page.
+      pdfSrc,
     };
   }
 
