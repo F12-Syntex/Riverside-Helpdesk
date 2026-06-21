@@ -1,4 +1,5 @@
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
 import Notifications from './_components/Notifications';
 
 export const metadata = {
@@ -22,7 +23,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}<Notifications /></body>
+      <body>{children}<Notifications /><Analytics /></body>
     </html>
   );
 }
