@@ -117,7 +117,10 @@ class RiversidePracticeQA extends React.Component {
   }
 
   async fetchAI(question, idx) {
-    const history = this.buildHistory(idx);
+    // History is the conversation BEFORE this question (idx-1 = the user message
+    // we're answering). On the first question this is empty, so the server skips
+    // the follow-up query-condensing step — no point enriching a standalone query.
+    const history = this.buildHistory(idx - 1);
     try {
       const data = await askQuestion({ question, history, customGuides: this.state.customGuides });
       if (!data.answerable || (!data.steps.length && !data.message)) {
