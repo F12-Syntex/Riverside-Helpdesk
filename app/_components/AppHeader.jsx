@@ -8,7 +8,6 @@ import MobileNav from './MobileNav';
 const TABS = [
   { key: 'assistant', label: 'Assistant', icon: Icons.chat },
   { key: 'kb', label: 'Knowledge base', icon: Icons.book },
-  { key: 'dpia', label: 'DPIA', icon: Icons.shield },
 ];
 
 export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null }) {

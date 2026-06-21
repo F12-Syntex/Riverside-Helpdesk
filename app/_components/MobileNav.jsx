@@ -9,18 +9,18 @@ import { s, Hover, Svg, Icons } from './ui';
  * Opened from the header's menu button on small screens (the tab pills are
  * hidden there). Uses the same plain NHS-style underlined links as the tools
  * index. Lets staff move between the app's tools and, when on the help bot,
- * between its views (Assistant / Knowledge base / DPIA).
+ * between its views (Assistant / Knowledge base).
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
   { href: '/helpbot', label: 'Practice Q&A' },
   { href: '/rota', label: 'Staff rota generator' },
+  { href: '/dpia', label: 'Data protection check (DPIA)' },
 ];
 
 const VIEWS = [
   { key: 'assistant', label: 'Assistant' },
   { key: 'kb', label: 'Knowledge base' },
-  { key: 'dpia', label: 'DPIA' },
 ];
 
 const GROUP_LABEL = 'font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:0 0 14px;';

@@ -22,6 +22,11 @@ const TOOLS = [
     title: 'Staff rota generator',
     description: 'Build and balance staff rotas with help from the practice assistant.',
   },
+  {
+    href: '/dpia',
+    title: 'Data protection check (DPIA)',
+    description: 'The data protection impact assessment for the whole Riverside Helpdesk program — what it does with information, the risks, and how far the check has got.',
+  },
 ];
 
 export default function Page() {

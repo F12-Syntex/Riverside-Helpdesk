@@ -17,7 +17,6 @@ import { s, Hover, Svg, Icons, assetSrc } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import ChatView from '../_components/ChatView';
 import KbView from '../_components/KbView';
-import DpiaView from '../_components/DpiaView';
 import DocumentViewer from '../_components/DocumentViewer';
 import AddGuideModal from '../_components/AddGuideModal';
 
@@ -431,7 +430,6 @@ class RiversidePracticeQA extends React.Component {
       welcome: this.props.welcome != null ? this.props.welcome : 'Ask anything about how the practice works. Answers come only from the organisation’s own documents — helpful for all staff.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
-      isDpia: this.state.view === 'dpia',
       kbStatus: this.state.kbStatus,
       kbGroups,
       kbTotal: kb.total || 0,
@@ -473,17 +471,17 @@ class RiversidePracticeQA extends React.Component {
 
         <AppHeader v={v} />
 
-        {v.notEmpty && !v.isKb && !v.isDpia && (
+        {v.notEmpty && !v.isKb && (
           <div style={s('flex:none;background:#fff;border-bottom:1px solid #d8dde0;padding:10px 24px;display:flex;')}>
             <Hover tag="button" onClick={v.onNewChat} base="display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:8px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#005eb8;color:#fff;"><Svg w={18} sw={2.2}>{Icons.arrowLeft}</Svg>Back to all topics</Hover>
           </div>
         )}
 
         <div id="riva-scroll" style={s('flex:1;overflow-y:auto;')}>
-          {v.isDpia ? <DpiaView /> : v.isKb ? <KbView v={v} /> : <ChatView v={v} />}
+          {v.isKb ? <KbView v={v} /> : <ChatView v={v} />}
         </div>
 
-        {!v.isKb && !v.isDpia && (
+        {!v.isKb && (
         <div style={s('flex:none;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;')}>
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
