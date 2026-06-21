@@ -67,18 +67,71 @@ function locationOf(chunk) {
   return 'Document';
 }
 
-function citationFor(chunk) {
+function citationFor(chunk, quote = '') {
   const body = (chunk.text || '').replace(/\s+/g, ' ').trim();
+  const q = (quote || '').replace(/\s+/g, ' ').trim();
   return {
     docId: chunk.docId,
     docTitle: chunk.docTitle,
     location: locationOf(chunk),
     snippet: body.length > 220 ? body.slice(0, 218).trim() + '…' : body,
-    // The full extract that was given to the model as this Source — shown when
-    // the reader hovers the citation, so they can see exactly what backs a step.
+    // The full extract that was given to the model as this Source — kept for
+    // context and as a fallback when there is no verified quote.
     text: body,
+    // The precise verbatim span the step is based on, verified to appear in this
+    // source. Empty when the model's quote could not be verified. Drives the
+    // exact-passage highlight and the "what this is based on" text.
+    quote: q,
     view: chunk.view || null,
   };
+}
+
+// Normalise text for verbatim comparison: unify smart quotes/dashes, collapse
+// whitespace, lowercase. Used to check a model quote against the source chunks.
+function normForMatch(str) {
+  return (str || '')
+    .replace(/[‘’‚‛′]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .replace(/[–—−]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+// How much of `quoteN` is found verbatim inside `chunkN` (0..1). Exact
+// containment scores 1; otherwise the longest leading/middle run that is
+// contained gives a partial score, so near-verbatim quotes still verify.
+function quoteContainment(quoteN, chunkN) {
+  if (!quoteN || !chunkN) return 0;
+  if (chunkN.includes(quoteN)) return 1;
+  let best = 0;
+  for (const frac of [0.85, 0.7, 0.55, 0.4]) {
+    const n = Math.max(24, Math.floor(quoteN.length * frac));
+    if (n < 24 || n > quoteN.length) continue;
+    if (chunkN.includes(quoteN.slice(0, n))) { best = Math.max(best, n / quoteN.length); break; }
+  }
+  if (quoteN.length > 80 && chunkN.includes(quoteN.slice(24, 84))) best = Math.max(best, 0.5);
+  return best;
+}
+
+// Resolve a step's citation. Given the model's claimed Source number and its
+// verbatim quote, find the retrieved chunk that actually contains the quote
+// (correcting a wrong source number), and attach the quote so the UI can show
+// and highlight the exact words. Falls back to the claimed source when the
+// quote can't be verified, so a step is never left without a source.
+function resolveCite(refMap, claimedRef, quote) {
+  const claimed = refMap.get(claimedRef) || null;
+  const quoteN = normForMatch(quote);
+  if (quoteN.length < 12) return claimed ? citationFor(claimed) : null;
+
+  let bestChunk = null, bestScore = 0;
+  for (const [ref, c] of refMap) {
+    // Tiny nudge toward the claimed source so an exact tie keeps the model's pick.
+    const score = quoteContainment(quoteN, normForMatch(c.text)) + (ref === claimedRef ? 0.001 : 0);
+    if (score > bestScore) { bestScore = score; bestChunk = c; }
+  }
+  if (bestChunk && bestScore >= 0.5) return citationFor(bestChunk, quote); // verified
+  return claimed ? citationFor(claimed) : (bestChunk ? citationFor(bestChunk) : null); // unverified fallback
 }
 
 export async function POST(request) {
@@ -168,9 +221,11 @@ export async function POST(request) {
       });
     }
 
-    const at = (n) => (refMap.has(n) ? citationFor(refMap.get(n)) : null);
-    const steps = parsed.steps.map((s) => ({ text: s.text, cite: at(s.source) }));
-    const messageCite = at(parsed.messageSource);
+    // Resolve each citation by verifying the model's verbatim quote against the
+    // retrieved Sources — correcting wrong source numbers and attaching the exact
+    // supporting words, so the citation shows accurate, precise text.
+    const steps = parsed.steps.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+    const messageCite = resolveCite(refMap, parsed.messageSource, parsed.messageQuote);
 
     // The distinct sources this answer relied on (for any list/summary use).
     const seen = new Set();

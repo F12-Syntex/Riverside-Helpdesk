@@ -257,10 +257,10 @@ class RiversidePracticeQA extends React.Component {
       // Whether a full document file exists to embed/download, and its URL.
       hasFile: !!url,
       fileUrl: url,
-      // The exact extract that backs the statement (full text, not the short
-      // preview) — used to find and highlight the passage inside the document,
-      // and shown on its own on mobile.
-      text: v.text || c.text || c.snippet || 'This source has no preview.',
+      // Prefer the verified verbatim quote (the precise words the step is based
+      // on) for finding and tightly highlighting the passage and for the mobile
+      // text; fall back to the full extract when there is no verified quote.
+      text: (c.quote && c.quote.length ? c.quote : (v.text || c.text || c.snippet)) || 'This source has no preview.',
       // The document URL to open/download; pdfSrc also jumps to the right page.
       pdfSrc,
     };
