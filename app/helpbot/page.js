@@ -239,13 +239,13 @@ class RiversidePracticeQA extends React.Component {
 
   buildViewerVM() {
     const c = this.state.viewer;
-    if (!c) return { docTitle: '', location: '', isImage: false, isPdf: false, isHtml: false, isText: false, text: '', imageEl: null, pdfEl: null, htmlEl: null };
+    if (!c) return { docTitle: '', location: '', isImage: false, isPdf: false, isHtml: false, isText: false, hasFile: false, fileUrl: '', text: '', imageEl: null, pdfEl: null, htmlEl: null };
     const v = c.view || {};
     const url = v.url ? assetSrc(v.url) : '';
     const isImage = v.kind === 'image' && !!url;
     const isPdf = v.kind === 'pdf' && !!url;
     const isFrame = (v.kind === 'html' || v.kind === 'markdown' || v.kind === 'text') && !!url;
-    const isText = !url; // no openable file — show the snippet/text inline
+    const isText = !url; // no openable file — the extract is all there is to show
     const pdfSrc = isPdf ? (url + (v.page ? '#page=' + v.page : '')) : '';
     return {
       docTitle: c.docTitle || 'Document',
@@ -254,7 +254,12 @@ class RiversidePracticeQA extends React.Component {
       isPdf,
       isHtml: isFrame,
       isText,
-      text: v.text || c.snippet || 'This source has no preview.',
+      // Whether a full document file exists to embed/download, and its URL.
+      hasFile: !!url,
+      fileUrl: url,
+      // The exact extract that backs the statement (full text, not the short
+      // preview) — always shown, and the only thing shown on mobile.
+      text: v.text || c.text || c.snippet || 'This source has no preview.',
       imageEl: isImage ? React.createElement('img', { src: url, alt: c.docTitle, style: { display: 'block', maxWidth: '100%', height: 'auto', margin: '0 auto' } }) : null,
       pdfEl: isPdf ? React.createElement('iframe', { src: pdfSrc, title: c.docTitle, style: { width: '100%', height: '78vh', border: 'none', display: 'block' } }) : null,
       htmlEl: isFrame ? React.createElement('iframe', { src: url, title: c.docTitle, style: { width: '100%', height: '78vh', border: 'none', display: 'block' } }) : null,
@@ -351,7 +356,6 @@ class RiversidePracticeQA extends React.Component {
               text: (t && t.text != null) ? t.text : t,
               hasCite: !!cite,
               citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
-              citeText: cite ? (cite.text || cite.snippet || '') : '',
               onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
             };
           }),
@@ -360,7 +364,6 @@ class RiversidePracticeQA extends React.Component {
           hasMessage: !!(m.message && m.message.length),
           hasMessageCite: !!m.messageCite,
           messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ' — ' + m.messageCite.location) : '',
-          messageCiteText: m.messageCite ? (m.messageCite.text || m.messageCite.snippet || '') : '',
           onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
           hasTip: !!(m.tip && m.tip.length),
           tip: m.tip || '',

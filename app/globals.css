@@ -48,6 +48,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* The mobile menu button is hidden on desktop (the tab pills are used there). */
 .riva-nav-btn { display: none; }
 
+/* Citation side panel: the embedded full-document preview shows on desktop and
+ * is hidden on phones, where the reader gets Open / Download buttons instead. */
+.riva-doc-embed { display: block; }
+
 @media (max-width: 600px) {
   /* Keep the header in view while the page scrolls. */
   .riva-header { padding: 0 14px !important; gap: 10px !important; position: sticky; top: 0; z-index: 40; }
@@ -69,6 +73,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
   /* Drop the bot avatar on phones so answers use the full width. */
   .riva-bot-avatar { display: none !important; }
+
+  /* Don't hand a whole document to a phone — hide the embedded preview; the
+   * Open / Download buttons in the citation panel remain. */
+  .riva-doc-embed { display: none !important; }
 
   /* Rota: the wide grid becomes one card per staff member on phones. */
   .riva-grid-desktop { display: none !important; }
