@@ -65,6 +65,8 @@ export default function RotaSystem({ page = 'rota' }) {
   const schedule = cache[weekISO] || null;
   const grid = schedule && schedule.grid ? schedule.grid : null;
   const times = (schedule && schedule.times && schedule.times.E) ? schedule.times : DEFAULT_TIMES;
+  const rules = schedule && Array.isArray(schedule.rules) ? schedule.rules : [];
+  const seed = schedule && Number.isInteger(schedule.seed) ? schedule.seed : null;
   const hasRota = !!grid;
   const canEdit = hasRota && !isReadOnly;
   const days = weekDays(weekISO);
@@ -105,23 +107,45 @@ export default function RotaSystem({ page = 'rota' }) {
   }
 
   function persist(sched) {
-    api('/api/rota', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, grid: sched.grid, times: sched.times }) }).catch(() => {});
+    api('/api/rota', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, grid: sched.grid, times: sched.times, rules: sched.rules || [], seed: sched.seed }) }).catch(() => {});
   }
 
-  async function generate() {
+  // (Re)generate: deterministic base + AI applies the rule list on top.
+  async function applyRules(nextRules, nextSeed) {
     setBusy(true);
     try {
-      const d = await api('/api/rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO }) });
+      const d = await api('/api/rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, rules: nextRules, seed: nextSeed }) });
       const sched = d.rota.schedule;
       setCache((c) => ({ ...c, [weekISO]: sched }));
       pushHist(weekISO, sched);
+      return sched;
+    } finally { setBusy(false); }
+  }
+
+  async function generate() {
+    try {
+      const sched = await applyRules(rules, Math.floor(Math.random() * 100000));
       const issues = analyze(sched.grid, staff);
-      flash(issues.length ? 'Generated — a couple of things could be tidied.' : 'Generated a balanced week.');
-    } catch (e) { flash(e.message, 'error'); } finally { setBusy(false); }
+      flash(issues.length ? 'Done — a couple of things could still be tidied.' : 'Done — a balanced week.', 'success');
+    } catch (e) { flash(e.message, 'error'); }
+  }
+
+  async function addRule(text) {
+    const rule = String(text || '').trim();
+    if (!rule) return;
+    if (isReadOnly) { flash('This week is locked.', 'error'); return; }
+    if (!hasRota) { flash('Generate a rota for this week first.', 'error'); return; }
+    try { await applyRules([...rules, rule], seed != null ? seed : Math.floor(Math.random() * 100000)); flash('Added rule: ' + rule, 'success'); }
+    catch (e) { flash(e.message, 'error'); }
+  }
+
+  async function removeRule(i) {
+    try { await applyRules(rules.filter((_, j) => j !== i), seed != null ? seed : Math.floor(Math.random() * 100000)); flash('Rule removed.'); }
+    catch (e) { flash(e.message, 'error'); }
   }
 
   function applyGrid(newGrid) {
-    const sched = { grid: newGrid, times };
+    const sched = { grid: newGrid, times, rules, seed };
     setCache((c) => ({ ...c, [weekISO]: sched }));
     pushHist(weekISO, sched);
     persist(sched);
@@ -162,23 +186,12 @@ export default function RotaSystem({ page = 'rota' }) {
     persist(sched);
   }
 
-  async function sendChat(e) {
+  function sendChat(e) {
     if (e && e.preventDefault) e.preventDefault();
     const message = chatInput.trim();
     if (!message) return;
-    if (isReadOnly) { flash('This week is locked. Switch to a current or future week to make changes.'); return; }
-    if (!hasRota) { flash('Generate a rota for this week first.'); return; }
     setChatInput('');
-    setBusy(true);
-    flash('Working on it…');
-    try {
-      const d = await api('/api/rota/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, message }) });
-      const sched = d.rota.schedule;
-      setCache((c) => ({ ...c, [weekISO]: sched }));
-      pushHist(weekISO, sched);
-      const note = Array.isArray(d.issues) && d.issues.length ? ' (Heads up: ' + d.issues[0] + ')' : '';
-      flash((d.reply || 'Done.') + note);
-    } catch (e2) { flash(e2.message, 'error'); } finally { setBusy(false); }
+    addRule(message);
   }
 
   function copyWhatsApp() {
@@ -234,7 +247,7 @@ export default function RotaSystem({ page = 'rota' }) {
         <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:1000px;margin:0 auto;padding:14px 24px 18px;')}>
             <form onSubmit={sendChat} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask for any change, or describe the situation…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Add a rule — e.g. “Simin is off all week”, “Saif works with Iqra”…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" disabled={busy} base={'flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;' + (busy ? 'opacity:.6;' : '')} hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
@@ -317,10 +330,34 @@ export default function RotaSystem({ page = 'rota' }) {
         {hasRota && (
           <>
             {renderToolbar()}
+            {renderRules()}
             {renderGridDesktop()}
             {renderGridMobile()}
           </>
         )}
+      </div>
+    );
+  }
+
+  function renderRules() {
+    const builtin = ['At least 2 staff on every shift', 'Early & late shared evenly', 'Annual leave respected'];
+    return (
+      <div style={s(CARD + 'padding:16px 18px;margin-bottom:14px;')}>
+        <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;')}>Rules for this rota</div>
+        <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
+          {builtin.map((r, i) => (
+            <span key={'b' + i} style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4c6272;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;padding:7px 12px;')}>
+              <Svg w={13} stroke="#768692" sw={2.4}>{Icons.lock}</Svg>{r}
+            </span>
+          ))}
+          {rules.map((r, i) => (
+            <span key={i} style={s('display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#005eb8;background:#e8f1f8;border:1px solid #cfe1f0;border-radius:8px;padding:7px 8px 7px 12px;')}>
+              {r}
+              {canEdit && <Hover tag="button" onClick={() => removeRule(i)} aria-label="Remove rule" disabled={busy} base="border:none;background:transparent;cursor:pointer;color:#4c6272;display:flex;padding:1px;" hover="color:#d5281b;"><Svg w={15} sw={2.4}>{Icons.close}</Svg></Hover>}
+            </span>
+          ))}
+          {rules.length === 0 && <span style={s('font-size:14px;color:#768692;align-self:center;')}>No extra rules yet — type a change in the bar below to add one.</span>}
+        </div>
       </div>
     );
   }
