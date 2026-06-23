@@ -364,12 +364,16 @@ export default function RotaSystem({ page = 'rota' }) {
           <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.L.bg + ';')} />Late {shiftRange(times, 'L')}</span>
           <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.AL.bg + ';')} />Leave</span>
         </div>
-        <div style={s('display:flex;align-items:center;gap:8px;flex-wrap:wrap;')}>
-          {canEdit && <Hover tag="button" onClick={undo} disabled={!canUndo} aria-label="Undo" base={ICON_BTN + (canUndo ? '' : 'opacity:.4;cursor:default;')} hover={canUndo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.undo}</Svg></Hover>}
-          {canEdit && <Hover tag="button" onClick={redo} disabled={!canRedo} aria-label="Redo" base={ICON_BTN + (canRedo ? '' : 'opacity:.4;cursor:default;')} hover={canRedo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.redo}</Svg></Hover>}
-          {canEdit && <Hover tag="button" onClick={generate} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg>Regenerate</Hover>}
-          {canEdit && <Hover tag="button" onClick={askDeleteRota} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#d5281b;background:#fff;border:1px solid #e3a9a3;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#fbeceb;"><Svg w={17} sw={2.2}>{Icons.trash}</Svg>Delete</Hover>}
-          <Hover tag="button" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg>Copy for WhatsApp</Hover>
+        <div className="riva-rota-actions" style={s('display:flex;align-items:center;gap:8px;flex-wrap:wrap;')}>
+          {canEdit && (
+            <div className="riva-rota-history" style={s('display:flex;align-items:center;gap:8px;')}>
+              <Hover tag="button" onClick={undo} disabled={!canUndo} aria-label="Undo" base={ICON_BTN + (canUndo ? '' : 'opacity:.4;cursor:default;')} hover={canUndo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.undo}</Svg></Hover>
+              <Hover tag="button" onClick={redo} disabled={!canRedo} aria-label="Redo" base={ICON_BTN + (canRedo ? '' : 'opacity:.4;cursor:default;')} hover={canRedo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.redo}</Svg></Hover>
+            </div>
+          )}
+          {canEdit && <Hover tag="button" className="riva-rota-act" onClick={generate} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg>Regenerate</Hover>}
+          {canEdit && <Hover tag="button" className="riva-rota-act" onClick={askDeleteRota} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#d5281b;background:#fff;border:1px solid #e3a9a3;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#fbeceb;"><Svg w={17} sw={2.2}>{Icons.trash}</Svg>Delete</Hover>}
+          <Hover tag="button" className="riva-rota-act riva-rota-copy" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg>Copy for WhatsApp</Hover>
         </div>
       </div>
     );
