@@ -12,7 +12,7 @@
 //     rule can be removed and the week rebuilt without it.
 import { NextResponse } from 'next/server';
 import { getSql, ensureSchema } from '@/lib/db';
-import { generateGrid, sanitiseGrid, rebalance, changedKeys, DEFAULT_TIMES } from '@/lib/rota/logic';
+import { generateGrid, tallyHistory, sanitiseGrid, rebalance, changedKeys, DEFAULT_TIMES } from '@/lib/rota/logic';
 import { buildRotaChatPrompt, parseGridResponse } from '@/lib/ai/rota';
 
 export const runtime = 'nodejs';
@@ -72,8 +72,14 @@ export async function POST(request) {
     const staff = await sql`SELECT id, name, about, leave FROM staff ORDER BY name ASC`;
     if (!staff.length) return NextResponse.json({ error: 'Add at least one staff member before generating a rota.' }, { status: 400 });
 
-    // 1) Fair base for the week (seeded so each regenerate differs).
-    let grid = generateGrid(staff, week, minStaff, seed);
+    // Recent past weeks → an early/late tally per person, so the base rota
+    // balances shifts across weeks, not just within this one.
+    const past = await sql`SELECT schedule FROM rotas WHERE week_starting < ${week} ORDER BY week_starting DESC LIMIT 8`;
+    const history = tallyHistory(past.map((r) => r.schedule), staff);
+
+    // 1) Fair base for the week (seeded so each regenerate differs), balanced
+    //    against the recent history above.
+    let grid = generateGrid(staff, week, minStaff, seed, history);
     let times = DEFAULT_TIMES;
 
     // 2) Apply all rules together via the AI, then rebalance coverage around them.

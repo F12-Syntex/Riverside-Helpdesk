@@ -53,9 +53,9 @@ export default function RotaSystem({ page = 'rota' }) {
   const [chatInput, setChatInput] = React.useState('');
 
   const [showAdd, setShowAdd] = React.useState(false);
-  const [draft, setDraft] = React.useState({ name: '', about: '' });
+  const [draft, setDraft] = React.useState({ name: '', about: '', phone: '' });
   const [editId, setEditId] = React.useState(null);
-  const [editDraft, setEditDraft] = React.useState({ name: '', about: '', leave: [], start: '', end: '' });
+  const [editDraft, setEditDraft] = React.useState({ name: '', about: '', phone: '', leave: [], start: '', end: '' });
 
   function flash(msg, type) { notify(msg, type || 'info'); }
 
@@ -183,14 +183,14 @@ export default function RotaSystem({ page = 'rota' }) {
     const name = draft.name.trim();
     if (!name) { flash('Enter a name.'); return; }
     try {
-      const d = await api('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, about: draft.about.trim(), leave: [] }) });
+      const d = await api('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, about: draft.about.trim(), phone: draft.phone.trim(), leave: [] }) });
       setStaff((prev) => [...prev, d.staff].sort((a, b) => a.name.localeCompare(b.name)));
-      setDraft({ name: '', about: '' });
+      setDraft({ name: '', about: '', phone: '' });
       setShowAdd(false);
       flash(firstName(name) + ' added.');
     } catch (e) { flash(e.message, 'error'); }
   }
-  function startEdit(p) { setEditId(p.id); setEditDraft({ name: p.name, about: p.about || '', leave: (p.leave || []).slice(), start: '', end: '' }); }
+  function startEdit(p) { setEditId(p.id); setEditDraft({ name: p.name, about: p.about || '', phone: p.phone || '', leave: (p.leave || []).slice(), start: '', end: '' }); }
   function addLeave() {
     const { start, end } = editDraft;
     if (!start) return;
@@ -201,7 +201,7 @@ export default function RotaSystem({ page = 'rota' }) {
     const name = editDraft.name.trim();
     if (!name) { flash('Enter a name.'); return; }
     try {
-      const d = await api('/api/staff', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editId, name, about: editDraft.about.trim(), leave: editDraft.leave }) });
+      const d = await api('/api/staff', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editId, name, about: editDraft.about.trim(), phone: editDraft.phone.trim(), leave: editDraft.leave }) });
       setStaff((prev) => prev.map((x) => (x.id === editId ? d.staff : x)).sort((a, b) => a.name.localeCompare(b.name)));
       setEditId(null);
       flash('Saved.');
@@ -435,7 +435,7 @@ export default function RotaSystem({ page = 'rota' }) {
             <h1 className="riva-hero-h1" style={s('font-size:36px;font-weight:700;margin:0;letter-spacing:-0.01em;')}>Staff</h1>
             <p style={s('font-size:17px;color:#4c6272;margin:6px 0 0;')}>{staff.length} {staff.length === 1 ? 'person' : 'people'} on the reception rota</p>
           </div>
-          <Hover tag="button" onClick={() => { setShowAdd((v) => !v); setDraft({ name: '', about: '' }); }} base={GREEN_BTN + 'font-size:16px;padding:12px 20px;display:inline-flex;align-items:center;gap:9px;'} active="transform:translateY(4px);box-shadow:none;"><Svg w={20} sw={2.4}>{Icons.plus}</Svg>Add staff</Hover>
+          <Hover tag="button" onClick={() => { setShowAdd((v) => !v); setDraft({ name: '', about: '', phone: '' }); }} base={GREEN_BTN + 'font-size:16px;padding:12px 20px;display:inline-flex;align-items:center;gap:9px;'} active="transform:translateY(4px);box-shadow:none;"><Svg w={20} sw={2.4}>{Icons.plus}</Svg>Add staff</Hover>
         </div>
 
         {showAdd && (
@@ -443,6 +443,8 @@ export default function RotaSystem({ page = 'rota' }) {
             <h2 style={s('font-size:22px;font-weight:700;margin:0 0 18px;')}>Add a staff member</h2>
             <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Name</label>
             <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Sarah Hughes" style={s(FIELD + 'margin-bottom:16px;')} />
+            <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>— used to tag them on WhatsApp (optional)</span></label>
+            <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="e.g. +44 7459 533082" inputMode="tel" style={s(FIELD + 'margin-bottom:16px;')} />
             <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Description</label>
             <textarea value={draft.about} onChange={(e) => setDraft({ ...draft, about: e.target.value })} rows={3} placeholder="What they do, what they're good at, anything the rota should know." style={s(FIELD + 'resize:vertical;')} />
             <div style={s('display:flex;gap:10px;margin-top:20px;')}>
@@ -462,6 +464,9 @@ export default function RotaSystem({ page = 'rota' }) {
                   <span style={s('flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;')}>{initials(p.name)}</span>
                   <div style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;')}>
                     <b style={s('font-size:19px;font-weight:700;')}>{p.name}</b>
+                    {p.phone
+                      ? <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4c6272;')}><Svg w={14} sw={2.2}>{Icons.phone}</Svg>{p.phone}</span>
+                      : <span style={s('font-size:13px;color:#aa5d00;')}>No number — WhatsApp will use their name</span>}
                     <p style={s('font-size:16px;line-height:1.5;margin:0;color:#212b32;')}>{p.about || 'No description yet.'}</p>
                     {(p.leave || []).length > 0 && (
                       <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;')}>
@@ -489,6 +494,10 @@ export default function RotaSystem({ page = 'rota' }) {
         <div>
           <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Name</label>
           <input value={editDraft.name} onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })} style={s(FIELD)} />
+        </div>
+        <div>
+          <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>— used to tag them on WhatsApp</span></label>
+          <input value={editDraft.phone} onChange={(e) => setEditDraft({ ...editDraft, phone: e.target.value })} placeholder="e.g. +44 7459 533082" inputMode="tel" style={s(FIELD)} />
         </div>
         <div>
           <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Description</label>

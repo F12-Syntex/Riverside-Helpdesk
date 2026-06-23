@@ -11,7 +11,13 @@ import { getSql, ensureSchema } from '@/lib/db';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COLS = 'id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave';
+const COLS = 'id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone';
+
+// Keep the phone roughly as typed (so it stays readable in the UI) but bounded
+// and single-line. Used to @mention the person in the WhatsApp export.
+function cleanPhone(raw) {
+  return String(raw || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 32);
+}
 
 function cleanLeave(raw) {
   if (!Array.isArray(raw)) return [];
@@ -27,7 +33,7 @@ export async function GET() {
     await ensureSchema();
     const sql = getSql();
     const staff = await sql`
-      SELECT id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave
+      SELECT id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone
       FROM staff ORDER BY name ASC
     `;
     return NextResponse.json({ staff });
@@ -43,15 +49,16 @@ export async function POST(request) {
   const name = String(body?.name || '').trim();
   if (!name) return NextResponse.json({ error: 'A name is required.' }, { status: 400 });
   const about = String(body?.about || '').trim();
+  const phone = cleanPhone(body?.phone);
   const leave = JSON.stringify(cleanLeave(body?.leave));
 
   try {
     await ensureSchema();
     const sql = getSql();
     const rows = await sql`
-      INSERT INTO staff (name, about, leave)
-      VALUES (${name}, ${about}, ${leave}::jsonb)
-      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave
+      INSERT INTO staff (name, about, phone, leave)
+      VALUES (${name}, ${about}, ${phone}, ${leave}::jsonb)
+      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone
     `;
     return NextResponse.json({ staff: rows[0] });
   } catch (e) {
@@ -68,15 +75,16 @@ export async function PATCH(request) {
   const name = String(body?.name || '').trim();
   if (!name) return NextResponse.json({ error: 'A name is required.' }, { status: 400 });
   const about = String(body?.about || '').trim();
+  const phone = cleanPhone(body?.phone);
   const leave = JSON.stringify(cleanLeave(body?.leave));
 
   try {
     await ensureSchema();
     const sql = getSql();
     const rows = await sql`
-      UPDATE staff SET name = ${name}, about = ${about}, leave = ${leave}::jsonb
+      UPDATE staff SET name = ${name}, about = ${about}, phone = ${phone}, leave = ${leave}::jsonb
       WHERE id = ${id}
-      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave
+      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone
     `;
     if (!rows.length) return NextResponse.json({ error: 'Staff member not found.' }, { status: 404 });
     return NextResponse.json({ staff: rows[0] });

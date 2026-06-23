@@ -12,7 +12,8 @@
     "rag:ingest": "node rag/ingest.mjs",
     "rag:prune": "node rag/prune.mjs",
     "rag:sync": "node rag/ingest.mjs && node rag/prune.mjs",
-    "rag:migrate-legacy": "node rag/migrate-legacy.mjs"
+    "rag:migrate-legacy": "node rag/migrate-legacy.mjs",
+    "db:reset-rota": "node scripts/reset-and-seed-rota.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.0",
