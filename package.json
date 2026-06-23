@@ -11,6 +11,7 @@
     "rag:status": "node rag/status.mjs",
     "rag:ingest": "node rag/ingest.mjs",
     "rag:prune": "node rag/prune.mjs",
+    "rag:sync": "node rag/ingest.mjs && node rag/prune.mjs",
     "rag:migrate-legacy": "node rag/migrate-legacy.mjs"
   },
   "dependencies": {
