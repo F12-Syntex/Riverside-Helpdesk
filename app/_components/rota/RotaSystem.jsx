@@ -171,6 +171,23 @@ export default function RotaSystem({ page = 'rota' }) {
     addRule(message);
   }
 
+  function askDeleteRota() {
+    setConfirm({
+      title: 'Delete this rota',
+      message: 'Clear the rota for ' + weekRangeLabel(weekISO) + '? You can auto-generate a fresh one afterwards. Any rules added to this week are removed too.',
+      confirmLabel: 'Delete rota', noLabel: 'Cancel',
+      onConfirm: async () => {
+        setConfirm(null);
+        try {
+          await api('/api/rota?week=' + weekISO, { method: 'DELETE' });
+          setCache((c) => ({ ...c, [weekISO]: null }));
+          setHist((x) => ({ ...x, [weekISO]: { stack: [], ptr: -1 } }));
+          flash('Rota cleared — generate a fresh one whenever you like.');
+        } catch (e) { flash(e.message, 'error'); }
+      },
+    });
+  }
+
   function copyWhatsApp() {
     const text = buildWhatsApp(grid, staff, weekISO, times);
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -351,6 +368,7 @@ export default function RotaSystem({ page = 'rota' }) {
           {canEdit && <Hover tag="button" onClick={undo} disabled={!canUndo} aria-label="Undo" base={ICON_BTN + (canUndo ? '' : 'opacity:.4;cursor:default;')} hover={canUndo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.undo}</Svg></Hover>}
           {canEdit && <Hover tag="button" onClick={redo} disabled={!canRedo} aria-label="Redo" base={ICON_BTN + (canRedo ? '' : 'opacity:.4;cursor:default;')} hover={canRedo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.redo}</Svg></Hover>}
           {canEdit && <Hover tag="button" onClick={generate} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg>Regenerate</Hover>}
+          {canEdit && <Hover tag="button" onClick={askDeleteRota} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#d5281b;background:#fff;border:1px solid #e3a9a3;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#fbeceb;"><Svg w={17} sw={2.2}>{Icons.trash}</Svg>Delete</Hover>}
           <Hover tag="button" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg>Copy for WhatsApp</Hover>
         </div>
       </div>

@@ -1,8 +1,10 @@
 // Rota persistence + generation for one week.
-//   GET  /api/rota?week=YYYY-MM-DD  — load the saved schedule (or null)
-//   POST /api/rota                  — (re)generate: deterministic base, then the
-//                                     AI applies the saved list of rules on top
-//   PUT  /api/rota                  — save a manually edited grid (keeps rules)
+//   GET    /api/rota?week=YYYY-MM-DD — load the saved schedule (or null)
+//   POST   /api/rota                 — (re)generate: deterministic base, then the
+//                                      AI applies the saved list of rules on top
+//   PUT    /api/rota                 — save a manually edited grid (keeps rules)
+//   DELETE /api/rota?week=YYYY-MM-DD — discard a future/current week so it can be
+//                                      generated fresh (past weeks are locked)
 //
 // A schedule is { grid, times, rules, seed }:
 //   - grid: staff id -> 5 shift codes (Mon–Fri)
@@ -12,7 +14,7 @@
 //     rule can be removed and the week rebuilt without it.
 import { NextResponse } from 'next/server';
 import { getSql, ensureSchema } from '@/lib/db';
-import { generateGrid, tallyHistory, sanitiseGrid, rebalance, changedKeys, DEFAULT_TIMES } from '@/lib/rota/logic';
+import { generateGrid, tallyHistory, sanitiseGrid, rebalance, changedKeys, DEFAULT_TIMES, currentMonday, isoOf } from '@/lib/rota/logic';
 import { buildRotaChatPrompt, parseGridResponse } from '@/lib/ai/rota';
 
 export const runtime = 'nodejs';
@@ -129,5 +131,22 @@ export async function PUT(request) {
     return NextResponse.json({ rota: saved });
   } catch (e) {
     return NextResponse.json({ error: 'Could not save the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
+  }
+}
+
+// Discard a week's saved rota entirely, so the UI shows "no rota yet" and the
+// manager can auto-generate it again from scratch. Only this week onward — past
+// weeks are a locked record and are never deleted.
+export async function DELETE(request) {
+  const week = new URL(request.url).searchParams.get('week') || '';
+  if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid ?week=YYYY-MM-DD is required.' }, { status: 400 });
+  if (week < isoOf(currentMonday())) return NextResponse.json({ error: 'Past weeks are locked and cannot be deleted.' }, { status: 403 });
+  try {
+    await ensureSchema();
+    const sql = getSql();
+    await sql`DELETE FROM rotas WHERE week_starting = ${week}`;
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: 'Could not delete the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
   }
 }
