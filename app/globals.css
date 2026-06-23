@@ -87,20 +87,30 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .riva-grid-desktop { display: none !important; }
   .riva-grid-mobile { display: flex !important; }
 
-  /* Rota toolbar: give the action buttons room instead of cramming them onto
-   * one wrapping line. Undo/redo share the top row, Regenerate + Delete split
-   * the next, and Copy for WhatsApp gets a full-width row of its own. */
-  .riva-rota-actions {
-    width: 100%;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px !important;
-  }
-  .riva-rota-history { grid-column: 1 / -1; }
-  .riva-rota-history > * { flex: 1; height: 44px; }
-  .riva-rota-act { width: 100%; height: 46px; font-size: 16px !important; }
-  .riva-rota-copy { grid-column: 1 / -1; }
+  /* Tighter page gutters on phones so content gets more width. */
+  .riva-rota-main { padding: 18px 14px 28px !important; }
+
+  /* Rota week stepper spans the full width so it's an easy tap target. */
+  .riva-week-nav { width: 100%; justify-content: space-between; }
+  .riva-week-label { flex: 1; min-width: 0 !important; }
+
+  /* Rota toolbar: keep the actions on one condensed row. Undo/redo and the
+   * Regenerate/Delete buttons collapse to icons; Copy grows and shows a short
+   * "Copy" label so the row stays compact. */
+  .riva-rota-actions { width: 100%; gap: 8px !important; flex-wrap: nowrap !important; }
+  .riva-rota-history { gap: 6px !important; }
+  .riva-rota-act { padding: 0 12px !important; height: 42px; }
+  .riva-rota-act .riva-btn-label { display: none; }
+  .riva-rota-copy { flex: 1; }
+  .riva-rota-copy .riva-btn-label-short { display: inline; }
+
+  /* The rules summary is desktop-only — it eats too much vertical space on a
+   * phone, and rules are still added/removed from the bar at the bottom. */
+  .riva-rota-rules { display: none !important; }
 }
+
+/* The short "Copy" label only shows on phones (see the rule above). */
+.riva-btn-label-short { display: none; }
 
 /* Rota grid: desktop shows the grid, mobile shows per-staff cards. */
 .riva-grid-mobile { display: none; }

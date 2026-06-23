@@ -287,18 +287,18 @@ export default function RotaSystem({ page = 'rota' }) {
   function renderRota() {
     return (
       <div style={s('padding-bottom:120px;')}>
-        <div style={s('display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px;')}>
+        <div className="riva-rota-head" style={s('display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px;')}>
           <div>
             <h1 className="riva-hero-h1" style={s('font-size:36px;font-weight:700;margin:0;letter-spacing:-0.01em;')}>Duty rota</h1>
             <p style={s('font-size:17px;color:#4c6272;margin:6px 0 0;')}>2 staff minimum on every shift · early and late shared evenly</p>
           </div>
-          <div style={s('display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:4px;')}>
-            <Hover tag="button" onClick={() => setWeekOffset((w) => w - 1)} aria-label="Previous week" base="width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronLeft}</Svg></Hover>
-            <div style={s('text-align:center;min-width:160px;padding:0 6px;')}>
+          <div className="riva-week-nav" style={s('display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:4px;')}>
+            <Hover tag="button" onClick={() => setWeekOffset((w) => w - 1)} aria-label="Previous week" base="flex:none;width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronLeft}</Svg></Hover>
+            <div className="riva-week-label" style={s('text-align:center;min-width:160px;padding:0 6px;')}>
               <div style={s('font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#768692;')}>{weekLabel}</div>
               <div style={s('font-size:16px;font-weight:700;color:#212b32;font-variant-numeric:tabular-nums;')}>{weekRangeLabel(weekISO)}</div>
             </div>
-            <Hover tag="button" onClick={() => setWeekOffset((w) => w + 1)} aria-label="Next week" base="width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronRight}</Svg></Hover>
+            <Hover tag="button" onClick={() => setWeekOffset((w) => w + 1)} aria-label="Next week" base="flex:none;width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronRight}</Svg></Hover>
           </div>
         </div>
 
@@ -336,7 +336,7 @@ export default function RotaSystem({ page = 'rota' }) {
   function renderRules() {
     const builtin = ['At least 2 staff on every shift', 'Early & late shared evenly', 'Annual leave respected'];
     return (
-      <div style={s(CARD + 'padding:16px 18px;margin-bottom:14px;')}>
+      <div className="riva-rota-rules" style={s(CARD + 'padding:16px 18px;margin-bottom:14px;')}>
         <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;')}>Rules for this rota</div>
         <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
           {builtin.map((r, i) => (
@@ -371,9 +371,9 @@ export default function RotaSystem({ page = 'rota' }) {
               <Hover tag="button" onClick={redo} disabled={!canRedo} aria-label="Redo" base={ICON_BTN + (canRedo ? '' : 'opacity:.4;cursor:default;')} hover={canRedo ? 'background:#f0f4f5;' : ''}><Svg w={18} sw={2.2}>{Icons.redo}</Svg></Hover>
             </div>
           )}
-          {canEdit && <Hover tag="button" className="riva-rota-act" onClick={generate} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg>Regenerate</Hover>}
-          {canEdit && <Hover tag="button" className="riva-rota-act" onClick={askDeleteRota} disabled={busy} base="font-family:inherit;font-size:15px;font-weight:600;color:#d5281b;background:#fff;border:1px solid #e3a9a3;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#fbeceb;"><Svg w={17} sw={2.2}>{Icons.trash}</Svg>Delete</Hover>}
-          <Hover tag="button" className="riva-rota-act riva-rota-copy" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg>Copy for WhatsApp</Hover>
+          {canEdit && <Hover tag="button" className="riva-rota-act" onClick={generate} disabled={busy} aria-label="Regenerate" base="font-family:inherit;font-size:15px;font-weight:600;color:#005eb8;background:#fff;border:1px solid #aeb7bd;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#f0f4f5;"><Svg w={17} sw={2.2}>{Icons.refresh}</Svg><span className="riva-btn-label">Regenerate</span></Hover>}
+          {canEdit && <Hover tag="button" className="riva-rota-act" onClick={askDeleteRota} disabled={busy} aria-label="Delete rota" base="font-family:inherit;font-size:15px;font-weight:600;color:#d5281b;background:#fff;border:1px solid #e3a9a3;border-radius:8px;padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#fbeceb;"><Svg w={17} sw={2.2}>{Icons.trash}</Svg><span className="riva-btn-label">Delete</span></Hover>}
+          <Hover tag="button" className="riva-rota-act riva-rota-copy" onClick={copyWhatsApp} base="font-family:inherit;font-size:15px;font-weight:700;color:#fff;background:#005eb8;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" hover="background:#004a93;"><Svg w={18}>{Icons.copy}</Svg><span className="riva-btn-label">Copy for WhatsApp</span><span className="riva-btn-label-short">Copy</span></Hover>
         </div>
       </div>
     );
