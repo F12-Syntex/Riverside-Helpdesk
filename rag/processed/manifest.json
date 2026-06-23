@@ -648,15 +648,6 @@
       "title": "bullying and harassment policy(1)",
       "processedAt": "2026-06-20T07:35:57.482Z"
     },
-    "business-plan-2": {
-      "path": "rag/sources/Business Plan(2).doc",
-      "sha256": "52835683a3ee14e61f449c18ed862e1b62060ab4f96c5375c5fe74d05092c448",
-      "size": 62976,
-      "mtime": 1781938995063.1545,
-      "chunks": 13,
-      "title": "Business Plan(2)",
-      "processedAt": "2026-06-20T07:35:58.753Z"
-    },
     "caldicott-protocol": {
       "path": "rag/sources/caldicott-protocol.doc",
       "sha256": "c64042ea1f9b08ee6c6176f9116e653074cfe40a9d1d0f359a6a9f67dddf87a6",
@@ -891,15 +882,6 @@
       "title": "data management policy[1]",
       "processedAt": "2026-06-20T07:36:28.305Z"
     },
-    "data-protection-policy": {
-      "path": "rag/sources/data-protection-policy.doc",
-      "sha256": "84318083b8082bace0ffe26bb5f286c56a8c6814625ec3df146cd75190d93b81",
-      "size": 77312,
-      "mtime": 1781939015783.4846,
-      "chunks": 8,
-      "title": "data protection policy",
-      "processedAt": "2026-06-20T07:36:30.312Z"
-    },
     "data-sharing-agreement": {
       "path": "rag/sources/data-sharing-agreement.doc",
       "sha256": "5e81ab6d85daa44ea87ff0661e75e514e2826a529d8388b9895bd31b5cfbee8d",
@@ -989,15 +971,6 @@
       "chunks": 2,
       "title": "emergency telephone call handling protocol",
       "processedAt": "2026-06-20T07:36:42.370Z"
-    },
-    "emis-reception-reference": {
-      "path": "rag/sources/EMIS-Reception-Reference.pdf",
-      "sha256": "90f2885e62561b4691a6fdd220779257b8ea2e40d1bf49cf33aa67dc3edae532",
-      "size": 161242,
-      "mtime": 1781940780034.5417,
-      "chunks": 22,
-      "title": "EMIS Reception Reference",
-      "processedAt": "2026-06-20T07:36:44.807Z"
     },
     "fire-drill-sheet-2023": {
       "path": "rag/sources/FIRE DRILL SHEET 2023.rtf",
@@ -1503,15 +1476,6 @@
       "title": "risk assessment toolkit (building)",
       "processedAt": "2026-06-20T07:37:52.904Z"
     },
-    "riverside-practice-business-continuity-plan-2025-2": {
-      "path": "rag/sources/Riverside Practice Business Continuity Plan 2025 (2).doc",
-      "sha256": "20243afab79d29f106489f968527a9cec26a2fe301ded2c78cb6ec80185804d8",
-      "size": 188928,
-      "mtime": 1781939093069.7148,
-      "chunks": 38,
-      "title": "Riverside Practice Business Continuity Plan 2025 (2)",
-      "processedAt": "2026-06-20T07:37:55.464Z"
-    },
     "safeguarding-policy-for-children-and-young-persons-1": {
       "path": "rag/sources/safeguarding-policy-for-children-and-young-persons[1].doc",
       "sha256": "e6a35930687c74d2fe043f63292778f0a9db3b1ac2f58235dd753bb1e957dc06",
@@ -1700,6 +1664,24 @@
       "chunks": 9,
       "title": "whistleblowing policy(2)",
       "processedAt": "2026-06-20T07:38:22.412Z"
+    },
+    "data-protection-policy": {
+      "path": "rag/sources/data-protection-policy.doc",
+      "sha256": "84318083b8082bace0ffe26bb5f286c56a8c6814625ec3df146cd75190d93b81",
+      "size": 77312,
+      "mtime": 1781939015783.4846,
+      "chunks": 8,
+      "title": "data protection policy",
+      "processedAt": "2026-06-23T07:07:00.961Z"
+    },
+    "emis-reception-reference-1": {
+      "path": "rag/sources/EMIS-Reception-Reference (1).pdf",
+      "sha256": "64de8e2fa4ce3ea097e1f4e5df2e90bf7a42975adf4ce34f0b217d84e0608170",
+      "size": 169270,
+      "mtime": 1782198286225.3442,
+      "chunks": 26,
+      "title": "EMIS Reception Reference (1)",
+      "processedAt": "2026-06-23T07:07:04.157Z"
     }
   }
 }

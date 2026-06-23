@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T07:38:55.229Z",
+  "generatedAt": "2026-06-23T07:07:05.524Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
@@ -999,20 +999,6 @@
       "source": "rag/sources/bullying-and-harassment-policy(1).doc"
     },
     {
-      "docId": "business-plan-2",
-      "title": "Business Plan(2)",
-      "summary": "Riverside Practice's 2021-2026 business plan outlines objectives, practice overview, and development strategies.",
-      "tags": [
-        "business plan",
-        "gp practice",
-        "development",
-        "objectives",
-        "strategy"
-      ],
-      "chunks": 13,
-      "source": "rag/sources/Business Plan(2).doc"
-    },
-    {
       "docId": "caldicott-protocol",
       "title": "caldicott protocol",
       "summary": "Covers the Caldicott principles, their purpose, and the role of the Information Governance Lead.",
@@ -1373,20 +1359,6 @@
       "source": "rag/sources/data-management-policy[1].doc"
     },
     {
-      "docId": "data-protection-policy",
-      "title": "data protection policy",
-      "summary": "This policy outlines the practice's commitment to data protection and compliance with the Data Protection Act 2018.",
-      "tags": [
-        "data protection",
-        "gdpr",
-        "policy",
-        "information security",
-        "patient data"
-      ],
-      "chunks": 8,
-      "source": "rag/sources/data-protection-policy.doc"
-    },
-    {
       "docId": "data-sharing-agreement",
       "title": "data sharing agreement",
       "summary": "This agreement outlines lawful data sharing between NHS GP practices and other organisations.",
@@ -1527,20 +1499,6 @@
       ],
       "chunks": 2,
       "source": "rag/sources/emergency-telephone-call-handling-protocol.doc"
-    },
-    {
-      "docId": "emis-reception-reference",
-      "title": "EMIS Reception Reference",
-      "summary": "Guide for reception staff on using EMIS for patient details, referrals, and document management.",
-      "tags": [
-        "emis",
-        "reception",
-        "sop",
-        "referrals",
-        "documentation"
-      ],
-      "chunks": 22,
-      "source": "rag/sources/EMIS-Reception-Reference.pdf"
     },
     {
       "docId": "fire-drill-sheet-2023",
@@ -2322,19 +2280,6 @@
       "source": "rag/sources/risk_assessment_toolkit (building).doc"
     },
     {
-      "docId": "riverside-practice-business-continuity-plan-2025-2",
-      "title": "Riverside Practice Business Continuity Plan 2025 (2)",
-      "summary": "This plan outlines Riverside Practice's procedures for responding to and managing various disruptive events.",
-      "tags": [
-        "business continuity",
-        "emergency response",
-        "practice management",
-        "risk assessment"
-      ],
-      "chunks": 38,
-      "source": "rag/sources/Riverside Practice Business Continuity Plan 2025 (2).doc"
-    },
-    {
       "docId": "safeguarding-policy-for-children-and-young-persons-1",
       "title": "safeguarding policy for children and young persons[1]",
       "summary": "This policy outlines the practice's commitment to safeguarding children and young persons from abuse and neglect.",
@@ -2628,6 +2573,34 @@
       ],
       "chunks": 9,
       "source": "rag/sources/whistleblowing-policy(2).doc"
+    },
+    {
+      "docId": "data-protection-policy",
+      "title": "data protection policy",
+      "summary": "Outlines the practice's compliance with the Data Protection Act 2018 and employee responsibilities for handling personal data",
+      "tags": [
+        "data protection",
+        "gdpr",
+        "patient confidentiality",
+        "staff responsibilities",
+        "information security"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/data-protection-policy.doc"
+    },
+    {
+      "docId": "emis-reception-reference-1",
+      "title": "EMIS Reception Reference (1)",
+      "summary": "Standard operating procedures for Riverside Practice reception staff using EMIS system",
+      "tags": [
+        "emis",
+        "reception",
+        "workflow",
+        "referrals",
+        "patient-management"
+      ],
+      "chunks": 26,
+      "source": "rag/sources/EMIS-Reception-Reference (1).pdf"
     }
   ]
 }
