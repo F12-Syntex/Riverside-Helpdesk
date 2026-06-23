@@ -61,6 +61,11 @@ export default function RotaSystem({ page = 'rota' }) {
 
   const weekISO = isoOf(mondayPlusWeeks(weekOffset));
   const todayMondayISO = isoOf(currentMonday());
+  // The earliest week the rota goes back to: the first seeded official week
+  // (15–19 Jun 2026). Browsing can't step before it.
+  const EARLIEST_MONDAY_ISO = '2026-06-15';
+  const minWeekOffset = Math.round((new Date(EARLIEST_MONDAY_ISO + 'T00:00:00').getTime() - currentMonday().getTime()) / (7 * 86400000));
+  const canGoBack = weekOffset > minWeekOffset;
   // Official weeks — this week and earlier — are the published record and are
   // locked; only future weeks can be generated or edited.
   const isReadOnly = weekISO <= todayMondayISO;
@@ -295,7 +300,7 @@ export default function RotaSystem({ page = 'rota' }) {
             <p style={s('font-size:17px;color:#4c6272;margin:6px 0 0;')}>2 staff minimum on every shift · early and late shared evenly</p>
           </div>
           <div className="riva-week-nav" style={s('display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:4px;')}>
-            <Hover tag="button" onClick={() => setWeekOffset((w) => w - 1)} aria-label="Previous week" base="flex:none;width:40px;height:40px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#005eb8;" hover="background:#e8f1f8;"><Svg w={20} sw={2.5}>{Icons.chevronLeft}</Svg></Hover>
+            <Hover tag="button" onClick={() => setWeekOffset((w) => Math.max(minWeekOffset, w - 1))} disabled={!canGoBack} aria-label="Previous week" base={'flex:none;width:40px;height:40px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;color:#005eb8;' + (canGoBack ? 'cursor:pointer;' : 'opacity:.35;cursor:default;')} hover={canGoBack ? 'background:#e8f1f8;' : ''}><Svg w={20} sw={2.5}>{Icons.chevronLeft}</Svg></Hover>
             <div className="riva-week-label" style={s('text-align:center;min-width:160px;padding:0 6px;')}>
               <div style={s('font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#768692;')}>{weekLabel}</div>
               <div style={s('font-size:16px;font-weight:700;color:#212b32;font-variant-numeric:tabular-nums;')}>{weekRangeLabel(weekISO)}</div>
