@@ -35,6 +35,11 @@ function cleanRules(raw) {
   return raw.map((r) => String(r || '').trim()).filter(Boolean).slice(0, 40);
 }
 
+// "Official" weeks — this week and every week before it — are the published
+// record and cannot be generated, edited or deleted. Only future weeks (next
+// week onward) are modifiable. Seeding writes directly to the DB, bypassing this.
+function isLockedWeek(week) { return week <= isoOf(currentMonday()); }
+
 async function upsert(sql, week, schedule) {
   const rows = await sql`
     INSERT INTO rotas (week_starting, schedule)
@@ -64,6 +69,7 @@ export async function POST(request) {
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   const week = String(body?.weekStarting || '').trim();
   if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid week start date (YYYY-MM-DD) is required.' }, { status: 400 });
+  if (isLockedWeek(week)) return NextResponse.json({ error: 'Past and current weeks are official and locked — only future weeks can be generated.' }, { status: 403 });
   const rules = cleanRules(body?.rules);
   const seed = Number.isInteger(body?.seed) ? body.seed : Math.floor(Math.random() * 100000);
   const minStaff = 2;
@@ -118,6 +124,7 @@ export async function PUT(request) {
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   const week = String(body?.weekStarting || '').trim();
   if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid week start date (YYYY-MM-DD) is required.' }, { status: 400 });
+  if (isLockedWeek(week)) return NextResponse.json({ error: 'Past and current weeks are official and locked.' }, { status: 403 });
 
   try {
     await ensureSchema();
@@ -140,7 +147,7 @@ export async function PUT(request) {
 export async function DELETE(request) {
   const week = new URL(request.url).searchParams.get('week') || '';
   if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid ?week=YYYY-MM-DD is required.' }, { status: 400 });
-  if (week < isoOf(currentMonday())) return NextResponse.json({ error: 'Past weeks are locked and cannot be deleted.' }, { status: 403 });
+  if (isLockedWeek(week)) return NextResponse.json({ error: 'Official weeks (this week and earlier) are locked and cannot be deleted.' }, { status: 403 });
   try {
     await ensureSchema();
     const sql = getSql();

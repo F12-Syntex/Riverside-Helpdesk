@@ -61,7 +61,9 @@ export default function RotaSystem({ page = 'rota' }) {
 
   const weekISO = isoOf(mondayPlusWeeks(weekOffset));
   const todayMondayISO = isoOf(currentMonday());
-  const isReadOnly = weekISO < todayMondayISO;
+  // Official weeks — this week and earlier — are the published record and are
+  // locked; only future weeks can be generated or edited.
+  const isReadOnly = weekISO <= todayMondayISO;
   const schedule = cache[weekISO] || null;
   const grid = schedule && schedule.grid ? schedule.grid : null;
   const times = (schedule && schedule.times && schedule.times.E) ? schedule.times : DEFAULT_TIMES;
@@ -304,7 +306,7 @@ export default function RotaSystem({ page = 'rota' }) {
 
         {isReadOnly && (
           <div style={s('display:flex;align-items:center;gap:10px;background:#e8edee;border:1px solid #d8dde0;border-radius:8px;padding:12px 16px;font-size:16px;color:#4c6272;margin-bottom:16px;')}>
-            <Svg w={20} sw={2}>{Icons.lock}</Svg>Past week — locked and can't be changed.
+            <Svg w={20} sw={2}>{Icons.lock}</Svg>{weekISO === todayMondayISO ? 'This week’s rota is official — locked and can’t be changed.' : 'Past week — locked and can’t be changed.'}
           </div>
         )}
 
