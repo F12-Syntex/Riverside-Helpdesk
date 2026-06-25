@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-23T07:07:05.524Z",
+  "generatedAt": "2026-06-25T05:34:07.818Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
@@ -2577,30 +2577,31 @@
     {
       "docId": "data-protection-policy",
       "title": "data protection policy",
-      "summary": "Outlines the practice's compliance with the Data Protection Act 2018 and employee responsibilities for handling personal data",
+      "summary": "Overview of the practice's data protection policy and employee responsibilities under DPA 2018",
       "tags": [
         "data protection",
         "gdpr",
         "patient confidentiality",
-        "staff responsibilities",
+        "employee duties",
         "information security"
       ],
       "chunks": 8,
       "source": "rag/sources/data-protection-policy.doc"
     },
     {
-      "docId": "emis-reception-reference-1",
-      "title": "EMIS Reception Reference (1)",
-      "summary": "Standard operating procedures for Riverside Practice reception staff using EMIS system",
+      "docId": "emis-reception-reference-2",
+      "title": "EMIS Reception Reference (2)",
+      "summary": "Standard operating procedures for Riverside Practice reception staff using EMIS, covering tasks, referrals, documents, and codes",
       "tags": [
         "emis",
         "reception",
-        "workflow",
+        "procedures",
         "referrals",
-        "patient-management"
+        "documentation",
+        "training"
       ],
-      "chunks": 26,
-      "source": "rag/sources/EMIS-Reception-Reference (1).pdf"
+      "chunks": 27,
+      "source": "rag/sources/EMIS-Reception-Reference (2).pdf"
     }
   ]
 }

@@ -11,7 +11,7 @@ import { getSql, ensureSchema } from '@/lib/db';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COLS = 'id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone';
+const COLS = 'id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone, temporary';
 
 // Keep the phone roughly as typed (so it stays readable in the UI) but bounded
 // and single-line. Used to @mention the person in the WhatsApp export.
@@ -33,7 +33,7 @@ export async function GET() {
     await ensureSchema();
     const sql = getSql();
     const staff = await sql`
-      SELECT id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone
+      SELECT id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone, temporary
       FROM staff ORDER BY name ASC
     `;
     return NextResponse.json({ staff });
@@ -51,14 +51,15 @@ export async function POST(request) {
   const about = String(body?.about || '').trim();
   const phone = cleanPhone(body?.phone);
   const leave = JSON.stringify(cleanLeave(body?.leave));
+  const temporary = body?.temporary === true;
 
   try {
     await ensureSchema();
     const sql = getSql();
     const rows = await sql`
-      INSERT INTO staff (name, about, phone, leave)
-      VALUES (${name}, ${about}, ${phone}, ${leave}::jsonb)
-      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone
+      INSERT INTO staff (name, about, phone, leave, temporary)
+      VALUES (${name}, ${about}, ${phone}, ${leave}::jsonb, ${temporary})
+      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone, temporary
     `;
     return NextResponse.json({ staff: rows[0] });
   } catch (e) {
@@ -77,14 +78,15 @@ export async function PATCH(request) {
   const about = String(body?.about || '').trim();
   const phone = cleanPhone(body?.phone);
   const leave = JSON.stringify(cleanLeave(body?.leave));
+  const temporary = body?.temporary === true;
 
   try {
     await ensureSchema();
     const sql = getSql();
     const rows = await sql`
-      UPDATE staff SET name = ${name}, about = ${about}, phone = ${phone}, leave = ${leave}::jsonb
+      UPDATE staff SET name = ${name}, about = ${about}, phone = ${phone}, leave = ${leave}::jsonb, temporary = ${temporary}
       WHERE id = ${id}
-      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone
+      RETURNING id, name, role, hours_per_week AS "hoursPerWeek", notes, about, leave, phone, temporary
     `;
     if (!rows.length) return NextResponse.json({ error: 'Staff member not found.' }, { status: 404 });
     return NextResponse.json({ staff: rows[0] });

@@ -21,6 +21,7 @@ const CARD = 'background:#fff;border:1px solid #d8dde0;border-radius:16px;';
 const FIELD = 'width:100%;font-family:inherit;font-size:16px;padding:10px 12px;border:2px solid #4c6272;border-radius:4px;background:#fff;color:#212b32;';
 const GREEN_BTN = 'font-family:inherit;font-weight:700;color:#fff;background:#007f3b;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #003419;';
 const ICON_BTN = 'width:40px;height:40px;border-radius:8px;border:1px solid #aeb7bd;background:#fff;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;';
+const TEMP_TAG = 'display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:#6b4e00;background:#fdeecb;border:1px solid #f0d999;border-radius:5px;padding:1px 6px;text-transform:uppercase;';
 
 function api(url, opts) {
   return fetch(url, opts).then(async (r) => {
@@ -53,9 +54,11 @@ export default function RotaSystem({ page = 'rota' }) {
   const [chatInput, setChatInput] = React.useState('');
 
   const [showAdd, setShowAdd] = React.useState(false);
-  const [draft, setDraft] = React.useState({ name: '', about: '', phone: '' });
+  const [draft, setDraft] = React.useState({ name: '', about: '', phone: '', temporary: false });
   const [editId, setEditId] = React.useState(null);
-  const [editDraft, setEditDraft] = React.useState({ name: '', about: '', phone: '', leave: [], start: '', end: '' });
+  const [editDraft, setEditDraft] = React.useState({ name: '', about: '', phone: '', temporary: false, leave: [], start: '', end: '' });
+  // Which temporary-staff cell is being set by hand (the bottom-sheet picker).
+  const [cellEdit, setCellEdit] = React.useState(null); // { staffId, day } | null
 
   function flash(msg, type) { notify(msg, type || 'info'); }
 
@@ -115,6 +118,21 @@ export default function RotaSystem({ page = 'rota' }) {
 
   function persist(sched) {
     api('/api/rota', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStarting: weekISO, grid: sched.grid, times: sched.times, rules: sched.rules || [], seed: sched.seed }) }).catch(() => {});
+  }
+
+  // Hand-set one day for a temporary staff member (early / late / blank). Saves
+  // straight away and records an undo step. Leave days are managed in the staff
+  // editor, so they're left untouched here.
+  function setTempCell(staffId, day, code) {
+    if (!canEdit || !grid) { setCellEdit(null); return; }
+    const row = (grid[staffId] || [null, null, null, null, null]).slice();
+    if (row[day] === 'AL') { setCellEdit(null); return; }
+    row[day] = code; // 'E' | 'L' | null (blank = not working)
+    const sched = { ...schedule, grid: { ...grid, [staffId]: row } };
+    setCache((c) => ({ ...c, [weekISO]: sched }));
+    pushHist(weekISO, sched);
+    persist(sched);
+    setCellEdit(null);
   }
 
   // (Re)generate: deterministic base + AI applies the rule list on top.
@@ -207,14 +225,14 @@ export default function RotaSystem({ page = 'rota' }) {
     const name = draft.name.trim();
     if (!name) { flash('Enter a name.'); return; }
     try {
-      const d = await api('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, about: draft.about.trim(), phone: draft.phone.trim(), leave: [] }) });
+      const d = await api('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, about: draft.about.trim(), phone: draft.phone.trim(), temporary: !!draft.temporary, leave: [] }) });
       setStaff((prev) => [...prev, d.staff].sort((a, b) => a.name.localeCompare(b.name)));
-      setDraft({ name: '', about: '', phone: '' });
+      setDraft({ name: '', about: '', phone: '', temporary: false });
       setShowAdd(false);
       flash(firstName(name) + ' added.');
     } catch (e) { flash(e.message, 'error'); }
   }
-  function startEdit(p) { setEditId(p.id); setEditDraft({ name: p.name, about: p.about || '', phone: p.phone || '', leave: (p.leave || []).slice(), start: '', end: '' }); }
+  function startEdit(p) { setEditId(p.id); setEditDraft({ name: p.name, about: p.about || '', phone: p.phone || '', temporary: !!p.temporary, leave: (p.leave || []).slice(), start: '', end: '' }); }
   function addLeave() {
     const { start, end } = editDraft;
     if (!start) return;
@@ -225,7 +243,7 @@ export default function RotaSystem({ page = 'rota' }) {
     const name = editDraft.name.trim();
     if (!name) { flash('Enter a name.'); return; }
     try {
-      const d = await api('/api/staff', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editId, name, about: editDraft.about.trim(), phone: editDraft.phone.trim(), leave: editDraft.leave }) });
+      const d = await api('/api/staff', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editId, name, about: editDraft.about.trim(), phone: editDraft.phone.trim(), temporary: !!editDraft.temporary, leave: editDraft.leave }) });
       setStaff((prev) => prev.map((x) => (x.id === editId ? d.staff : x)).sort((a, b) => a.name.localeCompare(b.name)));
       setEditId(null);
       flash('Saved.');
@@ -286,6 +304,41 @@ export default function RotaSystem({ page = 'rota' }) {
           </div>
         </Sheet>
       )}
+
+      {cellEdit && (() => {
+        const p = staff.find((x) => x.id === cellEdit.staffId);
+        if (!p) return null;
+        const cur = grid && grid[p.id] ? grid[p.id][cellEdit.day] : null;
+        const dy = days[cellEdit.day];
+        const opt = (code, title, sub, meta) => {
+          const onv = cur === code || (code === null && cur !== 'E' && cur !== 'L');
+          return (
+            <Hover tag="button" onClick={() => setTempCell(p.id, cellEdit.day, code)}
+              base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;font-family:inherit;cursor:pointer;border-radius:12px;padding:14px 16px;border:2px solid ' + (onv ? '#005eb8' : '#e4e9ec') + ';background:' + (onv ? '#f0f7fd' : '#fff') + ';'}
+              hover="border-color:#005eb8;">
+              <span style={s('flex:none;width:14px;height:14px;border-radius:4px;background:' + (meta ? meta.bg : '#f0f4f5') + ';border:1px solid rgba(0,0,0,.08);')} />
+              <span style={s('flex:1;min-width:0;')}>
+                <b style={s('display:block;font-size:16px;color:#212b32;')}>{title}</b>
+                <span style={s('font-size:13.5px;color:#768692;font-variant-numeric:tabular-nums;')}>{sub}</span>
+              </span>
+              {onv && <Svg w={20} stroke="#005eb8" sw={2.4}>{Icons.check}</Svg>}
+            </Hover>
+          );
+        };
+        return (
+          <Sheet maxWidth={420} onClose={() => setCellEdit(null)}>
+            <div style={s('padding:22px 24px 6px;')}>
+              <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.04em;')}>{firstName(p.name)} · {dy.long} {dy.date}</div>
+              <h2 style={s('font-size:21px;font-weight:700;margin:6px 0 0;')}>Set shift</h2>
+            </div>
+            <div style={s('display:flex;flex-direction:column;gap:10px;padding:14px 24px 24px;')}>
+              {opt('E', 'Early', shiftRange(times, 'E'), SHIFT_META.E)}
+              {opt('L', 'Late', shiftRange(times, 'L'), SHIFT_META.L)}
+              {opt(null, 'Not working', 'Leave this day blank', null)}
+            </div>
+          </Sheet>
+        );
+      })()}
     </div>
   );
 
@@ -398,6 +451,7 @@ export default function RotaSystem({ page = 'rota' }) {
               <div key={p.id} style={s('display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 13px;min-width:0;border-bottom:2px solid #e4e9ec;' + (i ? 'border-left:1px solid #eef1f2;' : ''))}>
                 <span style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#e8f1f8;color:#003087;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;')}>{initials(p.name)}</span>
                 <span style={s('max-width:100%;font-size:13px;font-weight:600;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{firstName(p.name)}</span>
+                {p.temporary && <span style={s(TEMP_TAG)}>Temp</span>}
               </div>
             ))}
           </div>
@@ -411,10 +465,23 @@ export default function RotaSystem({ page = 'rota' }) {
               {staff.map((p, i) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
+                const border = (d ? 'border-top:1px solid #eef1f2;' : '') + (i ? 'border-left:1px solid #eef1f2;' : '');
+                const isBlankTemp = p.temporary && code !== 'E' && code !== 'L' && code !== 'AL';
+                if (p.temporary && canEdit && code !== 'AL') {
+                  return (
+                    <Hover key={p.id} tag="button" title={'Set ' + firstName(p.name) + "’s shift"} onClick={() => setCellEdit({ staffId: p.id, day: d })}
+                      base={'display:flex;align-items:center;justify-content:center;min-height:56px;width:100%;padding:0;margin:0;box-sizing:border-box;cursor:pointer;font-family:inherit;border:none;' + border + 'background:' + (isBlankTemp ? '#fcfdfe' : cv.bg) + ';'}
+                      hover="filter:brightness(.96);">
+                      {isBlankTemp
+                        ? <span style={s('display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:#005eb8;border:1.5px dashed #9fc3e6;border-radius:6px;padding:3px 8px;')}><Svg w={12} sw={2.8}>{Icons.plus}</Svg>Set</span>
+                        : <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>}
+                    </Hover>
+                  );
+                }
                 return (
                   <div key={p.id} title={firstName(p.name)}
-                    style={s('display:flex;align-items:center;justify-content:center;min-height:56px;text-align:center;background:' + cv.bg + ';' + (d ? 'border-top:1px solid #eef1f2;' : '') + (i ? 'border-left:1px solid #eef1f2;' : ''))}>
-                    <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>
+                    style={s('display:flex;align-items:center;justify-content:center;min-height:56px;text-align:center;background:' + (isBlankTemp ? '#fcfdfe' : cv.bg) + ';' + border)}>
+                    <span style={s('font-weight:600;font-size:12.5px;color:' + (isBlankTemp ? '#b1b8bd' : cv.color) + ';font-variant-numeric:tabular-nums;')}>{isBlankTemp ? '—' : cv.main}</span>
                   </div>
                 );
               })}
@@ -434,18 +501,24 @@ export default function RotaSystem({ page = 'rota' }) {
             <div style={s('display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #eef1f2;')}>
               <span style={s('flex:none;width:40px;height:40px;border-radius:50%;background:#005eb8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;')}>{initials(p.name)}</span>
               <b style={s('font-size:17px;font-weight:700;')}>{p.name}</b>
+              {p.temporary && <span style={s(TEMP_TAG)}>Temp</span>}
             </div>
             <div>
               {days.map((day, d) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
+                const isBlankTemp = p.temporary && code !== 'E' && code !== 'L' && code !== 'AL';
                 return (
                   <div key={d} style={s('display:flex;align-items:center;gap:12px;width:100%;padding:11px 16px;' + (d ? 'border-top:1px solid #f3f6f7;' : ''))}>
                     <span style={s('flex:1;min-width:0;')}>
                       <b style={s('font-size:15px;color:#212b32;')}>{day.long}</b>
                       <span style={s('font-size:12.5px;color:#768692;')}>{'  ·  ' + day.date}</span>
                     </span>
-                    <span style={s('flex:none;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;background:' + cv.bg + ';color:' + cv.color + ';')}>{cv.main || 'Off'}</span>
+                    {p.temporary && canEdit && code !== 'AL'
+                      ? <Hover tag="button" onClick={() => setCellEdit({ staffId: p.id, day: d })}
+                          base={'flex:none;font-family:inherit;cursor:pointer;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;' + (isBlankTemp ? 'color:#005eb8;background:#fff;border:1.5px dashed #9fc3e6;' : 'border:none;background:' + cv.bg + ';color:' + cv.color + ';')}
+                          hover="filter:brightness(.96);">{isBlankTemp ? 'Tap to set' : cv.main}</Hover>
+                      : <span style={s('flex:none;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;background:' + (isBlankTemp ? '#f0f4f5' : cv.bg) + ';color:' + (isBlankTemp ? '#b1b8bd' : cv.color) + ';')}>{isBlankTemp ? '—' : (cv.main || 'Off')}</span>}
                   </div>
                 );
               })}
@@ -464,7 +537,7 @@ export default function RotaSystem({ page = 'rota' }) {
             <h1 className="riva-hero-h1" style={s('font-size:36px;font-weight:700;margin:0;letter-spacing:-0.01em;')}>Staff</h1>
             <p style={s('font-size:17px;color:#4c6272;margin:6px 0 0;')}>{staff.length} {staff.length === 1 ? 'person' : 'people'} on the reception rota</p>
           </div>
-          <Hover tag="button" onClick={() => { setShowAdd((v) => !v); setDraft({ name: '', about: '', phone: '' }); }} base={GREEN_BTN + 'font-size:16px;padding:12px 20px;display:inline-flex;align-items:center;gap:9px;'} active="transform:translateY(4px);box-shadow:none;"><Svg w={20} sw={2.4}>{Icons.plus}</Svg>Add staff</Hover>
+          <Hover tag="button" onClick={() => { setShowAdd((v) => !v); setDraft({ name: '', about: '', phone: '', temporary: false }); }} base={GREEN_BTN + 'font-size:16px;padding:12px 20px;display:inline-flex;align-items:center;gap:9px;'} active="transform:translateY(4px);box-shadow:none;"><Svg w={20} sw={2.4}>{Icons.plus}</Svg>Add staff</Hover>
         </div>
 
         {showAdd && (
@@ -475,7 +548,8 @@ export default function RotaSystem({ page = 'rota' }) {
             <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>— used to tag them on WhatsApp (optional)</span></label>
             <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="e.g. +44 7459 533082" inputMode="tel" style={s(FIELD + 'margin-bottom:16px;')} />
             <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Description</label>
-            <textarea value={draft.about} onChange={(e) => setDraft({ ...draft, about: e.target.value })} rows={3} placeholder="What they do, what they're good at, anything the rota should know." style={s(FIELD + 'resize:vertical;')} />
+            <textarea value={draft.about} onChange={(e) => setDraft({ ...draft, about: e.target.value })} rows={3} placeholder="What they do, what they're good at, anything the rota should know." style={s(FIELD + 'resize:vertical;margin-bottom:16px;')} />
+            {tempToggle(draft.temporary, () => setDraft({ ...draft, temporary: !draft.temporary }))}
             <div style={s('display:flex;gap:10px;margin-top:20px;')}>
               <Hover tag="button" onClick={addStaff} base={GREEN_BTN + 'font-size:16px;padding:11px 22px;'} active="transform:translateY(4px);box-shadow:none;">Add staff member</Hover>
               <Hover tag="button" onClick={() => setShowAdd(false)} base="font-family:inherit;font-size:16px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;" hover="color:#212b32;">Cancel</Hover>
@@ -492,7 +566,10 @@ export default function RotaSystem({ page = 'rota' }) {
                 <div style={s('display:flex;align-items:flex-start;gap:16px;')}>
                   <span style={s('flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;')}>{initials(p.name)}</span>
                   <div style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;')}>
-                    <b style={s('font-size:19px;font-weight:700;')}>{p.name}</b>
+                    <span style={s('display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;')}>
+                      <b style={s('font-size:19px;font-weight:700;')}>{p.name}</b>
+                      {p.temporary && <span style={s(TEMP_TAG)}>Temp · sets own days</span>}
+                    </span>
                     {p.phone
                       ? <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4c6272;')}><Svg w={14} sw={2.2}>{Icons.phone}</Svg>{p.phone}</span>
                       : <span style={s('font-size:13px;color:#aa5d00;')}>No number — WhatsApp will use their name</span>}
@@ -517,6 +594,23 @@ export default function RotaSystem({ page = 'rota' }) {
     );
   }
 
+  // A toggle marking someone as temporary (they set their own days).
+  function tempToggle(checked, onToggle) {
+    return (
+      <Hover tag="button" onClick={onToggle}
+        base={'display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;cursor:pointer;border-radius:10px;padding:14px 16px;background:' + (checked ? '#f0f7fd' : '#fff') + ';border:2px solid ' + (checked ? '#005eb8' : '#d8dde0') + ';'}
+        hover="border-color:#005eb8;">
+        <span style={s('flex:none;width:44px;height:26px;border-radius:999px;background:' + (checked ? '#005eb8' : '#cdd5da') + ';position:relative;')}>
+          <span style={s('position:absolute;top:3px;left:' + (checked ? '21px' : '3px') + ';width:20px;height:20px;border-radius:50%;background:#fff;')} />
+        </span>
+        <span style={s('flex:1;min-width:0;')}>
+          <b style={s('display:block;font-size:15px;color:#212b32;')}>Temporary staff</b>
+          <span style={s('font-size:13.5px;color:#768692;line-height:1.4;')}>Picks their own days — the rota won’t auto-fill them. You set each shift by hand on the rota.</span>
+        </span>
+      </Hover>
+    );
+  }
+
   function renderEdit(p) {
     return (
       <div style={s('display:flex;flex-direction:column;gap:14px;')}>
@@ -532,6 +626,7 @@ export default function RotaSystem({ page = 'rota' }) {
           <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Description</label>
           <textarea value={editDraft.about} onChange={(e) => setEditDraft({ ...editDraft, about: e.target.value })} rows={3} style={s(FIELD + 'resize:vertical;')} />
         </div>
+        {tempToggle(editDraft.temporary, () => setEditDraft({ ...editDraft, temporary: !editDraft.temporary }))}
         <div>
           <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Annual leave</label>
           <div style={s('display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;')}>

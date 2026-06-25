@@ -77,7 +77,7 @@ export async function POST(request) {
   try {
     await ensureSchema();
     const sql = getSql();
-    const staff = await sql`SELECT id, name, about, leave FROM staff ORDER BY name ASC`;
+    const staff = await sql`SELECT id, name, about, leave, temporary FROM staff ORDER BY name ASC`;
     if (!staff.length) return NextResponse.json({ error: 'Add at least one staff member before generating a rota.' }, { status: 400 });
 
     // Recent past weeks → an early/late tally per person, so the base rota
@@ -85,10 +85,19 @@ export async function POST(request) {
     const past = await sql`SELECT schedule FROM rotas WHERE week_starting < ${week} ORDER BY week_starting DESC LIMIT 8`;
     const history = tallyHistory(past.map((r) => r.schedule), staff);
 
+    // Temporary staff pick their own days — carry their hand-set shifts over
+    // from the saved week so a regenerate never wipes them.
+    const existing = await sql`SELECT schedule FROM rotas WHERE week_starting = ${week}`;
+    const prevGrid = existing[0]?.schedule?.grid || null;
+
     // 1) Fair base for the week (seeded so each regenerate differs), balanced
-    //    against the recent history above.
-    let grid = generateGrid(staff, week, minStaff, seed, history);
+    //    against the recent history above and around any temporary staff.
+    let grid = generateGrid(staff, week, minStaff, seed, history, prevGrid);
     let times = DEFAULT_TIMES;
+    // Snapshot the temporary staff's hand-set rows so the AI/rebalance steps
+    // below can never alter them.
+    const tempRows = {};
+    staff.forEach((s) => { if (s.temporary) tempRows[s.id] = grid[s.id].slice(); });
 
     // 2) Apply all rules together via the AI, then rebalance coverage around them.
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -112,6 +121,10 @@ export async function POST(request) {
       } catch (e) { /* non-fatal: keep the base grid */ }
     }
 
+    // Temporary staff are hand-set only — restore their exact rows in case the
+    // AI or rebalance touched them.
+    staff.forEach((s) => { if (s.temporary && tempRows[s.id]) grid[s.id] = tempRows[s.id]; });
+
     const saved = await upsert(sql, week, { grid, times, rules, seed });
     return NextResponse.json({ rota: saved });
   } catch (e) {
@@ -129,7 +142,7 @@ export async function PUT(request) {
   try {
     await ensureSchema();
     const sql = getSql();
-    const staff = await sql`SELECT id, name, about, leave FROM staff ORDER BY name ASC`;
+    const staff = await sql`SELECT id, name, about, leave, temporary FROM staff ORDER BY name ASC`;
     const grid = sanitiseGrid(body?.grid, staff, week);
     const times = (body?.times && body.times.E && body.times.L) ? body.times : DEFAULT_TIMES;
     const rules = cleanRules(body?.rules);
