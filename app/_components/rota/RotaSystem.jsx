@@ -79,6 +79,10 @@ export default function RotaSystem({ page = 'rota' }) {
   const seed = schedule && Number.isInteger(schedule.seed) ? schedule.seed : null;
   const hasRota = !!grid;
   const canEdit = hasRota && !isReadOnly;
+  // Who the grid shows for this week. Locked (past/current) weeks render from
+  // the roster frozen into the saved schedule, so they stay correct even after
+  // a staff member is deleted. Editable weeks use the live team.
+  const roster = (isReadOnly && schedule && Array.isArray(schedule.staff) && schedule.staff.length) ? schedule.staff : staff;
   const days = weekDays(weekISO);
   const h = hist[weekISO];
   const canUndo = !!h && h.ptr > 0 && canEdit;
@@ -214,7 +218,7 @@ export default function RotaSystem({ page = 'rota' }) {
   }
 
   function copyWhatsApp() {
-    const text = buildWhatsApp(grid, staff, weekISO, times);
+    const text = buildWhatsApp(grid, roster, weekISO, times);
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => flash('Copied — paste it straight into WhatsApp.')).catch(() => flash("Couldn't copy automatically."));
     } else flash("Copying isn't available here.");
@@ -311,7 +315,7 @@ export default function RotaSystem({ page = 'rota' }) {
         const cur = grid && grid[p.id] ? grid[p.id][cellEdit.day] : null;
         const dy = days[cellEdit.day];
         const opt = (code, title, sub, meta) => {
-          const onv = cur === code || (code === null && cur !== 'E' && cur !== 'L');
+          const onv = cur === code || (code === null && cur !== 'E' && cur !== 'L' && cur !== 'F');
           return (
             <Hover tag="button" onClick={() => setTempCell(p.id, cellEdit.day, code)}
               base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;font-family:inherit;cursor:pointer;border-radius:12px;padding:14px 16px;border:2px solid ' + (onv ? '#005eb8' : '#e4e9ec') + ';background:' + (onv ? '#f0f7fd' : '#fff') + ';'}
@@ -334,6 +338,7 @@ export default function RotaSystem({ page = 'rota' }) {
             <div style={s('display:flex;flex-direction:column;gap:10px;padding:14px 24px 24px;')}>
               {opt('E', 'Early', shiftRange(times, 'E'), SHIFT_META.E)}
               {opt('L', 'Late', shiftRange(times, 'L'), SHIFT_META.L)}
+              {opt('F', 'Full day', shiftRange(times, 'F'), SHIFT_META.F)}
               {opt(null, 'Not working', 'Leave this day blank', null)}
             </div>
           </Sheet>
@@ -422,6 +427,7 @@ export default function RotaSystem({ page = 'rota' }) {
         <div style={s('display:flex;align-items:center;gap:16px;flex-wrap:wrap;')}>
           <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.E.bg + ';')} />Early {shiftRange(times, 'E')}</span>
           <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.L.bg + ';')} />Late {shiftRange(times, 'L')}</span>
+          {staff.some((p) => p.temporary) && <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.F.bg + ';')} />Full day {shiftRange(times, 'F')}</span>}
           <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;')}><span style={s('width:11px;height:11px;border-radius:3px;background:' + SHIFT_META.AL.bg + ';')} />Leave</span>
         </div>
         <div className="riva-rota-actions" style={s('display:flex;align-items:center;gap:8px;flex-wrap:wrap;')}>
@@ -440,14 +446,14 @@ export default function RotaSystem({ page = 'rota' }) {
   }
 
   function renderGridDesktop() {
-    const cols = `116px repeat(${staff.length}, minmax(78px, 1fr))`;
+    const cols = `116px repeat(${roster.length}, minmax(78px, 1fr))`;
     return (
       <div className="riva-grid-desktop" style={s(CARD + 'overflow:hidden;')}>
         <div style={{ overflowX: 'auto' }}>
           {/* Staff header */}
           <div style={{ display: 'grid', gridTemplateColumns: cols }}>
             <div style={s('background:#fafbfc;border-right:1px solid #eef1f2;border-bottom:2px solid #e4e9ec;')} />
-            {staff.map((p, i) => (
+            {roster.map((p, i) => (
               <div key={p.id} style={s('display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 13px;min-width:0;border-bottom:2px solid #e4e9ec;' + (i ? 'border-left:1px solid #eef1f2;' : ''))}>
                 <span style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#e8f1f8;color:#003087;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;')}>{initials(p.name)}</span>
                 <span style={s('max-width:100%;font-size:13px;font-weight:600;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>{firstName(p.name)}</span>
@@ -462,11 +468,11 @@ export default function RotaSystem({ page = 'rota' }) {
                 <b style={s('font-size:14px;line-height:1.2;color:#212b32;')}>{day.short}</b>
                 <span style={s('font-size:12px;color:#768692;font-variant-numeric:tabular-nums;')}>{day.date}</span>
               </div>
-              {staff.map((p, i) => {
+              {roster.map((p, i) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
                 const border = (d ? 'border-top:1px solid #eef1f2;' : '') + (i ? 'border-left:1px solid #eef1f2;' : '');
-                const isBlankTemp = p.temporary && code !== 'E' && code !== 'L' && code !== 'AL';
+                const isBlankTemp = p.temporary && code !== 'E' && code !== 'L' && code !== 'F' && code !== 'AL';
                 if (p.temporary && canEdit && code !== 'AL') {
                   return (
                     <Hover key={p.id} tag="button" title={'Set ' + firstName(p.name) + "’s shift"} onClick={() => setCellEdit({ staffId: p.id, day: d })}
@@ -496,7 +502,7 @@ export default function RotaSystem({ page = 'rota' }) {
   function renderGridMobile() {
     return (
       <div className="riva-grid-mobile" style={s('flex-direction:column;gap:14px;')}>
-        {staff.map((p) => (
+        {roster.map((p) => (
           <div key={p.id} style={s(CARD + 'overflow:hidden;')}>
             <div style={s('display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #eef1f2;')}>
               <span style={s('flex:none;width:40px;height:40px;border-radius:50%;background:#005eb8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;')}>{initials(p.name)}</span>
@@ -507,7 +513,7 @@ export default function RotaSystem({ page = 'rota' }) {
               {days.map((day, d) => {
                 const code = grid[p.id] ? grid[p.id][d] : null;
                 const cv = cellView(code, times);
-                const isBlankTemp = p.temporary && code !== 'E' && code !== 'L' && code !== 'AL';
+                const isBlankTemp = p.temporary && code !== 'E' && code !== 'L' && code !== 'F' && code !== 'AL';
                 return (
                   <div key={d} style={s('display:flex;align-items:center;gap:12px;width:100%;padding:11px 16px;' + (d ? 'border-top:1px solid #f3f6f7;' : ''))}>
                     <span style={s('flex:1;min-width:0;')}>

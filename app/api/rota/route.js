@@ -35,6 +35,12 @@ function cleanRules(raw) {
   return raw.map((r) => String(r || '').trim()).filter(Boolean).slice(0, 40);
 }
 
+// Freeze who was on the team when a week was saved, so a past week still shows
+// the right people (and their names) even after a staff member is later deleted.
+function rosterSnapshot(staff) {
+  return staff.map((s) => ({ id: s.id, name: s.name, phone: s.phone || '', temporary: !!s.temporary }));
+}
+
 // "Official" weeks — this week and every week before it — are the published
 // record and cannot be generated, edited or deleted. Only future weeks (next
 // week onward) are modifiable. Seeding writes directly to the DB, bypassing this.
@@ -77,7 +83,7 @@ export async function POST(request) {
   try {
     await ensureSchema();
     const sql = getSql();
-    const staff = await sql`SELECT id, name, about, leave, temporary FROM staff ORDER BY name ASC`;
+    const staff = await sql`SELECT id, name, about, leave, temporary, phone FROM staff ORDER BY name ASC`;
     if (!staff.length) return NextResponse.json({ error: 'Add at least one staff member before generating a rota.' }, { status: 400 });
 
     // Recent past weeks → an early/late tally per person, so the base rota
@@ -125,7 +131,7 @@ export async function POST(request) {
     // AI or rebalance touched them.
     staff.forEach((s) => { if (s.temporary && tempRows[s.id]) grid[s.id] = tempRows[s.id]; });
 
-    const saved = await upsert(sql, week, { grid, times, rules, seed });
+    const saved = await upsert(sql, week, { grid, times, rules, seed, staff: rosterSnapshot(staff) });
     return NextResponse.json({ rota: saved });
   } catch (e) {
     return NextResponse.json({ error: 'Could not generate the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
@@ -142,12 +148,12 @@ export async function PUT(request) {
   try {
     await ensureSchema();
     const sql = getSql();
-    const staff = await sql`SELECT id, name, about, leave, temporary FROM staff ORDER BY name ASC`;
+    const staff = await sql`SELECT id, name, about, leave, temporary, phone FROM staff ORDER BY name ASC`;
     const grid = sanitiseGrid(body?.grid, staff, week);
     const times = (body?.times && body.times.E && body.times.L) ? body.times : DEFAULT_TIMES;
     const rules = cleanRules(body?.rules);
     const seed = Number.isInteger(body?.seed) ? body.seed : 0;
-    const saved = await upsert(sql, week, { grid, times, rules, seed });
+    const saved = await upsert(sql, week, { grid, times, rules, seed, staff: rosterSnapshot(staff) });
     return NextResponse.json({ rota: saved });
   } catch (e) {
     return NextResponse.json({ error: 'Could not save the rota.', detail: String(e).slice(0, 300) }, { status: 500 });
