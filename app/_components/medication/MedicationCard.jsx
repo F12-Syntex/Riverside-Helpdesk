@@ -47,6 +47,7 @@ export default function MedicationCard({ card }) {
   const plain = r ? r.sections.filter((sec) => sec.tier !== 'clinical') : [];
   const clinical = r ? r.sections.filter((sec) => sec.tier === 'clinical') : [];
   const emergency = !!(r && r.queryAnswer && r.queryAnswer.emergency);
+  const corrected = !!(r && r.correctedFrom && r.correctedFrom.toLowerCase() !== (r.name || '').toLowerCase());
 
   return (
     <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
@@ -94,6 +95,12 @@ export default function MedicationCard({ card }) {
 
         {status === 'ok' && r && (
           <>
+            {corrected && (
+              <div style={s('display:flex;gap:9px;align-items:flex-start;background:#fff;border-bottom:1px solid #eef2f4;padding:10px 22px;font-size:14px;color:#4c6272;')}>
+                <span style={s('flex:none;color:#768692;margin-top:1px;')}><Svg w={16} sw={2}>{Icons.search}</Svg></span>
+                <span>Showing information for <strong style={s('color:#212b32;')}>{r.name}</strong> — you searched “{r.correctedFrom}”.</span>
+              </div>
+            )}
             <div style={s('padding:18px 22px 0;display:flex;gap:16px;align-items:flex-start;')}>
               <div style={s('flex:1;min-width:0;')}>
                 <h3 style={s('font-size:24px;margin:0;letter-spacing:-0.01em;')}>{r.name}</h3>

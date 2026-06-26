@@ -73,6 +73,9 @@ function slugify(name) {
 
 const normText = (t) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
 const normQuery = (q) => normText(q).slice(0, 300);
+// Loose comparison that ignores spacing, hyphens and case, so a mere formatting
+// difference (e.g. "co codamol" vs "co-codamol") is not treated as a correction.
+const normLoose = (t) => normText(t).replace(/[^a-z0-9]/g, '');
 
 const bySectionOrder = (a, b) => {
   const ia = SECTION_ORDER.indexOf(a.key);
@@ -268,12 +271,52 @@ function emergencyResponse({ slug, name, retrievedAt }) {
   });
 }
 
+// Read one medicine's cached row. Returns the row, null when absent, or undefined
+// on a hard read failure (so the caller can return a 500 rather than treat it as
+// a miss and re-fetch needlessly).
+async function readMedication(sql, slug) {
+  try {
+    const rows = await sql`SELECT name, data, queries, retrieved_at AS "retrievedAt" FROM medications WHERE slug = ${slug}`;
+    return rows[0] || null;
+  } catch (e) {
+    console.error('[medication] cache read error:', e);
+    return undefined;
+  }
+}
+
+// Learn a spelling/synonym alias (typed name -> canonical slug) so the same typo
+// is corrected instantly next time. Best-effort: never fatal.
+async function rememberAlias(sql, alias, slug, name) {
+  if (!alias || !slug || alias === slug) return;
+  try {
+    await sql`
+      INSERT INTO medication_aliases (alias, slug, name)
+      VALUES (${alias}, ${slug}, ${name || ''})
+      ON CONFLICT (alias) DO UPDATE SET slug = EXCLUDED.slug, name = EXCLUDED.name
+    `;
+  } catch (e) { /* alias learning is an optimisation */ }
+}
+
+// Keep at most `max` cached questions per medicine, evicting the oldest.
+function trimQueries(obj, max) {
+  const entries = Object.entries(obj || {});
+  if (entries.length <= max) return Object.fromEntries(entries);
+  return Object.fromEntries(
+    entries
+      .sort((a, b) => String((b[1] && b[1].retrievedAt) || '').localeCompare(String((a[1] && a[1].retrievedAt) || '')))
+      .slice(0, max),
+  );
+}
+
 // Shape one cached/fresh medicine into the response the client renders.
-function buildResponse({ slug, name, data, queryEntry, query, fromCache, retrievedAt }) {
+// `correctedFrom` is the term the staff member actually typed when it was
+// auto-corrected to this medicine (empty when no correction was made).
+function buildResponse({ slug, name, data, queryEntry, query, fromCache, retrievedAt, correctedFrom }) {
   return NextResponse.json({
     status: 'ok',
     slug,
     name: data.name || name,
+    correctedFrom: correctedFrom || '',
     alsoKnownAs: data.alsoKnownAs || null,
     summary: data.summary || null,
     image: data.image || null,
@@ -297,14 +340,14 @@ export async function POST(request) {
   if (!name) return NextResponse.json({ error: 'A medicine name is required.' }, { status: 400 });
   if (name.length > 120) return NextResponse.json({ error: 'That medicine name is too long.' }, { status: 400 });
 
-  const slug = slugify(name);
-  if (!slug) return NextResponse.json({ error: 'That medicine name could not be read.' }, { status: 400 });
+  const typedSlug = slugify(name);
+  if (!typedSlug) return NextResponse.json({ error: 'That medicine name could not be read.' }, { status: 400 });
   const qkey = normQuery(query);
 
   // 0) Emergency backstop — before anything else, before any model call, and
   //    never cached. The citation filter must never be able to suppress this.
   if (qkey && looksLikeEmergency(query)) {
-    return emergencyResponse({ slug, name, retrievedAt: new Date().toISOString() });
+    return emergencyResponse({ slug: typedSlug, name, retrievedAt: new Date().toISOString() });
   }
 
   let sql;
@@ -316,31 +359,43 @@ export async function POST(request) {
     return NextResponse.json({ error: 'The medicines cache is unavailable.' }, { status: 500 });
   }
 
-  // 1) Read the cache.
-  let row = null;
+  // 1) Resolve the typed name via a learned alias — a correction the model has
+  //    already confirmed on a previous lookup — so a repeated misspelling or
+  //    synonym is corrected instantly. We do NOT fuzzy-guess locally: drug names
+  //    sit close together (prednisone/prednisolone, fluoxetine/fluvoxamine), so a
+  //    distance heuristic could serve a DIFFERENT real medicine. The web-search
+  //    model is the only corrector for a name we have not confirmed before.
+  //    `correctedFrom` records the typed term when we change it, for the UI.
+  let lookupSlug = typedSlug;
+  let correctedFrom = '';
   try {
-    const rows = await sql`SELECT name, data, queries, retrieved_at AS "retrievedAt" FROM medications WHERE slug = ${slug}`;
-    row = rows[0] || null;
-  } catch (e) {
-    console.error('[medication] cache read error:', e);
-    return NextResponse.json({ error: 'Could not read the medicines cache.' }, { status: 500 });
-  }
+    const aliasRows = await sql`SELECT slug FROM medication_aliases WHERE alias = ${typedSlug}`;
+    if (aliasRows[0] && aliasRows[0].slug && aliasRows[0].slug !== typedSlug) {
+      lookupSlug = aliasRows[0].slug;
+      correctedFrom = name;
+    }
+  } catch (e) { /* aliases are an optimisation */ }
+
+  // 2) Read the cache for the resolved slug.
+  const row = await readMedication(sql, lookupSlug);
+  if (row === undefined) return NextResponse.json({ error: 'Could not read the medicines cache.' }, { status: 500 });
 
   // Treat the cache as a usable base only when it has at least one sourced
   // section — never serve an empty (zero-source) base as a permanent hit.
-  const cachedData = row && row.data && Array.isArray(row.data.sections) && row.data.sections.length ? row.data : null;
+  let cachedData = row && row.data && Array.isArray(row.data.sections) && row.data.sections.length ? row.data : null;
   const cachedQuery = qkey && row && row.queries ? row.queries[qkey] : null;
 
-  // 2) Pure cache hit — return instantly, no model call.
+  // 3) Pure cache hit — return instantly, no model call.
   if (cachedData && (!qkey || cachedQuery)) {
     return buildResponse({
-      slug,
+      slug: lookupSlug,
       name: row.name,
       data: cachedData,
       queryEntry: cachedQuery || null,
       query,
       fromCache: true,
       retrievedAt: row.retrievedAt,
+      correctedFrom,
     });
   }
 
@@ -348,8 +403,8 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY or OPENROUTER_AI_MODEL.' }, { status: 500 });
   }
 
-  // 3) Miss — fetch what we are missing. We need the general info when it isn't
-  //    cached yet; the question is always fetched when it is new.
+  // 4) Miss — fetch. The model gets the ORIGINAL typed name so it can correct and
+  //    confirm the medicine by web search.
   const needsBase = !cachedData;
   const result = await fetchFromModel({ apiKey, model, name, query, needsBase });
   if (!result.ok) {
@@ -359,30 +414,56 @@ export async function POST(request) {
   // Secondary emergency catch: a question the model judged an emergency. Not
   // cached; urgent guidance shown instead of an answer.
   if (qkey && result.emergency) {
-    return emergencyResponse({ slug, name: result.name || name, retrievedAt: new Date().toISOString() });
+    return emergencyResponse({ slug: lookupSlug, name: result.name || name, retrievedAt: new Date().toISOString() });
   }
 
   if (!result.found) {
     return NextResponse.json({
       status: 'not_found',
-      slug,
+      slug: typedSlug,
       name: result.name || name,
       message: result.summary || `“${name}” could not be found in the NHS, BNF or eMC sources. Check the spelling and try again.`,
     });
   }
 
+  // 5) Correct via the model: its canonical name is authoritative (web-searched).
+  //    If it differs from what we searched under, re-key onto the canonical slug,
+  //    learn the alias for next time, and merge into the CANONICAL entry only —
+  //    never inherit a different medicine's cached data.
+  const canonicalName = ((result.name || name).replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim()) || (result.name || name);
+  let storeSlug = lookupSlug;
+  let skipCacheWrite = false;
+  const modelSlug = slugify(canonicalName);
+  if (modelSlug && modelSlug !== lookupSlug) {
+    storeSlug = modelSlug;
+    // Flag a correction only when the names genuinely differ (not mere spacing or
+    // hyphenation), so we never show a false "you searched ...".
+    if (!correctedFrom && normLoose(name) !== normLoose(canonicalName)) correctedFrom = name;
+    await rememberAlias(sql, typedSlug, modelSlug, canonicalName);
+    // Re-read the CANONICAL entry; the looked-up slug's data may belong to a
+    // different medicine, so it is never used as the merge base here.
+    const canon = await readMedication(sql, storeSlug);
+    if (canon === undefined) {
+      // Couldn't verify the canonical row — don't risk overwriting it.
+      cachedData = null;
+      skipCacheWrite = true;
+    } else {
+      cachedData = (canon && canon.data && Array.isArray(canon.data.sections) && canon.data.sections.length) ? canon.data : null;
+    }
+  }
+
   // References are crucial: never present medicines information with no real
-  // source behind it.
+  // source behind it (unless we are deepening an already-sourced cached entry).
   const hasBaseSources = (result.sections || []).length && (result.references || []).length;
   const hasQuerySources = result.queryAnswer && result.queryAnswer.points.length && result.queryAnswer.references.length;
-  if (needsBase && !hasBaseSources && !hasQuerySources) {
+  if (!cachedData && !hasBaseSources && !hasQuerySources) {
     return NextResponse.json({ status: 'error', message: 'The information found could not be verified against a trusted source, so it was not shown. Please try again.' }, { status: 502 });
   }
 
   const nowIso = new Date().toISOString();
-  const image = needsBase ? await fetchMedicineImage(result.name || name) : (cachedData ? cachedData.image : null);
+  const image = !cachedData ? await fetchMedicineImage(canonicalName) : cachedData.image;
 
-  // 4) Persist. Build/refresh the general data, then append the question.
+  // 6) Persist. Build/refresh the general data, then append the question.
   let data;
   if (cachedData) {
     const mergedSections = mergeSections(cachedData.sections, result.sections);
@@ -422,35 +503,38 @@ export async function POST(request) {
     }
   }
 
-  try {
-    await sql`
-      INSERT INTO medications (slug, name, data, retrieved_at, updated_at)
-      VALUES (${slug}, ${data.name || name}, ${JSON.stringify(data)}::jsonb, now(), now())
-      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name, data = EXCLUDED.data, updated_at = now()
-    `;
-    // Only cache a question we could actually answer from sources, and keep at
-    // most MAX_QUERIES per medicine (evicting the oldest) so the row stays bounded.
-    if (qkey && queryEntry && !queryEntry.unanswered) {
-      const merged = { ...((row && row.queries) || {}), [qkey]: queryEntry };
-      const trimmed = Object.fromEntries(
-        Object.entries(merged)
-          .sort((a, b) => String((b[1] && b[1].retrievedAt) || '').localeCompare(String((a[1] && a[1].retrievedAt) || '')))
-          .slice(0, MAX_QUERIES),
-      );
-      await sql`UPDATE medications SET queries = ${JSON.stringify(trimmed)}::jsonb, updated_at = now() WHERE slug = ${slug}`;
+  // skipCacheWrite is set when the canonical row couldn't be read during re-key —
+  // writing then could clobber a real entry with a single fresh fetch.
+  if (!skipCacheWrite) {
+    try {
+      await sql`
+        INSERT INTO medications (slug, name, data, retrieved_at, updated_at)
+        VALUES (${storeSlug}, ${data.name || name}, ${JSON.stringify(data)}::jsonb, now(), now())
+        ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name, data = EXCLUDED.data, updated_at = now()
+      `;
+      // Only cache a question we could actually answer from sources, and keep at
+      // most MAX_QUERIES per medicine (evicting the oldest). Read the current
+      // questions first so re-keying onto an existing canonical never wipes them.
+      if (qkey && queryEntry && !queryEntry.unanswered) {
+        const cur = await sql`SELECT queries FROM medications WHERE slug = ${storeSlug}`;
+        const merged = { ...((cur[0] && cur[0].queries) || {}), [qkey]: queryEntry };
+        const trimmed = trimQueries(merged, MAX_QUERIES);
+        await sql`UPDATE medications SET queries = ${JSON.stringify(trimmed)}::jsonb, updated_at = now() WHERE slug = ${storeSlug}`;
+      }
+    } catch (e) {
+      console.error('[medication] cache write error:', e);
+      // Caching is an optimisation — still return the answer we have.
     }
-  } catch (e) {
-    console.error('[medication] cache write error:', e);
-    // Caching is an optimisation — still return the answer we have.
   }
 
   return buildResponse({
-    slug,
+    slug: storeSlug,
     name: data.name || name,
     data,
     queryEntry,
     query,
     fromCache: false,
     retrievedAt: nowIso,
+    correctedFrom,
   });
 }
