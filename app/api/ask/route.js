@@ -9,16 +9,15 @@
 // is `answerable: false` and the UI shows a decline.
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
-import { buildAskPrompt, parseAiJson, buildCondenseQuery } from '@/lib/ai/prompt';
+import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const TOP_K = 5;
-// Cheap text analysis (follow-up condensing) runs on a small model, routed only
-// to providers that do not retain prompt data.
-const ANALYSIS_MODEL = process.env.OPENROUTER_ANALYSIS_MODEL || 'openai/gpt-oss-120b';
+// provider routing: only providers that do not retain prompt data, so the
+// question and document extracts are never stored by the model provider.
 const NO_RETENTION = { data_collection: 'deny' };
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_HEADERS = (apiKey) => ({
@@ -27,38 +26,6 @@ const OPENROUTER_HEADERS = (apiKey) => ({
   'HTTP-Referer': 'https://riverside-practice.local',
   'X-Title': 'Riverside Practice Q&A',
 });
-
-// Resolve a follow-up ("how is this done") into a standalone search query using
-// the conversation so far, so retrieval looks in the right documents. Best-effort:
-// any failure falls back to the original question, so a hiccup here never blocks
-// an answer.
-async function condenseQuery({ question, history, apiKey, model }) {
-  try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        // gpt-oss is a reasoning model: leave headroom for its reasoning tokens
-        // (a tiny cap returns empty content) and keep reasoning effort low.
-        max_tokens: 400,
-        reasoning: { effort: 'low' },
-        messages: [{ role: 'user', content: buildCondenseQuery({ history, question }) }],
-        provider: NO_RETENTION,
-      }),
-    });
-    if (!res.ok) return '';
-    const data = await res.json();
-    const out = (data?.choices?.[0]?.message?.content || '')
-      .replace(/^["'`]+|["'`]+$/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return out;
-  } catch (e) {
-    return '';
-  }
-}
 
 function locationOf(chunk) {
   if (chunk.view && chunk.view.page) return 'Page ' + chunk.view.page;
@@ -160,13 +127,11 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
 
-  // Resolve follow-ups against the conversation before retrieving, so e.g.
-  // "how is this done" searches for the actual subject, not the literal words.
-  let searchQuery = question;
-  if (history.trim()) {
-    const condensed = await condenseQuery({ question, history, apiKey, model: ANALYSIS_MODEL });
-    if (condensed) searchQuery = condensed;
-  }
+  // Resolve follow-ups for retrieval by concatenating the recent conversation
+  // locally — no extra model call. "how is this done" then searches with the
+  // subject carried over from the previous question. The single answer-model
+  // call below still receives the full history to interpret the follow-up.
+  const searchQuery = buildSearchQuery({ history, question });
 
   // Tier B — semantically retrieve the most relevant chunks (never fatal).
   let chunks = [];
