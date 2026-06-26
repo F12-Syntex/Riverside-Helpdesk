@@ -24,37 +24,34 @@ export default function ChatView({ v }) {
           <div>
             <div style={s('font-size:13px;font-weight:600;color:#768692;letter-spacing:.01em;margin:8px 0 12px;')}>Quick prompts — choose your role</div>
 
-            {/* Role tabs: soft pills, one tap to switch to the prompts for your role. */}
-            <div style={s('display:flex;gap:8px;flex-wrap:wrap;')}>
-              {v.heroRoleTabs.map((t) => (
-                <Hover key={t.id} tag="button" onClick={t.onClick}
-                  base={'display:inline-flex;align-items:center;gap:8px;border:none;border-radius:999px;padding:9px 16px 9px 13px;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;transition:background .14s,color .14s;background:' + (t.active ? t.accent : '#eef2f4') + ';color:' + (t.active ? '#fff' : '#52646f') + ';'}
-                  hover={t.active ? '' : 'background:' + t.accent + '14;color:' + t.accent + ';'}>
-                  <Svg w={17} stroke={t.active ? '#fff' : t.accent} sw={2.1}>{Icons[t.icon]}</Svg>
-                  <span>{t.label}</span>
-                </Hover>
-              ))}
+            {/* Role selector — classic NHS underline tab nav, one consistent blue. */}
+            <div style={s('display:flex;flex-wrap:wrap;gap:0 24px;border-bottom:1px solid #d8dde0;margin-bottom:4px;')}>
+              {v.heroRoleTabs.map((t) => (t.active ? (
+                <span key={t.id} style={s('font-size:16px;font-weight:700;color:#212b32;padding:10px 2px;border-bottom:3px solid #005eb8;margin-bottom:-1px;')}>{t.label}</span>
+              ) : (
+                <Hover key={t.id} tag="button" onClick={t.onClick} base="font:inherit;font-size:16px;font-weight:600;color:#005eb8;text-decoration:underline;text-underline-offset:.15em;background:none;border:none;padding:10px 2px;cursor:pointer;" hover="color:#003087;">{t.label}</Hover>
+              )))}
             </div>
 
-            {/* Topic groups for the active role — a soft heading then wrapping pill
-                chips, no boxes, so it reads light rather than blocky. */}
-            <div style={s('margin-top:8px;')}>
-              {v.heroGroups.map((g, gi) => (
-                <div key={gi} style={s('margin-top:22px;')}>
-                  <div style={s('font-size:13px;font-weight:700;letter-spacing:.02em;margin:0 0 10px;color:' + g.accent + ';')}>{g.title}</div>
-                  <div style={s('display:flex;flex-wrap:wrap;gap:9px;')}>
-                    {g.queries.map((q, qi) => (
-                      <Hover key={qi} tag="button" onClick={q.onClick}
-                        base="display:inline-flex;align-items:center;gap:8px;text-align:left;background:#fff;border:none;border-radius:999px;padding:10px 16px;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;color:#243b4a;line-height:1.3;box-shadow:0 1px 2px rgba(33,43,50,.08),0 0 0 1px rgba(33,43,50,.05);transition:box-shadow .14s,color .14s,background .14s;"
-                        hover={'color:' + g.accent + ';background:' + g.accent + '0a;box-shadow:0 2px 8px ' + g.accent + '2e,0 0 0 1px ' + g.accent + '55;'}>
-                        <span style={s('flex:none;opacity:.6;')}><Svg w={14} stroke={g.accent} sw={2.4}>{Icons.arrow}</Svg></span>
+            {/* Prompts for the active role — classic NHS link lists: underlined blue
+                links with a chevron, grouped under plain headings. */}
+            {v.heroGroups.map((g, gi) => (
+              <div key={gi} style={s('margin-top:24px;')}>
+                <h3 style={s('font-size:15px;font-weight:700;color:#212b32;margin:0;')}>{g.title}</h3>
+                <ul style={s('list-style:none;margin:6px 0 0;padding:0;')}>
+                  {g.queries.map((q, qi) => (
+                    <li key={qi}>
+                      <Hover tag="button" onClick={q.onClick}
+                        base="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:none;border:none;border-top:1px solid #e8edee;padding:13px 4px;cursor:pointer;font:inherit;font-size:16px;line-height:1.4;color:#005eb8;text-decoration:underline;text-underline-offset:.15em;"
+                        hover="color:#003087;background:#f0f4f5;">
                         <span>{q.question}</span>
+                        <span style={s('flex:none;')}><Svg w={16} sw={2.4}>{Icons.chevronRight}</Svg></span>
                       </Hover>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </>
       )}
