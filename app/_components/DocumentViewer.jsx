@@ -129,9 +129,17 @@ export default function DocumentViewer({ v }) {
   // Reset when the panel switches to a different source.
   React.useEffect(() => { setLine(null); setLocated(false); }, [vm.fileUrl]);
 
+  // Freeze the page behind the panel so there is only one scrollbar (the
+  // document's own) while a source is open.
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   const label = 'font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin:0 0 8px;';
   const action = 'display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 15px;font:inherit;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;';
-  const frame = s('width:100%;height:78vh;border:none;display:block;');
   const card = 'background:#fff;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;';
 
   // The standalone passage is hidden on desktop ONLY when it was highlighted in
@@ -152,27 +160,32 @@ export default function DocumentViewer({ v }) {
           <Hover tag="button" onClick={v.onCloseViewer} aria-label="Close" base="flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;" hover="color:#212b32;"><Svg w={24}>{Icons.close}</Svg></Hover>
         </div>
 
-        <div data-riva-scroll="" style={s('flex:1;min-height:0;overflow-y:auto;background:#f0f4f5;padding:20px;')}>
+        {/* Content region — fixed height; only the document inside it scrolls,
+            so the panel shows exactly one scrollbar (the document's own). */}
+        <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;background:#f0f4f5;')}>
 
           {/* The full document, formatted, with the passage highlighted (desktop). */}
           {vm.hasFile && (
-            <div className="riva-doc-embed">
-              <div style={s('display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
+            <div className="riva-doc-embed" style={s('flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 20px 0;')}>
+              <div style={s('flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
                 <Svg w={14} stroke="#946200" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
                 {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below' + (line ? ' (line ' + line + ').' : '.') : 'Showing the full document. The exact passage is shown below.')
                   : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (line ? ' (page ' + (vm.page || '?') + ', line ' + line + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
                   : 'The full document is shown below.'}
               </div>
-              {vm.isImage && <div style={s(card + 'padding:12px;')}><img src={vm.fileUrl} alt={vm.docTitle} style={s('display:block;max-width:100%;height:auto;margin:0 auto;')} /></div>}
-              {vm.isPdf && <PdfSourceView url={vm.fileUrl} page={vm.page || 1} quote={vm.text} onResolve={(r) => { setLocated(r.located); setLine(r.line); }} />}
-              {vm.isHtml && <div style={s(card)}><iframe src={vm.fileUrl} title={vm.docTitle} style={frame} onLoad={(e) => { const r = highlightPassage(e.currentTarget, vm.text); setLocated(r.ok); setLine(r.line); }} /></div>}
+              {/* The single scroll region: the document content itself. */}
+              <div data-riva-scroll="" style={s('flex:1;min-height:0;overflow-y:auto;')}>
+                {vm.isImage && <div style={s(card + 'padding:12px;')}><img src={vm.fileUrl} alt={vm.docTitle} style={s('display:block;max-width:100%;height:auto;margin:0 auto;')} /></div>}
+                {vm.isPdf && <PdfSourceView url={vm.fileUrl} page={vm.page || 1} quote={vm.text} onResolve={(r) => { setLocated(r.located); setLine(r.line); }} />}
+                {vm.isHtml && <div style={s(card + 'height:100%;')}><iframe src={vm.fileUrl} title={vm.docTitle} style={s('width:100%;height:100%;border:none;display:block;')} onLoad={(e) => { const r = highlightPassage(e.currentTarget, vm.text); setLocated(r.ok); setLine(r.line); }} /></div>}
+              </div>
             </div>
           )}
 
           {/* The passage text. Always present; hidden on desktop only when it was
               highlighted in the document above. The source text is thus never
               missing — it's here whenever the highlight couldn't be placed. */}
-          <div className={hidePassageOnDesktop ? 'riva-doc-passage' : ''} style={s((vm.hasFile ? 'margin-top:18px;' : '') + 'min-width:0;')}>
+          <div className={hidePassageOnDesktop ? 'riva-doc-passage' : ''} style={s('flex:0 1 auto;min-height:0;overflow-y:auto;padding:16px 20px;min-width:0;')}>
             <div style={s(label)}>What this is based on{line ? ' · line ' + line : ''}</div>
             <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;font-size:16px;line-height:1.6;color:#212b32;text-wrap:pretty;overflow-wrap:anywhere;')}>
               &ldquo;{vm.text}&rdquo;
