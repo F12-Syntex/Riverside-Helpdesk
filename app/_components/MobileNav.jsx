@@ -14,6 +14,7 @@ import { s, Hover, Svg, Icons } from './ui';
 
 const TOOLS = [
   { href: '/helpbot', label: 'Practice Q&A' },
+  { href: '/medications', label: 'Medication check' },
   { href: '/rota', label: 'Staff rota generator' },
   { href: '/dpia', label: 'Data protection check (DPIA)' },
 ];
