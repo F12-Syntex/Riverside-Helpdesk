@@ -4,8 +4,9 @@
   "private": true,
   "description": "Riverside Practice Q&A: a document-grounded reception assistant for The Riverside Practice, using OpenRouter.",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/copy-pdf-worker.mjs && next dev",
+    "build": "node scripts/copy-pdf-worker.mjs && next build",
+    "pdf:worker": "node scripts/copy-pdf-worker.mjs",
     "start": "next start",
     "lint": "next lint",
     "rag:status": "node rag/status.mjs",

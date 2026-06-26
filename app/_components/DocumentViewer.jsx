@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { s, Hover, Svg, Icons } from './ui';
+import PdfSourceView from './PdfSourceView';
 
 // Right-hand side panel for a citation. On desktop it shows the entire document
 // in its own formatting (an iframe of the source file), highlights the exact
@@ -151,17 +152,19 @@ export default function DocumentViewer({ v }) {
           <Hover tag="button" onClick={v.onCloseViewer} aria-label="Close" base="flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;" hover="color:#212b32;"><Svg w={24}>{Icons.close}</Svg></Hover>
         </div>
 
-        <div style={s('flex:1;min-height:0;overflow-y:auto;background:#f0f4f5;padding:20px;')}>
+        <div data-riva-scroll="" style={s('flex:1;min-height:0;overflow-y:auto;background:#f0f4f5;padding:20px;')}>
 
           {/* The full document, formatted, with the passage highlighted (desktop). */}
           {vm.hasFile && (
             <div className="riva-doc-embed">
               <div style={s('display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
                 <Svg w={14} stroke="#946200" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
-                {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below' + (line ? ' (line ' + line + ').' : '.') : 'Showing the full document. The exact passage is shown below.') : vm.isPdf ? 'The document opens at the relevant page; the exact passage is shown below.' : 'The full document is shown below.'}
+                {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below' + (line ? ' (line ' + line + ').' : '.') : 'Showing the full document. The exact passage is shown below.')
+                  : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (line ? ' (page ' + (vm.page || '?') + ', line ' + line + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
+                  : 'The full document is shown below.'}
               </div>
               {vm.isImage && <div style={s(card + 'padding:12px;')}><img src={vm.fileUrl} alt={vm.docTitle} style={s('display:block;max-width:100%;height:auto;margin:0 auto;')} /></div>}
-              {vm.isPdf && <div style={s(card)}><iframe src={vm.pdfSrc} title={vm.docTitle} style={frame} /></div>}
+              {vm.isPdf && <PdfSourceView url={vm.fileUrl} page={vm.page || 1} quote={vm.text} onResolve={(r) => { setLocated(r.located); setLine(r.line); }} />}
               {vm.isHtml && <div style={s(card)}><iframe src={vm.fileUrl} title={vm.docTitle} style={frame} onLoad={(e) => { const r = highlightPassage(e.currentTarget, vm.text); setLocated(r.ok); setLine(r.line); }} /></div>}
             </div>
           )}

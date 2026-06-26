@@ -242,6 +242,9 @@ class RiversidePracticeQA extends React.Component {
     return {
       docTitle: c.docTitle || 'Document',
       location: c.location || '',
+      // The PDF page this citation sits on — drives the in-browser PDF renderer,
+      // which opens at this page and highlights the verbatim quote there.
+      page: v.page || null,
       isImage,
       isPdf,
       isHtml: isFrame,
