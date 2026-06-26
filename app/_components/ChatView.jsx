@@ -22,39 +22,32 @@ export default function ChatView({ v }) {
           </div>
 
           <div>
-            <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 10px;')}>Quick prompts — choose your role</div>
+            <div style={s('font-size:13px;font-weight:600;color:#768692;letter-spacing:.01em;margin:8px 0 12px;')}>Quick prompts — choose your role</div>
 
-            {/* Role tabs: one tap to switch to the prompts that fit your role. */}
+            {/* Role tabs: soft pills, one tap to switch to the prompts for your role. */}
             <div style={s('display:flex;gap:8px;flex-wrap:wrap;')}>
               {v.heroRoleTabs.map((t) => (
                 <Hover key={t.id} tag="button" onClick={t.onClick}
-                  base={'display:flex;align-items:center;gap:10px;background:' + (t.active ? t.accent + '0f' : '#fff') + ';border:1.5px solid ' + (t.active ? t.accent : '#d8dde0') + ';border-radius:12px;padding:8px 14px 8px 9px;cursor:pointer;font:inherit;text-align:left;transition:border-color .12s,background .12s;'}
-                  hover={'border-color:' + t.accent + ';'}>
-                  <span style={s('flex:none;width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;background:' + (t.active ? t.accent : '#eef3f5') + ';')}>
-                    <Svg w={18} stroke={t.active ? '#fff' : t.accent} sw={2.1}>{Icons[t.icon]}</Svg>
-                  </span>
-                  <span style={s('display:flex;flex-direction:column;line-height:1.2;')}>
-                    <span style={s('font-size:15px;font-weight:700;color:' + (t.active ? t.accent : '#243b4a') + ';')}>{t.label}</span>
-                    <span style={s('font-size:12px;color:#768692;font-weight:600;')}>{t.sub}</span>
-                  </span>
+                  base={'display:inline-flex;align-items:center;gap:8px;border:none;border-radius:999px;padding:9px 16px 9px 13px;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;transition:background .14s,color .14s;background:' + (t.active ? t.accent : '#eef2f4') + ';color:' + (t.active ? '#fff' : '#52646f') + ';'}
+                  hover={t.active ? '' : 'background:' + t.accent + '14;color:' + t.accent + ';'}>
+                  <Svg w={17} stroke={t.active ? '#fff' : t.accent} sw={2.1}>{Icons[t.icon]}</Svg>
+                  <span>{t.label}</span>
                 </Hover>
               ))}
             </div>
 
-            {/* Subdivided topic blocks for the active role — each query is one tap. */}
-            <div style={s('display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-top:18px;')}>
+            {/* Topic groups for the active role — a soft heading then wrapping pill
+                chips, no boxes, so it reads light rather than blocky. */}
+            <div style={s('margin-top:8px;')}>
               {v.heroGroups.map((g, gi) => (
-                <div key={gi} style={s('background:#fff;border:1px solid #e3e9ec;border-radius:14px;padding:14px 14px 15px;')}>
-                  <div style={s('display:flex;align-items:center;gap:8px;margin:0 0 11px;')}>
-                    <span style={s('width:4px;height:15px;border-radius:2px;flex:none;background:' + g.accent + ';')} />
-                    <span style={s('font-size:12.5px;font-weight:700;color:#425563;text-transform:uppercase;letter-spacing:.045em;')}>{g.title}</span>
-                  </div>
-                  <div style={s('display:flex;flex-direction:column;gap:7px;')}>
+                <div key={gi} style={s('margin-top:22px;')}>
+                  <div style={s('font-size:13px;font-weight:700;letter-spacing:.02em;margin:0 0 10px;color:' + g.accent + ';')}>{g.title}</div>
+                  <div style={s('display:flex;flex-wrap:wrap;gap:9px;')}>
                     {g.queries.map((q, qi) => (
                       <Hover key={qi} tag="button" onClick={q.onClick}
-                        base="display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:#fbfcfd;border:1px solid #e3e9ec;border-radius:9px;padding:9px 11px;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;color:#243b4a;line-height:1.35;transition:border-color .12s,background .12s,color .12s;"
-                        hover={'border-color:' + g.accent + ';background:' + g.accent + '14;color:' + g.accent + ';'}>
-                        <span style={s('flex:none;opacity:.55;')}><Svg w={15} stroke={g.accent} sw={2.2}>{Icons.arrow}</Svg></span>
+                        base="display:inline-flex;align-items:center;gap:8px;text-align:left;background:#fff;border:none;border-radius:999px;padding:10px 16px;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;color:#243b4a;line-height:1.3;box-shadow:0 1px 2px rgba(33,43,50,.08),0 0 0 1px rgba(33,43,50,.05);transition:box-shadow .14s,color .14s,background .14s;"
+                        hover={'color:' + g.accent + ';background:' + g.accent + '0a;box-shadow:0 2px 8px ' + g.accent + '2e,0 0 0 1px ' + g.accent + '55;'}>
+                        <span style={s('flex:none;opacity:.6;')}><Svg w={14} stroke={g.accent} sw={2.4}>{Icons.arrow}</Svg></span>
                         <span>{q.question}</span>
                       </Hover>
                     ))}
