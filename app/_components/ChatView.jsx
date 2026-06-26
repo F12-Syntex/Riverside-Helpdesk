@@ -22,36 +22,14 @@ export default function ChatView({ v }) {
           </div>
 
           <div>
-            <div style={s('font-size:13px;font-weight:600;color:#768692;letter-spacing:.01em;margin:8px 0 12px;')}>Quick prompts — choose your role</div>
-
-            {/* Role selector — classic NHS underline tab nav, one consistent blue. */}
-            <div style={s('display:flex;flex-wrap:wrap;gap:0 24px;border-bottom:1px solid #d8dde0;margin-bottom:4px;')}>
-              {v.heroRoleTabs.map((t) => (t.active ? (
-                <span key={t.id} style={s('font-size:16px;font-weight:700;color:#212b32;padding:10px 2px;border-bottom:3px solid #005eb8;margin-bottom:-1px;')}>{t.label}</span>
-              ) : (
-                <Hover key={t.id} tag="button" onClick={t.onClick} base="font:inherit;font-size:16px;font-weight:600;color:#005eb8;text-decoration:underline;text-underline-offset:.15em;background:none;border:none;padding:10px 2px;cursor:pointer;" hover="color:#003087;">{t.label}</Hover>
-              )))}
+            <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 12px;')}>Popular questions</div>
+            <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+              {v.popular.map((p, i) => (
+                <Hover key={i} tag="button" onClick={p.onClick} base="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:13px 16px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;" hover="border-color:#005eb8;background:#f7fbff;">
+                  <span style={s('flex:none;')}><Svg w={18}>{Icons.arrow}</Svg></span><span>{p.question}</span>
+                </Hover>
+              ))}
             </div>
-
-            {/* Prompts for the active role — classic NHS link lists: underlined blue
-                links with a chevron, grouped under plain headings. */}
-            {v.heroGroups.map((g, gi) => (
-              <div key={gi} style={s('margin-top:24px;')}>
-                <h3 style={s('font-size:15px;font-weight:700;color:#212b32;margin:0;')}>{g.title}</h3>
-                <ul style={s('list-style:none;margin:6px 0 0;padding:0;')}>
-                  {g.queries.map((q, qi) => (
-                    <li key={qi}>
-                      <Hover tag="button" onClick={q.onClick}
-                        base="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:none;border:none;border-top:1px solid #e8edee;padding:13px 4px;cursor:pointer;font:inherit;font-size:16px;line-height:1.4;color:#005eb8;text-decoration:underline;text-underline-offset:.15em;"
-                        hover="color:#003087;background:#f0f4f5;">
-                        <span>{q.question}</span>
-                        <span style={s('flex:none;')}><Svg w={16} sw={2.4}>{Icons.chevronRight}</Svg></span>
-                      </Hover>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
           </div>
         </>
       )}

@@ -3,7 +3,16 @@
 import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askQuestion } from '../../lib/ai/client';
-import { ROLE_PROMPTS } from '../../lib/heroPrompts';
+
+// Suggested starter questions on the empty state — organisation-wide topics
+// answered from the practice's own policy/procedure documents.
+const POPULAR_QUESTIONS = [
+  'How do I report a significant event?',
+  'What is the complaints procedure?',
+  'What should I do if a patient is aggressive or abusive?',
+  'How do I report a data breach?',
+  'How are repeat prescription requests handled?',
+];
 import { s, Hover, Svg, Icons, assetSrc } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import ChatView from '../_components/ChatView';
@@ -34,7 +43,6 @@ class RiversidePracticeQA extends React.Component {
       draftError: false,
       viewer: null,
       view: 'assistant',   // 'assistant' | 'kb'
-      heroRole: ROLE_PROMPTS[0].id, // active staff-role tab on the empty/hero state
       kbQuery: '',         // knowledge-base search text
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
@@ -393,24 +401,7 @@ class RiversidePracticeQA extends React.Component {
       };
     });
 
-    // Role-based starter prompts for the hero: a tab per staff role, and for the
-    // active role its subdivided topic groups of one-tap questions.
-    const activeRole = ROLE_PROMPTS.find((r) => r.id === this.state.heroRole) || ROLE_PROMPTS[0];
-    const heroRoleTabs = ROLE_PROMPTS.map((r) => ({
-      id: r.id,
-      label: r.label,
-      sub: r.sub,
-      icon: r.icon,
-      accent: r.accent,
-      active: r.id === activeRole.id,
-      onClick: () => self.setState({ heroRole: r.id }),
-    }));
-    const heroAccent = activeRole.accent;
-    const heroGroups = (activeRole.groups || []).map((g) => ({
-      title: g.title,
-      accent: heroAccent,
-      queries: (g.queries || []).map((q) => ({ question: q, onClick: () => self.ask(q) })),
-    }));
+    const popular = POPULAR_QUESTIONS.map((q) => ({ question: q, onClick: () => self.ask(q) }));
 
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
@@ -458,8 +449,7 @@ class RiversidePracticeQA extends React.Component {
       isEmpty: this.state.messages.length === 0,
       notEmpty: this.state.messages.length > 0,
       input: this.state.input,
-      messages,
-      heroRoleTabs, heroGroups, heroAccent,
+      messages, popular,
       cats: this.cats(),
       showAdd: this.state.showAdd,
       draft: this.state.draft,
