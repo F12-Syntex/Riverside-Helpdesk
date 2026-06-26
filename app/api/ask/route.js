@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
+import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
 export const runtime = 'nodejs';
@@ -51,34 +52,6 @@ function citationFor(chunk, quote = '') {
     quote: q,
     view: chunk.view || null,
   };
-}
-
-// Normalise text for verbatim comparison: unify smart quotes/dashes, collapse
-// whitespace, lowercase. Used to check a model quote against the source chunks.
-function normForMatch(str) {
-  return (str || '')
-    .replace(/[‘’‚‛′]/g, "'")
-    .replace(/[“”„‟″]/g, '"')
-    .replace(/[–—−]/g, '-')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
-
-// How much of `quoteN` is found verbatim inside `chunkN` (0..1). Exact
-// containment scores 1; otherwise the longest leading/middle run that is
-// contained gives a partial score, so near-verbatim quotes still verify.
-function quoteContainment(quoteN, chunkN) {
-  if (!quoteN || !chunkN) return 0;
-  if (chunkN.includes(quoteN)) return 1;
-  let best = 0;
-  for (const frac of [0.85, 0.7, 0.55, 0.4]) {
-    const n = Math.max(24, Math.floor(quoteN.length * frac));
-    if (n < 24 || n > quoteN.length) continue;
-    if (chunkN.includes(quoteN.slice(0, n))) { best = Math.max(best, n / quoteN.length); break; }
-  }
-  if (quoteN.length > 80 && chunkN.includes(quoteN.slice(24, 84))) best = Math.max(best, 0.5);
-  return best;
 }
 
 // Resolve a step's citation. Given the model's claimed Source number and its
