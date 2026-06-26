@@ -199,6 +199,10 @@ async function fetchFromModel({ apiKey, model, name, query, needsBase }) {
         temperature: 0.2,
         max_tokens: 3000,
         messages: [{ role: 'user', content: prompt }],
+        // Force a JSON object reply. Smaller/cheaper models otherwise sometimes
+        // answer in prose ("Ibuprofen is a painkiller that…"), which has no JSON
+        // to parse and made every such lookup wrongly read as "not found".
+        response_format: { type: 'json_object' },
         tools: [
           {
             type: 'openrouter:web_search',
@@ -331,7 +335,11 @@ function buildResponse({ slug, name, data, queryEntry, query, fromCache, retriev
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_AI_MODEL;
+  // This tool needs a model that reliably follows the "return JSON, grounded in
+  // sources" instruction with the web-search tool. A dedicated var lets us use a
+  // solid, cheap one here (e.g. openai/gpt-4.1-nano) without changing the global
+  // OPENROUTER_AI_MODEL the Q&A tool and the vision RAG ingester rely on.
+  const model = process.env.OPENROUTER_MEDICATION_MODEL || process.env.OPENROUTER_AI_MODEL;
 
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
@@ -406,9 +414,25 @@ export async function POST(request) {
   // 4) Miss — fetch. The model gets the ORIGINAL typed name so it can correct and
   //    confirm the medicine by web search.
   const needsBase = !cachedData;
-  const result = await fetchFromModel({ apiKey, model, name, query, needsBase });
+  // One retry: the web-search model call occasionally returns a transient
+  // upstream error (a 5xx from the provider). A single retry turns most of those
+  // into a successful answer instead of a "try again" the user has to trigger.
+  let result = await fetchFromModel({ apiKey, model, name, query, needsBase });
+  if (!result.ok) result = await fetchFromModel({ apiKey, model, name, query, needsBase });
   if (!result.ok) {
     return NextResponse.json({ status: 'error', message: 'Sorry, the medicines information could not be retrieved just now. Please try again.' }, { status: 502 });
+  }
+
+  // The model sometimes finds the medicine but its quotes don't verify against
+  // the fetched passages, leaving nothing safe to show. When we have no cached
+  // base to fall back on, one more attempt usually grounds cleanly — so retry
+  // once rather than wrongly telling staff it "could not be verified".
+  const groundedEmpty = (r) =>
+    !((r.sections || []).length && (r.references || []).length)
+    && !(r.queryAnswer && r.queryAnswer.points.length && r.queryAnswer.references.length);
+  if (result.found && needsBase && groundedEmpty(result)) {
+    const retry = await fetchFromModel({ apiKey, model, name, query, needsBase });
+    if (retry.ok && retry.found && !groundedEmpty(retry)) result = retry;
   }
 
   // Secondary emergency catch: a question the model judged an emergency. Not
