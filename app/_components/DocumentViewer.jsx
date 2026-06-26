@@ -177,19 +177,21 @@ export default function DocumentViewer({ v }) {
             <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;font-size:16px;line-height:1.6;color:#212b32;text-wrap:pretty;overflow-wrap:anywhere;')}>
               &ldquo;{vm.text}&rdquo;
             </div>
-
-            {vm.hasFile && (
-              <div style={s('display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;')}>
-                <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#005eb8;color:#fff;border:none;'} hover="background:#003087;">
-                  <Svg w={16} stroke="#fff" sw={2.2}>{Icons.file}</Svg>Open full document
-                </Hover>
-                <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#fff;color:#005eb8;border:2px solid #d8dde0;'} hover="border-color:#005eb8;">
-                  <Svg w={16} sw={2.2}>{Icons.arrow}</Svg>Download
-                </Hover>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Actions pinned to the bottom of the panel — always visible, never
+            requiring a scroll. Only the document content above scrolls. */}
+        {vm.hasFile && (
+          <div style={s('flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid #d8dde0;background:#fff;')}>
+            <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#005eb8;color:#fff;border:none;'} hover="background:#003087;">
+              <Svg w={16} stroke="#fff" sw={2.2}>{Icons.file}</Svg>Open full document
+            </Hover>
+            <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#fff;color:#005eb8;border:2px solid #d8dde0;'} hover="border-color:#005eb8;">
+              <Svg w={16} sw={2.2}>{Icons.arrow}</Svg>Download
+            </Hover>
+          </div>
+        )}
       </div>
     </div>
   );
