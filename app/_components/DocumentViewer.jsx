@@ -145,7 +145,7 @@ export default function DocumentViewer({ v }) {
   // The standalone passage is hidden on desktop ONLY when it was highlighted in
   // place; if we couldn't locate it, it stays visible so the source text shows.
   const hidePassageOnDesktop = vm.hasFile && vm.isHtml && located;
-  const locParts = [vm.location, line ? 'line ' + line : ''].filter(Boolean);
+  const locParts = [vm.location].filter(Boolean);
 
   return (
     <div onClick={v.onCloseViewer} style={s('position:fixed;inset:0;background:rgba(33,43,50,.5);display:flex;align-items:stretch;justify-content:flex-end;z-index:60;')}>
@@ -169,8 +169,8 @@ export default function DocumentViewer({ v }) {
             <div className="riva-doc-embed" style={s('flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 20px 0;')}>
               <div style={s('flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
                 <Svg w={14} stroke="#946200" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
-                {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below' + (line ? ' (line ' + line + ').' : '.') : 'Showing the full document. The exact passage is shown below.')
-                  : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (line ? ' (page ' + (vm.page || '?') + ', line ' + line + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
+                {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below.' : 'Showing the full document. The exact passage is shown below.')
+                  : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (vm.page ? ' (page ' + vm.page + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
                   : 'The full document is shown below.'}
               </div>
               {/* The single scroll region: the document content itself. */}
@@ -186,7 +186,7 @@ export default function DocumentViewer({ v }) {
               highlighted in the document above. The source text is thus never
               missing — it's here whenever the highlight couldn't be placed. */}
           <div className={hidePassageOnDesktop ? 'riva-doc-passage' : ''} style={s('flex:0 1 auto;min-height:0;overflow-y:auto;padding:16px 20px;min-width:0;')}>
-            <div style={s(label)}>What this is based on{line ? ' · line ' + line : ''}</div>
+            <div style={s(label)}>What this is based on</div>
             <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;font-size:16px;line-height:1.6;color:#212b32;text-wrap:pretty;overflow-wrap:anywhere;')}>
               &ldquo;{vm.text}&rdquo;
             </div>
