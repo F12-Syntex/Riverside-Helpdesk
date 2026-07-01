@@ -9,7 +9,7 @@
 // is `answerable: false` and the UI shows a decline.
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
-import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
+import { buildAskPrompt, parseAiJson, buildSearchQuery, buildTriagePrompt, parseTriageJson } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
@@ -74,6 +74,46 @@ function resolveCite(refMap, claimedRef, quote) {
   return claimed ? citationFor(claimed) : (bestChunk ? citationFor(bestChunk) : null); // unverified fallback
 }
 
+// De-duplicate the distinct sources an answer relied on, keyed by document +
+// location, preserving order. Used for the "sources this answer used" list.
+function dedupeCitations(cites) {
+  const seen = new Set();
+  const out = [];
+  for (const c of cites) {
+    if (!c) continue;
+    const key = [c.docId, c.location].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out;
+}
+
+// Single place the model is called. Returns { text } on success or
+// { error } (a ready-to-send NextResponse) on any failure, so both the Q&A and
+// triage branches share identical provider routing and error handling.
+async function callModel(apiKey, model, prompt) {
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: OPENROUTER_HEADERS(apiKey),
+      // provider: only route to providers that do not retain prompt data, so the
+      // request and document extracts are never stored by the model provider.
+      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }], provider: NO_RETENTION }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      return { error: NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 }) };
+    }
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content || '';
+    if (!text) return { error: NextResponse.json({ error: 'No content returned by the model.' }, { status: 502 }) };
+    return { text };
+  } catch (e) {
+    return { error: NextResponse.json({ error: 'Could not reach OpenRouter.', detail: String(e).slice(0, 300) }, { status: 502 }) };
+  }
+}
+
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_AI_MODEL;
@@ -88,23 +128,29 @@ export async function POST(request) {
   let question = '';
   let history = '';
   let customGuides = [];
+  let mode = 'qa';
   try {
     const body = await request.json();
-    question = typeof body?.question === 'string' ? body.question : '';
+    mode = body?.mode === 'triage' ? 'triage' : 'qa';
     history = typeof body?.history === 'string' ? body.history : '';
     customGuides = Array.isArray(body?.customGuides) ? body.customGuides : [];
+    // In triage mode the reader pastes a patient request; treat it as the query.
+    question = mode === 'triage'
+      ? (typeof body?.submission === 'string' ? body.submission : '')
+      : (typeof body?.question === 'string' ? body.question : '');
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   if (!question.trim()) {
-    return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
+    return NextResponse.json({ error: mode === 'triage' ? 'Empty request.' : 'Empty question.' }, { status: 400 });
   }
 
   // Resolve follow-ups for retrieval by concatenating the recent conversation
   // locally — no extra model call. "how is this done" then searches with the
   // subject carried over from the previous question. The single answer-model
   // call below still receives the full history to interpret the follow-up.
-  const searchQuery = buildSearchQuery({ history, question });
+  // Triage requests are self-contained, so history is not folded into the query.
+  const searchQuery = mode === 'triage' ? question : buildSearchQuery({ history, question });
 
   // Tier B — semantically retrieve the most relevant chunks (never fatal).
   let chunks = [];
@@ -119,30 +165,40 @@ export async function POST(request) {
   });
 
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
+
+  // Triage mode — return action notes for handling an incoming patient request.
+  if (mode === 'triage') {
+    const prompt = buildTriagePrompt({ submission: question, catalog: catalogText(), extracts, guideCatalog });
+    const { text, error } = await callModel(apiKey, model, prompt);
+    if (error) return error;
+
+    const parsed = parseTriageJson(text);
+    const actions = parsed.actions.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+    const redFlags = parsed.redFlags.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+    const patientMessageCite = resolveCite(refMap, parsed.patientMessageSource, parsed.patientMessageQuote);
+    const citations = dedupeCitations(
+      actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
+    );
+
+    return NextResponse.json({
+      mode: 'triage',
+      urgency: parsed.urgency,
+      urgencyReason: parsed.urgencyReason,
+      summary: parsed.summary,
+      actions,
+      redFlags,
+      route: parsed.route,
+      patientMessage: parsed.patientMessage,
+      patientMessageCite,
+      citations,
+    });
+  }
+
   const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog });
 
   try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
-      // provider: only route to providers that do not retain prompt data, so the
-      // question and document extracts are never stored by the model provider.
-      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }], provider: NO_RETENTION }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      return NextResponse.json(
-        { error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) },
-        { status: 502 },
-      );
-    }
-
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content || '';
-    if (!text) {
-      return NextResponse.json({ error: 'No content returned by the model.' }, { status: 502 });
-    }
+    const { text, error } = await callModel(apiKey, model, prompt);
+    if (error) return error;
 
     const parsed = parseAiJson(text);
 
@@ -166,15 +222,7 @@ export async function POST(request) {
     const messageCite = resolveCite(refMap, parsed.messageSource, parsed.messageQuote);
 
     // The distinct sources this answer relied on (for any list/summary use).
-    const seen = new Set();
-    const citations = [];
-    for (const c of steps.map((s) => s.cite).concat([messageCite])) {
-      if (!c) continue;
-      const key = [c.docId, c.location].join('|');
-      if (seen.has(key)) continue;
-      seen.add(key);
-      citations.push(c);
-    }
+    const citations = dedupeCitations(steps.map((s) => s.cite).concat([messageCite]));
 
     return NextResponse.json({
       answerable: true,
