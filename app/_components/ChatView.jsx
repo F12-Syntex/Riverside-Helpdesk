@@ -19,15 +19,8 @@ export default function ChatView({ v }) {
             </div>
             <h1 className="riva-hero-h1" style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
             <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
-            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Never enter patient information. Ask about the process only.</p>
+            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Ask about a process, or paste a patient request to triage. Share only the patient detail you need — this gives routing help, not clinical advice.</p>
           </div>
-
-          <button onClick={v.onLoadTriageExample} style={s('display:block;width:100%;text-align:left;background:#e8f1f8;border:1px solid #cfe1f0;border-radius:12px;padding:16px 18px;cursor:pointer;font:inherit;')}>
-            <div style={s('display:flex;align-items:center;gap:10px;color:#003087;font-size:16px;font-weight:700;')}>
-              <Svg w={18} sw={2.2}>{Icons.fileLines}</Svg>Triage a patient request
-            </div>
-            <p style={s('margin:6px 0 0;font-size:15px;color:#4c6272;line-height:1.5;')}>Paste an Accurx-style request and get grounded action notes — urgency, what to do, who to route it to, and what to watch for. Tap to load an example.</p>
-          </button>
 
           <div>
             <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 12px;')}>Popular questions</div>

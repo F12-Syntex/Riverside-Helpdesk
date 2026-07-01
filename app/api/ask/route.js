@@ -9,7 +9,7 @@
 // is `answerable: false` and the UI shows a decline.
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
-import { buildAskPrompt, parseAiJson, buildSearchQuery, buildTriagePrompt, parseTriageJson } from '@/lib/ai/prompt';
+import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 
@@ -128,29 +128,23 @@ export async function POST(request) {
   let question = '';
   let history = '';
   let customGuides = [];
-  let mode = 'qa';
   try {
     const body = await request.json();
-    mode = body?.mode === 'triage' ? 'triage' : 'qa';
+    question = typeof body?.question === 'string' ? body.question : '';
     history = typeof body?.history === 'string' ? body.history : '';
     customGuides = Array.isArray(body?.customGuides) ? body.customGuides : [];
-    // In triage mode the reader pastes a patient request; treat it as the query.
-    question = mode === 'triage'
-      ? (typeof body?.submission === 'string' ? body.submission : '')
-      : (typeof body?.question === 'string' ? body.question : '');
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   if (!question.trim()) {
-    return NextResponse.json({ error: mode === 'triage' ? 'Empty request.' : 'Empty question.' }, { status: 400 });
+    return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
 
   // Resolve follow-ups for retrieval by concatenating the recent conversation
   // locally — no extra model call. "how is this done" then searches with the
-  // subject carried over from the previous question. The single answer-model
-  // call below still receives the full history to interpret the follow-up.
-  // Triage requests are self-contained, so history is not folded into the query.
-  const searchQuery = mode === 'triage' ? question : buildSearchQuery({ history, question });
+  // subject carried over from the previous question. The single model call below
+  // still receives the full history to interpret the follow-up.
+  const searchQuery = buildSearchQuery({ history, question });
 
   // Tier B — semantically retrieve the most relevant chunks (never fatal).
   let chunks = [];
@@ -165,35 +159,6 @@ export async function POST(request) {
   });
 
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
-
-  // Triage mode — return action notes for handling an incoming patient request.
-  if (mode === 'triage') {
-    const prompt = buildTriagePrompt({ submission: question, catalog: catalogText(), extracts, guideCatalog });
-    const { text, error } = await callModel(apiKey, model, prompt);
-    if (error) return error;
-
-    const parsed = parseTriageJson(text);
-    const actions = parsed.actions.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
-    const redFlags = parsed.redFlags.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
-    const patientMessageCite = resolveCite(refMap, parsed.patientMessageSource, parsed.patientMessageQuote);
-    const citations = dedupeCitations(
-      actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
-    );
-
-    return NextResponse.json({
-      mode: 'triage',
-      urgency: parsed.urgency,
-      urgencyReason: parsed.urgencyReason,
-      summary: parsed.summary,
-      actions,
-      redFlags,
-      route: parsed.route,
-      patientMessage: parsed.patientMessage,
-      patientMessageCite,
-      citations,
-    });
-  }
-
   const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog });
 
   try {
@@ -202,9 +167,34 @@ export async function POST(request) {
 
     const parsed = parseAiJson(text);
 
+    // The model decides for itself whether the message is a staff question or an
+    // incoming patient request to route, and returns the matching shape.
+    if (parsed.kind === 'triage') {
+      const actions = parsed.actions.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+      const redFlags = parsed.redFlags.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+      const patientMessageCite = resolveCite(refMap, parsed.patientMessageSource, parsed.patientMessageQuote);
+      const citations = dedupeCitations(
+        actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
+      );
+
+      return NextResponse.json({
+        kind: 'triage',
+        urgency: parsed.urgency,
+        urgencyReason: parsed.urgencyReason,
+        summary: parsed.summary,
+        actions,
+        redFlags,
+        route: parsed.route,
+        patientMessage: parsed.patientMessage,
+        patientMessageCite,
+        citations,
+      });
+    }
+
     // Strict grounding: if the model can't answer from the documents, decline.
     if (parsed.answerable === false || (!parsed.steps.length && !parsed.message)) {
       return NextResponse.json({
+        kind: 'answer',
         answerable: false,
         intro: parsed.intro || 'I could not find this in the practice’s documents.',
         steps: [],
@@ -225,6 +215,7 @@ export async function POST(request) {
     const citations = dedupeCitations(steps.map((s) => s.cite).concat([messageCite]));
 
     return NextResponse.json({
+      kind: 'answer',
       answerable: true,
       intro: parsed.intro,
       steps,
