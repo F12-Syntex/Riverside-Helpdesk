@@ -1,0 +1,146 @@
+# Useful telephone numbers
+
+Practice contact list.
+
+- Emis support: 08451222333
+- RLH- switchboard: 02073777000
+- Homerton hospital: 02085105555
+- Bowel screening: 02073777218
+- Talking Therapy: 020 7683 4278
+- District Nurse (Rachel): 07917595615
+- Community Matron (Sam): 07968693678
+- Community Matron (Alison Wade): 07977503699
+- Community Matron (Matha Duah): 07852339354
+- Community Matron (Kay): 07766922610
+- EPAU Homerton: 020 8510 7861
+- Colposcopy Appointment: 020 8510 7609
+- Semen testing Appointment: 020 510 7813
+- Natasha- 02082188168
+- RL GP Line: 0207 377 7461RL GP line for results: 02032460346
+- HUH GTT Booking line: 0208 510 7459
+- HUH Picton Suite: 0208 510 7929
+- St Leonards Switchboard: 0207 683 4040/4000
+- St Leonards – Physiotherapy tele: 02076834676
+- Central Booking Appt: 0207 683 0676ESP: 02076834676Physiotherapy: 02076834466
+- St Leonards Foot Health Department: 02076834046/4347
+- St Leonards pain & function clinic telephone: 02076834466/4325,
+- Medical Records: 0208 536 3000
+- Medical records email: sbs-i.medicalrecords@nhs.net
+- Inhealth Tel: 0844 581 0301
+- Krissy C&B Queries: 0208 510 5261
+- Colposcopy appts: 020 8510 7609
+- Incontinence pads 01924328502
+- Physio email- advocate needed: huh-tr.locomotor@nhs.net
+- District Nurse Direct Number: 02076834835/ 02076834144
+- Bernard- D/N- 07917595901
+- Adult community Nurse Nadia: 02076834835
+- Tissue Viability Nurse - 02085107993
+- Rosemary scott- 02076834698/ 07590047739
+- Kenworthy road number- 02076833601
+- Find a doc- 02076834645-4610
+- Huh urgent ref number- 02085105099 Radiology- 02085105057/7108
+- HUH- radiology secretaries- 02085107848/7375- bleep no- 341- acute radiologist
+- HUH advocate- 02085107179
+- Tavistock- 02076834900
+- IT helpdesk- 02036881234/08452410528- (hackney -02036881414)
+- Smartcard issues- 02036881414
+- UCLH- 020 3456 7890
+- Daniel- century court- 02084429884
+- Tavistock psychology- 02076834278- Louis Freidman centre st leonard’s
+- Mental health Telephone- 02032228500
+- Moorfields Eye A&E Telephone: 02075662356
+- Paed Physiotherapy: 02085107796
+- Urgent Paed: 02085107537/02085105108
+- AMBULANCE WITHIN THE HOUR: 020 7827 4555
+- Daniel- century court: 02084429884
+- Antenatal appointments: 02085105502
+- Advocacy: 02076834024
+- Social services: 02083566262
+- Chose: 03000330545
+- SAFEDALE 142: 02088067073
+- SAFEDALES 97: 0208 806 5140
+- Sharps Bin Patient to call: 03301224220 Lu – heart failure nurse: 07718192400
+- SHARPS SERVICE Telephone: 03301224220
+- Lucy Griffins- Learning Disabilities: Tel 020 7683 2616- Mobile 07818 862998
+- Endoscopy appointment: 02085105583
+- IVYS Centre Cytology Vials – Talia: 02076834103
+- Ivy Centre: 0207 683 4524/4525
+- John Scott Health Centre: 0207 683 4700
+- John Scott Dermatology Department: 0207 683 4726
+- UCLH: 02034567890
+- HUH GTT Booking line: 0208 510 7459
+- Barts GP Line: 0207 377 7461
+- Down’s Screening Forms: Sheema 0208 510 5761
+- Krissy C&B Queries: 0208 510 5261
+- Family Planning: Ivy Centre 0207 683 4103
+- Lower Clapton H/C: 0208 919 5000
+- MS nurse service, integrated Med: 02076832617
+- Radiology form request- joy: 02085107108
+- Emis Web: 03300241270
+- Advocate number: 02076834024
+- Booking an advocate at St Leonards, for locomotor services-email: locomotor@nhs.net, Radiology HOH: 02085107375/7848
+- Royal Free Hospital transport booking line: 03332404909
+- Royal National Orthopaedics Transport: 03333359645
+- St Leonards Physiotherapy Transport: 08452668667
+- ERS Medical Group for transfers: 03303800580
+- Transport’s Email – meh-tr.transport@nhs.net
+- DHL/St Anns Moorfield Transport: 03332404909
+- National Hosp Transport: 02034567010
+- UCLH transport: 02034479699
+- RLH Transport: 02077673344
+- HUH central bookings: 0208 510 5544HUH radiology results: 02085107731
+- HUH Starlight: 02085107451Guys hosp Switchboard: 020 7188 7188Respiratory secretary number: 0208 510 7769HUH outpatients: 0208 510 7425
+- Nightingale Practice: 0208 986 6004
+- HHUH Cardiology: 0208 510 5774
+- HUH Dermatology Secretary: 02085107690
+- Ordering gloves on pres – Med UK ltd: 01432373500
+- Anita House: 02072751001
+- HUH ENT: 02085107537
+- St Bart, Family History Breast Clinic: 02034656625
+- Social Worker Hackney: 02083566262
+- Ena Enchill - 02083563276 social services
+- Whipps Cross – 02034165000
+- HUH fertility nurses test results- 02085107236
+- Hackney Pharmacy: 02088066215
+- Blood clinic at HUH : 02085107555
+- Radiology at HUH : 02085105091
+- Docman Number 08449670967
+- HUH Blood Results Telephone: 02085107898
+- Helen ERS: 02038163263
+- HV Specsavers: 08001981134
+- PCE: 03330142884Breast Screening Number: 02037582024
+- Egton: 01133803000
+- BPAS For TOP ref: 03457304030Apollo Support: 01915166694
+- ACN team for our practice: 02076834835
+- MH 224-hr Crisis Line number: 020 8432 8020.
+- HOME Visit service for Audiology and Eye test – 0800605040 - hearing@outsideclinc.nhs.netTHE OUTSIDE CLINIC HQ Triage only
+- Age Related Hearing Loss (AQP) - OutsideClinic - National Home Visiting Audiology - NFC01
+- Contact details
+- OLD TOWN COURT, 10-14 HIGH STREET, SWINDON, WILTSHIRE, SN1 3EP
+- Professional phone: 0800 954 9093
+- Patient phone: 0800 954 9093
+- Email: hearing.outsideclinic@nhs.net
+- London wheel chair rental: 08000258005Wheel Freedom: 08000258005
+- Glennys Sam Collie): 0203 1413543
+- Language Line: 0203 3731700 (access code- 77390273)
+- Alex IT Tech Mobile Number: 07886552488Smart Card: 02036881414
+- Homerton fertility clinic: 02085107813
+- New mammogram number: 0203 7582024
+- Mammogram with sxms at Barts: 020304656610Breast clinic sec at HUH: 02085107930
+- AIRS at Royal London Hosp: 03456029906
+- TOP at HUH: 02085107445
+- Incontinence nurse Fiona: 07852339376
+- HUH Gynae Assistant: 02085107408/7505General Surgery HUH: huh-tr.hhbs@nhs.net
+- Open Exeter Delp Desk: pcse.openexeter@nhs.net
+- To cancel Parking Ticket : cancellation@cupenforcement.com ( inc date,reg no and etc)
+- AIRS Royal London Referral Email: bhnt.airs@nhs.net
+- Cervical Smear Courier Service Email: martin.davies@tdl.pathology.com
+- Radiology Secretary Email: huh-tr.Radsecretaries@nhs.net
+- To cancel Hub Appointments: cahccg.extendedaccess-general@nhs.net
+- pcse.nbocontact@nhs.net
+- pcse.registrations-preston@nhs.net
+- Retinal screening email: ahmed.patel1@nhs.net
+- Surgical Appliance HUH - huh-tr.surgical.appliances@nhs.net or 02085107958/02085105593Acute Gynae HUH – huh-tr.acutegynae@nhs.net
+- Physiotherapy HUH – huh-tr.physiotherapy@nhs.net
+- Care of the elderly HUH – 02085105048/02085108941
+- http://www.comecorrect.org.uk/Condoms.aspx - Contraception incl condoms
