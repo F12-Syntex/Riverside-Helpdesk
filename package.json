@@ -14,7 +14,8 @@
     "rag:prune": "node rag/prune.mjs",
     "rag:sync": "node rag/ingest.mjs && node rag/prune.mjs",
     "rag:migrate-legacy": "node rag/migrate-legacy.mjs",
-    "db:reset-rota": "node scripts/reset-and-seed-rota.mjs"
+    "db:reset-rota": "node scripts/reset-and-seed-rota.mjs",
+    "onenote:auth": "node scripts/onenote-auth.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.0",

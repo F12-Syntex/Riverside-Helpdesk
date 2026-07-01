@@ -1,0 +1,34 @@
+# Example note — rename to `pharmacy-first.md` to activate
+
+This is a template showing the kind of standing triage instruction you can add.
+Files ending in `.example` are ignored; rename to a `.md` file to switch it on
+(or, better, keep this content in a OneNote page so you can edit it without a
+redeploy).
+
+## Pharmacy First — signpost before booking a GP
+
+For patients aged 1 year and over presenting with one of these, offer Pharmacy
+First (community pharmacy) before booking a GP appointment, unless a red flag is
+present:
+
+- Sore throat
+- Sinusitis
+- Earache (acute otitis media, ages 1–17)
+- Infected insect bite
+- Impetigo
+- Shingles
+- Uncomplicated urinary tract infection (women 16–64)
+
+Suggested wording: "This is something our community pharmacist can assess and
+treat today under the NHS Pharmacy First scheme — would you like me to signpost
+you there? If it doesn't settle, come back to us."
+
+## Escalate instead of signposting if
+
+- Difficulty breathing or swallowing, drooling, or a muffled "hot potato" voice
+- One-sided severe throat swelling, or unable to swallow fluids
+- High fever with a rash that does not fade under pressure
+- Symptoms lasting longer than the pharmacy pathway allows, or already treated
+  without improvement
+
+When in doubt, add to the duty doctor list rather than signposting.

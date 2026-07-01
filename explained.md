@@ -78,3 +78,28 @@ The only differences are the instructions given to the LLM:
 
 As more triage and signposting documents are added to the knowledge base, the
 notes get richer automatically — there is nothing to retrain.
+
+## Supplementary context — your own notes, applied live
+
+The knowledge base (`rag/sources/`) is embedded ahead of time, so changing it
+means re-ingesting and redeploying. For guidance you tweak often — "sore throat →
+Pharmacy First", who covers duty this week, local signposting — there's a second
+channel that is read **at request time** instead: **supplementary context**.
+
+It can come from three places (all optional):
+
+- **OneNote** — pages from your notebook, fetched through the Microsoft Graph API
+  using a one-time refresh token. Edit a page in OneNote and the next request
+  (after a short cache, default 5 minutes) uses it. No redeploy.
+- **URLs** — any direct text/markdown links you configure.
+- **`rag/context/`** — committed baseline notes (these do need a redeploy).
+
+Whatever is gathered is split into chunks; **short notes are treated as standing
+instructions and always applied**, while **longer notes are matched to the
+request** so a big notebook stays affordable. The selected chunks are added as
+extra numbered **Sources**, so they go through the *exact same* quote check as
+everything else: the model has to quote your note, and the server verifies it.
+Your instructions influence the answer, but they can't be silently invented —
+each one shows up as a citation ("Practice note: …") you can open and read.
+
+Setup lives in `rag/context/README.md` and `scripts/onenote-auth.mjs`.

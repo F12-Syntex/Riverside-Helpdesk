@@ -12,6 +12,7 @@ import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
+import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -157,6 +158,21 @@ export async function POST(request) {
     refMap.set(ref, c);
     return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
   });
+
+  // Supplementary context — practice notes / triage instructions fetched at
+  // request time (OneNote, configured URLs, or the local rag/context folder), so
+  // they can be updated without a redeploy. Appended as extra numbered Sources
+  // after the knowledge-base chunks, so the model must quote them and the server
+  // verifies the quote exactly as for any document. Never fatal.
+  try {
+    const supp = await supplementarySourcesFor(searchQuery);
+    for (const s of supp) {
+      const ref = extracts.length + 1;
+      const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null };
+      refMap.set(ref, chunk);
+      extracts.push({ ref, title: chunk.docTitle, location: s.section || 'Note', text: chunk.text });
+    }
+  } catch (e) { /* supplementary context is optional */ }
 
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
   const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog });
