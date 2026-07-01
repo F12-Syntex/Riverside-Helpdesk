@@ -2,6 +2,7 @@
 
 import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
+import ContactsCard from './ContactsCard';
 
 export default function AiAnswer({ v }) {
   return (
@@ -33,13 +34,17 @@ export default function AiAnswer({ v }) {
         )}
 
         {v.aiDeclined && (
-          <div style={s('padding:18px 22px;display:flex;gap:13px;align-items:flex-start;')}>
-            <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
-            <div style={s('flex:1;min-width:0;')}>
-              <p style={s('margin:0;font-size:17px;line-height:1.5;color:#212b32;')}>{v.intro}</p>
-              <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
+          <>
+            <div style={s('padding:18px 22px;display:flex;gap:13px;align-items:flex-start;')}>
+              <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
+              <div style={s('flex:1;min-width:0;')}>
+                <p style={s('margin:0;font-size:17px;line-height:1.5;color:#212b32;')}>{v.intro}</p>
+                <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
+              </div>
             </div>
-          </div>
+            <ContactsCard v={v} />
+            {v.hasContacts && <div style={s('height:12px;')} />}
+          </>
         )}
 
         {v.aiDone && (
@@ -69,6 +74,8 @@ export default function AiAnswer({ v }) {
               </div>
             )}
             {v.hasTip && <div style={s('margin:0 22px 16px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {v.tip}</div>}
+            <ContactsCard v={v} />
+            {v.hasContacts && <div style={s('height:12px;')} />}
             <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
               <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Each step is backed by a practice document</span>
               <div style={s('margin-left:auto;display:flex;gap:10px;')}>

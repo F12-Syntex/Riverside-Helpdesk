@@ -2,6 +2,7 @@
 
 import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
+import ContactsCard from './ContactsCard';
 
 // How each urgency band is shown. Colours follow the NHS palette already used
 // across the app (emergency red, urgent amber, routine/self-care blues/greens).
@@ -109,6 +110,7 @@ export default function TriageAnswer({ v }) {
               </div>
             )}
 
+            <ContactsCard v={v} />
             <div style={s('border-top:1px solid #d8dde0;margin-top:16px;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
               <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Routing only &mdash; a clinician makes the clinical decision</span>
               <div style={s('margin-left:auto;display:flex;gap:10px;')}>

@@ -13,6 +13,7 @@ import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
+import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -174,8 +175,22 @@ export async function POST(request) {
     }
   } catch (e) { /* supplementary context is optional */ }
 
+  // Deterministic contacts directory match — exact numbers/emails shown to the
+  // reader verbatim (never authored by the model). Also build the set of numbers
+  // we can vouch for (directory + anything present in the retrieved Sources), so
+  // any other phone number the model writes can be stripped as unverified.
+  const contacts = matchContacts(searchQuery);
+  const verifiedNums = new Set(contactTelSet());
+  for (const ex of extracts) {
+    for (const run of (ex.text.match(/\d[\d ()\/-]{7,}\d/g) || [])) {
+      const d = digitsOf(run);
+      if (d.length >= 9) verifiedNums.add(d);
+    }
+  }
+  const redact = (t) => redactUnverifiedNumbers(t, verifiedNums);
+
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
-  const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog });
+  const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog, contacts: contacts.map((c) => c.label) });
 
   try {
     const { text, error } = await callModel(apiKey, model, prompt);
@@ -186,8 +201,8 @@ export async function POST(request) {
     // The model decides for itself whether the message is a staff question or an
     // incoming patient request to route, and returns the matching shape.
     if (parsed.kind === 'triage') {
-      const actions = parsed.actions.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
-      const redFlags = parsed.redFlags.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+      const actions = parsed.actions.map((s) => ({ text: redact(s.text), cite: resolveCite(refMap, s.source, s.quote) }));
+      const redFlags = parsed.redFlags.map((s) => ({ text: redact(s.text), cite: resolveCite(refMap, s.source, s.quote) }));
       const patientMessageCite = resolveCite(refMap, parsed.patientMessageSource, parsed.patientMessageQuote);
       const citations = dedupeCitations(
         actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
@@ -196,14 +211,15 @@ export async function POST(request) {
       return NextResponse.json({
         kind: 'triage',
         urgency: parsed.urgency,
-        urgencyReason: parsed.urgencyReason,
-        summary: parsed.summary,
+        urgencyReason: redact(parsed.urgencyReason),
+        summary: redact(parsed.summary),
         actions,
         redFlags,
-        route: parsed.route,
-        patientMessage: parsed.patientMessage,
+        route: redact(parsed.route),
+        patientMessage: redact(parsed.patientMessage),
         patientMessageCite,
         citations,
+        contacts,
       });
     }
 
@@ -218,13 +234,14 @@ export async function POST(request) {
         messageCite: null,
         tip: '',
         citations: [],
+        contacts,
       });
     }
 
     // Resolve each citation by verifying the model's verbatim quote against the
     // retrieved Sources — correcting wrong source numbers and attaching the exact
     // supporting words, so the citation shows accurate, precise text.
-    const steps = parsed.steps.map((s) => ({ text: s.text, cite: resolveCite(refMap, s.source, s.quote) }));
+    const steps = parsed.steps.map((s) => ({ text: redact(s.text), cite: resolveCite(refMap, s.source, s.quote) }));
     const messageCite = resolveCite(refMap, parsed.messageSource, parsed.messageQuote);
 
     // The distinct sources this answer relied on (for any list/summary use).
@@ -233,12 +250,13 @@ export async function POST(request) {
     return NextResponse.json({
       kind: 'answer',
       answerable: true,
-      intro: parsed.intro,
+      intro: redact(parsed.intro),
       steps,
-      message: parsed.message,
+      message: redact(parsed.message),
       messageCite,
-      tip: parsed.tip,
+      tip: redact(parsed.tip),
       citations,
+      contacts,
     });
   } catch (e) {
     return NextResponse.json(

@@ -111,7 +111,7 @@ class RiversidePracticeQA extends React.Component {
     const userMsg = { role: 'user', text: t };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question: t, status: 'loading', intro: '', steps: null, tip: '', message: '', messageCite: null, citations: [] };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question: t, status: 'loading', intro: '', steps: null, tip: '', message: '', messageCite: null, citations: [], contacts: [] };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     this.setState({ messages, input: '' }, () => { this.save(); this.fetchAI(t, aiIdx); });
@@ -137,14 +137,15 @@ class RiversidePracticeQA extends React.Component {
           patientMessage: data.patientMessage,
           patientMessageCite: data.patientMessageCite,
           citations: data.citations,
+          contacts: data.contacts || [],
         });
         return;
       }
       if (!data.answerable || (!data.steps.length && !data.message)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'I could not find this in the practice’s documents.', steps: [], message: '', messageCite: null, tip: '', citations: [] });
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'I could not find this in the practice’s documents.', steps: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', intro: data.intro, steps: data.steps, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', intro: data.intro, steps: data.steps, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
     }
@@ -155,6 +156,17 @@ class RiversidePracticeQA extends React.Component {
     if (!m || m.kind !== 'ai') return;
     this.updateAi(idx, { status: 'loading' });
     this.fetchAI(m.question, idx);
+  }
+
+  // Format the exact contacts (numbers/emails from the directory) for copying.
+  contactLines(m) {
+    if (!m.contacts || !m.contacts.length) return [];
+    const lines = ['', 'Contacts (from Useful telephone numbers):'];
+    for (const c of m.contacts) {
+      const vals = (c.phones || []).map((p) => p.display).concat(c.emails || []);
+      lines.push('- ' + c.label + ': ' + vals.join(', '));
+    }
+    return lines;
   }
 
   copyTriage(m, idx) {
@@ -174,6 +186,7 @@ class RiversidePracticeQA extends React.Component {
       m.redFlags.forEach((r) => lines.push('- ' + (r && r.text ? r.text : r)));
     }
     if (m.patientMessage) lines.push('', 'Draft reply to patient:', m.patientMessage);
+    lines.push(...this.contactLines(m));
     lines.push('', 'Routing suggestion from the practice’s documents — not clinical advice.');
     try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
     this.flagCopied(idx);
@@ -204,6 +217,7 @@ class RiversidePracticeQA extends React.Component {
       lines.push((i + 1) + '. ' + txt + src);
     });
     if (m.tip) lines.push('', 'Tip: ' + m.tip);
+    lines.push(...this.contactLines(m));
     lines.push('', 'Answered from the practice’s documents.');
     try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
     this.flagCopied(idx);
@@ -415,6 +429,8 @@ class RiversidePracticeQA extends React.Component {
             onRetry: () => self.retryAi(idx),
             onCopy: () => self.copyTriage(m, idx),
             copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy notes',
+            contacts: m.contacts || [],
+            hasContacts: !!(m.contacts && m.contacts.length),
           };
         }
         return {
@@ -448,6 +464,8 @@ class RiversidePracticeQA extends React.Component {
           onCopy: () => self.copyAi(m, idx),
           copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy steps',
           onSave: () => self.prefillFromAi(m),
+          contacts: m.contacts || [],
+          hasContacts: !!(m.contacts && m.contacts.length),
         };
       }
       if (m.kind === 'answer') {
