@@ -14,6 +14,15 @@ clickable sources they can open in-browser.
 - Answers are grounded **strictly** in the documents: every answer cites the
   source(s) it used, and if the answer isn't in the knowledge base it says so
   rather than guessing.
+- The assistant has two modes, chosen with the toggle above the message box:
+  - **Ask a question** — the how-to Q&A described above.
+  - **Triage a request** — paste an incoming patient request (for example an
+    Accurx online consultation) and get grounded *action notes*: an urgency
+    band, the actions to take, who to route it to, safety-net red flags and an
+    optional draft reply. It is **care navigation / routing only** — it applies
+    the practice's own triage, duty-doctor and signposting protocols and never
+    diagnoses or gives clinical advice. Same request path (`POST /api/ask` with
+    `mode: "triage"`), same source-checked citations.
 
 ## Layout
 

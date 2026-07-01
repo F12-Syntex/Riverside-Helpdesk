@@ -49,3 +49,27 @@ lives entirely in the search step, which is exact and auditable. So:
 **In one line:** a deterministic search finds the exact document passage, and
 the LLM is only allowed to rephrase it — with every sentence checked back
 against a word-for-word quote. No training, no guessing, fully traceable.
+
+## Triage mode — same engine, different job
+
+The bot also has a **triage** mode. Instead of a staff how-to question, you
+paste an incoming patient request (for example an Accurx online consultation)
+and it hands back **action notes**: an urgency band (emergency / urgent /
+routine / self-care / unclear), the actions to take, who to route the request
+to, safety-net red flags, and an optional draft reply to the patient.
+
+It uses the **exact same two steps** as above — search the practice's documents,
+then let the LLM word the answer — and the **same verification**: every action
+and every red flag must quote the document that backs it, checked on the server.
+The only differences are the instructions given to the LLM:
+
+- It is doing **care navigation / routing**, not clinical assessment. It applies
+  the practice's own triage, duty-doctor and signposting rules; it never
+  diagnoses or gives medical advice.
+- If the documents don't settle how to route a request, it doesn't guess — it
+  marks the urgency **unclear** and says to escalate to the duty doctor.
+- A possible emergency (chest pain, breathing difficulty, stroke signs, etc.)
+  is flagged **emergency** with call-999 / alert-a-clinician as the first action.
+
+As more triage and signposting documents are added to the knowledge base, the
+notes get richer automatically — there is nothing to retrain.
