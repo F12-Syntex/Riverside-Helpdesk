@@ -50,13 +50,18 @@ lives entirely in the search step, which is exact and auditable. So:
 the LLM is only allowed to rephrase it — with every sentence checked back
 against a word-for-word quote. No training, no guessing, fully traceable.
 
-## Triage mode — same engine, different job
+## Triage — same engine, different job (and the bot picks which)
 
-The bot also has a **triage** mode. Instead of a staff how-to question, you
-paste an incoming patient request (for example an Accurx online consultation)
-and it hands back **action notes**: an urgency band (emergency / urgent /
-routine / self-care / unclear), the actions to take, who to route the request
-to, safety-net red flags, and an optional draft reply to the patient.
+There's no mode switch. The bot reads each message and decides for itself
+whether it's a staff **how-to question** or an **incoming patient request** to
+route (for example an Accurx online consultation — usually first-person, often
+with prompts like "Describe the problem", "How long", "Have you tried
+anything"). It returns a `kind` of `"answer"` or `"triage"` and the UI shows the
+matching card.
+
+For a patient request it hands back **action notes**: an urgency band (emergency
+/ urgent / routine / self-care / unclear), the actions to take, who to route the
+request to, safety-net red flags, and an optional draft reply to the patient.
 
 It uses the **exact same two steps** as above — search the practice's documents,
 then let the LLM word the answer — and the **same verification**: every action
