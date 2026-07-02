@@ -37,10 +37,15 @@ clickable sources they can open in-browser.
 - **`rag/`** — the document knowledge base: ingest pipeline, parsers (including
   vision image reading and PDF page rendering), and the runtime retrieval store.
   See `rag/README.md`.
-- **`lib/ai/context.mjs`** + **`rag/context/`** — supplementary context: practice
-  notes / triage instructions read **at request time** from OneNote, configured
-  URLs, or the local folder, and injected as citable sources. Editable without a
-  redeploy. See `rag/context/README.md`.
+- **`app/notebook/`** + **`app/api/notebook/`** + **`lib/notebook.js`** — the
+  in-app Notebook: practice notes/instructions (with sub-notes) stored in
+  Postgres, edited at `/notebook`, and fed to the assistant automatically at
+  request time as citable sources (no rebuild).
+- **`lib/ai/context.mjs`** + **`rag/context/`** — optional extra supplementary
+  context (direct URLs, or committed files in `rag/context/`), injected the same
+  way. See `rag/context/README.md`.
+- **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
+  telephone directory (exact numbers shown verbatim, never authored by the AI).
 - **`public/assets/`** — logos, EMIS screenshots, and served document copies.
 
 ## Configuration
@@ -52,8 +57,8 @@ Set these in `.env.local` (see `.env.local.example`):
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
 | `OPENROUTER_AI_MODEL` | Chat/vision model slug, e.g. `anthropic/claude-sonnet-4.6`. Must be vision-capable. |
 | `OPENROUTER_EMBED_MODEL` | Embedding model (default `openai/text-embedding-3-small`). |
-| `ONENOTE_CLIENT_ID`, `ONENOTE_REFRESH_TOKEN` | Optional. Link a OneNote notebook as live supplementary context. Get a token with `npm run onenote:auth`. See `rag/context/README.md`. |
-| `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as supplementary context. |
+| `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
+| `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
 
 ## Run
 

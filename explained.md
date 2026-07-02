@@ -86,12 +86,12 @@ means re-ingesting and redeploying. For guidance you tweak often — "sore throa
 Pharmacy First", who covers duty this week, local signposting — there's a second
 channel that is read **at request time** instead: **supplementary context**.
 
-It can come from three places (all optional):
+It can come from three places:
 
-- **OneNote** — pages from your notebook, fetched through the Microsoft Graph API
-  using a one-time refresh token. Edit a page in OneNote and the next request
-  (after a short cache, default 5 minutes) uses it. No redeploy.
-- **URLs** — any direct text/markdown links you configure.
+- **The Notebook** (main) — the in-app `/notebook` page. Write a note (or a
+  sub-note like "How to book appointments"); it's stored in Postgres and used on
+  the very next request. No keys, no redeploy.
+- **URLs** — any direct text/markdown links you configure (optional).
 - **`rag/context/`** — committed baseline notes (these do need a redeploy).
 
 Whatever is gathered is split into chunks; **short notes are treated as standing
@@ -102,4 +102,4 @@ everything else: the model has to quote your note, and the server verifies it.
 Your instructions influence the answer, but they can't be silently invented —
 each one shows up as a citation ("Practice note: …") you can open and read.
 
-Setup lives in `rag/context/README.md` and `scripts/onenote-auth.mjs`.
+Write notes at `/notebook`; more detail is in `rag/context/README.md`.
