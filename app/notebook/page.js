@@ -43,6 +43,18 @@ function fmtSize(n) {
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// The app's standard popup: centered dialog on desktop, bottom sheet on mobile
+// (.riva-modal-overlay / .riva-sheet in globals.css — same as the rota's).
+function Sheet({ maxWidth = 420, onClose, children }) {
+  return (
+    <div className="riva-modal-overlay" onClick={onClose}>
+      <div className="riva-sheet" style={{ maxWidth: maxWidth + 'px' }} onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function NotebookPage() {
   const [notes, setNotes] = React.useState([]);
   const [attachments, setAttachments] = React.useState([]);
@@ -54,6 +66,8 @@ export default function NotebookPage() {
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState('');
   const [dragging, setDragging] = React.useState(false);
+  const [confirmBox, setConfirmBox] = React.useState(null); // { title, message, confirmLabel, onConfirm }
+  const [renameBox, setRenameBox] = React.useState(null);   // { id, value } — section rename dialog
   const dragDepth = React.useRef(0);
   const timer = React.useRef(null);
   const pending = React.useRef(null);
@@ -167,28 +181,52 @@ export default function NotebookPage() {
       setNotes((ns) => ns.concat([note]));
       if (parentId) setExpanded((e) => ({ ...e, [parentId]: true }));
       setSelectedId(note.id);
+      // A section is only a name — go straight to naming it.
+      if (!parentId) setRenameBox({ id: note.id, value: note.title || '' });
     } catch (e) { /* ignore */ }
   }
 
-  async function removeNote(id) {
+  // Delete goes through the app's standard confirm dialog (no window.confirm).
+  function askRemoveNote(id) {
     const n = byId.get(id);
     const gone = descendantIds(id);
     const kids = gone.size - 1;
-    const msg = 'Delete "' + (n ? n.title : 'this note') + '"' + (kids ? ' and its ' + kids + ' sub-note(s)' : '') + '? Attached files are deleted too. This cannot be undone.';
-    if (!window.confirm(msg)) return;
+    const isSection = n && !n.parentId;
+    setConfirmBox({
+      title: isSection ? 'Delete section' : 'Delete page',
+      message: 'Delete “' + ((n && n.title) || 'Untitled') + '”'
+        + (kids ? ' and the ' + kids + ' page' + (kids === 1 ? '' : 's') + ' inside it' : '')
+        + '? Attached files are deleted too. This cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setConfirmBox(null);
+        try {
+          await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
+          setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
+          setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
+          if (gone.has(selectedId)) {
+            // Prefer staying near the deleted note: its parent, else the first section.
+            const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
+            if (parent) setSelectedId(parent);
+            else {
+              const remaining = notes.filter((x) => !gone.has(x.id) && !x.parentId);
+              setSelectedId(remaining.length ? remaining[0].id : null);
+            }
+          }
+        } catch (e) { /* ignore */ }
+      },
+    });
+  }
+
+  // Section rename dialog — saves straight away (sections have no autosave body).
+  async function saveRename() {
+    if (!renameBox) return;
+    const { id, value } = renameBox;
+    const title = value.trim() || 'Untitled section';
+    setRenameBox(null);
+    setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, title } : n)));
     try {
-      await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
-      setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
-      setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
-      if (gone.has(selectedId)) {
-        // Prefer staying near the deleted note: its parent, else the first section.
-        const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
-        if (parent) setSelectedId(parent);
-        else {
-          const remaining = notes.filter((x) => !gone.has(x.id) && !x.parentId);
-          setSelectedId(remaining.length ? remaining[0].id : null);
-        }
-      }
+      await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, title }) });
     } catch (e) { /* ignore */ }
   }
 
@@ -215,16 +253,24 @@ export default function NotebookPage() {
     if (fileInput.current) fileInput.current.value = '';
   }
 
-  async function removeAttachment(a) {
-    if (!window.confirm('Remove "' + a.filename + '"?')) return;
-    try {
-      await fetch('/api/notebook/attachments?id=' + a.id, { method: 'DELETE' });
-      setAttachments((as) => as.filter((x) => x.id !== a.id));
-    } catch (e) { /* ignore */ }
+  function askRemoveAttachment(a) {
+    setConfirmBox({
+      title: 'Remove file',
+      message: 'Remove “' + a.filename + '”? This cannot be undone.',
+      confirmLabel: 'Remove',
+      onConfirm: async () => {
+        setConfirmBox(null);
+        try {
+          await fetch('/api/notebook/attachments?id=' + a.id, { method: 'DELETE' });
+          setAttachments((as) => as.filter((x) => x.id !== a.id));
+        } catch (e) { /* ignore */ }
+      },
+    });
   }
 
-  // Drag-and-drop anywhere on the editor uploads to the open note.
-  const dropHandlers = selected ? {
+  // Drag-and-drop anywhere on the editor uploads to the open note. Pages only —
+  // sections are name-only and hold no files.
+  const dropHandlers = selected && selected.parentId ? {
     onDragEnter: (e) => { e.preventDefault(); if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { dragDepth.current++; setDragging(true); } },
     onDragOver: (e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; },
     onDragLeave: () => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); },
@@ -260,13 +306,19 @@ export default function NotebookPage() {
             {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
           </button>
           <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
+            {depth === 0 && (
+              <Hover tag="button" onClick={() => setRenameBox({ id: n.id, value: n.title || '' })} aria-label="Rename section" title="Rename section"
+                base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+                <Svg w={15} sw={2.2}>{Icons.edit}</Svg>
+              </Hover>
+            )}
             {depth < MAX_DEPTH - 1 && (
-              <Hover tag="button" onClick={() => newNote(n.id)} aria-label="Add sub-note" title="Add sub-note"
+              <Hover tag="button" onClick={() => newNote(n.id)} aria-label={depth === 0 ? 'Add page' : 'Add sub-page'} title={depth === 0 ? 'Add page' : 'Add sub-page'}
                 base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
                 <Svg w={16} sw={2.2}>{Icons.plus}</Svg>
               </Hover>
             )}
-            <Hover tag="button" onClick={() => removeNote(n.id)} aria-label="Delete" title="Delete"
+            <Hover tag="button" onClick={() => askRemoveNote(n.id)} aria-label="Delete" title="Delete"
               base={actBtn} hover={'background:#fbe9e7;color:' + C.red + ';'}>
               <Svg w={16} sw={2.2}>{Icons.trash}</Svg>
             </Hover>
@@ -340,26 +392,81 @@ export default function NotebookPage() {
             </div>
           </div>
         )}
-        {selected && (
+        {/* Section view — a section is a name that groups pages; nothing is
+            written on it. Rename and delete go through the standard dialogs. */}
+        {selected && !selected.parentId && (
+          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
+            <div style={s('flex:none;display:flex;align-items:center;gap:10px;')}>
+              <Svg w={22} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{Icons.book}</Svg>
+              <h1 style={s('flex:1;min-width:0;margin:0;font-size:25px;font-weight:700;letter-spacing:-0.01em;color:' + C.ink + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+                {selected.title || 'Untitled section'}
+              </h1>
+              <Hover tag="button" onClick={() => setRenameBox({ id: selected.id, value: selected.title || '' })} aria-label="Rename section" title="Rename section"
+                base={'flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;color:' + C.mut + ';'}
+                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+                <Svg w={15} sw={2.2}>{Icons.edit}</Svg>Rename
+              </Hover>
+              <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label="Delete section" title="Delete section"
+                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
+                hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
+                <Svg w={16} sw={2}>{Icons.trash}</Svg>
+              </Hover>
+            </div>
+
+            <div style={s('flex:1;min-height:0;overflow-y:auto;margin-top:10px;')}>
+              <div style={s('border:1px solid ' + C.line + ';border-radius:12px;background:#fff;padding:18px 20px;')}>
+                <p style={s('margin:0 0 14px;font-size:14.5px;line-height:1.55;color:' + C.mut + ';')}>
+                  A section is just a name that groups pages — writing happens on its pages.
+                </p>
+                {childrenOf(selected.id).length === 0 && (
+                  <p style={s('margin:0 0 14px;font-size:14.5px;color:' + C.dim + ';')}>No pages yet.</p>
+                )}
+                {childrenOf(selected.id).map((k) => {
+                  const firstLine = (k.body || '').split('\n').map((l) => l.trim()).find(Boolean) || '';
+                  return (
+                    <Hover key={k.id} tag="button" onClick={() => selectNote(k.id)}
+                      base={'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid ' + C.soft + ';background:' + C.bg + ';border-radius:10px;padding:11px 14px;margin:0 0 8px;font:inherit;cursor:pointer;'}
+                      hover={'border-color:' + C.blue + ';background:' + C.sel + ';'}>
+                      <Svg w={16} sw={2} style={s('flex:none;color:' + C.mut + ';')}>{Icons.fileLines}</Svg>
+                      <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;')}>
+                        <span style={s('font-size:14.5px;font-weight:600;color:' + C.ink + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{k.title || 'Untitled'}</span>
+                        {firstLine && <span style={s('font-size:13px;color:' + C.dim + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{firstLine.slice(0, 120)}</span>}
+                      </span>
+                      <Svg w={14} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.chevronRight}</Svg>
+                    </Hover>
+                  );
+                })}
+                <Hover tag="button" onClick={() => newNote(selected.id)}
+                  base={'display:inline-flex;align-items:center;gap:7px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;'}
+                  hover={'background:' + C.navy + ';'}>
+                  <Svg w={14} sw={2.4}>{Icons.plus}</Svg>Add page
+                </Hover>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Page editor — pages carry the writing and the files. */}
+        {selected && !!selected.parentId && (
           <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
             {/* Title row */}
             <div style={s('flex:none;display:flex;align-items:center;gap:10px;')}>
               <input
                 value={selected.title || ''}
                 onChange={(e) => editSelected({ title: e.target.value })}
-                placeholder="Note title"
+                placeholder="Page title"
                 style={s('flex:1;min-width:0;font:inherit;font-size:25px;font-weight:700;letter-spacing:-0.01em;border:none;outline:none;background:none;color:' + C.ink + ';')}
               />
               <span style={s('flex:none;font-size:13px;min-width:64px;text-align:right;color:' + (saveState === 'unsaved' ? C.red : C.dim) + ';')}>
                 {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
               </span>
               <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
-              <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the note)"
+              <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the page)"
                 base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
                 hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
                 <Svg w={16} sw={2}>{Icons.paperclip}</Svg>
               </Hover>
-              <Hover tag="button" onClick={() => removeNote(selected.id)} aria-label="Delete note" title="Delete note"
+              <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label="Delete page" title="Delete page"
                 base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
                 hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
                 <Svg w={16} sw={2}>{Icons.trash}</Svg>
@@ -384,7 +491,7 @@ export default function NotebookPage() {
                       style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600;color:' + C.ink + ';text-decoration:none;')}>
                       {a.filename}
                     </a>
-                    <Hover tag="button" onClick={() => removeAttachment(a)} aria-label={'Remove ' + a.filename} title="Remove"
+                    <Hover tag="button" onClick={() => askRemoveAttachment(a)} aria-label={'Remove ' + a.filename} title="Remove"
                       base={'flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:none;background:' + C.soft + ';border-radius:99px;cursor:pointer;color:' + C.mut + ';'}
                       hover={'background:#fbe9e7;color:' + C.red + ';'}>
                       <Svg w={12} sw={2.6}>{Icons.close}</Svg>
@@ -399,7 +506,7 @@ export default function NotebookPage() {
         )}
 
         {/* Drop overlay */}
-        {dragging && selected && (
+        {dragging && selected && !!selected.parentId && (
           <div style={s('position:absolute;inset:10px;border:2.5px dashed ' + C.blue + ';border-radius:14px;background:rgba(232,241,248,.85);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
             <div style={s('display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;color:' + C.navy + ';')}>
               <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
@@ -409,6 +516,49 @@ export default function NotebookPage() {
         )}
       </main>
       </div>
+
+      {/* Standard confirm dialog (same pattern as the rota's). */}
+      {confirmBox && (
+        <Sheet maxWidth={420} onClose={() => setConfirmBox(null)}>
+          <div style={s('padding:24px 24px 8px;')}>
+            <h2 style={s('font-size:21px;font-weight:700;margin:0 0 8px;')}>{confirmBox.title}</h2>
+            <p style={s('font-size:16px;line-height:1.5;margin:0;color:' + C.mut + ';')}>{confirmBox.message}</p>
+          </div>
+          <div style={s('display:flex;gap:10px;padding:16px 24px 22px;')}>
+            <Hover tag="button" onClick={confirmBox.onConfirm}
+              base={'font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:' + C.red + ';border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #7a160d;'}
+              active="transform:translateY(4px);box-shadow:none;">{confirmBox.confirmLabel}</Hover>
+            <Hover tag="button" onClick={() => setConfirmBox(null)}
+              base={'font-family:inherit;font-size:16px;font-weight:600;color:' + C.mut + ';background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;'}
+              hover={'color:' + C.ink + ';'}>Cancel</Hover>
+          </div>
+        </Sheet>
+      )}
+
+      {/* Rename-section dialog. */}
+      {renameBox && (
+        <Sheet maxWidth={420} onClose={() => setRenameBox(null)}>
+          <div style={s('padding:24px 24px 8px;')}>
+            <h2 style={s('font-size:21px;font-weight:700;margin:0 0 8px;')}>Rename section</h2>
+            <input
+              autoFocus
+              value={renameBox.value}
+              onChange={(e) => setRenameBox((r) => ({ ...r, value: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') setRenameBox(null); }}
+              placeholder="Section name"
+              style={s('width:100%;font:inherit;font-size:16px;padding:10px 12px;border:2px solid ' + C.mut + ';border-radius:4px;background:#fff;outline:none;color:' + C.ink + ';')}
+            />
+          </div>
+          <div style={s('display:flex;gap:10px;padding:16px 24px 22px;')}>
+            <Hover tag="button" onClick={saveRename}
+              base={'font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #003419;'}
+              active="transform:translateY(4px);box-shadow:none;">Save</Hover>
+            <Hover tag="button" onClick={() => setRenameBox(null)}
+              base={'font-family:inherit;font-size:16px;font-weight:600;color:' + C.mut + ';background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;'}
+              hover={'color:' + C.ink + ';'}>Cancel</Hover>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }

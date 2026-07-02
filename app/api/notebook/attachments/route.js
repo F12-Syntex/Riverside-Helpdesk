@@ -5,7 +5,7 @@
 //   DELETE /api/notebook/attachments?id=12  — remove one attachment (row + blob)
 import { NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
-import { createAttachment, deleteAttachment } from '@/lib/notebook';
+import { createAttachment, deleteAttachment, getNote } from '@/lib/notebook';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,6 +22,12 @@ export async function POST(request) {
   if (!noteId) return NextResponse.json({ error: 'A valid noteId is required.' }, { status: 400 });
   if (!file || typeof file === 'string') return NextResponse.json({ error: 'A file is required.' }, { status: 400 });
   if (file.size > MAX_BYTES) return NextResponse.json({ error: 'File is too large (20 MB max).' }, { status: 413 });
+
+  // Sections are name-only categories — files belong on pages. Checked before
+  // the blob upload so a rejected request stores nothing.
+  const note = await getNote(noteId).catch(() => null);
+  if (!note) return NextResponse.json({ error: 'Note not found.' }, { status: 404 });
+  if (note.parentId == null) return NextResponse.json({ error: 'Files attach to pages, not sections.' }, { status: 400 });
 
   const safeName = (file.name || 'file').replace(/[^\w.\- ()]/g, '_').slice(0, 200);
   try {
