@@ -1,37 +1,36 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 
 /* ------------------------------------------------------------------ *
  * Notebook — practice notes the assistant uses automatically.
  *
- * Full-page editor. The sidebar on the far left is a recursive note
- * tree (any depth) with tight parent→child connector lines and
- * hover-reveal actions, styled to the NHS design language (green
- * primary action, blue interaction colour, 4px radii). Attachments
- * upload by drag-and-drop onto the note (or the paperclip button) and
- * are docked in a strip at the BOTTOM of the editor so they never push
- * the note down. Notes persist to Postgres (/api/notebook); files go
- * to Vercel Blob (/api/notebook/attachments).
+ * Full-page editor with no app header: the sidebar pinned to the far
+ * left carries a home link and a recursive note tree where connector
+ * lines run from each parent to its children (notes nest to any
+ * depth). The editor fills the page; attachments show as chips under
+ * the title and files upload by drag-and-drop onto the note (or the
+ * paperclip button). Notes persist to Postgres (/api/notebook); files
+ * go to Vercel Blob (/api/notebook/attachments).
  * ------------------------------------------------------------------ */
 
 const C = {
   ink: '#212b32', mut: '#4c6272', dim: '#768692', line: '#d8dde0',
   soft: '#eef1f2', blue: '#005eb8', navy: '#003087', sel: '#e8f1f8',
-  bg: '#f0f4f5', red: '#d5281b', green: '#007f3b', greenDark: '#00662f',
+  bg: '#f0f4f5', red: '#d5281b', green: '#007f3b',
 };
 
-// Row hover actions + parent→child connector lines. Indentation is kept
-// tight (14px per level) so deep trees still fit; rows are compact so the
-// list scales to lots of notes.
+// Hover-reveal row actions + the parent→child connector lines live in real
+// CSS. Each nested level is indented inside .nb-kids, which draws a vertical
+// guide; each row in it draws a short horizontal tick joining the guide.
 const CSS = `
 .nb-row .nb-actions{opacity:0;transition:opacity .12s;}
 .nb-row:hover .nb-actions,.nb-row:focus-within .nb-actions{opacity:1;}
-.nb-row:hover{background:#f7fbff;}
-.nb-kids{margin-left:13px;padding-left:6px;border-left:1.5px solid ${C.line};}
+.nb-kids{margin-left:19px;padding-left:10px;border-left:1.5px solid ${C.line};}
 .nb-kids>div>.nb-row{position:relative;}
-.nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
+.nb-kids>div>.nb-row::before{content:"";position:absolute;left:-10px;top:50%;width:9px;height:1.5px;background:${C.line};}
 `;
 
 const MAX_DEPTH = 4; // sections + 3 levels of sub-notes keeps the tree sane
@@ -82,7 +81,7 @@ export default function NotebookPage() {
   const selected = byId.get(selectedId) || null;
   const selectedFiles = attachments.filter((a) => a.noteId === selectedId);
 
-  // Ancestor chain of the selection (highlight + auto-expand).
+  // Ancestor chain of the selection, root first (breadcrumb-ish highlight + auto-expand).
   const ancestors = React.useMemo(() => {
     const chain = [];
     for (let cur = selected && byId.get(selected.parentId); cur && chain.length < 12; cur = byId.get(cur.parentId)) {
@@ -181,6 +180,7 @@ export default function NotebookPage() {
       setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
       setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
       if (gone.has(selectedId)) {
+        // Prefer staying near the deleted note: its parent, else the first section.
         const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
         if (parent) setSelectedId(parent);
         else {
@@ -222,54 +222,53 @@ export default function NotebookPage() {
     } catch (e) { /* ignore */ }
   }
 
-  // Drag-and-drop anywhere on the editor uploads to the open note. Handlers sit
-  // on the <main> element (capture phase not needed; textarea drop bubbles up
-  // because we preventDefault on dragover, which disables its native handling).
+  // Drag-and-drop anywhere on the editor uploads to the open note.
   const dropHandlers = selected ? {
-    onDragEnter: (e) => { e.preventDefault(); if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { dragDepth.current++; setDragging(true); } },
-    onDragOver: (e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; },
+    onDragEnter: (e) => { e.preventDefault(); dragDepth.current++; setDragging(true); },
+    onDragOver: (e) => { e.preventDefault(); },
     onDragLeave: () => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); },
     onDrop: (e) => { e.preventDefault(); dragDepth.current = 0; setDragging(false); uploadFiles(e.dataTransfer.files); },
   } : {};
 
   /* ------------------------------ Sidebar ------------------------------ */
 
-  // NHS-consistent building blocks: 4px radii, 30px square icon buttons.
-  const actBtn = 'flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:' + C.mut + ';border-radius:4px;';
+  const actBtn = 'flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:' + C.dim + ';border-radius:6px;';
 
-  // One tree row; children render recursively inside .nb-kids (connector lines).
+  // One tree row; children render recursively inside .nb-kids, which draws
+  // the parent→child connector lines.
   function SideRow({ n, depth }) {
     const isSel = selectedId === n.id;
     const onPath = ancestors.some((a) => a.id === n.id);
     const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
     const open = !!expanded[n.id] || (!!q && kids.length > 0);
-    const hasFiles = attachments.some((a) => a.noteId === n.id);
+    const fileCount = attachments.filter((a) => a.noteId === n.id).length;
     return (
       <div>
-        <div className="nb-row" style={s('display:flex;align-items:center;border-radius:4px;padding:0 2px;' +
-          (isSel ? 'background:' + C.sel + ';box-shadow:inset 3px 0 0 ' + C.blue + ';' : onPath ? 'background:#f7fbff;' : ''))}>
+        <div className="nb-row" style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
+          (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
           {kids.length > 0 ? (
             <Hover tag="button" onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} aria-label={open ? 'Collapse' : 'Expand'}
-              base={actBtn + 'width:24px;height:24px;'} hover={'background:' + C.soft + ';'}>
-              <Svg w={16} sw={2.4} style={s('transform:rotate(' + (open ? 90 : 0) + 'deg);transition:transform .15s;')}>{Icons.chevronRight}</Svg>
+              base={actBtn + 'width:20px;height:20px;'} hover={'background:' + C.soft + ';'}>
+              <Svg w={13} sw={2.4} style={s('transform:rotate(' + (open ? 90 : 0) + 'deg);transition:transform .15s;')}>{Icons.chevronRight}</Svg>
             </Hover>
-          ) : (<span style={s('flex:none;width:24px;')} />)}
+          ) : (<span style={s('flex:none;width:20px;')} />)}
           <button onClick={() => selectNote(n.id)}
-            style={s('flex:1;min-width:0;display:flex;align-items:center;gap:8px;text-align:left;border:none;background:none;font:inherit;font-size:14.5px;cursor:pointer;padding:7px 4px;color:' + (isSel ? C.navy : C.ink) + ';' + (isSel ? 'font-weight:600;' : ''))}>
-            <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 ? Icons.book : Icons.fileLines}</Svg>
+            style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;text-align:left;border:none;background:none;font:inherit;font-size:14.5px;cursor:pointer;padding:8px 4px;color:' + (isSel ? C.navy : C.ink) + ';' + (isSel ? 'font-weight:600;' : ''))}>
+            <Svg w={14} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.dim) + ';')}>{depth === 0 ? Icons.book : Icons.fileLines}</Svg>
             <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
-            {hasFiles && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
+            {kids.length > 0 && !open && <span style={s('flex:none;font-size:11.5px;color:' + C.dim + ';background:' + C.soft + ';border-radius:99px;padding:1px 7px;')}>{kids.length}</span>}
+            {fileCount > 0 && <Svg w={12} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
           </button>
-          <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;')}>
+          <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
             {depth < MAX_DEPTH - 1 && (
               <Hover tag="button" onClick={() => newNote(n.id)} aria-label="Add sub-note" title="Add sub-note"
-                base={actBtn + 'width:26px;height:26px;'} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                <Svg w={16} sw={2.2}>{Icons.plus}</Svg>
+                base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+                <Svg w={14} sw={2.2}>{Icons.plus}</Svg>
               </Hover>
             )}
             <Hover tag="button" onClick={() => removeNote(n.id)} aria-label="Delete" title="Delete"
-              base={actBtn + 'width:26px;height:26px;'} hover={'background:#fbe9e7;color:' + C.red + ';'}>
-              <Svg w={16} sw={2.2}>{Icons.trash}</Svg>
+              base={actBtn} hover={'background:#fbe9e7;color:' + C.red + ';'}>
+              <Svg w={14} sw={2.2}>{Icons.trash}</Svg>
             </Hover>
           </span>
         </div>
@@ -289,33 +288,34 @@ export default function NotebookPage() {
       <style>{CSS}</style>
 
       {/* --------------------------- Sidebar --------------------------- */}
-      <aside style={s('flex:none;width:300px;border-right:1px solid ' + C.line + ';background:#fff;display:flex;flex-direction:column;min-height:0;')}>
-        {/* NHS-blue banner header, matching nhs.uk. */}
-        <div style={s('flex:none;background:' + C.blue + ';padding:12px 14px;display:flex;align-items:center;gap:10px;')}>
-          <Svg w={20} sw={2} stroke="#fff">{Icons.book}</Svg>
-          <span style={s('flex:1;font-size:17px;font-weight:700;color:#fff;')}>Notebook</span>
-        </div>
-
-        <div style={s('flex:none;padding:12px 12px 8px;display:flex;flex-direction:column;gap:10px;')}>
-          {/* NHS primary action: green button, full width. */}
-          <Hover tag="button" onClick={() => newNote(null)}
-            base={'display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:' + C.green + ';color:#fff;border:none;border-radius:4px;padding:10px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 0 ' + C.greenDark + ';'}
-            hover={'background:' + C.greenDark + ';'}>
-            <Svg w={16} sw={2.4}>{Icons.plus}</Svg>New section
-          </Hover>
-          <div style={s('display:flex;align-items:center;gap:8px;border:2px solid ' + C.mut + ';border-radius:4px;padding:7px 10px;background:#fff;')}>
-            <Svg w={16} sw={2} style={s('flex:none;color:' + C.mut + ';')}>{Icons.search}</Svg>
+      <aside style={s('flex:none;width:290px;border-right:1px solid ' + C.line + ';background:#fff;display:flex;flex-direction:column;min-height:0;')}>
+        <div style={s('flex:none;padding:12px 14px 6px;display:flex;flex-direction:column;gap:10px;')}>
+          <div style={s('display:flex;align-items:center;gap:8px;')}>
+            <Hover tag={Link} href="/" aria-label="Back to practice tools" title="Back to practice tools"
+              base={'flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';border-radius:8px;color:' + C.mut + ';background:#fff;text-decoration:none;'}
+              hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+              <Svg w={15} sw={2.2}>{Icons.home}</Svg>
+            </Hover>
+            <span style={s('flex:1;font-size:15px;font-weight:700;color:' + C.ink + ';')}>Notebook</span>
+            <Hover tag="button" onClick={() => newNote(null)} aria-label="New section" title="New section"
+              base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:6px 11px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;'}
+              hover={'background:' + C.navy + ';'}>
+              <Svg w={13} sw={2.4}>{Icons.plus}</Svg>New
+            </Hover>
+          </div>
+          <div style={s('display:flex;align-items:center;gap:8px;border:1px solid ' + C.line + ';border-radius:9px;padding:7px 10px;background:' + C.bg + ';')}>
+            <Svg w={14} sw={2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.search}</Svg>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes"
-              style={s('flex:1;min-width:0;border:none;outline:none;background:none;font:inherit;font-size:14.5px;color:' + C.ink + ';')} />
+              style={s('flex:1;min-width:0;border:none;outline:none;background:none;font:inherit;font-size:14px;color:' + C.ink + ';')} />
             {search && (
-              <Hover tag="button" onClick={() => setSearch('')} aria-label="Clear search" base={actBtn + 'width:22px;height:22px;'} hover={'color:' + C.ink + ';'}>
-                <Svg w={14} sw={2.4}>{Icons.close}</Svg>
+              <Hover tag="button" onClick={() => setSearch('')} aria-label="Clear search" base={actBtn + 'width:18px;height:18px;'} hover={'color:' + C.ink + ';'}>
+                <Svg w={12} sw={2.4}>{Icons.close}</Svg>
               </Hover>
             )}
           </div>
         </div>
 
-        <div style={s('flex:1;overflow-y:auto;padding:2px 8px 12px;')}>
+        <div style={s('flex:1;overflow-y:auto;padding:4px 10px 14px;display:flex;flex-direction:column;gap:1px;')}>
           {status === 'loading' && <p style={s('color:' + C.mut + ';font-size:14px;padding:8px 10px;')}>Loading…</p>}
           {status === 'error' && <p style={s('color:' + C.red + ';font-size:14px;padding:8px 10px;')}>Could not load notes. Is the database configured?</p>}
           {status === 'ready' && sections.length === 0 && (
@@ -344,7 +344,7 @@ export default function NotebookPage() {
           </div>
         )}
         {selected && (
-          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 16px;')}>
+          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
             {/* Title row */}
             <div style={s('flex:none;display:flex;align-items:center;gap:10px;')}>
               <input
@@ -358,39 +358,31 @@ export default function NotebookPage() {
               </span>
               <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
               <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the note)"
-                base={'flex:none;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:2px solid ' + C.mut + ';background:#fff;border-radius:4px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
+                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
                 hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-                <Svg w={18} sw={2}>{Icons.paperclip}</Svg>
+                <Svg w={16} sw={2}>{Icons.paperclip}</Svg>
               </Hover>
               <Hover tag="button" onClick={() => removeNote(selected.id)} aria-label="Delete note" title="Delete note"
-                base={'flex:none;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:2px solid ' + C.mut + ';background:#fff;border-radius:4px;cursor:pointer;color:' + C.mut + ';'}
+                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
                 hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
-                <Svg w={18} sw={2}>{Icons.trash}</Svg>
+                <Svg w={16} sw={2}>{Icons.trash}</Svg>
               </Hover>
             </div>
 
-            {/* Body — fills the page; attachments never push it around. */}
-            <textarea
-              value={selected.body || ''}
-              onChange={(e) => editSelected({ body: e.target.value })}
-              placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
-              style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:1px solid ' + C.line + ';border-radius:6px;background:#fff;padding:18px 20px;outline:none;color:' + C.ink + ';margin-top:10px;')}
-            />
-
-            {/* Attachments — docked at the bottom. */}
+            {/* Attachment chips — only when the note has files (or an error). */}
             {(selectedFiles.length > 0 || uploadErr || uploading) && (
-              <div style={s('flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 2px 0;')}>
+              <div style={s('flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0 4px;')}>
                 {selectedFiles.map((a) => (
-                  <span key={a.id} style={s('display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';border-radius:4px;background:#fff;padding:5px 6px 5px 10px;max-width:280px;')}>
-                    <Svg w={14} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
+                  <span key={a.id} style={s('display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';border-radius:99px;background:#fff;padding:5px 6px 5px 11px;max-width:280px;')}>
+                    <Svg w={13} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
                     <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' · ' + fmtSize(a.size) : '')}
-                      style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600;color:' + C.blue + ';text-decoration:underline;')}>
+                      style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;color:' + C.ink + ';text-decoration:none;')}>
                       {a.filename}
                     </a>
                     <Hover tag="button" onClick={() => removeAttachment(a)} aria-label={'Remove ' + a.filename} title="Remove"
-                      base={'flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:none;background:' + C.soft + ';border-radius:4px;cursor:pointer;color:' + C.mut + ';'}
+                      base={'flex:none;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border:none;background:' + C.soft + ';border-radius:99px;cursor:pointer;color:' + C.dim + ';'}
                       hover={'background:#fbe9e7;color:' + C.red + ';'}>
-                      <Svg w={12} sw={2.6}>{Icons.close}</Svg>
+                      <Svg w={11} sw={2.6}>{Icons.close}</Svg>
                     </Hover>
                   </span>
                 ))}
@@ -398,12 +390,20 @@ export default function NotebookPage() {
                 {uploadErr && <span style={s('font-size:13px;color:' + C.red + ';')}>{uploadErr}</span>}
               </div>
             )}
+
+            {/* Body — fills the rest of the page. */}
+            <textarea
+              value={selected.body || ''}
+              onChange={(e) => editSelected({ body: e.target.value })}
+              placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
+              style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:1px solid ' + C.line + ';border-radius:12px;background:#fff;padding:18px 20px;outline:none;color:' + C.ink + ';margin-top:10px;')}
+            />
           </div>
         )}
 
         {/* Drop overlay */}
         {dragging && selected && (
-          <div style={s('position:absolute;inset:10px;border:3px dashed ' + C.blue + ';border-radius:8px;background:rgba(232,241,248,.9);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
+          <div style={s('position:absolute;inset:10px;border:2.5px dashed ' + C.blue + ';border-radius:14px;background:rgba(232,241,248,.85);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
             <div style={s('display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;color:' + C.navy + ';')}>
               <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
               Drop files to attach to “{selected.title || 'Untitled'}”
