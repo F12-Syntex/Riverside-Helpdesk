@@ -28,6 +28,11 @@ const TOOLS = [
     description: 'Build and balance staff rotas with help from the practice assistant.',
   },
   {
+    href: '/notebook',
+    title: 'Notebook',
+    description: 'Write practice notes and instructions, with sub-notes. Everything you save is used automatically by the Practice Q&A assistant — no rebuild needed.',
+  },
+  {
     href: '/dpia',
     title: 'Data protection check (DPIA)',
     description: 'The data protection impact assessment for the whole Riverside Helpdesk program — what it does with information, the risks, and how far the check has got.',

@@ -13,6 +13,7 @@ import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
+import { noteContextSources } from '@/lib/notebook';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 
 export const runtime = 'nodejs';
@@ -160,13 +161,18 @@ export async function POST(request) {
     return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
   });
 
-  // Supplementary context — practice notes / triage instructions fetched at
-  // request time (OneNote, configured URLs, or the local rag/context folder), so
-  // they can be updated without a redeploy. Appended as extra numbered Sources
-  // after the knowledge-base chunks, so the model must quote them and the server
-  // verifies the quote exactly as for any document. Never fatal.
+  // Supplementary context — practice notes / triage instructions gathered at
+  // request time so they can be updated without a redeploy: the in-app Notebook
+  // (Postgres), plus any configured URLs / local rag/context folder. Appended as
+  // extra numbered Sources after the knowledge-base chunks, so the model must
+  // quote them and the server verifies the quote exactly as for any document.
+  // Never fatal.
   try {
-    const supp = await supplementarySourcesFor(searchQuery);
+    const [remote, notes] = await Promise.all([
+      supplementarySourcesFor(searchQuery).catch(() => []),
+      noteContextSources(searchQuery).catch(() => []),
+    ]);
+    const supp = notes.concat(remote); // notebook first — it's the staff's own guidance
     for (const s of supp) {
       const ref = extracts.length + 1;
       const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null };
