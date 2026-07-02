@@ -7,7 +7,8 @@
 // Notes written here are automatically used by the assistant: the /api/ask route
 // pulls them in at request time as citable sources (no re-ingest, no redeploy).
 import { NextResponse } from 'next/server';
-import { listNotes, createNote, updateNote, deleteNote } from '@/lib/notebook';
+import { del } from '@vercel/blob';
+import { listNotes, createNote, updateNote, deleteNote, listAttachments, attachmentsUnderNote } from '@/lib/notebook';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,9 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const notes = await listNotes();
-    return NextResponse.json({ notes });
+    // Attachments are non-fatal: the notebook still works if blob metadata fails.
+    const attachments = await listAttachments().catch(() => []);
+    return NextResponse.json({ notes, attachments });
   } catch (e) {
     return NextResponse.json({ error: 'Could not load notes.', detail: String(e).slice(0, 300) }, { status: 500 });
   }
@@ -50,7 +53,10 @@ export async function DELETE(request) {
   const id = parseInt(new URL(request.url).searchParams.get('id') || '', 10);
   if (!id) return NextResponse.json({ error: 'A valid id is required.' }, { status: 400 });
   try {
+    // Collect blob urls before the DB cascade removes the attachment rows.
+    const blobs = await attachmentsUnderNote(id).catch(() => []);
     await deleteNote(id);
+    if (blobs.length) await del(blobs.map((b) => b.url)).catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: 'Could not delete note.', detail: String(e).slice(0, 300) }, { status: 500 });
