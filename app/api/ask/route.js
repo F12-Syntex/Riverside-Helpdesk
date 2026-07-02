@@ -13,7 +13,7 @@ import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
-import { noteContextSources } from '@/lib/notebook';
+import { notebookContext } from '@/lib/notebook';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 
 export const runtime = 'nodejs';
@@ -163,16 +163,19 @@ export async function POST(request) {
 
   // Supplementary context — practice notes / triage instructions gathered at
   // request time so they can be updated without a redeploy: the in-app Notebook
-  // (Postgres), plus any configured URLs / local rag/context folder. Appended as
-  // extra numbered Sources after the knowledge-base chunks, so the model must
-  // quote them and the server verifies the quote exactly as for any document.
-  // Never fatal.
+  // (semantically retrieved from its own embeddings in Postgres, exactly like
+  // the knowledge base), plus any configured URLs / local rag/context folder.
+  // Appended as extra numbered Sources after the knowledge-base chunks, so the
+  // model must quote them and the server verifies the quote exactly as for any
+  // document. Never fatal.
+  let noteCatalog = '';
   try {
-    const [remote, notes] = await Promise.all([
+    const [remote, nb] = await Promise.all([
       supplementarySourcesFor(searchQuery).catch(() => []),
-      noteContextSources(searchQuery).catch(() => []),
+      notebookContext(searchQuery).catch(() => ({ sources: [], catalog: '' })),
     ]);
-    const supp = notes.concat(remote); // notebook first — it's the staff's own guidance
+    noteCatalog = nb.catalog || '';
+    const supp = nb.sources.concat(remote); // notebook first — it's the staff's own guidance
     for (const s of supp) {
       const ref = extracts.length + 1;
       const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null };
@@ -196,7 +199,10 @@ export async function POST(request) {
   const redact = (t) => redactUnverifiedNumbers(t, verifiedNums);
 
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
-  const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog, contacts: contacts.map((c) => c.label) });
+  // Tier A catalogue: knowledge-base documents plus every notebook note, so the
+  // model is aware of the notebook's coverage even when no chunk was retrieved.
+  const catalog = [catalogText(), noteCatalog].filter(Boolean).join('\n');
+  const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label) });
 
   try {
     const { text, error } = await callModel(apiKey, model, prompt);
