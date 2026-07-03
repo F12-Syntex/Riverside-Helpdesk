@@ -72,6 +72,29 @@ const TIcons = {
   divider: (<><line x1="5" x2="19" y1="12" y2="12" /><circle cx="12" cy="6" r="0.5" /><circle cx="12" cy="18" r="0.5" /></>),
 };
 
+// Line-level diff (LCS) for the AI-format preview: ' ' unchanged, '-' removed,
+// '+' added. Notes are small, so the quadratic table is fine.
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n');
+  const n = A.length, m = B.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const out = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { out.push({ t: ' ', s: A[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ t: '-', s: A[i] }); i++; }
+    else { out.push({ t: '+', s: B[j] }); j++; }
+  }
+  while (i < n) out.push({ t: '-', s: A[i++] });
+  while (j < m) out.push({ t: '+', s: B[j++] });
+  return out;
+}
+
 // NHS-style confirmation sheet — same pattern as the rota system so popups
 // stay consistent across the app.
 function Sheet({ maxWidth = 420, onClose, children }) {
@@ -163,6 +186,7 @@ export default function NotebookPage() {
   const [dragging, setDragging] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
+  const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
@@ -331,6 +355,35 @@ export default function NotebookPage() {
   const divider = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('insertText', false, '\n\n---\n\n'); };
   const doUndo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('undo'); };
   const doRedo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('redo'); };
+
+  // AI format: send the body off, then show the proposed change as a diff the
+  // user must confirm — nothing is applied (or saved) until they accept.
+  async function runAiFormat() {
+    const original = (selected && selected.body) || '';
+    if (!original.trim() || (aiFmt && aiFmt.status === 'loading')) return;
+    setAiFmt({ status: 'loading' });
+    try {
+      const res = await fetch('/api/notebook/format', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: original }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Formatting failed.');
+      const formatted = String(data.formatted || '');
+      if (formatted.trim() === original.trim()) { setAiFmt({ status: 'error', message: 'Nothing to change — the note is already tidy.' }); return; }
+      setAiFmt({ status: 'ready', formatted, diff: lineDiff(original, formatted) });
+    } catch (e) {
+      setAiFmt({ status: 'error', message: String(e.message || e) });
+    }
+  }
+
+  function applyAiFormat() {
+    if (!aiFmt || aiFmt.status !== 'ready') return;
+    setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, body: aiFmt.formatted } : n)));
+    dirty.current.add(selectedId);
+    setSaveState('saving');
+    setAiFmt(null);
+  }
 
   function editorKeys(e) {
     if (!(e.ctrlKey || e.metaKey)) return;
@@ -659,11 +712,13 @@ export default function NotebookPage() {
                 { title: 'Increase indent', run: indent, icon: TIcons.indent },
                 { title: 'Quote', run: quote, icon: TIcons.quote },
                 { title: 'Divider', run: divider, icon: TIcons.divider },
+                null,
+                { title: 'AI format — tidy this note (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
               ].map((btn, i) => btn === null
                 ? <span key={'sep' + i} style={s('flex:none;width:1px;height:18px;background:' + C.line + ';margin:0 7px;')} />
                 : (
                   <Hover key={btn.title} tag="button" onClick={btn.run} aria-label={btn.title} title={btn.title}
-                    base={'flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;color:' + C.mut + ';'}
+                    base={'flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;color:' + (btn.accent ? C.blue : C.mut) + ';' + (btn.accent && aiFmt && aiFmt.status === 'loading' ? 'opacity:.5;' : '')}
                     hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
                     <Svg w={16} sw={2}>{btn.icon}</Svg>
                   </Hover>
@@ -732,6 +787,47 @@ export default function NotebookPage() {
             <Svg w={15} sw={2.2}>{Icons.trash}</Svg>Delete
           </Hover>
         </div>
+      )}
+
+      {/* AI-format preview — the diff the user must confirm before anything
+          is applied. Removed lines red, added lines green. */}
+      {aiFmt && (
+        <Sheet maxWidth={760} onClose={() => setAiFmt(null)}>
+          <div style={s('padding:24px 26px 8px;')}>
+            <h2 style={s('display:flex;align-items:center;gap:9px;font-size:21px;font-weight:700;margin:0 0 6px;color:' + C.ink + ';')}>
+              <Svg w={19} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>AI formatting
+            </h2>
+            {aiFmt.status === 'loading' && <p style={s('font-size:16px;margin:0;color:' + C.mut + ';')}>Tidying the note — checking spelling and structure…</p>}
+            {aiFmt.status === 'error' && <p style={s('font-size:16px;margin:0;color:' + C.mut + ';')}>{aiFmt.message}</p>}
+            {aiFmt.status === 'ready' && (
+              <>
+                <p style={s('font-size:15px;line-height:1.5;margin:0 0 12px;color:' + C.mut + ';')}>
+                  Review the proposed changes. Wording is kept as written — only typos, punctuation and layout change. Nothing is saved until you apply.
+                </p>
+                <div style={s('max-height:52vh;overflow:auto;border:1px solid ' + C.line + ';border-radius:10px;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.55;')}>
+                  {aiFmt.diff.map((l, i) => (
+                    <div key={i} style={s('display:flex;gap:8px;padding:1px 10px;white-space:pre-wrap;word-break:break-word;' +
+                      (l.t === '-' ? 'background:#fbe9e7;color:#8a1206;text-decoration:line-through;' :
+                       l.t === '+' ? 'background:#e7f5ec;color:#00542b;' : 'color:' + C.mut + ';'))}>
+                      <span style={s('flex:none;width:12px;user-select:none;opacity:.7;')}>{l.t === ' ' ? '' : l.t}</span>
+                      <span style={s('flex:1;min-width:0;')}>{l.s || ' '}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div style={s('display:flex;align-items:center;gap:10px;padding:18px 26px 22px;')}>
+            {aiFmt.status === 'ready' && (
+              <Hover tag="button" onClick={applyAiFormat}
+                base={'font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #00401e;'}
+                active="transform:translateY(4px);box-shadow:none;">Apply changes</Hover>
+            )}
+            <Hover tag="button" onClick={() => setAiFmt(null)}
+              base="font-family:inherit;font-size:16px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;"
+              hover="color:#212b32;">{aiFmt.status === 'ready' ? 'Cancel' : 'Close'}</Hover>
+          </div>
+        </Sheet>
       )}
 
       {confirm && <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} />}
