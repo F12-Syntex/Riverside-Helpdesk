@@ -1031,8 +1031,12 @@ export default function NotebookPage() {
                 ))}
               </div>
             ) : (
+              // preventDefault: mousedown's default action moves focus off the
+              // textarea this opens (React mounts+focuses it synchronously, then
+              // the browser blurs it), which committed and closed the editor
+              // before a single keystroke — new/empty notes felt unwritable.
               <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:20px 28px;cursor:text;')}
-                onMouseDown={(e) => { if (e.target === e.currentTarget && activeBlock === null) startBlock(blocks.length, ''); }}>
+                onMouseDown={(e) => { if (e.target === e.currentTarget && activeBlock === null) { e.preventDefault(); startBlock(blocks.length, ''); } }}>
                 {blocks.map((b, i) => (
                   activeBlock === i ? (
                     <textarea
@@ -1062,13 +1066,16 @@ export default function NotebookPage() {
                     style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:none;padding:2px 0;margin:0 0 12px;min-height:56px;')}
                   />
                 )}
+                {/* pointer-events:none so clicks on the hint (and the spacer
+                    below) fall through to the container's click-to-write
+                    handler, which requires target === currentTarget. */}
                 {blocks.length === 0 && activeBlock === null && (
-                  <p style={s('margin:4px 0;font-size:16px;color:' + C.dim + ';')}>
+                  <p style={s('margin:4px 0;font-size:16px;color:' + C.dim + ';pointer-events:none;')}>
                     Click anywhere to start writing. Markdown renders as you go — finish a block and it turns into headings, lists, tables… Anything you write is used by the assistant to answer and triage.
                   </p>
                 )}
                 {/* Click-to-continue area below the last block. */}
-                {activeBlock === null && blocks.length > 0 && <div style={s('min-height:120px;')} />}
+                {activeBlock === null && blocks.length > 0 && <div style={s('min-height:120px;pointer-events:none;')} />}
               </div>
             )}
 
