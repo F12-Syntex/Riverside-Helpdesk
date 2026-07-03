@@ -34,6 +34,9 @@ const CSS = `
 .nb-kids{margin-left:13px;padding-left:6px;border-left:1.5px solid ${C.line};}
 .nb-kids>div>.nb-row{position:relative;}
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
+.nb-title{border-bottom:1.5px dashed ${C.line};transition:border-color .12s;}
+.nb-title:hover{border-bottom-color:${C.blue};}
+.nb-title:focus{border-bottom:1.5px solid ${C.blue};}
 `;
 
 const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
@@ -84,7 +87,7 @@ function ConfirmSheet({ confirm, onClose }) {
 // defining it inline remounted the whole tree on every state change, which is
 // what made the sidebar blink.
 function SideRow({ n, depth, ctx }) {
-  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote } = ctx;
+  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote, renameNote } = ctx;
   const isSel = selectedId === n.id;
   const onPath = ancestors.some((a) => a.id === n.id);
   const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
@@ -107,6 +110,10 @@ function SideRow({ n, depth, ctx }) {
           {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
         </button>
         <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
+          <Hover tag="button" onClick={() => renameNote(n.id)} aria-label="Rename" title="Rename"
+            base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+            <Svg w={15} sw={2.2}>{Icons.edit}</Svg>
+          </Hover>
           {depth < MAX_DEPTH - 1 && (
             <Hover tag="button" onClick={() => newNote(n.id)} aria-label="Add page" title="Add page"
               base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
@@ -141,9 +148,12 @@ export default function NotebookPage() {
   const [dragging, setDragging] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const dragDepth = React.useRef(0);
-  const timer = React.useRef(null);
-  const pending = React.useRef(null);
+  const saved = React.useRef(new Map());   // id -> { title, body } last persisted
+  const dirty = React.useRef(new Set());   // ids edited since their last save
+  const notesRef = React.useRef([]);
   const fileInput = React.useRef(null);
+  const titleInput = React.useRef(null);
+  notesRef.current = notes;
 
   React.useEffect(() => {
     (async () => {
@@ -152,6 +162,7 @@ export default function NotebookPage() {
         if (!res.ok) throw new Error('bad status');
         const data = await res.json();
         const list = Array.isArray(data.notes) ? data.notes : [];
+        for (const n of list) saved.current.set(n.id, { title: n.title || '', body: n.body || '' });
         setNotes(list);
         setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
         setStatus('ready');
@@ -165,7 +176,6 @@ export default function NotebookPage() {
         setStatus('error');
       }
     })();
-    return () => { if (timer.current) clearTimeout(timer.current); };
   }, []);
 
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
@@ -203,35 +213,45 @@ export default function NotebookPage() {
   }, [childrenOf, q]); // eslint-disable-line react-hooks/exhaustive-deps
   const sections = notes.filter((n) => !n.parentId).filter(treeMatch);
 
-  /* ------------------------------ Saving ------------------------------ */
+  /* ------------------------------ Saving ------------------------------ *
+   * Time-based, not per-keystroke: edits only mark the note dirty; a 1s
+   * interval diffs each dirty note against its last persisted snapshot and
+   * PATCHes only the fields that actually changed — no change, no request. */
 
   async function flush() {
-    if (!pending.current) return;
-    const body = pending.current;
-    pending.current = null;
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-    try {
-      setSaveState('saving');
-      const res = await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error('bad status');
-      setSaveState('saved');
-      setTimeout(() => setSaveState((s2) => (s2 === 'saved' ? '' : s2)), 1500);
-    } catch (e) {
-      setSaveState('unsaved');
+    for (const id of Array.from(dirty.current)) {
+      const n = notesRef.current.find((x) => x.id === id);
+      if (!n) { dirty.current.delete(id); continue; } // deleted while dirty
+      const prev = saved.current.get(id) || {};
+      const patch = {};
+      if ((n.title || '') !== (prev.title || '')) patch.title = n.title || '';
+      if ((n.body || '') !== (prev.body || '')) patch.body = n.body || '';
+      if (!Object.keys(patch).length) { dirty.current.delete(id); continue; }
+      try {
+        setSaveState('saving');
+        const res = await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...patch, id }) });
+        if (!res.ok) throw new Error('bad status');
+        saved.current.set(id, { title: n.title || '', body: n.body || '' });
+        dirty.current.delete(id);
+        setSaveState('saved');
+        setTimeout(() => setSaveState((s2) => (s2 === 'saved' ? '' : s2)), 1500);
+      } catch (e) {
+        setSaveState('unsaved');
+      }
     }
   }
 
-  function scheduleSave(id, patch) {
-    pending.current = { ...(pending.current && pending.current.id === id ? pending.current : {}), ...patch, id };
-    setSaveState('saving');
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(flush, 700);
-  }
+  // flush() reads only refs, so the interval's first-render closure stays valid.
+  React.useEffect(() => {
+    const iv = setInterval(flush, 1000);
+    return () => clearInterval(iv);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function editSelected(patch) {
     if (isSection && 'body' in patch) return; // sections are name-only
     setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, ...patch } : n)));
-    scheduleSave(selectedId, patch);
+    dirty.current.add(selectedId);
+    setSaveState('saving');
   }
 
   /* --------------------------- Note actions --------------------------- */
@@ -255,6 +275,7 @@ export default function NotebookPage() {
     });
     if (!res.ok) throw new Error('bad status');
     const { note } = await res.json();
+    saved.current.set(note.id, { title: note.title || '', body: note.body || '' });
     return note;
   }
 
@@ -356,7 +377,13 @@ export default function NotebookPage() {
     onDrop: (e) => { e.preventDefault(); dragDepth.current = 0; setDragging(false); uploadFiles(e.dataTransfer.files); },
   } : {};
 
-  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote };
+  // Rename = select the note, then put the caret in the header title input.
+  async function renameNote(id) {
+    await selectNote(id);
+    setTimeout(() => { if (titleInput.current) { titleInput.current.focus(); titleInput.current.select(); } }, 0);
+  }
+
+  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote, renameNote };
   const sectionPages = isSection ? childrenOf(selected.id) : [];
 
   /* ------------------------------ Render ------------------------------- */
@@ -426,15 +453,15 @@ export default function NotebookPage() {
                   </React.Fragment>
                 ))}
                 <input
+                  ref={titleInput}
+                  className="nb-title"
                   value={selected.title || ''}
                   onChange={(e) => editSelected({ title: e.target.value })}
                   placeholder={isSection ? 'Section name' : 'Page title'}
                   aria-label={isSection ? 'Section name' : 'Page title'}
+                  title="Click to rename"
                   style={s('flex:1;min-width:60px;font:inherit;font-size:15.5px;font-weight:600;border:none;outline:none;background:none;color:' + C.ink + ';padding:4px 0;')}
                 />
-                <span style={s('flex:none;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:' + (isSection ? C.navy : C.dim) + ';background:' + (isSection ? C.sel : C.soft) + ';border-radius:99px;padding:3px 9px;margin-left:4px;')}>
-                  {isSection ? 'Section' : 'Page'}
-                </span>
               </>
             )}
           </div>
@@ -497,18 +524,19 @@ export default function NotebookPage() {
         {/* Page view — the title lives in the header; the whole content area
             is the note body, with attachments docked below. */}
         {selected && !isSection && (
-          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
-            {/* Body — fills the page; attachments dock below and never push it down. */}
+          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;background:#fff;')}>
+            {/* Body — the entire content area is the writing surface;
+                attachments dock below and never push it down. */}
             <textarea
               value={selected.body || ''}
               onChange={(e) => editSelected({ body: e.target.value })}
               placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
-              style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:1px solid ' + C.line + ';border-radius:12px;background:#fff;padding:18px 20px;outline:none;color:' + C.ink + ';margin-top:10px;')}
+              style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:none;background:#fff;padding:24px 28px;outline:none;color:' + C.ink + ';')}
             />
 
             {/* Attachments — docked at the bottom of the page. */}
             {(selectedFiles.length > 0 || uploadErr || uploading) && (
-              <div style={s('flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 2px 0;')}>
+              <div style={s('flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 28px 14px;border-top:1px solid ' + C.soft + ';')}>
                 {selectedFiles.map((a) => (
                   <span key={a.id} style={s('display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';border-radius:99px;background:#fff;padding:5px 6px 5px 11px;max-width:280px;')}>
                     <Svg w={14} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
