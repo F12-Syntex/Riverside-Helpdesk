@@ -36,6 +36,8 @@ const CSS = `
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
 .nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
 .nb-crumb:hover{color:${C.blue};}
+.nb-block{border-radius:8px;padding:2px 12px;margin:0 -12px;}
+.nb-block:hover{background:#f7fbff;box-shadow:inset 2.5px 0 0 ${C.line};}
 .nb-title{border-bottom:1.5px dashed transparent;transition:border-color .12s;}
 .nb-title:hover{border-bottom-color:${C.blue};}
 .nb-title:focus{border-bottom:1.5px solid ${C.blue};}
@@ -70,31 +72,65 @@ const TIcons = {
   outdent: (<><polyline points="7 8 3 12 7 16" /><line x1="21" x2="11" y1="12" y2="12" /><line x1="21" x2="11" y1="6" y2="6" /><line x1="21" x2="11" y1="18" y2="18" /></>),
   quote: (<><path d="M17 6H3" /><path d="M21 12H8" /><path d="M21 18H8" /><path d="M3 12v6" /></>),
   divider: (<><line x1="5" x2="19" y1="12" y2="12" /><circle cx="12" cy="6" r="0.5" /><circle cx="12" cy="18" r="0.5" /></>),
+  underline: (<><path d="M6 4v6a6 6 0 0 0 12 0V4" /><line x1="4" x2="20" y1="20" y2="20" /></>),
+  highlighter: (<><path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4a2 2 0 0 1 2.8 0l5.2 5.2a2 2 0 0 1 0 2.8Z" /></>),
+  table: (<><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M12 3v18" /></>),
 };
+
+// Text-colour swatches for the toolbar (NHS palette).
+const TEXT_COLORS = [
+  { name: 'Red', hex: '#d5281b' },
+  { name: 'Green', hex: '#007f3b' },
+  { name: 'Blue', hex: '#005eb8' },
+];
+
+const TABLE_SNIPPET = '\n| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n';
 
 /* --------------------------- Markdown view --------------------------- *
  * Notes are stored as markdown; Preview renders it. Small hand-rolled
  * renderer (headings, lists incl. tasks, quotes, hr, bold/italic/strike/
  * code/links) — enough for notes without pulling in a dependency.       */
 
+// Inline markdown plus a safe HTML subset: <u>, <mark>, <sup>, <sub>, <br>,
+// <big>, <small>, <kbd>, and <span style="color:…">. Only these exact shapes
+// are recognised — anything else renders as literal text, so no arbitrary
+// HTML/attributes ever reach the DOM. Recursive, so tags nest with markdown.
+const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,20})$/;
+
 function renderInline(str) {
   const out = [];
   let rest = String(str);
   let k = 0;
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(~~[^~]+~~)|(\[[^\]]+\]\([^)\s]+\))/;
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(~~[^~]+~~)|(\[[^\]]+\]\([^)\s]+\))|(<(u|mark|sup|sub|big|small|kbd)>[\s\S]*?<\/\7>)|(<span style="color:\s*[^">]+;?\s*">[\s\S]*?<\/span>)|(<br\s*\/?>)/;
   while (rest) {
     const m = rest.match(re);
     if (!m) { out.push(rest); break; }
     if (m.index > 0) out.push(rest.slice(0, m.index));
     const t = m[0];
+    let mm;
     if (t.startsWith('`')) out.push(<code key={k++} style={s('font-family:Consolas,Menlo,monospace;font-size:.9em;background:' + C.soft + ';border-radius:4px;padding:1px 5px;')}>{t.slice(1, -1)}</code>);
-    else if (t.startsWith('**')) out.push(<strong key={k++}>{t.slice(2, -2)}</strong>);
-    else if (t.startsWith('~~')) out.push(<s key={k++}>{t.slice(2, -2)}</s>);
-    else if (t.startsWith('*')) out.push(<em key={k++}>{t.slice(1, -1)}</em>);
-    else {
-      const mm = t.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    else if (t.startsWith('**')) out.push(<strong key={k++}>{renderInline(t.slice(2, -2))}</strong>);
+    else if (t.startsWith('~~')) out.push(<s key={k++}>{renderInline(t.slice(2, -2))}</s>);
+    else if (t.startsWith('*')) out.push(<em key={k++}>{renderInline(t.slice(1, -1))}</em>);
+    else if (t.startsWith('[')) {
+      mm = t.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       out.push(<a key={k++} href={mm[2]} target="_blank" rel="noopener noreferrer" style={s('color:' + C.blue + ';')}>{mm[1]}</a>);
-    }
+    } else if (/^<br/i.test(t)) out.push(<br key={k++} />);
+    else if ((mm = t.match(/^<span style="color:\s*([^">;]+);?\s*">([\s\S]*?)<\/span>$/))) {
+      out.push(SAFE_COLOR.test(mm[1].trim())
+        ? <span key={k++} style={{ color: mm[1].trim() }}>{renderInline(mm[2])}</span>
+        : <span key={k++}>{renderInline(mm[2])}</span>);
+    } else if ((mm = t.match(/^<(u|mark|sup|sub|big|small|kbd)>([\s\S]*?)<\/\1>$/))) {
+      const inner = renderInline(mm[2]);
+      const tag = mm[1];
+      if (tag === 'u') out.push(<u key={k++}>{inner}</u>);
+      else if (tag === 'mark') out.push(<mark key={k++} style={s('background:#fff6cc;border-radius:3px;padding:0 2px;')}>{inner}</mark>);
+      else if (tag === 'sup') out.push(<sup key={k++}>{inner}</sup>);
+      else if (tag === 'sub') out.push(<sub key={k++}>{inner}</sub>);
+      else if (tag === 'big') out.push(<span key={k++} style={s('font-size:1.2em;font-weight:600;')}>{inner}</span>);
+      else if (tag === 'small') out.push(<span key={k++} style={s('font-size:.85em;color:' + C.mut + ';')}>{inner}</span>);
+      else out.push(<kbd key={k++} style={s('font-family:Consolas,Menlo,monospace;font-size:.85em;background:' + C.soft + ';border:1px solid ' + C.line + ';border-bottom-width:2px;border-radius:5px;padding:1px 6px;')}>{inner}</kbd>);
+    } else out.push(t);
     rest = rest.slice(m.index + t.length);
   }
   return out;
@@ -124,6 +160,26 @@ function MdView({ text }) {
       const q = [];
       while (i < lines.length && /^>\s?/.test(lines[i])) { q.push(lines[i].replace(/^>\s?/, '')); i++; }
       blocks.push(<div key={k++} style={s('margin:0 0 12px;border-left:4px solid ' + C.blue + ';background:' + C.sel + ';padding:10px 14px;border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.6;color:' + C.ink + ';')}>{renderInline(q.join(' '))}</div>);
+      continue;
+    }
+    // Markdown table: header row, |---| separator, body rows.
+    if (/^\s*\|.*\|\s*$/.test(l) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].includes('-')) {
+      const cells = (row) => row.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+      const head = cells(l);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(cells(lines[i])); i++; }
+      const cellS = 'padding:8px 12px;border:1px solid ' + C.line + ';font-size:15px;line-height:1.5;text-align:left;vertical-align:top;';
+      blocks.push(
+        <div key={k++} style={s('margin:0 0 14px;overflow-x:auto;')}>
+          <table style={s('border-collapse:collapse;min-width:50%;')}>
+            <thead><tr>{head.map((c, j) => <th key={j} style={s(cellS + 'background:' + C.soft + ';font-weight:700;color:' + C.ink + ';')}>{renderInline(c)}</th>)}</tr></thead>
+            <tbody>{rows.map((r, ri) => (
+              <tr key={ri} style={s(ri % 2 ? 'background:#fafcfd;' : '')}>{head.map((_, j) => <td key={j} style={s(cellS + 'color:' + C.ink + ';')}>{renderInline(r[j] || '')}</td>)}</tr>
+            ))}</tbody>
+          </table>
+        </div>
+      );
       continue;
     }
     if (/^\s*([-*+]|\d+\.)\s+/.test(l)) {
@@ -271,7 +327,8 @@ export default function NotebookPage() {
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
-  const [viewMode, setViewMode] = React.useState('write');   // 'write' | 'read' — page editor vs rendered markdown
+  const [activeBlock, setActiveBlock] = React.useState(null); // index of the block being edited (blocks.length = new block at end)
+  const [draft, setDraft] = React.useState('');               // raw markdown of the active block
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
@@ -441,6 +498,37 @@ export default function NotebookPage() {
   const doUndo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('undo'); };
   const doRedo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('redo'); };
 
+  /* -------------------------- Smart blocks ---------------------------- *
+   * The note renders as markdown; clicking a block swaps just that block
+   * for a raw-markdown textarea. Leaving the block (blur/Escape) commits
+   * it and it renders again — so **test** turns bold once you're done,
+   * never mid-keystroke. Blocks are paragraphs separated by blank lines;
+   * a blank line typed inside a block splits it on commit.               */
+
+  const blocks = React.useMemo(
+    () => ((selected && selected.body) ? selected.body.replace(/\r\n/g, '\n').split(/\n{2,}/) : []),
+    [selected && selected.body] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  function startBlock(i, text) {
+    if (activeBlock !== null) return; // the blur of the open editor commits first; next click opens
+    setDraft(text);
+    setActiveBlock(i);
+  }
+
+  function commitBlock() {
+    if (activeBlock === null) return;
+    const next = blocks.slice();
+    if (activeBlock >= next.length) { if (draft.trim()) next.push(draft); }
+    else if (!draft.trim()) next.splice(activeBlock, 1);
+    else next[activeBlock] = draft;
+    const body = next.join('\n\n');
+    setActiveBlock(null);
+    if (body !== (selected.body || '')) editSelected({ body });
+  }
+
+  const autoGrow = (el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } };
+
   // AI format: send the body off, then show the proposed change as a diff the
   // user must confirm — nothing is applied (or saved) until they accept.
   async function runAiFormat() {
@@ -468,7 +556,7 @@ export default function NotebookPage() {
     dirty.current.add(selectedId);
     setSaveState('saving');
     setAiFmt(null);
-    setViewMode('read'); // show the tidied note rendered
+    setActiveBlock(null);
   }
 
   function editorKeys(e) {
@@ -484,6 +572,7 @@ export default function NotebookPage() {
     await flush();
     setUploadErr('');
     setAiFmt(null);
+    setActiveBlock(null);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
     setExpanded((e) => {
@@ -800,6 +889,11 @@ export default function NotebookPage() {
                 { title: 'Quote', run: quote, icon: TIcons.quote },
                 { title: 'Divider', run: divider, icon: TIcons.divider },
                 null,
+                { title: 'Underline', run: () => applyWrap('<u>', '</u>'), icon: TIcons.underline },
+                { title: 'Highlight', run: () => applyWrap('<mark>', '</mark>'), icon: TIcons.highlighter },
+                ...TEXT_COLORS.map((c2) => ({ title: c2.name + ' text', run: () => applyWrap('<span style="color:' + c2.hex + '">', '</span>'), swatch: c2.hex })),
+                { title: 'Insert table', run: () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('insertText', false, TABLE_SNIPPET); }, icon: TIcons.table },
+                null,
                 { title: 'AI format — tidy this note (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
               ].map((btn, i) => btn === null
                 ? <span key={'sep' + i} style={s('flex:none;width:1px;height:18px;background:' + C.line + ';margin:0 7px;')} />
@@ -807,20 +901,11 @@ export default function NotebookPage() {
                   <Hover key={btn.title} tag="button" onClick={btn.run} aria-label={btn.title} title={btn.title}
                     base={'flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;color:' + (btn.accent ? C.blue : C.mut) + ';' + (btn.accent && aiFmt && aiFmt.status === 'loading' ? 'opacity:.5;' : '')}
                     hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                    <Svg w={16} sw={2}>{btn.icon}</Svg>
+                    {btn.swatch
+                      ? <span style={s('width:14px;height:14px;border-radius:99px;background:' + btn.swatch + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + C.line + ';')} />
+                      : <Svg w={16} sw={2}>{btn.icon}</Svg>}
                   </Hover>
                 ))}
-              <span style={s('flex:1;')} />
-              {/* Write / Preview toggle — Preview renders the markdown. */}
-              <div style={s('flex:none;display:flex;align-items:center;gap:2px;background:' + C.soft + ';border-radius:8px;padding:2px;')}>
-                {['write', 'read'].map((mode) => (
-                  <button key={mode} onClick={() => setViewMode(mode)}
-                    style={s('border:none;border-radius:6px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:5px 12px;' +
-                      (viewMode === mode ? 'background:#fff;color:' + C.navy + ';box-shadow:0 1px 2px rgba(33,43,50,.15);' : 'background:none;color:' + C.mut + ';'))}>
-                    {mode === 'write' ? 'Write' : 'Preview'}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* AI-format status bar — the diff below replaces the editor until
@@ -860,19 +945,46 @@ export default function NotebookPage() {
                   </div>
                 ))}
               </div>
-            ) : viewMode === 'read' ? (
-              <div style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:24px 28px;')}>
-                <MdView text={selected.body || ''} />
-              </div>
             ) : (
-              <textarea
-                ref={bodyRef}
-                value={selected.body || ''}
-                onChange={(e) => editSelected({ body: e.target.value })}
-                onKeyDown={editorKeys}
-                placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
-                style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:none;background:#fff;padding:24px 28px;outline:none;color:' + C.ink + ';')}
-              />
+              <div style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:20px 28px;cursor:text;')}
+                onMouseDown={(e) => { if (e.target === e.currentTarget && activeBlock === null) startBlock(blocks.length, ''); }}>
+                {blocks.map((b, i) => (
+                  activeBlock === i ? (
+                    <textarea
+                      key={'edit' + i}
+                      ref={(el) => { bodyRef.current = el; if (el && !el.dataset.init) { el.dataset.init = '1'; autoGrow(el); el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }}
+                      value={draft}
+                      onChange={(e) => { setDraft(e.target.value); autoGrow(e.target); }}
+                      onBlur={commitBlock}
+                      onKeyDown={(e) => { editorKeys(e); if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); } }}
+                      style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:#f7fbff;border-radius:8px;padding:8px 12px;margin:0 -12px 12px;box-shadow:inset 2.5px 0 0 ' + C.blue + ';')}
+                    />
+                  ) : (
+                    <div key={'blk' + i} className="nb-block" onClick={() => startBlock(i, b)} title="Click to edit">
+                      <MdView text={b} />
+                    </div>
+                  )
+                ))}
+                {activeBlock === blocks.length && (
+                  <textarea
+                    key="edit-new"
+                    ref={(el) => { bodyRef.current = el; if (el && !el.dataset.init) { el.dataset.init = '1'; autoGrow(el); el.focus(); } }}
+                    value={draft}
+                    onChange={(e) => { setDraft(e.target.value); autoGrow(e.target); }}
+                    onBlur={commitBlock}
+                    onKeyDown={(e) => { editorKeys(e); if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); } }}
+                    placeholder="Write markdown — it renders when you click away. Use the toolbar for headings, lists, tables, highlights and colours."
+                    style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:#f7fbff;border-radius:8px;padding:8px 12px;margin:0 -12px 12px;box-shadow:inset 2.5px 0 0 ' + C.blue + ';min-height:56px;')}
+                  />
+                )}
+                {blocks.length === 0 && activeBlock === null && (
+                  <p style={s('margin:4px 0;font-size:16px;color:' + C.dim + ';')}>
+                    Click anywhere to start writing. Markdown renders as you go — finish a block and it turns into headings, lists, tables… Anything you write is used by the assistant to answer and triage.
+                  </p>
+                )}
+                {/* Click-to-continue area below the last block. */}
+                {activeBlock === null && blocks.length > 0 && <div style={s('min-height:120px;')} />}
+              </div>
             )}
 
             {/* Attachments — docked at the bottom of the page. */}

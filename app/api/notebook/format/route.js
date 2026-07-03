@@ -23,6 +23,8 @@ Rules — follow all of them:
 - Keep the wording as close as possible to the original. Do NOT rephrase, summarise, shorten, or add content.
 - Fix spelling/typos and obvious punctuation mistakes only.
 - Improve structure: consistent headings (##/###), bullet or numbered lists where the text is clearly a list, blank lines between blocks.
+- Use markdown tables (| Col | Col | with a |---| separator row) when the content is clearly tabular (e.g. contact lists, opening hours, if/then rules).
+- You may also use this limited HTML where it genuinely helps: <u>underline</u>, <mark>highlight key warnings</mark>, <sup>/<sub>, <kbd>keys</kbd>, <br>, and <span style="color:#d5281b">red</span> / <span style="color:#007f3b">green</span> / <span style="color:#005eb8">blue</span> for safety-critical emphasis. No other tags or attributes.
 - Never change medical or procedural meaning, names, phone numbers, or times.
 - Output ONLY the reformatted note text. No preamble, no explanation, no code fences.
 
