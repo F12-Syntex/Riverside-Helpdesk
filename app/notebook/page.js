@@ -36,8 +36,7 @@ const CSS = `
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
 .nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
 .nb-crumb:hover{color:${C.blue};}
-.nb-block{border-radius:8px;padding:2px 12px;margin:0 -12px;}
-.nb-block:hover{background:#f7fbff;box-shadow:inset 2.5px 0 0 ${C.line};}
+.nb-block{padding:2px 0;}
 .nb-title{border-bottom:1.5px dashed transparent;transition:border-color .12s;}
 .nb-title:hover{border-bottom-color:${C.blue};}
 .nb-title:focus{border-bottom:1.5px solid ${C.blue};}
@@ -957,7 +956,7 @@ export default function NotebookPage() {
                       onChange={(e) => { setDraft(e.target.value); autoGrow(e.target); }}
                       onBlur={commitBlock}
                       onKeyDown={(e) => { editorKeys(e); if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); } }}
-                      style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:#f7fbff;border-radius:8px;padding:8px 12px;margin:0 -12px 12px;box-shadow:inset 2.5px 0 0 ' + C.blue + ';')}
+                      style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:none;padding:2px 0;margin:0 0 12px;')}
                     />
                   ) : (
                     <div key={'blk' + i} className="nb-block" onClick={() => startBlock(i, b)} title="Click to edit">
@@ -974,7 +973,7 @@ export default function NotebookPage() {
                     onBlur={commitBlock}
                     onKeyDown={(e) => { editorKeys(e); if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); } }}
                     placeholder="Write markdown — it renders when you click away. Use the toolbar for headings, lists, tables, highlights and colours."
-                    style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:#f7fbff;border-radius:8px;padding:8px 12px;margin:0 -12px 12px;box-shadow:inset 2.5px 0 0 ' + C.blue + ';min-height:56px;')}
+                    style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:none;padding:2px 0;margin:0 0 12px;min-height:56px;')}
                   />
                 )}
                 {blocks.length === 0 && activeBlock === null && (
