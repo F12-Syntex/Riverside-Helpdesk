@@ -52,6 +52,26 @@ function fmtSize(n) {
 
 const actBtn = 'flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:' + C.mut + ';border-radius:6px;';
 
+// Formatting-toolbar glyphs (same 24×24 stroke style as Icons in ui.js —
+// geometry from the Lucide set). Local to the notebook: no other page
+// needs them.
+const TIcons = {
+  h1: (<><path d="M4 12h8" /><path d="M4 18V6" /><path d="M12 18V6" /><path d="m17 12 3-2v8" /></>),
+  h2: (<><path d="M4 12h8" /><path d="M4 18V6" /><path d="M12 18V6" /><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1" /></>),
+  h3: (<><path d="M4 12h8" /><path d="M4 18V6" /><path d="M12 18V6" /><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2 2 2 0 0 1 2 2c0 1.5-1.8 2.5-3.5 1.5" /></>),
+  bold: (<><path d="M14 12a4 4 0 0 0 0-8H6v8" /><path d="M15 20a4 4 0 0 0 0-8H6v8Z" /></>),
+  italic: (<><line x1="19" x2="10" y1="4" y2="4" /><line x1="14" x2="5" y1="20" y2="20" /><line x1="15" x2="9" y1="4" y2="20" /></>),
+  strike: (<><path d="M16 4H9a3 3 0 0 0-2.83 4" /><path d="M14 12a4 4 0 0 1 0 8H6" /><line x1="4" x2="20" y1="12" y2="12" /></>),
+  code: (<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></>),
+  list: (<><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></>),
+  listOrdered: (<><line x1="10" x2="21" y1="6" y2="6" /><line x1="10" x2="21" y1="12" y2="12" /><line x1="10" x2="21" y1="18" y2="18" /><path d="M4 6h1v4" /><path d="M4 10h2" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" /></>),
+  listChecks: (<><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></>),
+  indent: (<><polyline points="3 8 7 12 3 16" /><line x1="21" x2="11" y1="12" y2="12" /><line x1="21" x2="11" y1="6" y2="6" /><line x1="21" x2="11" y1="18" y2="18" /></>),
+  outdent: (<><polyline points="7 8 3 12 7 16" /><line x1="21" x2="11" y1="12" y2="12" /><line x1="21" x2="11" y1="6" y2="6" /><line x1="21" x2="11" y1="18" y2="18" /></>),
+  quote: (<><path d="M17 6H3" /><path d="M21 12H8" /><path d="M21 18H8" /><path d="M3 12v6" /></>),
+  divider: (<><line x1="5" x2="19" y1="12" y2="12" /><circle cx="12" cy="6" r="0.5" /><circle cx="12" cy="18" r="0.5" /></>),
+};
+
 // NHS-style confirmation sheet — same pattern as the rota system so popups
 // stay consistent across the app.
 function Sheet({ maxWidth = 420, onClose, children }) {
@@ -622,30 +642,30 @@ export default function NotebookPage() {
                 { title: 'Undo (Ctrl+Z)', run: doUndo, icon: Icons.undo },
                 { title: 'Redo (Ctrl+Y)', run: doRedo, icon: Icons.redo },
                 null,
-                { title: 'Heading 1', run: () => toggleHeading(1), label: 'H1' },
-                { title: 'Heading 2', run: () => toggleHeading(2), label: 'H2' },
-                { title: 'Heading 3', run: () => toggleHeading(3), label: 'H3' },
+                { title: 'Heading 1', run: () => toggleHeading(1), icon: TIcons.h1 },
+                { title: 'Heading 2', run: () => toggleHeading(2), icon: TIcons.h2 },
+                { title: 'Heading 3', run: () => toggleHeading(3), icon: TIcons.h3 },
                 null,
-                { title: 'Bold (Ctrl+B)', run: () => applyWrap('**'), label: 'B', lab: 'font-weight:800;' },
-                { title: 'Italic (Ctrl+I)', run: () => applyWrap('*'), label: 'I', lab: 'font-style:italic;font-family:Georgia,serif;' },
-                { title: 'Strikethrough', run: () => applyWrap('~~'), label: 'S', lab: 'text-decoration:line-through;' },
-                { title: 'Inline code', run: () => applyWrap('`'), label: '<>', lab: 'font-family:Consolas,monospace;font-size:12.5px;' },
+                { title: 'Bold (Ctrl+B)', run: () => applyWrap('**'), icon: TIcons.bold },
+                { title: 'Italic (Ctrl+I)', run: () => applyWrap('*'), icon: TIcons.italic },
+                { title: 'Strikethrough', run: () => applyWrap('~~'), icon: TIcons.strike },
+                { title: 'Inline code', run: () => applyWrap('`'), icon: TIcons.code },
                 null,
-                { title: 'Bulleted list', run: bullets, label: '•≡' },
-                { title: 'Numbered list', run: numbers, label: '1.' },
-                { title: 'Task list', run: tasks, label: '☑' },
+                { title: 'Bulleted list', run: bullets, icon: TIcons.list },
+                { title: 'Numbered list', run: numbers, icon: TIcons.listOrdered },
+                { title: 'Task list', run: tasks, icon: TIcons.listChecks },
                 null,
-                { title: 'Decrease indent', run: outdent, label: '⇤' },
-                { title: 'Increase indent', run: indent, label: '⇥' },
-                { title: 'Quote', run: quote, label: '❝' },
-                { title: 'Divider', run: divider, label: '—' },
+                { title: 'Decrease indent', run: outdent, icon: TIcons.outdent },
+                { title: 'Increase indent', run: indent, icon: TIcons.indent },
+                { title: 'Quote', run: quote, icon: TIcons.quote },
+                { title: 'Divider', run: divider, icon: TIcons.divider },
               ].map((btn, i) => btn === null
-                ? <span key={'sep' + i} style={s('flex:none;width:1px;height:20px;background:' + C.line + ';margin:0 6px;')} />
+                ? <span key={'sep' + i} style={s('flex:none;width:1px;height:18px;background:' + C.line + ';margin:0 7px;')} />
                 : (
                   <Hover key={btn.title} tag="button" onClick={btn.run} aria-label={btn.title} title={btn.title}
-                    base={'flex:none;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;font:inherit;font-size:14px;font-weight:600;color:' + C.mut + ';padding:0 6px;'}
+                    base={'flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;color:' + C.mut + ';'}
                     hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                    {btn.icon ? <Svg w={16} sw={2.2}>{btn.icon}</Svg> : <span style={s(btn.lab || '')}>{btn.label}</span>}
+                    <Svg w={16} sw={2}>{btn.icon}</Svg>
                   </Hover>
                 ))}
             </div>
