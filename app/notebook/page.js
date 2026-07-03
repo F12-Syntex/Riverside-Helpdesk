@@ -34,7 +34,9 @@ const CSS = `
 .nb-kids{margin-left:13px;padding-left:6px;border-left:1.5px solid ${C.line};}
 .nb-kids>div>.nb-row{position:relative;}
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
-.nb-title{border-bottom:1.5px dashed ${C.line};transition:border-color .12s;}
+.nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
+.nb-crumb:hover{color:${C.blue};}
+.nb-title{border-bottom:1.5px dashed transparent;transition:border-color .12s;}
 .nb-title:hover{border-bottom-color:${C.blue};}
 .nb-title:focus{border-bottom:1.5px solid ${C.blue};}
 `;
@@ -87,7 +89,7 @@ function ConfirmSheet({ confirm, onClose }) {
 // defining it inline remounted the whole tree on every state change, which is
 // what made the sidebar blink.
 function SideRow({ n, depth, ctx }) {
-  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote, renameNote } = ctx;
+  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu } = ctx;
   const isSel = selectedId === n.id;
   const onPath = ancestors.some((a) => a.id === n.id);
   const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
@@ -95,7 +97,8 @@ function SideRow({ n, depth, ctx }) {
   const fileCount = attachments.filter((a) => a.noteId === n.id).length;
   return (
     <div>
-      <div className="nb-row" style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
+      <div className="nb-row" onContextMenu={(e) => openMenu(e, n.id)}
+        style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
         (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
         {kids.length > 0 ? (
           <Hover tag="button" onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} aria-label={open ? 'Collapse' : 'Expand'}
@@ -110,20 +113,12 @@ function SideRow({ n, depth, ctx }) {
           {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
         </button>
         <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
-          <Hover tag="button" onClick={() => renameNote(n.id)} aria-label="Rename" title="Rename"
-            base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-            <Svg w={15} sw={2.2}>{Icons.edit}</Svg>
-          </Hover>
           {depth < MAX_DEPTH - 1 && (
             <Hover tag="button" onClick={() => newNote(n.id)} aria-label="Add page" title="Add page"
               base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
               <Svg w={16} sw={2.2}>{Icons.plus}</Svg>
             </Hover>
           )}
-          <Hover tag="button" onClick={() => askRemoveNote(n.id)} aria-label="Delete" title="Delete"
-            base={actBtn} hover={'background:#fbe9e7;color:' + C.red + ';'}>
-            <Svg w={16} sw={2.2}>{Icons.trash}</Svg>
-          </Hover>
         </span>
       </div>
       {open && kids.length > 0 && (
@@ -147,6 +142,7 @@ export default function NotebookPage() {
   const [uploadErr, setUploadErr] = React.useState('');
   const [dragging, setDragging] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
+  const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
@@ -383,7 +379,31 @@ export default function NotebookPage() {
     setTimeout(() => { if (titleInput.current) { titleInput.current.focus(); titleInput.current.select(); } }, 0);
   }
 
-  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote, renameNote };
+  /* -------------------- Sidebar right-click menu ---------------------- */
+
+  function openMenu(e, id) {
+    e.preventDefault();
+    e.stopPropagation(); // keep the window-level close handler from eating the new menu
+    setMenu({ id, x: Math.min(e.clientX, window.innerWidth - 180), y: Math.min(e.clientY, window.innerHeight - 110) });
+  }
+
+  React.useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e) => { if (e.key === 'Escape') setMenu(null); };
+    window.addEventListener('click', close);
+    window.addEventListener('contextmenu', close);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('contextmenu', close);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', close);
+    };
+  }, [menu]);
+
+  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu };
   const sectionPages = isSection ? childrenOf(selected.id) : [];
 
   /* ------------------------------ Render ------------------------------- */
@@ -447,8 +467,7 @@ export default function NotebookPage() {
               <>
                 {ancestors.map((a) => (
                   <React.Fragment key={a.id}>
-                    <button onClick={() => selectNote(a.id)}
-                      style={s('border:none;background:none;font:inherit;font-size:14px;color:' + C.blue + ';cursor:pointer;padding:0;text-decoration:underline;')}>
+                    <button className="nb-crumb" onClick={() => selectNote(a.id)}>
                       {a.title || 'Untitled'}
                     </button>
                     <Svg w={12} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.chevronRight}</Svg>
@@ -571,6 +590,23 @@ export default function NotebookPage() {
         )}
       </main>
       </div>
+
+      {/* Sidebar right-click menu — rename / delete. */}
+      {menu && (
+        <div style={s('position:fixed;left:' + menu.x + 'px;top:' + menu.y + 'px;z-index:90;min-width:168px;background:#fff;border:1px solid ' + C.line + ';border-radius:10px;box-shadow:0 8px 24px rgba(33,43,50,.18);padding:5px;display:flex;flex-direction:column;')}
+          onClick={(e) => e.stopPropagation()}>
+          <Hover tag="button" onClick={() => { setMenu(null); renameNote(menu.id); }}
+            base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.ink + ';cursor:pointer;padding:9px 11px;text-align:left;'}
+            hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+            <Svg w={15} sw={2.2}>{Icons.edit}</Svg>Rename
+          </Hover>
+          <Hover tag="button" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}
+            base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.red + ';cursor:pointer;padding:9px 11px;text-align:left;'}
+            hover={'background:#fbe9e7;'}>
+            <Svg w={15} sw={2.2}>{Icons.trash}</Svg>Delete
+          </Hover>
+        </div>
+      )}
 
       {confirm && <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} />}
     </div>
