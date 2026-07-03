@@ -390,7 +390,9 @@ export default function NotebookPage() {
 
   return (
     <div style={s('display:flex;flex-direction:column;height:100vh;min-height:100vh;background:' + C.bg + ';')}>
-      <style>{CSS}</style>
+      {/* dangerouslySetInnerHTML: a plain {CSS} text child gets HTML-escaped
+          on the server (> and ") but not on the client — hydration mismatch. */}
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <AppHeader subtitle="Notebook" />
       <div style={s('flex:1;min-height:0;display:flex;width:100%;')}>
 
