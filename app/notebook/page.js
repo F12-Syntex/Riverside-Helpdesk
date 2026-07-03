@@ -7,13 +7,15 @@ import AppHeader from '../_components/AppHeader';
 /* ------------------------------------------------------------------ *
  * Notebook — practice notes the assistant uses automatically.
  *
- * Full-page editor with no app header: the sidebar pinned to the far
- * left carries a home link and a recursive note tree where connector
- * lines run from each parent to its children (notes nest to any
- * depth). The editor fills the page; attachments show as chips under
- * the title and files upload by drag-and-drop onto the note (or the
- * paperclip button). Notes persist to Postgres (/api/notebook); files
- * go to Vercel Blob (/api/notebook/attachments).
+ * Sidebar on the far left holds the section tree; the entire right
+ * side is the notes area with its own header bar (breadcrumb, save
+ * state, attach/delete). Sections are name-only containers: content
+ * lives in pages beneath them, so creating a section also creates its
+ * first page and opens that page for writing. Files upload by
+ * drag-and-drop onto a page (or the paperclip button). Notes persist
+ * to Postgres (/api/notebook); files go to Vercel Blob
+ * (/api/notebook/attachments). Destructive actions confirm through the
+ * shared NHS-style sheet (riva-modal-overlay / riva-sheet).
  * ------------------------------------------------------------------ */
 
 const C = {
@@ -34,7 +36,7 @@ const CSS = `
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
 `;
 
-const MAX_DEPTH = 4; // sections + 3 levels of sub-notes keeps the tree sane
+const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
 
 function fmtSize(n) {
   if (!n) return '';
@@ -43,14 +45,85 @@ function fmtSize(n) {
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-// The app's standard popup: centered dialog on desktop, bottom sheet on mobile
-// (.riva-modal-overlay / .riva-sheet in globals.css — same as the rota's).
+const actBtn = 'flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:' + C.mut + ';border-radius:6px;';
+
+// NHS-style confirmation sheet — same pattern as the rota system so popups
+// stay consistent across the app.
 function Sheet({ maxWidth = 420, onClose, children }) {
   return (
     <div className="riva-modal-overlay" onClick={onClose}>
       <div className="riva-sheet" style={{ maxWidth: maxWidth + 'px' }} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
+    </div>
+  );
+}
+
+function ConfirmSheet({ confirm, onClose }) {
+  return (
+    <Sheet onClose={onClose}>
+      <div style={s('padding:26px 26px 8px;')}>
+        <h2 style={s('font-size:21px;font-weight:700;margin:0 0 8px;color:' + C.ink + ';')}>{confirm.title}</h2>
+        <p style={s('font-size:16px;line-height:1.5;margin:0;color:' + C.mut + ';')}>{confirm.message}</p>
+      </div>
+      <div style={s('display:flex;align-items:center;gap:10px;padding:20px 26px 24px;')}>
+        <Hover tag="button" onClick={confirm.onConfirm}
+          base="font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:#d5281b;border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #7a160d;"
+          active="transform:translateY(4px);box-shadow:none;">{confirm.confirmLabel || 'Delete'}</Hover>
+        <Hover tag="button" onClick={onClose}
+          base="font-family:inherit;font-size:16px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;"
+          hover="color:#212b32;">Cancel</Hover>
+      </div>
+    </Sheet>
+  );
+}
+
+// One tree row; children render recursively inside .nb-kids, which draws the
+// parent→child connector lines. Defined at module level (not inside the page
+// component) so React keeps the same component identity across renders —
+// defining it inline remounted the whole tree on every state change, which is
+// what made the sidebar blink.
+function SideRow({ n, depth, ctx }) {
+  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote } = ctx;
+  const isSel = selectedId === n.id;
+  const onPath = ancestors.some((a) => a.id === n.id);
+  const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
+  const open = !!expanded[n.id] || (!!q && kids.length > 0);
+  const fileCount = attachments.filter((a) => a.noteId === n.id).length;
+  return (
+    <div>
+      <div className="nb-row" style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
+        (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
+        {kids.length > 0 ? (
+          <Hover tag="button" onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} aria-label={open ? 'Collapse' : 'Expand'}
+            base={actBtn + 'width:24px;height:24px;'} hover={'background:' + C.soft + ';'}>
+            <Svg w={16} sw={2.4} style={s('transform:rotate(' + (open ? 90 : 0) + 'deg);transition:transform .15s;')}>{Icons.chevronRight}</Svg>
+          </Hover>
+        ) : (<span style={s('flex:none;width:24px;')} />)}
+        <button onClick={() => selectNote(n.id)}
+          style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;text-align:left;border:none;background:none;font:inherit;font-size:14.5px;cursor:pointer;padding:8px 4px;color:' + (isSel ? C.navy : C.ink) + ';' + (isSel ? 'font-weight:600;' : ''))}>
+          <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 ? Icons.book : Icons.fileLines}</Svg>
+          <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
+          {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
+        </button>
+        <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
+          {depth < MAX_DEPTH - 1 && (
+            <Hover tag="button" onClick={() => newNote(n.id)} aria-label="Add page" title="Add page"
+              base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+              <Svg w={16} sw={2.2}>{Icons.plus}</Svg>
+            </Hover>
+          )}
+          <Hover tag="button" onClick={() => askRemoveNote(n.id)} aria-label="Delete" title="Delete"
+            base={actBtn} hover={'background:#fbe9e7;color:' + C.red + ';'}>
+            <Svg w={16} sw={2.2}>{Icons.trash}</Svg>
+          </Hover>
+        </span>
+      </div>
+      {open && kids.length > 0 && (
+        <div className="nb-kids">
+          {kids.map((k) => <SideRow key={k.id} n={k} depth={depth + 1} ctx={ctx} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -66,8 +139,7 @@ export default function NotebookPage() {
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState('');
   const [dragging, setDragging] = React.useState(false);
-  const [confirmBox, setConfirmBox] = React.useState(null); // { title, message, confirmLabel, onConfirm }
-  const [renameBox, setRenameBox] = React.useState(null);   // { id, value } — section rename dialog
+  const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const dragDepth = React.useRef(0);
   const timer = React.useRef(null);
   const pending = React.useRef(null);
@@ -83,7 +155,12 @@ export default function NotebookPage() {
         setNotes(list);
         setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
         setStatus('ready');
-        if (list.length) setSelectedId((list.find((n) => !n.parentId) || list[0]).id);
+        // Open on the first page (sections are name-only), else the first section.
+        if (list.length) {
+          const first = list.find((n) => n.parentId) || list[0];
+          setSelectedId(first.id);
+          if (first.parentId) setExpanded((e) => ({ ...e, [first.parentId]: true }));
+        }
       } catch (e) {
         setStatus('error');
       }
@@ -94,9 +171,10 @@ export default function NotebookPage() {
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
+  const isSection = !!selected && !selected.parentId;
   const selectedFiles = attachments.filter((a) => a.noteId === selectedId);
 
-  // Ancestor chain of the selection, root first (breadcrumb-ish highlight + auto-expand).
+  // Ancestor chain of the selection, root first (breadcrumb + auto-expand).
   const ancestors = React.useMemo(() => {
     const chain = [];
     for (let cur = selected && byId.get(selected.parentId); cur && chain.length < 12; cur = byId.get(cur.parentId)) {
@@ -151,6 +229,7 @@ export default function NotebookPage() {
   }
 
   function editSelected(patch) {
+    if (isSection && 'body' in patch) return; // sections are name-only
     setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, ...patch } : n)));
     scheduleSave(selectedId, patch);
   }
@@ -169,71 +248,72 @@ export default function NotebookPage() {
     });
   }
 
+  async function createNoteApi(title, parentId) {
+    const res = await fetch('/api/notebook', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, parentId: parentId || null }),
+    });
+    if (!res.ok) throw new Error('bad status');
+    const { note } = await res.json();
+    return note;
+  }
+
+  // New page under a parent — or, with no parent, a new section. A section is
+  // a name-only container, so it is always created together with its first
+  // page, and the page (the writing surface) is what opens.
   async function newNote(parentId) {
     await flush();
     try {
-      const res = await fetch('/api/notebook', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: parentId ? 'New page' : 'New section', parentId: parentId || null }),
-      });
-      if (!res.ok) throw new Error('bad status');
-      const { note } = await res.json();
-      setNotes((ns) => ns.concat([note]));
-      if (parentId) setExpanded((e) => ({ ...e, [parentId]: true }));
-      setSelectedId(note.id);
-      // A section is only a name — go straight to naming it.
-      if (!parentId) setRenameBox({ id: note.id, value: note.title || '' });
+      if (parentId) {
+        const note = await createNoteApi('New page', parentId);
+        setNotes((ns) => ns.concat([note]));
+        setExpanded((e) => ({ ...e, [parentId]: true }));
+        setSelectedId(note.id);
+      } else {
+        const section = await createNoteApi('New section', null);
+        const page = await createNoteApi('New page', section.id);
+        setNotes((ns) => ns.concat([section, page]));
+        setExpanded((e) => ({ ...e, [section.id]: true }));
+        setSelectedId(page.id);
+      }
     } catch (e) { /* ignore */ }
   }
 
-  // Delete goes through the app's standard confirm dialog (no window.confirm).
   function askRemoveNote(id) {
     const n = byId.get(id);
-    const gone = descendantIds(id);
-    const kids = gone.size - 1;
-    const isSection = n && !n.parentId;
-    setConfirmBox({
-      title: isSection ? 'Delete section' : 'Delete page',
-      message: 'Delete “' + ((n && n.title) || 'Untitled') + '”'
-        + (kids ? ' and the ' + kids + ' page' + (kids === 1 ? '' : 's') + ' inside it' : '')
-        + '? Attached files are deleted too. This cannot be undone.',
-      confirmLabel: 'Delete',
-      onConfirm: async () => {
-        setConfirmBox(null);
-        try {
-          await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
-          setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
-          setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
-          if (gone.has(selectedId)) {
-            // Prefer staying near the deleted note: its parent, else the first section.
-            const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
-            if (parent) setSelectedId(parent);
-            else {
-              const remaining = notes.filter((x) => !gone.has(x.id) && !x.parentId);
-              setSelectedId(remaining.length ? remaining[0].id : null);
-            }
-          }
-        } catch (e) { /* ignore */ }
-      },
+    const kids = descendantIds(id).size - 1;
+    const sec = n && !n.parentId;
+    setConfirm({
+      title: sec ? 'Delete section' : 'Delete page',
+      message: 'Delete "' + (n ? n.title || 'Untitled' : 'this note') + '"' + (kids ? ' and the ' + kids + ' page(s) inside it' : '') + '? Attached files are deleted too. This cannot be undone.',
+      confirmLabel: sec ? 'Delete section' : 'Delete page',
+      onConfirm: () => { setConfirm(null); removeNote(id); },
     });
   }
 
-  // Section rename dialog — saves straight away (sections have no autosave body).
-  async function saveRename() {
-    if (!renameBox) return;
-    const { id, value } = renameBox;
-    const title = value.trim() || 'Untitled section';
-    setRenameBox(null);
-    setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, title } : n)));
+  async function removeNote(id) {
+    const n = byId.get(id);
+    const gone = descendantIds(id);
     try {
-      await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, title }) });
+      await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
+      setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
+      setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
+      if (gone.has(selectedId)) {
+        // Prefer staying near the deleted note: its parent, else the first section.
+        const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
+        if (parent) setSelectedId(parent);
+        else {
+          const remaining = notes.filter((x) => !gone.has(x.id) && !x.parentId);
+          setSelectedId(remaining.length ? remaining[0].id : null);
+        }
+      }
     } catch (e) { /* ignore */ }
   }
 
   /* --------------------------- Attachments ---------------------------- */
 
   async function uploadFiles(files) {
-    if (!selectedId || !files || !files.length) return;
+    if (!selectedId || isSection || !files || !files.length) return;
     setUploading(true);
     setUploadErr('');
     for (const file of Array.from(files)) {
@@ -254,12 +334,12 @@ export default function NotebookPage() {
   }
 
   function askRemoveAttachment(a) {
-    setConfirmBox({
+    setConfirm({
       title: 'Remove file',
-      message: 'Remove “' + a.filename + '”? This cannot be undone.',
-      confirmLabel: 'Remove',
+      message: 'Remove "' + a.filename + '" from this page? This cannot be undone.',
+      confirmLabel: 'Remove file',
       onConfirm: async () => {
-        setConfirmBox(null);
+        setConfirm(null);
         try {
           await fetch('/api/notebook/attachments?id=' + a.id, { method: 'DELETE' });
           setAttachments((as) => as.filter((x) => x.id !== a.id));
@@ -268,70 +348,16 @@ export default function NotebookPage() {
     });
   }
 
-  // Drag-and-drop anywhere on the editor uploads to the open note. Pages only —
-  // sections are name-only and hold no files.
-  const dropHandlers = selected && selected.parentId ? {
+  // Drag-and-drop anywhere on the editor uploads to the open page.
+  const dropHandlers = selected && !isSection ? {
     onDragEnter: (e) => { e.preventDefault(); if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) { dragDepth.current++; setDragging(true); } },
     onDragOver: (e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; },
     onDragLeave: () => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); },
     onDrop: (e) => { e.preventDefault(); dragDepth.current = 0; setDragging(false); uploadFiles(e.dataTransfer.files); },
   } : {};
 
-  /* ------------------------------ Sidebar ------------------------------ */
-
-  const actBtn = 'flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:' + C.mut + ';border-radius:6px;';
-
-  // One tree row; children render recursively inside .nb-kids, which draws
-  // the parent→child connector lines.
-  function SideRow({ n, depth }) {
-    const isSel = selectedId === n.id;
-    const onPath = ancestors.some((a) => a.id === n.id);
-    const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
-    const open = !!expanded[n.id] || (!!q && kids.length > 0);
-    const fileCount = attachments.filter((a) => a.noteId === n.id).length;
-    return (
-      <div>
-        <div className="nb-row" style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
-          (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
-          {kids.length > 0 ? (
-            <Hover tag="button" onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} aria-label={open ? 'Collapse' : 'Expand'}
-              base={actBtn + 'width:24px;height:24px;'} hover={'background:' + C.soft + ';'}>
-              <Svg w={16} sw={2.4} style={s('transform:rotate(' + (open ? 90 : 0) + 'deg);transition:transform .15s;')}>{Icons.chevronRight}</Svg>
-            </Hover>
-          ) : (<span style={s('flex:none;width:24px;')} />)}
-          <button onClick={() => selectNote(n.id)}
-            style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;text-align:left;border:none;background:none;font:inherit;font-size:14.5px;cursor:pointer;padding:8px 4px;color:' + (isSel ? C.navy : C.ink) + ';' + (isSel ? 'font-weight:600;' : ''))}>
-            <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 ? Icons.book : Icons.fileLines}</Svg>
-            <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
-            {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
-          </button>
-          <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
-            {depth === 0 && (
-              <Hover tag="button" onClick={() => setRenameBox({ id: n.id, value: n.title || '' })} aria-label="Rename section" title="Rename section"
-                base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                <Svg w={15} sw={2.2}>{Icons.edit}</Svg>
-              </Hover>
-            )}
-            {depth < MAX_DEPTH - 1 && (
-              <Hover tag="button" onClick={() => newNote(n.id)} aria-label={depth === 0 ? 'Add page' : 'Add sub-page'} title={depth === 0 ? 'Add page' : 'Add sub-page'}
-                base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                <Svg w={16} sw={2.2}>{Icons.plus}</Svg>
-              </Hover>
-            )}
-            <Hover tag="button" onClick={() => askRemoveNote(n.id)} aria-label="Delete" title="Delete"
-              base={actBtn} hover={'background:#fbe9e7;color:' + C.red + ';'}>
-              <Svg w={16} sw={2.2}>{Icons.trash}</Svg>
-            </Hover>
-          </span>
-        </div>
-        {open && kids.length > 0 && (
-          <div className="nb-kids">
-            {kids.map((k) => <SideRow key={k.id} n={k} depth={depth + 1} />)}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, askRemoveNote };
+  const sectionPages = isSection ? childrenOf(selected.id) : [];
 
   /* ------------------------------ Render ------------------------------- */
 
@@ -346,7 +372,7 @@ export default function NotebookPage() {
         <div style={s('flex:none;padding:12px 14px 6px;display:flex;flex-direction:column;gap:10px;')}>
           <div style={s('display:flex;align-items:center;gap:8px;')}>
             <span style={s('flex:1;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + C.mut + ';')}>Sections</span>
-            <Hover tag="button" onClick={() => newNote(null)} aria-label="New section" title="New section"
+            <Hover tag="button" onClick={() => newNote(null)} aria-label="New section" title="New section (with its first page)"
               base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;'}
               hover={'background:' + C.navy + ';'}>
               <Svg w={14} sw={2.4}>{Icons.plus}</Svg>New
@@ -372,7 +398,7 @@ export default function NotebookPage() {
               {q ? 'No notes match your search.' : 'No sections yet. Create one — e.g. “Instructions” with pages like “How to book appointments”.'}
             </p>
           )}
-          {sections.map((n) => <SideRow key={n.id} n={n} depth={0} />)}
+          {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
         </div>
 
         <div style={s('flex:none;border-top:1px solid ' + C.soft + ';padding:10px 14px;font-size:12.5px;color:' + C.dim + ';line-height:1.45;')}>
@@ -382,8 +408,54 @@ export default function NotebookPage() {
         </div>
       </aside>
 
-      {/* ---------------------------- Editor ---------------------------- */}
+      {/* ------------------------- Notes area --------------------------- */}
       <main style={s('flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;')} {...dropHandlers}>
+        {/* Notes header — breadcrumb, save state and actions for the open note. */}
+        <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:#fff;border-bottom:1px solid ' + C.line + ';padding:10px 22px;min-height:56px;')}>
+          <div style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:14px;color:' + C.mut + ';overflow:hidden;white-space:nowrap;')}>
+            {!selected && <span>Notebook</span>}
+            {selected && (
+              <>
+                {ancestors.map((a) => (
+                  <React.Fragment key={a.id}>
+                    <button onClick={() => selectNote(a.id)}
+                      style={s('border:none;background:none;font:inherit;font-size:14px;color:' + C.blue + ';cursor:pointer;padding:0;text-decoration:underline;')}>
+                      {a.title || 'Untitled'}
+                    </button>
+                    <Svg w={12} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.chevronRight}</Svg>
+                  </React.Fragment>
+                ))}
+                <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:' + C.ink + ';')}>
+                  {selected.title || 'Untitled'}
+                </span>
+                <span style={s('flex:none;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:' + (isSection ? C.navy : C.dim) + ';background:' + (isSection ? C.sel : C.soft) + ';border-radius:99px;padding:3px 9px;margin-left:4px;')}>
+                  {isSection ? 'Section' : 'Page'}
+                </span>
+              </>
+            )}
+          </div>
+          <span style={s('flex:none;font-size:13px;min-width:64px;text-align:right;color:' + (saveState === 'unsaved' ? C.red : C.dim) + ';')}>
+            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
+          </span>
+          {selected && !isSection && (
+            <>
+              <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
+              <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the page)"
+                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
+                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+                <Svg w={16} sw={2}>{Icons.paperclip}</Svg>
+              </Hover>
+            </>
+          )}
+          {selected && (
+            <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label={isSection ? 'Delete section' : 'Delete page'} title={isSection ? 'Delete section' : 'Delete page'}
+              base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
+              hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
+              <Svg w={16} sw={2}>{Icons.trash}</Svg>
+            </Hover>
+          )}
+        </div>
+
         {!selected && (
           <div style={s('flex:1;display:flex;align-items:center;justify-content:center;color:' + C.dim + ';font-size:16px;text-align:center;padding:24px;')}>
             <div>
@@ -392,86 +464,47 @@ export default function NotebookPage() {
             </div>
           </div>
         )}
-        {/* Section view — a section is a name that groups pages; nothing is
-            written on it. Rename and delete go through the standard dialogs. */}
-        {selected && !selected.parentId && (
-          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
-            <div style={s('flex:none;display:flex;align-items:center;gap:10px;')}>
-              <Svg w={22} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{Icons.book}</Svg>
-              <h1 style={s('flex:1;min-width:0;margin:0;font-size:25px;font-weight:700;letter-spacing:-0.01em;color:' + C.ink + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
-                {selected.title || 'Untitled section'}
-              </h1>
-              <Hover tag="button" onClick={() => setRenameBox({ id: selected.id, value: selected.title || '' })} aria-label="Rename section" title="Rename section"
-                base={'flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;color:' + C.mut + ';'}
-                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-                <Svg w={15} sw={2.2}>{Icons.edit}</Svg>Rename
-              </Hover>
-              <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label="Delete section" title="Delete section"
-                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
-                hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
-                <Svg w={16} sw={2}>{Icons.trash}</Svg>
-              </Hover>
-            </div>
 
-            <div style={s('flex:1;min-height:0;overflow-y:auto;margin-top:10px;')}>
-              <div style={s('border:1px solid ' + C.line + ';border-radius:12px;background:#fff;padding:18px 20px;')}>
-                <p style={s('margin:0 0 14px;font-size:14.5px;line-height:1.55;color:' + C.mut + ';')}>
-                  A section is just a name that groups pages — writing happens on its pages.
-                </p>
-                {childrenOf(selected.id).length === 0 && (
-                  <p style={s('margin:0 0 14px;font-size:14.5px;color:' + C.dim + ';')}>No pages yet.</p>
-                )}
-                {childrenOf(selected.id).map((k) => {
-                  const firstLine = (k.body || '').split('\n').map((l) => l.trim()).find(Boolean) || '';
-                  return (
-                    <Hover key={k.id} tag="button" onClick={() => selectNote(k.id)}
-                      base={'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid ' + C.soft + ';background:' + C.bg + ';border-radius:10px;padding:11px 14px;margin:0 0 8px;font:inherit;cursor:pointer;'}
-                      hover={'border-color:' + C.blue + ';background:' + C.sel + ';'}>
-                      <Svg w={16} sw={2} style={s('flex:none;color:' + C.mut + ';')}>{Icons.fileLines}</Svg>
-                      <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;')}>
-                        <span style={s('font-size:14.5px;font-weight:600;color:' + C.ink + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{k.title || 'Untitled'}</span>
-                        {firstLine && <span style={s('font-size:13px;color:' + C.dim + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{firstLine.slice(0, 120)}</span>}
-                      </span>
-                      <Svg w={14} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.chevronRight}</Svg>
-                    </Hover>
-                  );
-                })}
-                <Hover tag="button" onClick={() => newNote(selected.id)}
-                  base={'display:inline-flex;align-items:center;gap:7px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;'}
-                  hover={'background:' + C.navy + ';'}>
-                  <Svg w={14} sw={2.4}>{Icons.plus}</Svg>Add page
+        {/* Section view — name only; content lives in the pages beneath it. */}
+        {selected && isSection && (
+          <div style={s('flex:1;min-height:0;overflow-y:auto;width:100%;max-width:1000px;margin:0 auto;padding:26px 28px;')}>
+            <input
+              value={selected.title || ''}
+              onChange={(e) => editSelected({ title: e.target.value })}
+              placeholder="Section name"
+              style={s('width:100%;font:inherit;font-size:27px;font-weight:700;letter-spacing:-0.01em;border:none;outline:none;background:none;color:' + C.ink + ';')}
+            />
+            <p style={s('margin:6px 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
+              Sections only have a name — they organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
+            </p>
+            <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+              {sectionPages.map((p) => (
+                <Hover key={p.id} tag="button" onClick={() => selectNote(p.id)}
+                  base={'display:flex;align-items:center;gap:10px;text-align:left;border:1px solid ' + C.line + ';border-radius:11px;background:#fff;padding:13px 16px;font:inherit;font-size:15px;font-weight:600;color:' + C.ink + ';cursor:pointer;'}
+                  hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
+                  <Svg w={17} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{Icons.fileLines}</Svg>
+                  <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{p.title || 'Untitled'}</span>
+                  {(p.body || '').trim() ? null : <span style={s('flex:none;font-size:12.5px;font-weight:500;color:' + C.dim + ';')}>Empty</span>}
                 </Hover>
-              </div>
+              ))}
+              <Hover tag="button" onClick={() => newNote(selected.id)}
+                base={'display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed ' + C.line + ';border-radius:11px;background:none;padding:13px 16px;font:inherit;font-size:14.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;'}
+                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+                <Svg w={15} sw={2.4}>{Icons.plus}</Svg>New page
+              </Hover>
             </div>
           </div>
         )}
 
-        {/* Page editor — pages carry the writing and the files. */}
-        {selected && !!selected.parentId && (
+        {/* Page view — title, body, attachments. */}
+        {selected && !isSection && (
           <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
-            {/* Title row */}
-            <div style={s('flex:none;display:flex;align-items:center;gap:10px;')}>
-              <input
-                value={selected.title || ''}
-                onChange={(e) => editSelected({ title: e.target.value })}
-                placeholder="Page title"
-                style={s('flex:1;min-width:0;font:inherit;font-size:25px;font-weight:700;letter-spacing:-0.01em;border:none;outline:none;background:none;color:' + C.ink + ';')}
-              />
-              <span style={s('flex:none;font-size:13px;min-width:64px;text-align:right;color:' + (saveState === 'unsaved' ? C.red : C.dim) + ';')}>
-                {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
-              </span>
-              <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
-              <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the page)"
-                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
-                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-                <Svg w={16} sw={2}>{Icons.paperclip}</Svg>
-              </Hover>
-              <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label="Delete page" title="Delete page"
-                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
-                hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
-                <Svg w={16} sw={2}>{Icons.trash}</Svg>
-              </Hover>
-            </div>
+            <input
+              value={selected.title || ''}
+              onChange={(e) => editSelected({ title: e.target.value })}
+              placeholder="Page title"
+              style={s('flex:none;width:100%;font:inherit;font-size:25px;font-weight:700;letter-spacing:-0.01em;border:none;outline:none;background:none;color:' + C.ink + ';')}
+            />
 
             {/* Body — fills the page; attachments dock below and never push it down. */}
             <textarea
@@ -506,7 +539,7 @@ export default function NotebookPage() {
         )}
 
         {/* Drop overlay */}
-        {dragging && selected && !!selected.parentId && (
+        {dragging && selected && !isSection && (
           <div style={s('position:absolute;inset:10px;border:2.5px dashed ' + C.blue + ';border-radius:14px;background:rgba(232,241,248,.85);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
             <div style={s('display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;color:' + C.navy + ';')}>
               <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
@@ -517,48 +550,7 @@ export default function NotebookPage() {
       </main>
       </div>
 
-      {/* Standard confirm dialog (same pattern as the rota's). */}
-      {confirmBox && (
-        <Sheet maxWidth={420} onClose={() => setConfirmBox(null)}>
-          <div style={s('padding:24px 24px 8px;')}>
-            <h2 style={s('font-size:21px;font-weight:700;margin:0 0 8px;')}>{confirmBox.title}</h2>
-            <p style={s('font-size:16px;line-height:1.5;margin:0;color:' + C.mut + ';')}>{confirmBox.message}</p>
-          </div>
-          <div style={s('display:flex;gap:10px;padding:16px 24px 22px;')}>
-            <Hover tag="button" onClick={confirmBox.onConfirm}
-              base={'font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:' + C.red + ';border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #7a160d;'}
-              active="transform:translateY(4px);box-shadow:none;">{confirmBox.confirmLabel}</Hover>
-            <Hover tag="button" onClick={() => setConfirmBox(null)}
-              base={'font-family:inherit;font-size:16px;font-weight:600;color:' + C.mut + ';background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;'}
-              hover={'color:' + C.ink + ';'}>Cancel</Hover>
-          </div>
-        </Sheet>
-      )}
-
-      {/* Rename-section dialog. */}
-      {renameBox && (
-        <Sheet maxWidth={420} onClose={() => setRenameBox(null)}>
-          <div style={s('padding:24px 24px 8px;')}>
-            <h2 style={s('font-size:21px;font-weight:700;margin:0 0 8px;')}>Rename section</h2>
-            <input
-              autoFocus
-              value={renameBox.value}
-              onChange={(e) => setRenameBox((r) => ({ ...r, value: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') setRenameBox(null); }}
-              placeholder="Section name"
-              style={s('width:100%;font:inherit;font-size:16px;padding:10px 12px;border:2px solid ' + C.mut + ';border-radius:4px;background:#fff;outline:none;color:' + C.ink + ';')}
-            />
-          </div>
-          <div style={s('display:flex;gap:10px;padding:16px 24px 22px;')}>
-            <Hover tag="button" onClick={saveRename}
-              base={'font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #003419;'}
-              active="transform:translateY(4px);box-shadow:none;">Save</Hover>
-            <Hover tag="button" onClick={() => setRenameBox(null)}
-              base={'font-family:inherit;font-size:16px;font-weight:600;color:' + C.mut + ';background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;'}
-              hover={'color:' + C.ink + ';'}>Cancel</Hover>
-          </div>
-        </Sheet>
-      )}
+      {confirm && <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }
