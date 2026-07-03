@@ -72,6 +72,90 @@ const TIcons = {
   divider: (<><line x1="5" x2="19" y1="12" y2="12" /><circle cx="12" cy="6" r="0.5" /><circle cx="12" cy="18" r="0.5" /></>),
 };
 
+/* --------------------------- Markdown view --------------------------- *
+ * Notes are stored as markdown; Preview renders it. Small hand-rolled
+ * renderer (headings, lists incl. tasks, quotes, hr, bold/italic/strike/
+ * code/links) — enough for notes without pulling in a dependency.       */
+
+function renderInline(str) {
+  const out = [];
+  let rest = String(str);
+  let k = 0;
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(~~[^~]+~~)|(\[[^\]]+\]\([^)\s]+\))/;
+  while (rest) {
+    const m = rest.match(re);
+    if (!m) { out.push(rest); break; }
+    if (m.index > 0) out.push(rest.slice(0, m.index));
+    const t = m[0];
+    if (t.startsWith('`')) out.push(<code key={k++} style={s('font-family:Consolas,Menlo,monospace;font-size:.9em;background:' + C.soft + ';border-radius:4px;padding:1px 5px;')}>{t.slice(1, -1)}</code>);
+    else if (t.startsWith('**')) out.push(<strong key={k++}>{t.slice(2, -2)}</strong>);
+    else if (t.startsWith('~~')) out.push(<s key={k++}>{t.slice(2, -2)}</s>);
+    else if (t.startsWith('*')) out.push(<em key={k++}>{t.slice(1, -1)}</em>);
+    else {
+      const mm = t.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      out.push(<a key={k++} href={mm[2]} target="_blank" rel="noopener noreferrer" style={s('color:' + C.blue + ';')}>{mm[1]}</a>);
+    }
+    rest = rest.slice(m.index + t.length);
+  }
+  return out;
+}
+
+const H_SIZE = { 1: 26, 2: 22, 3: 18.5, 4: 16.5, 5: 15.5, 6: 15 };
+
+function MdView({ text }) {
+  const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+  let i = 0, k = 0;
+  const para = 'margin:0 0 12px;font-size:16px;line-height:1.65;color:' + C.ink + ';';
+  while (i < lines.length) {
+    const l = lines[i];
+    if (!l.trim()) { i++; continue; }
+    let m;
+    if ((m = l.match(/^(#{1,6})\s+(.*)/))) {
+      const lv = m[1].length;
+      blocks.push(<div key={k++} style={s('margin:' + (blocks.length ? 22 : 0) + 'px 0 10px;font-size:' + H_SIZE[lv] + 'px;font-weight:700;letter-spacing:-0.01em;color:' + C.ink + ';' + (lv <= 2 ? 'padding-bottom:6px;border-bottom:1px solid ' + C.soft + ';' : ''))}>{renderInline(m[2])}</div>);
+      i++; continue;
+    }
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(l.trim())) {
+      blocks.push(<hr key={k++} style={s('border:none;border-top:1px solid ' + C.line + ';margin:18px 0;')} />);
+      i++; continue;
+    }
+    if (/^>\s?/.test(l)) {
+      const q = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) { q.push(lines[i].replace(/^>\s?/, '')); i++; }
+      blocks.push(<div key={k++} style={s('margin:0 0 12px;border-left:4px solid ' + C.blue + ';background:' + C.sel + ';padding:10px 14px;border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.6;color:' + C.ink + ';')}>{renderInline(q.join(' '))}</div>);
+      continue;
+    }
+    if (/^\s*([-*+]|\d+\.)\s+/.test(l)) {
+      const items = [];
+      while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) {
+        const im = lines[i].match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+        const depth = Math.min(4, Math.floor(im[1].replace(/\t/g, '  ').length / 2));
+        const tm = im[3].match(/^\[([ xX])\]\s+(.*)$/);
+        items.push({ depth, num: /^\d+\.$/.test(im[2]) ? im[2] : null, task: !!tm, checked: !!tm && tm[1] !== ' ', text: tm ? tm[2] : im[3] });
+        i++;
+      }
+      blocks.push(
+        <div key={k++} style={s('margin:0 0 12px;display:flex;flex-direction:column;gap:5px;')}>
+          {items.map((it, j) => (
+            <div key={j} style={s('display:flex;gap:9px;padding-left:' + (4 + it.depth * 22) + 'px;font-size:16px;line-height:1.55;color:' + C.ink + ';')}>
+              <span style={s('flex:none;min-width:14px;text-align:center;color:' + (it.task ? (it.checked ? C.green : C.dim) : C.blue) + ';' + (it.num ? 'font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;' : 'font-weight:700;'))}>
+                {it.task ? (it.checked ? '☑' : '☐') : it.num ? it.num : '•'}
+              </span>
+              <span style={s('flex:1;min-width:0;' + (it.task && it.checked ? 'text-decoration:line-through;color:' + C.dim + ';' : ''))}>{renderInline(it.text)}</span>
+            </div>
+          ))}
+        </div>
+      );
+      continue;
+    }
+    const p = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|>|\s*([-*+]|\d+\.)\s|(-{3,}|\*{3,}|_{3,})\s*$)/.test(lines[i])) { p.push(lines[i]); i++; }
+    blocks.push(<p key={k++} style={s(para)}>{renderInline(p.join(' '))}</p>);
+  }
+  return <div>{blocks.length ? blocks : <p style={s(para + 'color:' + C.dim + ';')}>Nothing here yet — switch to Write to add content.</p>}</div>;
+}
+
 // Line-level diff (LCS) for the AI-format preview: ' ' unchanged, '-' removed,
 // '+' added. Notes are small, so the quadratic table is fine.
 function lineDiff(a, b) {
@@ -187,6 +271,7 @@ export default function NotebookPage() {
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
+  const [viewMode, setViewMode] = React.useState('write');   // 'write' | 'read' — page editor vs rendered markdown
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
@@ -383,6 +468,7 @@ export default function NotebookPage() {
     dirty.current.add(selectedId);
     setSaveState('saving');
     setAiFmt(null);
+    setViewMode('read'); // show the tidied note rendered
   }
 
   function editorKeys(e) {
@@ -397,6 +483,7 @@ export default function NotebookPage() {
   async function selectNote(id) {
     await flush();
     setUploadErr('');
+    setAiFmt(null);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
     setExpanded((e) => {
@@ -723,18 +810,70 @@ export default function NotebookPage() {
                     <Svg w={16} sw={2}>{btn.icon}</Svg>
                   </Hover>
                 ))}
+              <span style={s('flex:1;')} />
+              {/* Write / Preview toggle — Preview renders the markdown. */}
+              <div style={s('flex:none;display:flex;align-items:center;gap:2px;background:' + C.soft + ';border-radius:8px;padding:2px;')}>
+                {['write', 'read'].map((mode) => (
+                  <button key={mode} onClick={() => setViewMode(mode)}
+                    style={s('border:none;border-radius:6px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:5px 12px;' +
+                      (viewMode === mode ? 'background:#fff;color:' + C.navy + ';box-shadow:0 1px 2px rgba(33,43,50,.15);' : 'background:none;color:' + C.mut + ';'))}>
+                    {mode === 'write' ? 'Write' : 'Preview'}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Body — the entire content area is the writing surface;
+            {/* AI-format status bar — the diff below replaces the editor until
+                the user applies or cancels. */}
+            {aiFmt && (
+              <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:9px 20px;')}>
+                <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
+                <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
+                  {aiFmt.status === 'loading' && 'Tidying the note — checking spelling and structure…'}
+                  {aiFmt.status === 'error' && aiFmt.message}
+                  {aiFmt.status === 'ready' && 'Review the proposed changes below. Wording stays as written — only typos, punctuation and layout change. Nothing is saved until you apply.'}
+                </span>
+                {aiFmt.status === 'ready' && (
+                  <Hover tag="button" onClick={applyAiFormat}
+                    base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
+                    hover="background:#00542b;">Apply changes</Hover>
+                )}
+                {aiFmt.status !== 'loading' && (
+                  <Hover tag="button" onClick={() => setAiFmt(null)}
+                    base={'flex:none;font:inherit;font-size:13.5px;font-weight:600;color:' + C.mut + ';background:none;border:none;border-radius:7px;padding:7px 10px;cursor:pointer;'}
+                    hover={'color:' + C.ink + ';'}>{aiFmt.status === 'ready' ? 'Cancel' : 'Dismiss'}</Hover>
+                )}
+              </div>
+            )}
+
+            {/* Body — the entire content area is the writing surface (or the
+                rendered markdown in Preview, or the AI diff while reviewing);
                 attachments dock below and never push it down. */}
-            <textarea
-              ref={bodyRef}
-              value={selected.body || ''}
-              onChange={(e) => editSelected({ body: e.target.value })}
-              onKeyDown={editorKeys}
-              placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
-              style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:none;background:#fff;padding:24px 28px;outline:none;color:' + C.ink + ';')}
-            />
+            {aiFmt && aiFmt.status === 'ready' ? (
+              <div style={s('flex:1;min-height:0;overflow:auto;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
+                {aiFmt.diff.map((l, i) => (
+                  <div key={i} style={s('display:flex;gap:10px;padding:1px 20px;white-space:pre-wrap;word-break:break-word;' +
+                    (l.t === '-' ? 'background:#fbe9e7;color:#8a1206;text-decoration:line-through;' :
+                     l.t === '+' ? 'background:#e7f5ec;color:#00542b;' : 'color:' + C.mut + ';'))}>
+                    <span style={s('flex:none;width:12px;user-select:none;opacity:.7;')}>{l.t === ' ' ? '' : l.t}</span>
+                    <span style={s('flex:1;min-width:0;')}>{l.s || ' '}</span>
+                  </div>
+                ))}
+              </div>
+            ) : viewMode === 'read' ? (
+              <div style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:24px 28px;')}>
+                <MdView text={selected.body || ''} />
+              </div>
+            ) : (
+              <textarea
+                ref={bodyRef}
+                value={selected.body || ''}
+                onChange={(e) => editSelected({ body: e.target.value })}
+                onKeyDown={editorKeys}
+                placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
+                style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:none;background:#fff;padding:24px 28px;outline:none;color:' + C.ink + ';')}
+              />
+            )}
 
             {/* Attachments — docked at the bottom of the page. */}
             {(selectedFiles.length > 0 || uploadErr || uploading) && (
@@ -787,47 +926,6 @@ export default function NotebookPage() {
             <Svg w={15} sw={2.2}>{Icons.trash}</Svg>Delete
           </Hover>
         </div>
-      )}
-
-      {/* AI-format preview — the diff the user must confirm before anything
-          is applied. Removed lines red, added lines green. */}
-      {aiFmt && (
-        <Sheet maxWidth={760} onClose={() => setAiFmt(null)}>
-          <div style={s('padding:24px 26px 8px;')}>
-            <h2 style={s('display:flex;align-items:center;gap:9px;font-size:21px;font-weight:700;margin:0 0 6px;color:' + C.ink + ';')}>
-              <Svg w={19} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>AI formatting
-            </h2>
-            {aiFmt.status === 'loading' && <p style={s('font-size:16px;margin:0;color:' + C.mut + ';')}>Tidying the note — checking spelling and structure…</p>}
-            {aiFmt.status === 'error' && <p style={s('font-size:16px;margin:0;color:' + C.mut + ';')}>{aiFmt.message}</p>}
-            {aiFmt.status === 'ready' && (
-              <>
-                <p style={s('font-size:15px;line-height:1.5;margin:0 0 12px;color:' + C.mut + ';')}>
-                  Review the proposed changes. Wording is kept as written — only typos, punctuation and layout change. Nothing is saved until you apply.
-                </p>
-                <div style={s('max-height:52vh;overflow:auto;border:1px solid ' + C.line + ';border-radius:10px;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.55;')}>
-                  {aiFmt.diff.map((l, i) => (
-                    <div key={i} style={s('display:flex;gap:8px;padding:1px 10px;white-space:pre-wrap;word-break:break-word;' +
-                      (l.t === '-' ? 'background:#fbe9e7;color:#8a1206;text-decoration:line-through;' :
-                       l.t === '+' ? 'background:#e7f5ec;color:#00542b;' : 'color:' + C.mut + ';'))}>
-                      <span style={s('flex:none;width:12px;user-select:none;opacity:.7;')}>{l.t === ' ' ? '' : l.t}</span>
-                      <span style={s('flex:1;min-width:0;')}>{l.s || ' '}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <div style={s('display:flex;align-items:center;gap:10px;padding:18px 26px 22px;')}>
-            {aiFmt.status === 'ready' && (
-              <Hover tag="button" onClick={applyAiFormat}
-                base={'font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #00401e;'}
-                active="transform:translateY(4px);box-shadow:none;">Apply changes</Hover>
-            )}
-            <Hover tag="button" onClick={() => setAiFmt(null)}
-              base="font-family:inherit;font-size:16px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;"
-              hover="color:#212b32;">{aiFmt.status === 'ready' ? 'Cancel' : 'Close'}</Hover>
-          </div>
-        </Sheet>
       )}
 
       {confirm && <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} />}
