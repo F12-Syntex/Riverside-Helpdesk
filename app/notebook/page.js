@@ -425,9 +425,13 @@ export default function NotebookPage() {
                     <Svg w={12} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.chevronRight}</Svg>
                   </React.Fragment>
                 ))}
-                <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:' + C.ink + ';')}>
-                  {selected.title || 'Untitled'}
-                </span>
+                <input
+                  value={selected.title || ''}
+                  onChange={(e) => editSelected({ title: e.target.value })}
+                  placeholder={isSection ? 'Section name' : 'Page title'}
+                  aria-label={isSection ? 'Section name' : 'Page title'}
+                  style={s('flex:1;min-width:60px;font:inherit;font-size:15.5px;font-weight:600;border:none;outline:none;background:none;color:' + C.ink + ';padding:4px 0;')}
+                />
                 <span style={s('flex:none;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:' + (isSection ? C.navy : C.dim) + ';background:' + (isSection ? C.sel : C.soft) + ';border-radius:99px;padding:3px 9px;margin-left:4px;')}>
                   {isSection ? 'Section' : 'Page'}
                 </span>
@@ -468,13 +472,7 @@ export default function NotebookPage() {
         {/* Section view — name only; content lives in the pages beneath it. */}
         {selected && isSection && (
           <div style={s('flex:1;min-height:0;overflow-y:auto;width:100%;max-width:1000px;margin:0 auto;padding:26px 28px;')}>
-            <input
-              value={selected.title || ''}
-              onChange={(e) => editSelected({ title: e.target.value })}
-              placeholder="Section name"
-              style={s('width:100%;font:inherit;font-size:27px;font-weight:700;letter-spacing:-0.01em;border:none;outline:none;background:none;color:' + C.ink + ';')}
-            />
-            <p style={s('margin:6px 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
+            <p style={s('margin:0 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
               Sections only have a name — they organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
             </p>
             <div style={s('display:flex;flex-direction:column;gap:8px;')}>
@@ -496,16 +494,10 @@ export default function NotebookPage() {
           </div>
         )}
 
-        {/* Page view — title, body, attachments. */}
+        {/* Page view — the title lives in the header; the whole content area
+            is the note body, with attachments docked below. */}
         {selected && !isSection && (
           <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1000px;margin:0 auto;padding:20px 28px 20px;')}>
-            <input
-              value={selected.title || ''}
-              onChange={(e) => editSelected({ title: e.target.value })}
-              placeholder="Page title"
-              style={s('flex:none;width:100%;font:inherit;font-size:25px;font-weight:700;letter-spacing:-0.01em;border:none;outline:none;background:none;color:' + C.ink + ';')}
-            />
-
             {/* Body — fills the page; attachments dock below and never push it down. */}
             <textarea
               value={selected.body || ''}
