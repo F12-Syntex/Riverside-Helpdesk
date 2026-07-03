@@ -39,9 +39,9 @@ export async function PATCH(request) {
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   if (!parseInt(body?.id, 10)) return NextResponse.json({ error: 'A valid id is required.' }, { status: 400 });
-  if (body?.title == null && body?.body == null) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
+  if (body?.title == null && body?.body == null && typeof body?.isSection !== 'boolean') return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
   try {
-    const note = await updateNote({ id: body.id, title: body.title, body: body.body });
+    const note = await updateNote({ id: body.id, title: body.title, body: body.body, isSection: body.isSection });
     if (!note) return NextResponse.json({ error: 'Note not found.' }, { status: 404 });
     return NextResponse.json({ note });
   } catch (e) {

@@ -290,7 +290,7 @@ function SideRow({ n, depth, ctx }) {
         ) : (<span style={s('flex:none;width:24px;')} />)}
         <button onClick={() => selectNote(n.id)}
           style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;text-align:left;border:none;background:none;font:inherit;font-size:14.5px;cursor:pointer;padding:8px 4px;color:' + (isSel ? C.navy : C.ink) + ';' + (isSel ? 'font-weight:600;' : ''))}>
-          <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 ? Icons.book : Icons.fileLines}</Svg>
+          <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 || n.isSection ? Icons.book : Icons.fileLines}</Svg>
           <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
         </button>
@@ -317,7 +317,14 @@ export default function NotebookPage() {
   const [attachments, setAttachments] = React.useState([]);
   const [status, setStatus] = React.useState('loading'); // loading | ready | error
   const [selectedId, setSelectedId] = React.useState(null);
-  const [expanded, setExpanded] = React.useState({});      // noteId -> bool
+  // Which sections are open — persisted so the tree doesn't collapse on reload.
+  const [expanded, setExpanded] = React.useState(() => {
+    if (typeof window === 'undefined') return {};
+    try { return JSON.parse(window.localStorage.getItem('nb-expanded') || '{}') || {}; } catch (e) { return {}; }
+  });
+  React.useEffect(() => {
+    try { window.localStorage.setItem('nb-expanded', JSON.stringify(expanded)); } catch (e) { /* ignore */ }
+  }, [expanded]);
   const [search, setSearch] = React.useState('');
   const [saveState, setSaveState] = React.useState('');     // '' | 'saving' | 'saved' | 'unsaved'
   const [uploading, setUploading] = React.useState(false);
@@ -350,7 +357,7 @@ export default function NotebookPage() {
         setStatus('ready');
         // Open on the first page (sections are name-only), else the first section.
         if (list.length) {
-          const first = list.find((n) => n.parentId) || list[0];
+          const first = list.find((n) => n.parentId && !n.isSection) || list[0];
           setSelectedId(first.id);
           if (first.parentId) setExpanded((e) => ({ ...e, [first.parentId]: true }));
         }
@@ -363,7 +370,7 @@ export default function NotebookPage() {
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
-  const isSection = !!selected && !selected.parentId;
+  const isSection = !!selected && (!selected.parentId || !!selected.isSection);
   const selectedFiles = attachments.filter((a) => a.noteId === selectedId);
 
   // Ancestor chain of the selection, root first (breadcrumb + auto-expand).
@@ -696,6 +703,69 @@ export default function NotebookPage() {
     setTimeout(() => { if (titleInput.current) { titleInput.current.focus(); titleInput.current.select(); } }, 0);
   }
 
+  // Promote a note to a section (name-only container for sub-notes) or back.
+  async function toggleSection(id, val) {
+    try {
+      const res = await fetch('/api/notebook', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, isSection: val }),
+      });
+      if (!res.ok) throw new Error('bad status');
+      const { note } = await res.json();
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, isSection: !!note.isSection } : n)));
+      if (val) setExpanded((e) => ({ ...e, [id]: true }));
+    } catch (e) { /* ignore */ }
+  }
+
+  /* --------------------------- Backup ---------------------------------- */
+
+  const importInput = React.useRef(null);
+
+  async function reloadAll() {
+    try {
+      const res = await fetch('/api/notebook');
+      if (!res.ok) throw new Error('bad status');
+      const data = await res.json();
+      const list = Array.isArray(data.notes) ? data.notes : [];
+      for (const n of list) if (!saved.current.has(n.id)) saved.current.set(n.id, { title: n.title || '', body: n.body || '' });
+      setNotes(list);
+      setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
+    } catch (e) { /* ignore */ }
+  }
+
+  function onImportFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (importInput.current) importInput.current.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try { data = JSON.parse(String(reader.result)); } catch (err) { data = null; }
+      const count = data && Array.isArray(data.notes) ? data.notes.length : 0;
+      if (!count) {
+        setConfirm({ title: 'Import failed', message: 'That file is not a notebook backup (no notes found).', confirmLabel: 'OK', onConfirm: () => setConfirm(null) });
+        return;
+      }
+      setConfirm({
+        title: 'Import backup',
+        message: 'Import ' + count + ' note(s) from "' + file.name + '"? They are added alongside your existing notes — nothing is overwritten.',
+        confirmLabel: 'Import',
+        onConfirm: async () => {
+          setConfirm(null);
+          try {
+            const res = await fetch('/api/notebook/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            const out = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(out.error || 'Import failed.');
+            await reloadAll();
+          } catch (err) {
+            setConfirm({ title: 'Import failed', message: String(err.message || err), confirmLabel: 'OK', onConfirm: () => setConfirm(null) });
+          }
+        },
+      });
+    };
+    reader.readAsText(file);
+  }
+
   /* -------------------- Sidebar right-click menu ---------------------- */
 
   function openMenu(e, id) {
@@ -767,10 +837,24 @@ export default function NotebookPage() {
           {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
         </div>
 
-        <div style={s('flex:none;border-top:1px solid ' + C.soft + ';padding:10px 14px;font-size:12.5px;color:' + C.dim + ';line-height:1.45;')}>
+        <div style={s('flex:none;border-top:1px solid ' + C.soft + ';padding:10px 14px;display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:' + C.dim + ';line-height:1.45;')}>
           <span style={s('display:inline-flex;align-items:center;gap:6px;')}>
             <Svg w={13} sw={2.2} stroke={C.green}>{Icons.shield}</Svg>Notes are used by the assistant automatically.
           </span>
+          {/* Backup: export downloads every note as JSON; import restores it. */}
+          <div style={s('display:flex;align-items:center;gap:6px;')}>
+            <input ref={importInput} type="file" accept=".json,application/json" style={s('display:none;')} onChange={onImportFile} />
+            <Hover tag="button" onClick={() => { window.location.href = '/api/notebook/export'; }} title="Download all notes as a JSON backup"
+              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
+              hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+              <Svg w={13} sw={2.2}>{Icons.external}</Svg>Export
+            </Hover>
+            <Hover tag="button" onClick={() => importInput.current && importInput.current.click()} title="Restore notes from a JSON backup (added alongside existing notes)"
+              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
+              hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+              <Svg w={13} sw={2.2}>{Icons.refresh}</Svg>Import
+            </Hover>
+          </div>
         </div>
       </aside>
 
@@ -1031,6 +1115,13 @@ export default function NotebookPage() {
             hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
             <Svg w={15} sw={2.2}>{Icons.edit}</Svg>Rename
           </Hover>
+          {(() => { const n = byId.get(menu.id); return n && n.parentId ? (
+            <Hover tag="button" onClick={() => { setMenu(null); toggleSection(menu.id, !n.isSection); }}
+              base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.ink + ';cursor:pointer;padding:9px 11px;text-align:left;'}
+              hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+              <Svg w={15} sw={2.2}>{n.isSection ? Icons.fileLines : Icons.book}</Svg>{n.isSection ? 'Convert to page' : 'Convert to section'}
+            </Hover>
+          ) : null; })()}
           <Hover tag="button" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}
             base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.red + ';cursor:pointer;padding:9px 11px;text-align:left;'}
             hover={'background:#fbe9e7;'}>
