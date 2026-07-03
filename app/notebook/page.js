@@ -149,6 +149,7 @@ export default function NotebookPage() {
   const notesRef = React.useRef([]);
   const fileInput = React.useRef(null);
   const titleInput = React.useRef(null);
+  const bodyRef = React.useRef(null);
   notesRef.current = notes;
 
   React.useEffect(() => {
@@ -248,6 +249,74 @@ export default function NotebookPage() {
     setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, ...patch } : n)));
     dirty.current.add(selectedId);
     setSaveState('saving');
+  }
+
+  /* ------------------------ Formatting toolbar ------------------------ *
+   * Notes are markdown, so the toolbar inserts/toggles markdown around the
+   * textarea selection. All writes go through execCommand('insertText') so
+   * the browser's native undo/redo stack stays intact, and the input event
+   * it fires runs the normal onChange → dirty → interval-save path.       */
+
+  function applyWrap(before, after = before) {
+    const ta = bodyRef.current; if (!ta) return; ta.focus();
+    const { selectionStart: a, selectionEnd: b, value: v } = ta;
+    const sel = v.slice(a, b) || 'text';
+    const wrapped = v.slice(Math.max(0, a - before.length), a) === before && v.slice(b, b + after.length) === after;
+    if (wrapped) { // toggle off
+      ta.setSelectionRange(a - before.length, b + after.length);
+      document.execCommand('insertText', false, sel);
+      ta.setSelectionRange(a - before.length, a - before.length + sel.length);
+    } else {
+      document.execCommand('insertText', false, before + sel + after);
+      ta.setSelectionRange(a + before.length, a + before.length + sel.length);
+    }
+  }
+
+  // Rewrite the full lines covered by the selection.
+  function applyLines(fn) {
+    const ta = bodyRef.current; if (!ta) return; ta.focus();
+    const { selectionStart: a, selectionEnd: b, value: v } = ta;
+    const start = v.lastIndexOf('\n', a - 1) + 1;
+    let end = v.indexOf('\n', b); if (end === -1) end = v.length;
+    const block = v.slice(start, end);
+    const out = fn(block.split('\n')).join('\n');
+    if (out === block) return;
+    ta.setSelectionRange(start, end);
+    document.execCommand('insertText', false, out);
+    ta.setSelectionRange(start, start + out.length);
+  }
+
+  const toggleHeading = (level) => applyLines((lines) => {
+    const mark = '#'.repeat(level) + ' ';
+    const all = lines.every((l) => l.startsWith(mark) || !l.trim());
+    return lines.map((l) => (!l.trim() ? l : all ? l.slice(mark.length) : mark + l.replace(/^#{1,6}\s+/, '')));
+  });
+
+  const togglePrefix = (prefix, re) => applyLines((lines) => {
+    const all = lines.every((l) => re.test(l) || !l.trim());
+    return lines.map((l, i) => {
+      if (!l.trim()) return l;
+      if (all) return l.replace(re, '');
+      const p = prefix === '1. ' ? (i + 1) + '. ' : prefix;
+      return re.test(l) ? l : p + l;
+    });
+  });
+
+  const bullets = () => togglePrefix('- ', /^\s*[-•]\s+(?!\[)/);
+  const numbers = () => togglePrefix('1. ', /^\s*\d+\.\s+/);
+  const tasks = () => togglePrefix('- [ ] ', /^\s*[-•]\s+\[[ xX]\]\s+/);
+  const quote = () => togglePrefix('> ', /^>\s+/);
+  const indent = () => applyLines((lines) => lines.map((l) => (l.trim() ? '  ' + l : l)));
+  const outdent = () => applyLines((lines) => lines.map((l) => l.replace(/^ {1,2}/, '')));
+  const divider = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('insertText', false, '\n\n---\n\n'); };
+  const doUndo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('undo'); };
+  const doRedo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('redo'); };
+
+  function editorKeys(e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'b') { e.preventDefault(); applyWrap('**'); }
+    else if (k === 'i') { e.preventDefault(); applyWrap('*'); }
   }
 
   /* --------------------------- Note actions --------------------------- */
@@ -546,11 +615,48 @@ export default function NotebookPage() {
             is the note body, with attachments docked below. */}
         {selected && !isSection && (
           <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;background:#fff;')}>
+            {/* Formatting toolbar — OneNote-style, but for markdown. */}
+            <div style={s('flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px;background:#fff;border-bottom:1px solid ' + C.soft + ';padding:5px 20px;')}
+              onMouseDown={(e) => e.preventDefault() /* keep the textarea selection */}>
+              {[
+                { title: 'Undo (Ctrl+Z)', run: doUndo, icon: Icons.undo },
+                { title: 'Redo (Ctrl+Y)', run: doRedo, icon: Icons.redo },
+                null,
+                { title: 'Heading 1', run: () => toggleHeading(1), label: 'H1' },
+                { title: 'Heading 2', run: () => toggleHeading(2), label: 'H2' },
+                { title: 'Heading 3', run: () => toggleHeading(3), label: 'H3' },
+                null,
+                { title: 'Bold (Ctrl+B)', run: () => applyWrap('**'), label: 'B', lab: 'font-weight:800;' },
+                { title: 'Italic (Ctrl+I)', run: () => applyWrap('*'), label: 'I', lab: 'font-style:italic;font-family:Georgia,serif;' },
+                { title: 'Strikethrough', run: () => applyWrap('~~'), label: 'S', lab: 'text-decoration:line-through;' },
+                { title: 'Inline code', run: () => applyWrap('`'), label: '<>', lab: 'font-family:Consolas,monospace;font-size:12.5px;' },
+                null,
+                { title: 'Bulleted list', run: bullets, label: '•≡' },
+                { title: 'Numbered list', run: numbers, label: '1.' },
+                { title: 'Task list', run: tasks, label: '☑' },
+                null,
+                { title: 'Decrease indent', run: outdent, label: '⇤' },
+                { title: 'Increase indent', run: indent, label: '⇥' },
+                { title: 'Quote', run: quote, label: '❝' },
+                { title: 'Divider', run: divider, label: '—' },
+              ].map((btn, i) => btn === null
+                ? <span key={'sep' + i} style={s('flex:none;width:1px;height:20px;background:' + C.line + ';margin:0 6px;')} />
+                : (
+                  <Hover key={btn.title} tag="button" onClick={btn.run} aria-label={btn.title} title={btn.title}
+                    base={'flex:none;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;font:inherit;font-size:14px;font-weight:600;color:' + C.mut + ';padding:0 6px;'}
+                    hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+                    {btn.icon ? <Svg w={16} sw={2.2}>{btn.icon}</Svg> : <span style={s(btn.lab || '')}>{btn.label}</span>}
+                  </Hover>
+                ))}
+            </div>
+
             {/* Body — the entire content area is the writing surface;
                 attachments dock below and never push it down. */}
             <textarea
+              ref={bodyRef}
               value={selected.body || ''}
               onChange={(e) => editSelected({ body: e.target.value })}
+              onKeyDown={editorKeys}
               placeholder="Write your note here. Plain text or markdown. Drag files onto the page to attach them. Anything you write is used by the assistant to answer and to triage — for example ‘Sore throat → signpost to Pharmacy First’."
               style={s('flex:1;min-height:0;width:100%;resize:none;font:inherit;font-size:16px;line-height:1.65;border:none;background:#fff;padding:24px 28px;outline:none;color:' + C.ink + ';')}
             />
