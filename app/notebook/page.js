@@ -37,6 +37,8 @@ const CSS = `
 .nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
 .nb-crumb:hover{color:${C.blue};}
 .nb-block{padding:2px 0;}
+.nb-scroll{scrollbar-width:none;-ms-overflow-style:none;}
+.nb-scroll::-webkit-scrollbar{display:none;}
 .nb-title{border-bottom:1.5px dashed transparent;transition:border-color .12s;}
 .nb-title:hover{border-bottom-color:${C.blue};}
 .nb-title:focus{border-bottom:1.5px solid ${C.blue};}
@@ -826,7 +828,7 @@ export default function NotebookPage() {
           </div>
         </div>
 
-        <div style={s('flex:1;overflow-y:auto;padding:4px 10px 14px;display:flex;flex-direction:column;gap:1px;')}>
+        <div className="nb-scroll" style={s('flex:1;overflow-y:auto;padding:4px 10px 14px;display:flex;flex-direction:column;gap:1px;')}>
           {status === 'loading' && <p style={s('color:' + C.mut + ';font-size:14px;padding:8px 10px;')}>Loading…</p>}
           {status === 'error' && <p style={s('color:' + C.red + ';font-size:14px;padding:8px 10px;')}>Could not load notes. Is the database configured?</p>}
           {status === 'ready' && sections.length === 0 && (
@@ -920,7 +922,7 @@ export default function NotebookPage() {
 
         {/* Section view — name only; content lives in the pages beneath it. */}
         {selected && isSection && (
-          <div style={s('flex:1;min-height:0;overflow-y:auto;width:100%;max-width:1000px;margin:0 auto;padding:26px 28px;')}>
+          <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;width:100%;max-width:1000px;margin:0 auto;padding:26px 28px;')}>
             <p style={s('margin:0 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
               Sections only have a name — they organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
             </p>
@@ -1018,7 +1020,7 @@ export default function NotebookPage() {
                 rendered markdown in Preview, or the AI diff while reviewing);
                 attachments dock below and never push it down. */}
             {aiFmt && aiFmt.status === 'ready' ? (
-              <div style={s('flex:1;min-height:0;overflow:auto;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
+              <div className="nb-scroll" style={s('flex:1;min-height:0;overflow:auto;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
                 {aiFmt.diff.map((l, i) => (
                   <div key={i} style={s('display:flex;gap:10px;padding:1px 20px;white-space:pre-wrap;word-break:break-word;' +
                     (l.t === '-' ? 'background:#fbe9e7;color:#8a1206;text-decoration:line-through;' :
@@ -1029,7 +1031,7 @@ export default function NotebookPage() {
                 ))}
               </div>
             ) : (
-              <div style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:20px 28px;cursor:text;')}
+              <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:20px 28px;cursor:text;')}
                 onMouseDown={(e) => { if (e.target === e.currentTarget && activeBlock === null) startBlock(blocks.length, ''); }}>
                 {blocks.map((b, i) => (
                   activeBlock === i ? (
