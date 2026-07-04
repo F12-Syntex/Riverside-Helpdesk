@@ -1,6 +1,22 @@
 'use client';
 
 import React from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
+import TextStyle from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Markdown } from 'tiptap-markdown';
+import { Mark, mergeAttributes } from '@tiptap/core';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 
@@ -36,12 +52,54 @@ const CSS = `
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
 .nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
 .nb-crumb:hover{color:${C.blue};}
-.nb-block{padding:2px 0;}
 .nb-scroll{scrollbar-width:none;-ms-overflow-style:none;}
 .nb-scroll::-webkit-scrollbar{display:none;}
 .nb-title{border-bottom:1.5px dashed transparent;transition:border-color .12s;}
 .nb-title:hover{border-bottom-color:${C.blue};}
 .nb-title:focus{border-bottom:1.5px solid ${C.blue};}
+/* Notion-style writing surface (TipTap). Same visual language the old
+   markdown preview used, applied to the always-rendered editor. */
+.nb-prose{flex:1;outline:none;padding:22px 28px 140px;font-size:16px;line-height:1.65;color:${C.ink};caret-color:${C.blue};}
+/* The global NHS focus style (yellow bg on [tabindex]:focus-visible) is for
+   buttons/controls — the editor is a writing surface, keep it white. */
+.nb-prose:focus-visible{background:#fff !important;color:${C.ink} !important;box-shadow:none !important;}
+.nb-prose>:first-child{margin-top:0;}
+.nb-prose p{margin:0 0 10px;}
+.nb-prose h1,.nb-prose h2,.nb-prose h3,.nb-prose h4{margin:22px 0 10px;font-weight:700;letter-spacing:-0.01em;color:${C.ink};}
+.nb-prose h1{font-size:26px;padding-bottom:6px;border-bottom:1px solid ${C.soft};}
+.nb-prose h2{font-size:22px;padding-bottom:6px;border-bottom:1px solid ${C.soft};}
+.nb-prose h3{font-size:18.5px;}
+.nb-prose h4{font-size:16.5px;}
+.nb-prose ul,.nb-prose ol{margin:0 0 12px;padding-left:24px;}
+.nb-prose ul ul,.nb-prose ol ol,.nb-prose ul ol,.nb-prose ol ul{margin-bottom:0;}
+.nb-prose li{margin:3px 0;}
+.nb-prose li>p{margin:0;}
+.nb-prose ul>li::marker{color:${C.blue};}
+.nb-prose ol>li::marker{color:${C.blue};font-weight:600;font-variant-numeric:tabular-nums;}
+.nb-prose ul[data-type="taskList"]{list-style:none;padding-left:2px;}
+.nb-prose ul[data-type="taskList"] li{display:flex;gap:9px;align-items:flex-start;}
+.nb-prose ul[data-type="taskList"] li>label{flex:none;margin-top:4.5px;}
+.nb-prose ul[data-type="taskList"] li>label input{width:15px;height:15px;accent-color:${C.blue};cursor:pointer;margin:0;}
+.nb-prose ul[data-type="taskList"] li>div{flex:1;min-width:0;}
+.nb-prose li[data-checked="true"]>div{text-decoration:line-through;color:${C.dim};}
+.nb-prose blockquote{margin:0 0 12px;border-left:4px solid ${C.blue};background:${C.sel};padding:10px 14px;border-radius:0 8px 8px 0;font-size:15.5px;}
+.nb-prose blockquote p{margin:0;}
+.nb-prose code{font-family:Consolas,Menlo,monospace;font-size:.9em;background:${C.soft};border-radius:4px;padding:1px 5px;}
+.nb-prose pre{margin:0 0 12px;background:${C.soft};border-radius:8px;padding:12px 14px;overflow-x:auto;}
+.nb-prose pre code{background:none;padding:0;}
+.nb-prose mark{background:#fff6cc;border-radius:3px;padding:0 2px;}
+.nb-prose kbd{font-family:Consolas,Menlo,monospace;font-size:.85em;background:${C.soft};border:1px solid ${C.line};border-bottom-width:2px;border-radius:5px;padding:1px 6px;}
+.nb-prose hr{border:none;border-top:1px solid ${C.line};margin:18px 0;}
+.nb-prose hr.ProseMirror-selectednode{border-top:2px solid ${C.blue};}
+.nb-prose a{color:${C.blue};}
+.nb-prose s{color:${C.dim};}
+.nb-prose .tableWrapper{margin:0 0 14px;overflow-x:auto;}
+.nb-prose table{border-collapse:collapse;min-width:50%;}
+.nb-prose th,.nb-prose td{border:1px solid ${C.line};padding:8px 12px;font-size:15px;line-height:1.5;text-align:left;vertical-align:top;position:relative;min-width:48px;}
+.nb-prose th{background:${C.soft};font-weight:700;}
+.nb-prose th p,.nb-prose td p{margin:0;}
+.nb-prose .selectedCell::after{content:"";position:absolute;inset:0;background:rgba(0,94,184,.08);pointer-events:none;}
+.nb-prose p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:${C.dim};float:left;height:0;pointer-events:none;white-space:pre-wrap;}
 `;
 
 const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
@@ -85,132 +143,58 @@ const TEXT_COLORS = [
   { name: 'Blue', hex: '#005eb8' },
 ];
 
-const TABLE_SNIPPET = '\n| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n';
+/* --------------------------- Page editor ----------------------------- *
+ * Notion-style writing surface: the note is always rendered formatted and
+ * edited in place — no raw-markdown flip. TipTap drives the editing (with
+ * live shortcuts: "## ", "- ", "1. ", "> ", "**bold**", "---"); the
+ * Markdown extension keeps the stored format exactly what it was before —
+ * markdown plus the small HTML subset — so autosave, the AI formatter,
+ * export/import and the assistant's RAG chunking are all untouched.      */
 
-/* --------------------------- Markdown view --------------------------- *
- * Notes are stored as markdown; Preview renders it. Small hand-rolled
- * renderer (headings, lists incl. tasks, quotes, hr, bold/italic/strike/
- * code/links) — enough for notes without pulling in a dependency.       */
+// <kbd> mark — a couple of notes use it for keyboard keys; supporting it
+// keeps the editor lossless for existing content.
+const Kbd = Mark.create({
+  name: 'kbd',
+  parseHTML() { return [{ tag: 'kbd' }]; },
+  renderHTML({ HTMLAttributes }) { return ['kbd', mergeAttributes(HTMLAttributes), 0]; },
+});
 
-// Inline markdown plus a safe HTML subset: <u>, <mark>, <sup>, <sub>, <br>,
-// <big>, <small>, <kbd>, and <span style="color:…">. Only these exact shapes
-// are recognised — anything else renders as literal text, so no arbitrary
-// HTML/attributes ever reach the DOM. Recursive, so tags nest with markdown.
-const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,20})$/;
+const EXTENSIONS = [
+  StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
+  Underline, Kbd, Highlight, TextStyle, Color,
+  TaskList, TaskItem.configure({ nested: true }),
+  Table, TableRow, TableHeader, TableCell,
+  Link.configure({ openOnClick: false, autolink: true }),
+  Placeholder.configure({ placeholder: 'Write here — headings, lists and tables format as you type ("## ", "- ", "1. ", "> "). Everything you write is used by the assistant to answer and triage.' }),
+  // html:true keeps the <mark>/<u>/<span style="color:…">/<kbd> subset intact
+  // in both directions (stored markdown → editor, editor → stored markdown).
+  Markdown.configure({ html: true, linkify: true }),
+];
 
-function renderInline(str) {
-  const out = [];
-  let rest = String(str);
-  let k = 0;
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(~~[^~]+~~)|(\[[^\]]+\]\([^)\s]+\))|(<(u|mark|sup|sub|big|small|kbd)>[\s\S]*?<\/\7>)|(<span style="color:\s*[^">]+;?\s*">[\s\S]*?<\/span>)|(<br\s*\/?>)/;
-  while (rest) {
-    const m = rest.match(re);
-    if (!m) { out.push(rest); break; }
-    if (m.index > 0) out.push(rest.slice(0, m.index));
-    const t = m[0];
-    let mm;
-    if (t.startsWith('`')) out.push(<code key={k++} style={s('font-family:Consolas,Menlo,monospace;font-size:.9em;background:' + C.soft + ';border-radius:4px;padding:1px 5px;')}>{t.slice(1, -1)}</code>);
-    else if (t.startsWith('**')) out.push(<strong key={k++}>{renderInline(t.slice(2, -2))}</strong>);
-    else if (t.startsWith('~~')) out.push(<s key={k++}>{renderInline(t.slice(2, -2))}</s>);
-    else if (t.startsWith('*')) out.push(<em key={k++}>{renderInline(t.slice(1, -1))}</em>);
-    else if (t.startsWith('[')) {
-      mm = t.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-      out.push(<a key={k++} href={mm[2]} target="_blank" rel="noopener noreferrer" style={s('color:' + C.blue + ';')}>{mm[1]}</a>);
-    } else if (/^<br/i.test(t)) out.push(<br key={k++} />);
-    else if ((mm = t.match(/^<span style="color:\s*([^">;]+);?\s*">([\s\S]*?)<\/span>$/))) {
-      out.push(SAFE_COLOR.test(mm[1].trim())
-        ? <span key={k++} style={{ color: mm[1].trim() }}>{renderInline(mm[2])}</span>
-        : <span key={k++}>{renderInline(mm[2])}</span>);
-    } else if ((mm = t.match(/^<(u|mark|sup|sub|big|small|kbd)>([\s\S]*?)<\/\1>$/))) {
-      const inner = renderInline(mm[2]);
-      const tag = mm[1];
-      if (tag === 'u') out.push(<u key={k++}>{inner}</u>);
-      else if (tag === 'mark') out.push(<mark key={k++} style={s('background:#fff6cc;border-radius:3px;padding:0 2px;')}>{inner}</mark>);
-      else if (tag === 'sup') out.push(<sup key={k++}>{inner}</sup>);
-      else if (tag === 'sub') out.push(<sub key={k++}>{inner}</sub>);
-      else if (tag === 'big') out.push(<span key={k++} style={s('font-size:1.2em;font-weight:600;')}>{inner}</span>);
-      else if (tag === 'small') out.push(<span key={k++} style={s('font-size:.85em;color:' + C.mut + ';')}>{inner}</span>);
-      else out.push(<kbd key={k++} style={s('font-family:Consolas,Menlo,monospace;font-size:.85em;background:' + C.soft + ';border:1px solid ' + C.line + ';border-bottom-width:2px;border-radius:5px;padding:1px 6px;')}>{inner}</kbd>);
-    } else out.push(t);
-    rest = rest.slice(m.index + t.length);
-  }
-  return out;
-}
-
-const H_SIZE = { 1: 26, 2: 22, 3: 18.5, 4: 16.5, 5: 15.5, 6: 15 };
-
-function MdView({ text }) {
-  const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
-  const blocks = [];
-  let i = 0, k = 0;
-  const para = 'margin:0 0 12px;font-size:16px;line-height:1.65;color:' + C.ink + ';';
-  while (i < lines.length) {
-    const l = lines[i];
-    if (!l.trim()) { i++; continue; }
-    let m;
-    if ((m = l.match(/^(#{1,6})\s+(.*)/))) {
-      const lv = m[1].length;
-      blocks.push(<div key={k++} style={s('margin:' + (blocks.length ? 22 : 0) + 'px 0 10px;font-size:' + H_SIZE[lv] + 'px;font-weight:700;letter-spacing:-0.01em;color:' + C.ink + ';' + (lv <= 2 ? 'padding-bottom:6px;border-bottom:1px solid ' + C.soft + ';' : ''))}>{renderInline(m[2])}</div>);
-      i++; continue;
-    }
-    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(l.trim())) {
-      blocks.push(<hr key={k++} style={s('border:none;border-top:1px solid ' + C.line + ';margin:18px 0;')} />);
-      i++; continue;
-    }
-    if (/^>\s?/.test(l)) {
-      const q = [];
-      while (i < lines.length && /^>\s?/.test(lines[i])) { q.push(lines[i].replace(/^>\s?/, '')); i++; }
-      blocks.push(<div key={k++} style={s('margin:0 0 12px;border-left:4px solid ' + C.blue + ';background:' + C.sel + ';padding:10px 14px;border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.6;color:' + C.ink + ';')}>{renderInline(q.join(' '))}</div>);
-      continue;
-    }
-    // Markdown table: header row, |---| separator, body rows.
-    if (/^\s*\|.*\|\s*$/.test(l) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].includes('-')) {
-      const cells = (row) => row.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
-      const head = cells(l);
-      i += 2;
-      const rows = [];
-      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(cells(lines[i])); i++; }
-      const cellS = 'padding:8px 12px;border:1px solid ' + C.line + ';font-size:15px;line-height:1.5;text-align:left;vertical-align:top;';
-      blocks.push(
-        <div key={k++} style={s('margin:0 0 14px;overflow-x:auto;')}>
-          <table style={s('border-collapse:collapse;min-width:50%;')}>
-            <thead><tr>{head.map((c, j) => <th key={j} style={s(cellS + 'background:' + C.soft + ';font-weight:700;color:' + C.ink + ';')}>{renderInline(c)}</th>)}</tr></thead>
-            <tbody>{rows.map((r, ri) => (
-              <tr key={ri} style={s(ri % 2 ? 'background:#fafcfd;' : '')}>{head.map((_, j) => <td key={j} style={s(cellS + 'color:' + C.ink + ';')}>{renderInline(r[j] || '')}</td>)}</tr>
-            ))}</tbody>
-          </table>
-        </div>
-      );
-      continue;
-    }
-    if (/^\s*([-*+]|\d+\.)\s+/.test(l)) {
-      const items = [];
-      while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) {
-        const im = lines[i].match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
-        const depth = Math.min(4, Math.floor(im[1].replace(/\t/g, '  ').length / 2));
-        const tm = im[3].match(/^\[([ xX])\]\s+(.*)$/);
-        items.push({ depth, num: /^\d+\.$/.test(im[2]) ? im[2] : null, task: !!tm, checked: !!tm && tm[1] !== ' ', text: tm ? tm[2] : im[3] });
-        i++;
-      }
-      blocks.push(
-        <div key={k++} style={s('margin:0 0 12px;display:flex;flex-direction:column;gap:5px;')}>
-          {items.map((it, j) => (
-            <div key={j} style={s('display:flex;gap:9px;padding-left:' + (4 + it.depth * 22) + 'px;font-size:16px;line-height:1.55;color:' + C.ink + ';')}>
-              <span style={s('flex:none;min-width:14px;text-align:center;color:' + (it.task ? (it.checked ? C.green : C.dim) : C.blue) + ';' + (it.num ? 'font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;' : 'font-weight:700;'))}>
-                {it.task ? (it.checked ? '☑' : '☐') : it.num ? it.num : '•'}
-              </span>
-              <span style={s('flex:1;min-width:0;' + (it.task && it.checked ? 'text-decoration:line-through;color:' + C.dim + ';' : ''))}>{renderInline(it.text)}</span>
-            </div>
-          ))}
-        </div>
-      );
-      continue;
-    }
-    const p = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|>|\s*([-*+]|\d+\.)\s|(-{3,}|\*{3,}|_{3,})\s*$)/.test(lines[i])) { p.push(lines[i]); i++; }
-    blocks.push(<p key={k++} style={s(para)}>{renderInline(p.join(' '))}</p>);
-  }
-  return <div>{blocks.length ? blocks : <p style={s(para + 'color:' + C.dim + ';')}>Nothing here yet — switch to Write to add content.</p>}</div>;
+// Keyed by note id in the parent, so switching pages gets a fresh editor and
+// its own undo history. onChange receives the serialized markdown on every
+// edit and feeds the existing dirty → interval-save pipeline.
+function PageEditor({ initialBody, onChange, onReady }) {
+  const onChangeRef = React.useRef(onChange);
+  onChangeRef.current = onChange;
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: EXTENSIONS,
+    content: initialBody || '',
+    editorProps: { attributes: { class: 'nb-prose' } },
+    onUpdate: ({ editor: ed }) => onChangeRef.current(ed.storage.markdown.getMarkdown()),
+  });
+  // Hand the instance up for the toolbar (and take it back on unmount).
+  React.useEffect(() => {
+    onReady(editor || null);
+    return () => onReady(null);
+  }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;cursor:text;display:flex;flex-direction:column;')}
+      onMouseDown={(e) => { if (e.target === e.currentTarget && editor) { e.preventDefault(); editor.chain().focus('end').run(); } }}>
+      <EditorContent editor={editor} style={{ flex: 1, display: 'flex', flexDirection: 'column' }} />
+    </div>
+  );
 }
 
 // Line-level diff (LCS) for the AI-format preview: ' ' unchanged, '-' removed,
@@ -335,16 +319,23 @@ export default function NotebookPage() {
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
-  const [activeBlock, setActiveBlock] = React.useState(null); // index of the block being edited (blocks.length = new block at end)
-  const [draft, setDraft] = React.useState('');               // raw markdown of the active block
+  const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page (from PageEditor)
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
   const notesRef = React.useRef([]);
   const fileInput = React.useRef(null);
   const titleInput = React.useRef(null);
-  const bodyRef = React.useRef(null);
   notesRef.current = notes;
+
+  // Re-render on every editor transaction so the toolbar's active states
+  // (bold on, "in a table", …) track the caret.
+  const [, onEditorTx] = React.useReducer((x) => x + 1, 0);
+  React.useEffect(() => {
+    if (!editor) return;
+    editor.on('transaction', onEditorTx);
+    return () => { editor.off('transaction', onEditorTx); };
+  }, [editor]);
 
   React.useEffect(() => {
     (async () => {
@@ -446,96 +437,22 @@ export default function NotebookPage() {
   }
 
   /* ------------------------ Formatting toolbar ------------------------ *
-   * Notes are markdown, so the toolbar inserts/toggles markdown around the
-   * textarea selection. All writes go through execCommand('insertText') so
-   * the browser's native undo/redo stack stays intact, and the input event
-   * it fires runs the normal onChange → dirty → interval-save path.       */
+   * Buttons drive the TipTap editor directly, so formatting applies in
+   * place (Notion-style) and undo/redo is the editor's own history.      */
 
-  function applyWrap(before, after = before) {
-    const ta = bodyRef.current; if (!ta) return; ta.focus();
-    const { selectionStart: a, selectionEnd: b, value: v } = ta;
-    const sel = v.slice(a, b) || 'text';
-    const wrapped = v.slice(Math.max(0, a - before.length), a) === before && v.slice(b, b + after.length) === after;
-    if (wrapped) { // toggle off
-      ta.setSelectionRange(a - before.length, b + after.length);
-      document.execCommand('insertText', false, sel);
-      ta.setSelectionRange(a - before.length, a - before.length + sel.length);
-    } else {
-      document.execCommand('insertText', false, before + sel + after);
-      ta.setSelectionRange(a + before.length, a + before.length + sel.length);
-    }
-  }
-
-  // Rewrite the full lines covered by the selection.
-  function applyLines(fn) {
-    const ta = bodyRef.current; if (!ta) return; ta.focus();
-    const { selectionStart: a, selectionEnd: b, value: v } = ta;
-    const start = v.lastIndexOf('\n', a - 1) + 1;
-    let end = v.indexOf('\n', b); if (end === -1) end = v.length;
-    const block = v.slice(start, end);
-    const out = fn(block.split('\n')).join('\n');
-    if (out === block) return;
-    ta.setSelectionRange(start, end);
-    document.execCommand('insertText', false, out);
-    ta.setSelectionRange(start, start + out.length);
-  }
-
-  const toggleHeading = (level) => applyLines((lines) => {
-    const mark = '#'.repeat(level) + ' ';
-    const all = lines.every((l) => l.startsWith(mark) || !l.trim());
-    return lines.map((l) => (!l.trim() ? l : all ? l.slice(mark.length) : mark + l.replace(/^#{1,6}\s+/, '')));
-  });
-
-  const togglePrefix = (prefix, re) => applyLines((lines) => {
-    const all = lines.every((l) => re.test(l) || !l.trim());
-    return lines.map((l, i) => {
-      if (!l.trim()) return l;
-      if (all) return l.replace(re, '');
-      const p = prefix === '1. ' ? (i + 1) + '. ' : prefix;
-      return re.test(l) ? l : p + l;
-    });
-  });
-
-  const bullets = () => togglePrefix('- ', /^\s*[-•]\s+(?!\[)/);
-  const numbers = () => togglePrefix('1. ', /^\s*\d+\.\s+/);
-  const tasks = () => togglePrefix('- [ ] ', /^\s*[-•]\s+\[[ xX]\]\s+/);
-  const quote = () => togglePrefix('> ', /^>\s+/);
-  const indent = () => applyLines((lines) => lines.map((l) => (l.trim() ? '  ' + l : l)));
-  const outdent = () => applyLines((lines) => lines.map((l) => l.replace(/^ {1,2}/, '')));
-  const divider = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('insertText', false, '\n\n---\n\n'); };
-  const doUndo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('undo'); };
-  const doRedo = () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('redo'); };
-
-  /* -------------------------- Smart blocks ---------------------------- *
-   * The note renders as markdown; clicking a block swaps just that block
-   * for a raw-markdown textarea. Leaving the block (blur/Escape) commits
-   * it and it renders again — so **test** turns bold once you're done,
-   * never mid-keystroke. Blocks are paragraphs separated by blank lines;
-   * a blank line typed inside a block splits it on commit.               */
-
-  const blocks = React.useMemo(
-    () => ((selected && selected.body) ? selected.body.replace(/\r\n/g, '\n').split(/\n{2,}/) : []),
-    [selected && selected.body] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  function startBlock(i, text) {
-    if (activeBlock !== null) return; // the blur of the open editor commits first; next click opens
-    setDraft(text);
-    setActiveBlock(i);
-  }
-
-  function commitBlock() {
-    if (activeBlock === null) return;
-    const next = blocks.slice();
-    if (activeBlock >= next.length) { if (draft.trim()) next.push(draft); }
-    else if (!draft.trim()) next.splice(activeBlock, 1);
-    else next[activeBlock] = draft;
-    const body = next.join('\n\n');
-    setActiveBlock(null);
-    if (body !== (selected.body || '')) editSelected({ body });
-  }
-
-  const autoGrow = (el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } };
+  const chain = () => editor.chain().focus();
+  const listKind = () => (editor.isActive('taskItem') ? 'taskItem' : 'listItem');
+  // The DOM normalises hex colours to rgb(…) on save, so match either form
+  // when deciding whether a swatch is active (and should toggle off).
+  const hexToRgb = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return 'rgb(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ')';
+  };
+  const colorActive = (hex) => {
+    if (!editor) return false;
+    const c = editor.getAttributes('textStyle').color;
+    return c === hex || c === hexToRgb(hex);
+  };
 
   // AI format: send the body off, then show the proposed change as a diff the
   // user must confirm — nothing is applied (or saved) until they accept.
@@ -560,18 +477,15 @@ export default function NotebookPage() {
 
   function applyAiFormat() {
     if (!aiFmt || aiFmt.status !== 'ready') return;
-    setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, body: aiFmt.formatted } : n)));
-    dirty.current.add(selectedId);
-    setSaveState('saving');
+    // Load the formatted markdown into the editor; emitting the update runs
+    // the normal onChange → dirty → interval-save path.
+    if (editor) editor.commands.setContent(aiFmt.formatted, true);
+    else {
+      setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, body: aiFmt.formatted } : n)));
+      dirty.current.add(selectedId);
+      setSaveState('saving');
+    }
     setAiFmt(null);
-    setActiveBlock(null);
-  }
-
-  function editorKeys(e) {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    const k = e.key.toLowerCase();
-    if (k === 'b') { e.preventDefault(); applyWrap('**'); }
-    else if (k === 'i') { e.preventDefault(); applyWrap('*'); }
   }
 
   /* --------------------------- Note actions --------------------------- */
@@ -580,7 +494,6 @@ export default function NotebookPage() {
     await flush();
     setUploadErr('');
     setAiFmt(null);
-    setActiveBlock(null);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
     setExpanded((e) => {
@@ -949,46 +862,63 @@ export default function NotebookPage() {
             is the note body, with attachments docked below. */}
         {selected && !isSection && (
           <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;background:#fff;')}>
-            {/* Formatting toolbar — OneNote-style, but for markdown. */}
+            {/* Formatting toolbar — drives the TipTap editor in place. */}
             <div style={s('flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px;background:#fff;border-bottom:1px solid ' + C.soft + ';padding:5px 20px;')}
-              onMouseDown={(e) => e.preventDefault() /* keep the textarea selection */}>
+              onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
               {[
-                { title: 'Undo (Ctrl+Z)', run: doUndo, icon: Icons.undo },
-                { title: 'Redo (Ctrl+Y)', run: doRedo, icon: Icons.redo },
+                { title: 'Undo (Ctrl+Z)', run: () => chain().undo().run(), icon: Icons.undo },
+                { title: 'Redo (Ctrl+Y)', run: () => chain().redo().run(), icon: Icons.redo },
                 null,
-                { title: 'Heading 1', run: () => toggleHeading(1), icon: TIcons.h1 },
-                { title: 'Heading 2', run: () => toggleHeading(2), icon: TIcons.h2 },
-                { title: 'Heading 3', run: () => toggleHeading(3), icon: TIcons.h3 },
+                { title: 'Heading 1', run: () => chain().toggleHeading({ level: 1 }).run(), icon: TIcons.h1, active: editor && editor.isActive('heading', { level: 1 }) },
+                { title: 'Heading 2', run: () => chain().toggleHeading({ level: 2 }).run(), icon: TIcons.h2, active: editor && editor.isActive('heading', { level: 2 }) },
+                { title: 'Heading 3', run: () => chain().toggleHeading({ level: 3 }).run(), icon: TIcons.h3, active: editor && editor.isActive('heading', { level: 3 }) },
                 null,
-                { title: 'Bold (Ctrl+B)', run: () => applyWrap('**'), icon: TIcons.bold },
-                { title: 'Italic (Ctrl+I)', run: () => applyWrap('*'), icon: TIcons.italic },
-                { title: 'Strikethrough', run: () => applyWrap('~~'), icon: TIcons.strike },
-                { title: 'Inline code', run: () => applyWrap('`'), icon: TIcons.code },
+                { title: 'Bold (Ctrl+B)', run: () => chain().toggleBold().run(), icon: TIcons.bold, active: editor && editor.isActive('bold') },
+                { title: 'Italic (Ctrl+I)', run: () => chain().toggleItalic().run(), icon: TIcons.italic, active: editor && editor.isActive('italic') },
+                { title: 'Strikethrough', run: () => chain().toggleStrike().run(), icon: TIcons.strike, active: editor && editor.isActive('strike') },
+                { title: 'Inline code', run: () => chain().toggleCode().run(), icon: TIcons.code, active: editor && editor.isActive('code') },
                 null,
-                { title: 'Bulleted list', run: bullets, icon: TIcons.list },
-                { title: 'Numbered list', run: numbers, icon: TIcons.listOrdered },
-                { title: 'Task list', run: tasks, icon: TIcons.listChecks },
+                { title: 'Bulleted list', run: () => chain().toggleBulletList().run(), icon: TIcons.list, active: editor && editor.isActive('bulletList') },
+                { title: 'Numbered list', run: () => chain().toggleOrderedList().run(), icon: TIcons.listOrdered, active: editor && editor.isActive('orderedList') },
+                { title: 'Task list', run: () => chain().toggleTaskList().run(), icon: TIcons.listChecks, active: editor && editor.isActive('taskList') },
                 null,
-                { title: 'Decrease indent', run: outdent, icon: TIcons.outdent },
-                { title: 'Increase indent', run: indent, icon: TIcons.indent },
-                { title: 'Quote', run: quote, icon: TIcons.quote },
-                { title: 'Divider', run: divider, icon: TIcons.divider },
+                { title: 'Decrease indent', run: () => chain().liftListItem(listKind()).run(), icon: TIcons.outdent },
+                { title: 'Increase indent', run: () => chain().sinkListItem(listKind()).run(), icon: TIcons.indent },
+                { title: 'Quote', run: () => chain().toggleBlockquote().run(), icon: TIcons.quote, active: editor && editor.isActive('blockquote') },
+                { title: 'Divider', run: () => chain().setHorizontalRule().run(), icon: TIcons.divider },
                 null,
-                { title: 'Underline', run: () => applyWrap('<u>', '</u>'), icon: TIcons.underline },
-                { title: 'Highlight', run: () => applyWrap('<mark>', '</mark>'), icon: TIcons.highlighter },
-                ...TEXT_COLORS.map((c2) => ({ title: c2.name + ' text', run: () => applyWrap('<span style="color:' + c2.hex + '">', '</span>'), swatch: c2.hex })),
-                { title: 'Insert table', run: () => { const ta = bodyRef.current; if (!ta) return; ta.focus(); document.execCommand('insertText', false, TABLE_SNIPPET); }, icon: TIcons.table },
+                { title: 'Underline (Ctrl+U)', run: () => chain().toggleUnderline().run(), icon: TIcons.underline, active: editor && editor.isActive('underline') },
+                { title: 'Highlight', run: () => chain().toggleHighlight().run(), icon: TIcons.highlighter, active: editor && editor.isActive('highlight') },
+                ...TEXT_COLORS.map((c2) => ({
+                  title: c2.name + ' text',
+                  run: () => (colorActive(c2.hex) ? chain().unsetColor().run() : chain().setColor(c2.hex).run()),
+                  swatch: c2.hex,
+                  active: colorActive(c2.hex),
+                })),
+                { title: 'Insert table', run: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), icon: TIcons.table },
+                // Table controls appear only while the caret is inside a table.
+                ...(editor && editor.isActive('table') ? [
+                  null,
+                  { title: 'Add row below', run: () => chain().addRowAfter().run(), label: '+ Row' },
+                  { title: 'Add column right', run: () => chain().addColumnAfter().run(), label: '+ Col' },
+                  { title: 'Delete row', run: () => chain().deleteRow().run(), label: '− Row' },
+                  { title: 'Delete column', run: () => chain().deleteColumn().run(), label: '− Col' },
+                  { title: 'Delete table', run: () => chain().deleteTable().run(), label: '✕ Table' },
+                ] : []),
                 null,
-                { title: 'AI format — tidy this note (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
+                { title: 'AI format — restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
               ].map((btn, i) => btn === null
                 ? <span key={'sep' + i} style={s('flex:none;width:1px;height:18px;background:' + C.line + ';margin:0 7px;')} />
                 : (
-                  <Hover key={btn.title} tag="button" onClick={btn.run} aria-label={btn.title} title={btn.title}
-                    base={'flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;color:' + (btn.accent ? C.blue : C.mut) + ';' + (btn.accent && aiFmt && aiFmt.status === 'loading' ? 'opacity:.5;' : '')}
+                  <Hover key={btn.title} tag="button" onClick={() => { if (!editor && !btn.accent) return; btn.run(); }} aria-label={btn.title} title={btn.title}
+                    base={'flex:none;height:32px;display:flex;align-items:center;justify-content:center;border:none;border-radius:7px;cursor:pointer;font:inherit;' +
+                      (btn.label ? 'padding:0 10px;font-size:12.5px;font-weight:700;' : 'width:32px;') +
+                      'background:' + (btn.active ? C.sel : 'none') + ';color:' + (btn.active || btn.accent ? C.blue : C.mut) + ';' +
+                      (btn.accent && aiFmt && aiFmt.status === 'loading' ? 'opacity:.5;' : '')}
                     hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
                     {btn.swatch
-                      ? <span style={s('width:14px;height:14px;border-radius:99px;background:' + btn.swatch + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + C.line + ';')} />
-                      : <Svg w={16} sw={2}>{btn.icon}</Svg>}
+                      ? <span style={s('width:14px;height:14px;border-radius:99px;background:' + btn.swatch + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + (btn.active ? C.blue : C.line) + ';')} />
+                      : btn.label ? btn.label : <Svg w={16} sw={2}>{btn.icon}</Svg>}
                   </Hover>
                 ))}
             </div>
@@ -999,9 +929,9 @@ export default function NotebookPage() {
               <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:9px 20px;')}>
                 <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
                 <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
-                  {aiFmt.status === 'loading' && 'Tidying the note — checking spelling and structure…'}
+                  {aiFmt.status === 'loading' && 'Restructuring the note — headings, lists, tables and highlights…'}
                   {aiFmt.status === 'error' && aiFmt.message}
-                  {aiFmt.status === 'ready' && 'Review the proposed changes below. Wording stays as written — only typos, punctuation and layout change. Nothing is saved until you apply.'}
+                  {aiFmt.status === 'ready' && 'Review the full reformat below — headings, lists, tables and highlights. Every fact is kept. Nothing is saved until you apply.'}
                 </span>
                 {aiFmt.status === 'ready' && (
                   <Hover tag="button" onClick={applyAiFormat}
@@ -1017,8 +947,8 @@ export default function NotebookPage() {
             )}
 
             {/* Body — the entire content area is the writing surface (or the
-                rendered markdown in Preview, or the AI diff while reviewing);
-                attachments dock below and never push it down. */}
+                AI diff while reviewing); attachments dock below and never
+                push it down. */}
             {aiFmt && aiFmt.status === 'ready' ? (
               <div className="nb-scroll" style={s('flex:1;min-height:0;overflow:auto;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
                 {aiFmt.diff.map((l, i) => (
@@ -1031,52 +961,12 @@ export default function NotebookPage() {
                 ))}
               </div>
             ) : (
-              // preventDefault: mousedown's default action moves focus off the
-              // textarea this opens (React mounts+focuses it synchronously, then
-              // the browser blurs it), which committed and closed the editor
-              // before a single keystroke — new/empty notes felt unwritable.
-              <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;padding:20px 28px;cursor:text;')}
-                onMouseDown={(e) => { if (e.target === e.currentTarget && activeBlock === null) { e.preventDefault(); startBlock(blocks.length, ''); } }}>
-                {blocks.map((b, i) => (
-                  activeBlock === i ? (
-                    <textarea
-                      key={'edit' + i}
-                      ref={(el) => { bodyRef.current = el; if (el && !el.dataset.init) { el.dataset.init = '1'; autoGrow(el); el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }}
-                      value={draft}
-                      onChange={(e) => { setDraft(e.target.value); autoGrow(e.target); }}
-                      onBlur={commitBlock}
-                      onKeyDown={(e) => { editorKeys(e); if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); } }}
-                      style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:none;padding:2px 0;margin:0 0 12px;')}
-                    />
-                  ) : (
-                    <div key={'blk' + i} className="nb-block" onClick={() => startBlock(i, b)} title="Click to edit">
-                      <MdView text={b} />
-                    </div>
-                  )
-                ))}
-                {activeBlock === blocks.length && (
-                  <textarea
-                    key="edit-new"
-                    ref={(el) => { bodyRef.current = el; if (el && !el.dataset.init) { el.dataset.init = '1'; autoGrow(el); el.focus(); } }}
-                    value={draft}
-                    onChange={(e) => { setDraft(e.target.value); autoGrow(e.target); }}
-                    onBlur={commitBlock}
-                    onKeyDown={(e) => { editorKeys(e); if (e.key === 'Escape') { e.preventDefault(); e.target.blur(); } }}
-                    placeholder="Write markdown — it renders when you click away. Use the toolbar for headings, lists, tables, highlights and colours."
-                    style={s('display:block;width:100%;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.65;border:none;outline:none;color:' + C.ink + ';background:none;padding:2px 0;margin:0 0 12px;min-height:56px;')}
-                  />
-                )}
-                {/* pointer-events:none so clicks on the hint (and the spacer
-                    below) fall through to the container's click-to-write
-                    handler, which requires target === currentTarget. */}
-                {blocks.length === 0 && activeBlock === null && (
-                  <p style={s('margin:4px 0;font-size:16px;color:' + C.dim + ';pointer-events:none;')}>
-                    Click anywhere to start writing. Markdown renders as you go — finish a block and it turns into headings, lists, tables… Anything you write is used by the assistant to answer and triage.
-                  </p>
-                )}
-                {/* Click-to-continue area below the last block. */}
-                {activeBlock === null && blocks.length > 0 && <div style={s('min-height:120px;pointer-events:none;')} />}
-              </div>
+              <PageEditor
+                key={selected.id}
+                initialBody={selected.body || ''}
+                onChange={(md) => editSelected({ body: md })}
+                onReady={setEditor}
+              />
             )}
 
             {/* Attachments — docked at the bottom of the page. */}
