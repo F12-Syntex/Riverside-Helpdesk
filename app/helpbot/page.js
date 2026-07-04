@@ -19,6 +19,7 @@ import ChatView from '../_components/ChatView';
 import KbView from '../_components/KbView';
 import DocumentViewer from '../_components/DocumentViewer';
 import AddGuideModal from '../_components/AddGuideModal';
+import { plainText } from '../_components/chat/Rich';
 
 /* ------------------------------------------------------------------ *
  * The Riverside Practice Q&A component.
@@ -96,7 +97,7 @@ class RiversidePracticeQA extends React.Component {
           lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
         }
       } else if (m.kind === 'ai') {
-        const steps = (m.steps || []).map((t, i) => (i + 1) + ') ' + (t && t.text ? t.text : t)).join('  ');
+        const steps = (m.steps || []).map((t, i) => (i + 1) + ') ' + plainText(t && t.text ? t.text : t)).join('  ');
         if (steps) lines.push('The assistant answered: ' + steps);
       } else if (m.kind === 'suggest') {
         lines.push('The assistant: ' + m.text);
@@ -171,19 +172,19 @@ class RiversidePracticeQA extends React.Component {
 
   copyTriage(m, idx) {
     const label = { emergency: 'EMERGENCY', urgent: 'Urgent — duty doctor', routine: 'Routine', 'self-care': 'Self-care / signpost', unclear: 'Unclear — escalate' }[m.urgency] || 'Unclear';
-    const lines = ['Triage notes', 'Urgency: ' + label + (m.urgencyReason ? ' — ' + m.urgencyReason : '')];
-    if (m.summary) lines.push('Request: ' + m.summary);
+    const lines = ['Triage notes', 'Urgency: ' + label + (m.urgencyReason ? ' — ' + plainText(m.urgencyReason) : '')];
+    if (m.summary) lines.push('Request: ' + plainText(m.summary));
     if (m.actions && m.actions.length) {
       lines.push('', 'Actions:');
       m.actions.forEach((a, i) => {
         const src = a && a.cite ? '  [' + a.cite.docTitle + ' — ' + a.cite.location + ']' : '';
-        lines.push((i + 1) + '. ' + (a && a.text ? a.text : a) + src);
+        lines.push((i + 1) + '. ' + plainText(a && a.text ? a.text : a) + src);
       });
     }
     if (m.route) lines.push('', 'Route to: ' + m.route);
     if (m.redFlags && m.redFlags.length) {
       lines.push('', 'Escalate if:');
-      m.redFlags.forEach((r) => lines.push('- ' + (r && r.text ? r.text : r)));
+      m.redFlags.forEach((r) => lines.push('- ' + plainText(r && r.text ? r.text : r)));
     }
     if (m.patientMessage) lines.push('', 'Draft reply to patient:', m.patientMessage);
     lines.push(...this.contactLines(m));
@@ -212,11 +213,11 @@ class RiversidePracticeQA extends React.Component {
     }
     const lines = [m.question, ''];
     (m.steps || []).forEach((t, i) => {
-      const txt = t && t.text ? t.text : t;
+      const txt = plainText(t && t.text ? t.text : t);
       const src = t && t.cite ? '  [' + t.cite.docTitle + ' — ' + t.cite.location + ']' : '';
       lines.push((i + 1) + '. ' + txt + src);
     });
-    if (m.tip) lines.push('', 'Tip: ' + m.tip);
+    if (m.tip) lines.push('', 'Tip: ' + plainText(m.tip));
     lines.push(...this.contactLines(m));
     lines.push('', 'Answered from the practice’s documents.');
     try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
@@ -230,9 +231,9 @@ class RiversidePracticeQA extends React.Component {
       draft: {
         question: m.question || '',
         category: 'appointments',
-        intro: m.intro || '',
-        steps: (m.steps && m.steps.length) ? m.steps.map((s2) => (s2 && s2.text ? s2.text : s2)) : ['', ''],
-        tip: m.tip || '',
+        intro: plainText(m.intro || ''),
+        steps: (m.steps && m.steps.length) ? m.steps.map((s2) => plainText(s2 && s2.text ? s2.text : s2)) : ['', ''],
+        tip: plainText(m.tip || ''),
       },
     });
   }

@@ -3,6 +3,7 @@
 import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
 import ContactsCard from './ContactsCard';
+import Rich from './Rich';
 
 // How each urgency band is shown. Colours follow the NHS palette already used
 // across the app (emergency red, urgent amber, routine/self-care blues/greens).
@@ -51,14 +52,14 @@ export default function TriageAnswer({ v }) {
               <span style={s('flex:none;color:' + band.fg + ';margin-top:1px;')}><Svg w={20} sw={2.2}>{band.icon}</Svg></span>
               <div style={s('flex:1;min-width:0;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + band.fg + ';')}>{band.label}</div>
-                {v.hasUrgencyReason && <div style={s('margin-top:3px;font-size:16px;line-height:1.45;color:#212b32;')}>{v.urgencyReason}</div>}
+                {v.hasUrgencyReason && <div style={s('margin-top:3px;font-size:16px;line-height:1.45;color:#212b32;')}><Rich text={v.urgencyReason} /></div>}
               </div>
             </div>
 
             {v.hasSummary && (
               <div style={s('padding:14px 22px 0;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>Request</div>
-                <p style={s('margin:0;font-size:17px;line-height:1.5;color:#4c6272;')}>{v.summary}</p>
+                <p style={s('margin:0;font-size:17px;line-height:1.5;color:#4c6272;')}><Rich text={v.summary} /></p>
               </div>
             )}
 
@@ -70,7 +71,7 @@ export default function TriageAnswer({ v }) {
                     <div key={a.num} style={s('display:flex;gap:14px;align-items:flex-start;')}>
                       <div style={s('flex:none;width:28px;height:28px;border-radius:50%;background:#005eb8;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;margin-top:1px;')}>{a.num}</div>
                       <div style={s('flex:1;min-width:0;')}>
-                        <div style={s('font-size:17px;line-height:1.5;')}>{a.text}</div>
+                        <div style={s('font-size:17px;line-height:1.5;')}><Rich text={a.text} /></div>
                         {a.hasCite && <CiteChip label={a.citeLabel} onClick={a.onCite} />}
                       </div>
                     </div>
@@ -94,7 +95,7 @@ export default function TriageAnswer({ v }) {
                 <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;')}>
                   {v.redFlags.map((r, i) => (
                     <li key={i} style={s('font-size:16px;line-height:1.45;color:#212b32;')}>
-                      <span style={s('color:#a5130b;font-weight:700;margin-right:6px;')}>&bull;</span>{r.text}
+                      <span style={s('color:#a5130b;font-weight:700;margin-right:6px;')}>&bull;</span><Rich text={r.text} />
                       {r.hasCite && <div><CiteChip label={r.citeLabel} onClick={r.onCite} /></div>}
                     </li>
                   ))}
