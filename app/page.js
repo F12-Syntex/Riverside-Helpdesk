@@ -17,16 +17,19 @@ const TOOLS = [
     title: 'Practice Q&A',
     description: 'Ask anything about how the practice works — answers come only from the organisation’s own documents. For all staff.',
   },
-  {
-    href: '/medications',
-    title: 'Medication check',
-    description: 'Look up clear, referenced information about any medicine — from public UK sources (NHS, BNF/NICE, eMC). Add several at once, with an optional question for each. For all staff.',
-  },
-  {
-    href: '/rota',
-    title: 'Staff rota generator',
-    description: 'Build and balance staff rotas with help from the practice assistant.',
-  },
+  // Medication check and the Staff rota generator are hidden from the index
+  // for now (the /medications and /rota routes still work if visited
+  // directly). Uncomment to bring them back.
+  // {
+  //   href: '/medications',
+  //   title: 'Medication check',
+  //   description: 'Look up clear, referenced information about any medicine — from public UK sources (NHS, BNF/NICE, eMC). Add several at once, with an optional question for each. For all staff.',
+  // },
+  // {
+  //   href: '/rota',
+  //   title: 'Staff rota generator',
+  //   description: 'Build and balance staff rotas with help from the practice assistant.',
+  // },
   {
     href: '/notebook',
     title: 'Notebook',
