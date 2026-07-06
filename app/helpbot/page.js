@@ -20,6 +20,43 @@ import KbView from '../_components/KbView';
 import DocumentViewer from '../_components/DocumentViewer';
 import AddGuideModal from '../_components/AddGuideModal';
 import { plainText } from '../_components/chat/Rich';
+import { mdPlain } from '../_components/chat/Md';
+
+// Attached images are downscaled in the browser before sending: big photos
+// waste tokens and upload time, and localStorage (where the chat persists)
+// holds only a few MB. Anything over MAX_DIM px is resized and re-encoded as
+// JPEG on a white background; small files are sent as-is.
+const MAX_IMAGES = 4;
+function prepareImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the file.'));
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1400;
+        const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height, 1));
+        if (scale === 1 && dataUrl.length < 900000) { resolve(dataUrl); return; }
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff'; // JPEG has no alpha — transparent PNGs go black otherwise
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } catch (e) {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => reject(new Error('Not a readable image.'));
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 /* ------------------------------------------------------------------ *
  * The Riverside Practice Q&A component.
@@ -36,6 +73,7 @@ class RiversidePracticeQA extends React.Component {
     super(props);
     this.state = {
       input: '',
+      pendingImages: [],   // images attached to the next message: [{ name, dataUrl }]
       messages: [],
       customGuides: [],
       showAdd: false,
@@ -48,6 +86,7 @@ class RiversidePracticeQA extends React.Component {
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
     };
+    this.imgInput = React.createRef();
   }
 
   blankDraft() {
@@ -73,10 +112,53 @@ class RiversidePracticeQA extends React.Component {
   }
 
   save() {
+    // Image data URLs can blow the localStorage quota; if the full transcript
+    // won't fit, persist it again with the image data dropped (keeping a count
+    // so the bubble can still say images were attached).
     try {
       localStorage.setItem('riva-chat-v1', JSON.stringify(this.state.messages));
+    } catch (e) {
+      try {
+        const slim = this.state.messages.map((m) => (m.images && m.images.length)
+          ? Object.assign({}, m, { images: [], imageCount: m.images.length })
+          : m);
+        localStorage.setItem('riva-chat-v1', JSON.stringify(slim));
+      } catch (e2) {}
+    }
+    try {
       localStorage.setItem('riva-guides-v1', JSON.stringify(this.state.customGuides));
     } catch (e) {}
+  }
+
+  /* ------------------------- Image attachments ------------------------- */
+
+  async addImages(files) {
+    const imgs = this.state.pendingImages.slice();
+    for (const f of Array.from(files || [])) {
+      if (!f || !/^image\//.test(f.type)) continue;
+      if (imgs.length >= MAX_IMAGES) break;
+      try {
+        imgs.push({ name: f.name || 'Pasted image', dataUrl: await prepareImage(f) });
+      } catch (e) { /* unreadable file — skip it */ }
+    }
+    this.setState({ pendingImages: imgs });
+  }
+
+  removePendingImage(i) {
+    const imgs = this.state.pendingImages.slice();
+    imgs.splice(i, 1);
+    this.setState({ pendingImages: imgs });
+  }
+
+  onPaste(e) {
+    const files = [];
+    for (const it of Array.from((e.clipboardData && e.clipboardData.items) || [])) {
+      if (it.kind === 'file' && /^image\//.test(it.type)) {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) { e.preventDefault(); this.addImages(files); }
   }
 
   cats() { return CATEGORIES; }
@@ -97,8 +179,18 @@ class RiversidePracticeQA extends React.Component {
           lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
         }
       } else if (m.kind === 'ai') {
-        const steps = (m.steps || []).map((t, i) => (i + 1) + ') ' + plainText(t && t.text ? t.text : t)).join('  ');
-        if (steps) lines.push('The assistant answered: ' + steps);
+        if (m.answerKind === 'triage') {
+          const bits = 'The assistant triaged the request as ' + (m.urgency || 'unclear')
+            + (m.route ? ', routing to ' + plainText(m.route) : '') + '.';
+          lines.push(bits);
+        } else {
+          // New answers carry markdown sections; older saved chats carry steps.
+          const body = (m.sections && m.sections.length)
+            ? m.sections.map((sec) => mdPlain(sec.markdown)).join(' ')
+            : (m.steps || []).map((t, i) => (i + 1) + ') ' + plainText(t && t.text ? t.text : t)).join('  ');
+          const txt = (body || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+          if (txt) lines.push('The assistant answered: ' + txt);
+        }
       } else if (m.kind === 'suggest') {
         lines.push('The assistant: ' + m.text);
       }
@@ -108,14 +200,17 @@ class RiversidePracticeQA extends React.Component {
 
   ask(text) {
     const t = (text || '').trim();
-    if (!t) return;
-    const userMsg = { role: 'user', text: t };
+    const images = this.state.pendingImages.map((im) => im.dataUrl);
+    if (!t && !images.length) return;
+    const question = t || 'Please look at the attached image.';
+    const userMsg = { role: 'user', text: t, images };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question: t, status: 'loading', intro: '', steps: null, tip: '', message: '', messageCite: null, citations: [], contacts: [] };
+    // The images ride along on the bot message too, so a retry can resend them.
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', intro: '', sections: null, tip: '', message: '', messageCite: null, citations: [], contacts: [] };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
-    this.setState({ messages, input: '' }, () => { this.save(); this.fetchAI(t, aiIdx); });
+    this.setState({ messages, input: '', pendingImages: [] }, () => { this.save(); this.fetchAI(question, aiIdx); });
   }
 
   async fetchAI(question, idx) {
@@ -123,8 +218,10 @@ class RiversidePracticeQA extends React.Component {
     // we're answering). On the first question this is empty, so the server skips
     // the follow-up query-condensing step — no point enriching a standalone query.
     const history = this.buildHistory(idx - 1);
+    const m = this.state.messages[idx];
+    const images = (m && m.images) || [];
     try {
-      const data = await askQuestion({ question, history, customGuides: this.state.customGuides });
+      const data = await askQuestion({ question, history, customGuides: this.state.customGuides, images });
       if (data.kind === 'triage') {
         this.updateAi(idx, {
           status: 'done',
@@ -142,11 +239,11 @@ class RiversidePracticeQA extends React.Component {
         });
         return;
       }
-      if (!data.answerable || (!data.steps.length && !data.message)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'I could not find this in the practice’s documents.', steps: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
+      if (!data.answerable || (!data.sections.length && !data.message)) {
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I can’t answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', intro: data.intro, steps: data.steps, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', intro: data.intro, sections: data.sections, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error' });
     }
@@ -177,14 +274,18 @@ class RiversidePracticeQA extends React.Component {
     if (m.actions && m.actions.length) {
       lines.push('', 'Actions:');
       m.actions.forEach((a, i) => {
-        const src = a && a.cite ? '  [' + a.cite.docTitle + ' — ' + a.cite.location + ']' : '';
+        const src = a && a.cite ? '  [' + a.cite.docTitle + ' — ' + a.cite.location + ']'
+          : (a && a.basis === 'judgement' ? '  [AI judgement]' : '');
         lines.push((i + 1) + '. ' + plainText(a && a.text ? a.text : a) + src);
       });
     }
     if (m.route) lines.push('', 'Route to: ' + m.route);
     if (m.redFlags && m.redFlags.length) {
       lines.push('', 'Escalate if:');
-      m.redFlags.forEach((r) => lines.push('- ' + plainText(r && r.text ? r.text : r)));
+      m.redFlags.forEach((r) => {
+        const src = r && !r.cite && r.basis === 'judgement' ? '  [AI judgement]' : '';
+        lines.push('- ' + plainText(r && r.text ? r.text : r) + src);
+      });
     }
     if (m.patientMessage) lines.push('', 'Draft reply to patient:', m.patientMessage);
     lines.push(...this.contactLines(m));
@@ -205,6 +306,17 @@ class RiversidePracticeQA extends React.Component {
     this._ct = setTimeout(() => this.setState({ copiedIdx: null }), 1800);
   }
 
+  // Answers as sections (new) or steps (older saved chats), normalised for
+  // copying and the save-to-guide prefill.
+  answerSections(m) {
+    if (m.sections && m.sections.length) return m.sections;
+    return (m.steps || []).map((t, i) => ({
+      markdown: (i + 1) + '. ' + ((t && t.text != null) ? t.text : t),
+      basis: 'documents',
+      cite: (t && t.cite) ? t.cite : null,
+    }));
+  }
+
   copyAi(m, idx) {
     if (m.message) {
       try { navigator.clipboard.writeText(m.message); } catch (e) {}
@@ -212,19 +324,28 @@ class RiversidePracticeQA extends React.Component {
       return;
     }
     const lines = [m.question, ''];
-    (m.steps || []).forEach((t, i) => {
-      const txt = plainText(t && t.text ? t.text : t);
-      const src = t && t.cite ? '  [' + t.cite.docTitle + ' — ' + t.cite.location + ']' : '';
-      lines.push((i + 1) + '. ' + txt + src);
+    if (m.intro) lines.push(plainText(m.intro), '');
+    this.answerSections(m).forEach((sec) => {
+      if (sec.basis === 'judgement') lines.push('[AI judgement — not from the practice’s documents]');
+      lines.push(mdPlain(sec.markdown));
+      if (sec.cite) lines.push('[Source: ' + sec.cite.docTitle + ' — ' + sec.cite.location + ']');
+      lines.push('');
     });
-    if (m.tip) lines.push('', 'Tip: ' + plainText(m.tip));
+    if (m.tip) lines.push('Tip: ' + plainText(m.tip));
     lines.push(...this.contactLines(m));
-    lines.push('', 'Answered from the practice’s documents.');
-    try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
+    lines.push('', 'From the practice’s documents; AI judgement marked where used.');
+    try { navigator.clipboard.writeText(lines.join('\n').replace(/\n{3,}/g, '\n\n')); } catch (e) {}
     this.flagCopied(idx);
   }
 
   prefillFromAi(m) {
+    // Guide steps are short plain lines — flatten the answer's markdown into
+    // one line per list item / paragraph, dropping list markers and headings.
+    const steps = this.answerSections(m)
+      .flatMap((sec) => mdPlain(sec.markdown).split('\n'))
+      .map((l) => l.replace(/^\s*(?:\d+[.)]|-)\s*/, '').trim())
+      .filter(Boolean)
+      .slice(0, 10);
     this.setState({
       showAdd: true,
       draftError: false,
@@ -232,7 +353,7 @@ class RiversidePracticeQA extends React.Component {
         question: m.question || '',
         category: 'appointments',
         intro: plainText(m.intro || ''),
-        steps: (m.steps && m.steps.length) ? m.steps.map((s2) => plainText(s2 && s2.text ? s2.text : s2)) : ['', ''],
+        steps: steps.length ? steps : ['', ''],
         tip: plainText(m.tip || ''),
       },
     });
@@ -396,7 +517,18 @@ class RiversidePracticeQA extends React.Component {
     const all = this.allGuides();
 
     const messages = this.state.messages.map((m, idx) => {
-      if (m.role === 'user') return { isUser: true, text: m.text };
+      if (m.role === 'user') {
+        return {
+          isUser: true,
+          text: m.text,
+          images: m.images || [],
+          hasImages: !!(m.images && m.images.length),
+          // Image data was stripped to fit localStorage — say so instead.
+          imageNote: (!m.images || !m.images.length) && m.imageCount
+            ? m.imageCount + ' image' + (m.imageCount === 1 ? '' : 's') + ' attached'
+            : '',
+        };
+      }
       if (m.kind === 'ai') {
         // The server tells us whether this turned out to be a how-to answer or a
         // triage of an incoming patient request; render the matching card.
@@ -416,9 +548,9 @@ class RiversidePracticeQA extends React.Component {
             hasUrgencyReason: !!(m.urgencyReason && m.urgencyReason.length),
             summary: m.summary || '',
             hasSummary: !!(m.summary && m.summary.length),
-            actions: (m.actions || []).map((a, i) => Object.assign({ num: i + 1, text: (a && a.text != null) ? a.text : a }, cite(a && a.cite))),
+            actions: (m.actions || []).map((a, i) => Object.assign({ num: i + 1, text: (a && a.text != null) ? a.text : a, isJudgement: !!(a && a.basis === 'judgement' && !a.cite) }, cite(a && a.cite))),
             hasActions: !!(m.actions && m.actions.length),
-            redFlags: (m.redFlags || []).map((r) => Object.assign({ text: (r && r.text != null) ? r.text : r }, cite(r && r.cite))),
+            redFlags: (m.redFlags || []).map((r) => Object.assign({ text: (r && r.text != null) ? r.text : r, isJudgement: !!(r && r.basis === 'judgement' && !r.cite) }, cite(r && r.cite))),
             hasRedFlags: !!(m.redFlags && m.redFlags.length),
             route: m.route || '',
             hasRoute: !!(m.route && m.route.length),
@@ -434,6 +566,17 @@ class RiversidePracticeQA extends React.Component {
             hasContacts: !!(m.contacts && m.contacts.length),
           };
         }
+        const sections = this.answerSections(m).map((sec, i) => {
+          const cite = sec.cite || null;
+          return {
+            key: i,
+            markdown: sec.markdown || '',
+            isJudgement: sec.basis === 'judgement',
+            hasCite: !!cite,
+            citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
+            onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
+          };
+        });
         return {
           isAi: true,
           aiLoading: m.status === 'loading',
@@ -443,17 +586,9 @@ class RiversidePracticeQA extends React.Component {
           question: m.question,
           intro: m.intro || '',
           hasIntro: !!(m.intro && m.intro.length),
-          steps: (m.steps || []).map((t, i) => {
-            const cite = (t && t.cite) ? t.cite : null;
-            return {
-              num: i + 1,
-              text: (t && t.text != null) ? t.text : t,
-              hasCite: !!cite,
-              citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
-              onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
-            };
-          }),
-          hasSteps: !!(m.steps && m.steps.length),
+          sections,
+          hasSections: sections.length > 0,
+          usedJudgement: sections.some((sec) => sec.isJudgement),
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
           hasMessageCite: !!m.messageCite,
@@ -528,7 +663,7 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, or paste an incoming patient request to triage. Everything comes only from the organisation’s own documents — helpful for all staff.',
+      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, or paste an incoming patient request to triage. Answers come from the organisation’s own documents first — anything from AI judgement is clearly marked.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -542,6 +677,16 @@ class RiversidePracticeQA extends React.Component {
       isEmpty: this.state.messages.length === 0,
       notEmpty: this.state.messages.length > 0,
       input: this.state.input,
+      pendingImages: this.state.pendingImages.map((im, i) => ({
+        name: im.name,
+        dataUrl: im.dataUrl,
+        onRemove: () => self.removePendingImage(i),
+      })),
+      hasPendingImages: this.state.pendingImages.length > 0,
+      canAttachMore: this.state.pendingImages.length < MAX_IMAGES,
+      onPickImages: () => { if (self.imgInput.current) self.imgInput.current.click(); },
+      onImgFiles: (e) => { self.addImages(e.target.files); if (self.imgInput.current) self.imgInput.current.value = ''; },
+      onPaste: (e) => self.onPaste(e),
       messages, popular,
       cats: this.cats(),
       showAdd: this.state.showAdd,
@@ -585,8 +730,28 @@ class RiversidePracticeQA extends React.Component {
         {!v.isKb && (
         <div style={s('flex:none;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;')}>
+            {v.hasPendingImages && (
+              <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
+                {v.pendingImages.map((im, i) => (
+                  <div key={i} style={s('position:relative;')}>
+                    <img src={im.dataUrl} alt={im.name} title={im.name} style={s('display:block;height:64px;max-width:120px;object-fit:cover;border-radius:10px;border:1px solid #d8dde0;')} />
+                    <Hover tag="button" type="button" onClick={im.onRemove} aria-label={'Remove ' + im.name}
+                      base="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:#212b32;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"
+                      hover="background:#d5281b;">
+                      <Svg w={10} stroke="#fff" sw={3}>{Icons.close}</Svg>
+                    </Hover>
+                  </div>
+                ))}
+              </div>
+            )}
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className="riva-input" value={v.input} onChange={v.onInput} placeholder="Ask a question, or paste a patient request…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input ref={this.imgInput} type="file" accept="image/*" multiple style={s('display:none;')} onChange={v.onImgFiles} />
+              <Hover tag="button" type="button" onClick={v.onPickImages} disabled={!v.canAttachMore} aria-label="Attach an image" title="Attach an image (or paste one into the message box)"
+                base={'flex:none;width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid #d8dde0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4c6272;' + (v.canAttachMore ? '' : 'opacity:.45;cursor:default;')}
+                hover={v.canAttachMore ? 'border-color:#005eb8;color:#005eb8;' : ''}>
+                <Svg w={20} sw={2}>{Icons.image}</Svg>
+              </Hover>
+              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Ask a question, paste a patient request, or paste an image…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>

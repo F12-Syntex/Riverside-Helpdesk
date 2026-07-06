@@ -2,6 +2,7 @@
 
 import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
+import JudgementChip from './JudgementChip';
 import ContactsCard from './ContactsCard';
 import Rich from './Rich';
 
@@ -24,7 +25,7 @@ export default function TriageAnswer({ v }) {
       </div>
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
-          <span style={s('flex:none;')}><Svg w={16}>{Icons.fileLines}</Svg></span>Triage notes &mdash; routing only, from the practice&rsquo;s documents. Not clinical advice.
+          <span style={s('flex:none;')}><Svg w={16}>{Icons.fileLines}</Svg></span>Triage notes &mdash; routing only; AI judgement is marked. Not clinical advice.
         </div>
 
         {v.aiLoading && (
@@ -73,6 +74,7 @@ export default function TriageAnswer({ v }) {
                       <div style={s('flex:1;min-width:0;')}>
                         <div style={s('font-size:17px;line-height:1.5;')}><Rich text={a.text} /></div>
                         {a.hasCite && <CiteChip label={a.citeLabel} onClick={a.onCite} />}
+                        {!a.hasCite && a.isJudgement && <JudgementChip />}
                       </div>
                     </div>
                   ))}
@@ -97,6 +99,7 @@ export default function TriageAnswer({ v }) {
                     <li key={i} style={s('font-size:16px;line-height:1.45;color:#212b32;')}>
                       <span style={s('color:#a5130b;font-weight:700;margin-right:6px;')}>&bull;</span><Rich text={r.text} />
                       {r.hasCite && <div><CiteChip label={r.citeLabel} onClick={r.onCite} /></div>}
+                      {!r.hasCite && r.isJudgement && <div><JudgementChip /></div>}
                     </li>
                   ))}
                 </ul>

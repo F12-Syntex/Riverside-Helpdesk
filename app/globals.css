@@ -142,5 +142,33 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   @keyframes rivaNotifyIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
 }
 
+/* ------------------------------------------------------------------ *
+ * Assistant answers — formatted-note prose (chat's counterpart of the
+ * notebook's .nb-prose). Rendered by app/_components/chat/Md.jsx.
+ * ------------------------------------------------------------------ */
+.riva-md { font-size: 16.5px; line-height: 1.6; color: #212b32; overflow-wrap: break-word; }
+.riva-md > :first-child { margin-top: 0; }
+.riva-md > :last-child { margin-bottom: 0; }
+.riva-md p { margin: 0 0 10px; }
+.riva-md h2, .riva-md h3, .riva-md h4 { margin: 18px 0 8px; font-weight: 700; letter-spacing: -0.01em; color: #212b32; }
+.riva-md h2 { font-size: 20px; padding-bottom: 6px; border-bottom: 1px solid #eef1f2; }
+.riva-md h3 { font-size: 17.5px; }
+.riva-md h4 { font-size: 16px; }
+.riva-md ul, .riva-md ol { margin: 0 0 12px; padding-left: 24px; }
+.riva-md ul ul, .riva-md ol ol, .riva-md ul ol, .riva-md ol ul { margin-bottom: 0; }
+.riva-md li { margin: 4px 0; }
+.riva-md ul > li::marker { color: #005eb8; }
+.riva-md ol > li::marker { color: #005eb8; font-weight: 600; font-variant-numeric: tabular-nums; }
+.riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #005eb8; background: #e8f1f8; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
+.riva-md blockquote p { margin: 0 0 4px; }
+.riva-md blockquote p:last-child { margin-bottom: 0; }
+.riva-md .riva-md-tablewrap { margin: 0 0 12px; overflow-x: auto; }
+.riva-md table { border-collapse: collapse; min-width: 50%; }
+.riva-md th, .riva-md td { border: 1px solid #d8dde0; padding: 7px 11px; font-size: 15px; line-height: 1.5; text-align: left; vertical-align: top; min-width: 48px; }
+.riva-md th { background: #eef1f2; font-weight: 700; }
+.riva-md hr { border: none; border-top: 1px solid #d8dde0; margin: 14px 0; }
+.riva-md mark { background: #fff6cc; border-radius: 3px; padding: 0 2px; }
+.riva-md kbd { font-family: Consolas, Menlo, monospace; font-size: .85em; background: #f0f4f5; border: 1px solid #d8dde0; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
 body { overflow-x: hidden; }

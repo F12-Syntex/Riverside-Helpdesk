@@ -36,7 +36,7 @@ const PATTERNS = [
 // them from plain segments rather than showing raw angle brackets to reception.
 const STRAY_TAG = /<\/?(?:mark|u|kbd|span|strong|b|em|i|br|p|div)\b[^>]*>/gi;
 
-function renderInline(text, keyBase) {
+export function renderInline(text, keyBase) {
   const out = [];
   let rest = text;
   let n = 0;
