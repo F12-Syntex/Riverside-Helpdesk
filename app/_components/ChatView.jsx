@@ -6,6 +6,7 @@ import GuideCard from './chat/GuideCard';
 import SuggestBubble from './chat/SuggestBubble';
 import AiAnswer from './chat/AiAnswer';
 import TriageAnswer from './chat/TriageAnswer';
+import DocFileAnswer from './chat/DocFileAnswer';
 
 export default function ChatView({ v }) {
   return (
@@ -19,7 +20,7 @@ export default function ChatView({ v }) {
             </div>
             <h1 className="riva-hero-h1" style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
             <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
-            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Ask about a process, paste a patient request to triage, or attach a screenshot or photo. Share only the patient detail you need — this gives routing help, not clinical advice.</p>
+            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Ask about a process, paste a patient request to triage, or paste a medical document (patient name removed) for a ready-to-file title. Share only the patient detail you need — this gives routing help, not clinical advice.</p>
           </div>
 
           <div>
@@ -56,6 +57,7 @@ export default function ChatView({ v }) {
           {m.isSuggest && <SuggestBubble v={m} />}
           {m.isAi && <AiAnswer v={m} />}
           {m.isTriage && <TriageAnswer v={m} />}
+          {m.isDocFile && <DocFileAnswer v={m} />}
         </React.Fragment>
       ))}
     </div>

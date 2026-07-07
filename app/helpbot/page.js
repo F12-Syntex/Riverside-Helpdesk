@@ -179,7 +179,9 @@ class RiversidePracticeQA extends React.Component {
           lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
         }
       } else if (m.kind === 'ai') {
-        if (m.answerKind === 'triage') {
+        if (m.answerKind === 'docfile') {
+          lines.push('The assistant gave the document filing title “' + (m.title || '') + '”.');
+        } else if (m.answerKind === 'triage') {
           const bits = 'The assistant triaged the request as ' + (m.urgency || 'unclear')
             + (m.route ? ', routing to ' + plainText(m.route) : '') + '.';
           lines.push(bits);
@@ -222,6 +224,19 @@ class RiversidePracticeQA extends React.Component {
     const images = (m && m.images) || [];
     try {
       const data = await askQuestion({ question, history, customGuides: this.state.customGuides, images });
+      if (data.kind === 'docfile') {
+        this.updateAi(idx, {
+          status: 'done',
+          answerKind: 'docfile',
+          title: data.title,
+          date: data.date,
+          source: data.source,
+          department: data.department,
+          actions: data.actions,
+          note: data.note,
+        });
+        return;
+      }
       if (data.kind === 'triage') {
         this.updateAi(idx, {
           status: 'done',
@@ -291,6 +306,13 @@ class RiversidePracticeQA extends React.Component {
     lines.push(...this.contactLines(m));
     lines.push('', 'Routing suggestion from the practice’s documents — not clinical advice.');
     try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
+    this.flagCopied(idx);
+  }
+
+  // Copy just the filing title — that is what gets pasted into the document
+  // title field in EMIS; everything else on the card is context.
+  copyDocFile(m, idx) {
+    try { navigator.clipboard.writeText(m.title || ''); } catch (e) {}
     this.flagCopied(idx);
   }
 
@@ -530,8 +552,31 @@ class RiversidePracticeQA extends React.Component {
         };
       }
       if (m.kind === 'ai') {
-        // The server tells us whether this turned out to be a how-to answer or a
-        // triage of an incoming patient request; render the matching card.
+        // The server tells us whether this turned out to be a how-to answer, a
+        // triage of an incoming patient request, or a pasted medical document
+        // to file; render the matching card.
+        if (m.answerKind === 'docfile') {
+          return {
+            isDocFile: true,
+            aiLoading: m.status === 'loading',
+            aiError: m.status === 'error',
+            aiDone: m.status === 'done',
+            title: m.title || '',
+            // The title's parts, labelled, so a wrong date or department is
+            // easy to spot against the document before filing.
+            parts: [
+              { label: 'Date', value: m.date || '' },
+              { label: 'From', value: m.source || '' },
+              { label: 'Department', value: m.department || '' },
+              { label: 'Note', value: (!m.actions || !m.actions.length) ? (m.note || 'no action') : '' },
+            ].filter((p) => p.value),
+            actions: m.actions || [],
+            hasActions: !!(m.actions && m.actions.length),
+            onRetry: () => self.retryAi(idx),
+            onCopy: () => self.copyDocFile(m, idx),
+            copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy title',
+          };
+        }
         if (m.answerKind === 'triage') {
           const cite = (c) => ({
             hasCite: !!c,
@@ -663,7 +708,7 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, or paste an incoming patient request to triage. Answers come from the organisation’s own documents first — anything from AI judgement is clearly marked.',
+      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, paste an incoming patient request to triage, or paste a medical document to get a concise filing title. Answers come from the organisation’s own documents first — anything from AI judgement is clearly marked.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -751,7 +796,7 @@ class RiversidePracticeQA extends React.Component {
                 hover={v.canAttachMore ? 'border-color:#005eb8;color:#005eb8;' : ''}>
                 <Svg w={20} sw={2}>{Icons.image}</Svg>
               </Hover>
-              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Ask a question, paste a patient request, or paste an image…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Ask a question, paste a patient request or a document to file, or paste an image…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
