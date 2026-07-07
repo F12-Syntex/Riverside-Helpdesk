@@ -17,6 +17,8 @@ work for it), I must:
    - `test` — adding or fixing tests
    - `perf` — performance improvement
 3. Push to `origin` on the current branch.
+4. Merge the working branch straight into `main` (fast-forward) and push it —
+   no pull requests.
 
 Group unrelated changes into separate commits with the appropriate type rather
 than one mixed commit. Keep the subject in the imperative mood and under ~72
