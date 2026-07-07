@@ -14,8 +14,11 @@ import { s, Hover, Svg, Icons } from './ui';
 
 const TOOLS = [
   { href: '/helpbot', label: 'Practice Q&A' },
-  { href: '/medications', label: 'Medication check' },
-  { href: '/rota', label: 'Staff rota generator' },
+  // Medication check and the rota generator are hidden for now — keep in
+  // step with TOOLS in app/page.js.
+  // { href: '/medications', label: 'Medication check' },
+  // { href: '/rota', label: 'Staff rota generator' },
+  { href: '/notebook', label: 'Notebook' },
   { href: '/dpia', label: 'Data protection check (DPIA)' },
 ];
 

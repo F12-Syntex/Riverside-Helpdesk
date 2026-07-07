@@ -11,29 +11,20 @@ by `npm run rag:ingest`), supplementary context is **read live on every request*
 
 ## Where it can come from
 
-Three sources, gathered together (all optional):
+Three sources, gathered together:
 
-1. **OneNote (auto-linked, no redeploy).** Pages from your OneNote notebook, via
-   the Microsoft Graph API. Edit a page in OneNote and the next request (after the
-   cache window, default 5 min) picks it up. Set up once:
-
-   ```bash
-   ONENOTE_CLIENT_ID=<client-id> npm run onenote:auth
-   ```
-
-   Then set `ONENOTE_CLIENT_ID` and `ONENOTE_REFRESH_TOKEN` in your environment
-   (Vercel + `.env.local`). Optionally narrow to a notebook/section with
-   `ONENOTE_NOTEBOOK` / `ONENOTE_SECTION`. Full steps are in
-   `scripts/onenote-auth.mjs` and `.env.local.example`.
+1. **The Notebook (main, no redeploy).** Write notes at **`/notebook`** in the
+   app. They're stored in Postgres and used on the next request — no keys, no
+   setup. This is the recommended place for anything you edit often.
 
 2. **URLs (no redeploy).** Any direct text/markdown/JSON links in
    `SUPPLEMENTARY_CONTEXT_URLS` (comma or newline separated) — a published note, a
-   gist, or a OneDrive/SharePoint file with a direct-download link.
+   gist, or a file with a direct-download link.
 
 3. **This folder (baseline).** `.md`, `.txt`, `.json`, `.csv`, `.yaml` files
    committed here ship with the app and are always available. Changing them needs
-   a redeploy, so use this only for stable defaults; use OneNote/URLs for anything
-   you edit often. (`README.md` and `*.example` files are ignored.)
+   a redeploy, so use this only for stable defaults. (`README.md` and `*.example`
+   files are ignored.)
 
 ## How it is used
 
@@ -49,7 +40,7 @@ Three sources, gathered together (all optional):
 
 - These notes are treated as authoritative. Write them as clear practice policy
   ("what to do"), not speculation.
-- Do **not** put patient-identifiable information or secrets in here or in OneNote
-  pages that the token can read.
+- Do **not** put patient-identifiable information or secrets in here or in the
+  Notebook.
 - This is care navigation / routing guidance, not clinical advice — the assistant
   still never diagnoses.

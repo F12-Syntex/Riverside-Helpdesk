@@ -1,18 +1,21 @@
-// Server-side Q&A endpoint. The browser sends only the question, a short history
-// string and any locally-stored custom guides; retrieval, prompt building, the
-// model call, parsing and citation resolution all happen here, so the API key
-// and the full knowledge base never reach the client.
+// Server-side Q&A endpoint. The browser sends the question, a short history
+// string, any locally-stored custom guides and (optionally) attached images;
+// retrieval, prompt building, the model call, parsing and citation resolution
+// all happen here, so the API key and the full knowledge base never reach the
+// client.
 //
-// Answers are grounded strictly in the practice's documents: every step names
-// the Source that backs it, resolved here into a clickable citation the UI opens
-// in its in-page viewer. If the documents don't cover the question, the response
-// is `answerable: false` and the UI shows a decline.
+// Answers are markdown sections with explicit provenance: sections backed by
+// the practice's documents carry a Source citation with a server-verified
+// verbatim quote (opened in the in-page viewer); sections from the model's own
+// judgement are flagged as such and shown under a clear "AI judgement" marker.
+// Clinical judgement about a specific patient is still declined.
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
+import { notebookContext } from '@/lib/notebook';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 
 export const runtime = 'nodejs';
@@ -91,17 +94,36 @@ function dedupeCitations(cites) {
   return out;
 }
 
-// Single place the model is called. Returns { text } on success or
-// { error } (a ready-to-send NextResponse) on any failure, so both the Q&A and
-// triage branches share identical provider routing and error handling.
-async function callModel(apiKey, model, prompt) {
+// Attached images arrive as data URLs. Bound them hard: a handful of images,
+// common raster types only, and a size cap well inside what providers accept.
+const MAX_IMAGES = 4;
+const MAX_IMAGE_CHARS = 6_000_000; // ~4.5 MB of image data per image
+function sanitizeImages(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const u of raw) {
+    if (typeof u !== 'string') continue;
+    if (u.length > MAX_IMAGE_CHARS) continue;
+    if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)) continue;
+    out.push(u);
+    if (out.length >= MAX_IMAGES) break;
+  }
+  return out;
+}
+
+// Single place the model is called. `content` is either the prompt string or,
+// when images are attached, an array of multimodal parts. Returns { text } on
+// success or { error } (a ready-to-send NextResponse) on any failure, so both
+// the Q&A and triage branches share identical provider routing and error
+// handling.
+async function callModel(apiKey, model, content) {
   try {
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
       headers: OPENROUTER_HEADERS(apiKey),
       // provider: only route to providers that do not retain prompt data, so the
       // request and document extracts are never stored by the model provider.
-      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }], provider: NO_RETENTION }),
+      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content }], provider: NO_RETENTION }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
@@ -130,17 +152,20 @@ export async function POST(request) {
   let question = '';
   let history = '';
   let customGuides = [];
+  let images = [];
   try {
     const body = await request.json();
     question = typeof body?.question === 'string' ? body.question : '';
     history = typeof body?.history === 'string' ? body.history : '';
     customGuides = Array.isArray(body?.customGuides) ? body.customGuides : [];
+    images = sanitizeImages(body?.images);
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
-  if (!question.trim()) {
+  if (!question.trim() && !images.length) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
+  if (!question.trim()) question = 'Please look at the attached image.';
 
   // Resolve follow-ups for retrieval by concatenating the recent conversation
   // locally — no extra model call. "how is this done" then searches with the
@@ -160,13 +185,21 @@ export async function POST(request) {
     return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
   });
 
-  // Supplementary context — practice notes / triage instructions fetched at
-  // request time (OneNote, configured URLs, or the local rag/context folder), so
-  // they can be updated without a redeploy. Appended as extra numbered Sources
-  // after the knowledge-base chunks, so the model must quote them and the server
-  // verifies the quote exactly as for any document. Never fatal.
+  // Supplementary context — practice notes / triage instructions gathered at
+  // request time so they can be updated without a redeploy: the in-app Notebook
+  // (semantically retrieved from its own embeddings in Postgres, exactly like
+  // the knowledge base), plus any configured URLs / local rag/context folder.
+  // Appended as extra numbered Sources after the knowledge-base chunks, so the
+  // model must quote them and the server verifies the quote exactly as for any
+  // document. Never fatal.
+  let noteCatalog = '';
   try {
-    const supp = await supplementarySourcesFor(searchQuery);
+    const [remote, nb] = await Promise.all([
+      supplementarySourcesFor(searchQuery).catch(() => []),
+      notebookContext(searchQuery).catch(() => ({ sources: [], catalog: '' })),
+    ]);
+    noteCatalog = nb.catalog || '';
+    const supp = nb.sources.concat(remote); // notebook first — it's the staff's own guidance
     for (const s of supp) {
       const ref = extracts.length + 1;
       const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null };
@@ -190,19 +223,36 @@ export async function POST(request) {
   const redact = (t) => redactUnverifiedNumbers(t, verifiedNums);
 
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
-  const prompt = buildAskPrompt({ question, catalog: catalogText(), extracts, history, guideCatalog, contacts: contacts.map((c) => c.label) });
+  // Tier A catalogue: knowledge-base documents plus every notebook note, so the
+  // model is aware of the notebook's coverage even when no chunk was retrieved.
+  const catalog = [catalogText(), noteCatalog].filter(Boolean).join('\n');
+  const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label), imageCount: images.length });
+
+  // With images attached, the message becomes multimodal content parts; the
+  // prompt text stays identical either way.
+  const content = images.length
+    ? [{ type: 'text', text: prompt }].concat(images.map((url) => ({ type: 'image_url', image_url: { url } })))
+    : prompt;
 
   try {
-    const { text, error } = await callModel(apiKey, model, prompt);
+    const { text, error } = await callModel(apiKey, model, content);
     if (error) return error;
 
     const parsed = parseAiJson(text);
 
+    // An item declared as the model's own judgement carries no citation; a
+    // "documents" item whose source can't be resolved at all is downgraded to
+    // judgement too, so nothing unsourced is ever presented as document-backed.
+    const provenance = (s) => {
+      const cite = s.basis === 'judgement' ? null : resolveCite(refMap, s.source, s.quote);
+      return { cite, basis: cite ? 'documents' : 'judgement' };
+    };
+
     // The model decides for itself whether the message is a staff question or an
     // incoming patient request to route, and returns the matching shape.
     if (parsed.kind === 'triage') {
-      const actions = parsed.actions.map((s) => ({ text: redact(s.text), cite: resolveCite(refMap, s.source, s.quote) }));
-      const redFlags = parsed.redFlags.map((s) => ({ text: redact(s.text), cite: resolveCite(refMap, s.source, s.quote) }));
+      const actions = parsed.actions.map((s) => ({ text: redact(s.text), ...provenance(s) }));
+      const redFlags = parsed.redFlags.map((s) => ({ text: redact(s.text), ...provenance(s) }));
       const patientMessageCite = resolveCite(refMap, parsed.patientMessageSource, parsed.patientMessageQuote);
       const citations = dedupeCitations(
         actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
@@ -223,13 +273,15 @@ export async function POST(request) {
       });
     }
 
-    // Strict grounding: if the model can't answer from the documents, decline.
-    if (parsed.answerable === false || (!parsed.steps.length && !parsed.message)) {
+    // Declines are now rare — only when the message needs clinical judgement
+    // about a specific patient (or is otherwise off-limits); the model answers
+    // document-silent questions with clearly flagged judgement sections instead.
+    if (parsed.answerable === false || (!parsed.sections.length && !parsed.message)) {
       return NextResponse.json({
         kind: 'answer',
         answerable: false,
-        intro: parsed.intro || 'I could not find this in the practice’s documents.',
-        steps: [],
+        intro: parsed.intro || 'This needs a clinician’s judgement, so I can’t answer it here.',
+        sections: [],
         message: '',
         messageCite: null,
         tip: '',
@@ -238,20 +290,21 @@ export async function POST(request) {
       });
     }
 
-    // Resolve each citation by verifying the model's verbatim quote against the
-    // retrieved Sources — correcting wrong source numbers and attaching the exact
-    // supporting words, so the citation shows accurate, precise text.
-    const steps = parsed.steps.map((s) => ({ text: redact(s.text), cite: resolveCite(refMap, s.source, s.quote) }));
+    // Resolve each section's citation by verifying the model's verbatim quote
+    // against the retrieved Sources — correcting wrong source numbers and
+    // attaching the exact supporting words, so the citation shows accurate,
+    // precise text. Judgement sections carry no citation and stay flagged.
+    const sections = parsed.sections.map((sec) => ({ markdown: redact(sec.markdown), ...provenance(sec) }));
     const messageCite = resolveCite(refMap, parsed.messageSource, parsed.messageQuote);
 
     // The distinct sources this answer relied on (for any list/summary use).
-    const citations = dedupeCitations(steps.map((s) => s.cite).concat([messageCite]));
+    const citations = dedupeCitations(sections.map((s) => s.cite).concat([messageCite]));
 
     return NextResponse.json({
       kind: 'answer',
       answerable: true,
       intro: redact(parsed.intro),
-      steps,
+      sections,
       message: redact(parsed.message),
       messageCite,
       tip: redact(parsed.tip),

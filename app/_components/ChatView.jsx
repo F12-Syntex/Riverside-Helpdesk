@@ -19,7 +19,7 @@ export default function ChatView({ v }) {
             </div>
             <h1 className="riva-hero-h1" style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
             <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
-            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Ask about a process, or paste a patient request to triage. Share only the patient detail you need — this gives routing help, not clinical advice.</p>
+            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Ask about a process, paste a patient request to triage, or attach a screenshot or photo. Share only the patient detail you need — this gives routing help, not clinical advice.</p>
           </div>
 
           <div>
@@ -39,7 +39,17 @@ export default function ChatView({ v }) {
         <React.Fragment key={i}>
           {m.isUser && (
             <div style={s('display:flex;justify-content:flex-end;animation:rivaUp .25s ease;')}>
-              <div style={s('max-width:75%;background:#005eb8;color:#fff;border-radius:16px 16px 4px 16px;padding:12px 16px;font-size:17px;line-height:1.45;')}>{m.text}</div>
+              <div style={s('max-width:75%;background:#005eb8;color:#fff;border-radius:16px 16px 4px 16px;padding:12px 16px;font-size:17px;line-height:1.45;')}>
+                {m.hasImages && (
+                  <div style={s('display:flex;gap:8px;flex-wrap:wrap;margin-bottom:' + (m.text ? '10px' : '0') + ';')}>
+                    {m.images.map((src, j) => (
+                      <img key={j} src={src} alt="Attached image" style={s('max-width:200px;max-height:160px;border-radius:10px;display:block;background:#fff;')} />
+                    ))}
+                  </div>
+                )}
+                {m.imageNote && <div style={s('font-size:13.5px;opacity:.85;margin-bottom:' + (m.text ? '6px' : '0') + ';')}>{m.imageNote}</div>}
+                {m.text}
+              </div>
             </div>
           )}
           {m.isAnswer && <GuideCard v={m} />}

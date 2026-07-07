@@ -1672,16 +1672,7 @@
       "mtime": 1781939015783.4846,
       "chunks": 8,
       "title": "data protection policy",
-      "processedAt": "2026-06-25T05:34:03.301Z"
-    },
-    "emis-reception-reference-2": {
-      "path": "rag/sources/EMIS-Reception-Reference (2).pdf",
-      "sha256": "cc36f9eed15052f815551cd9fc5a85416c287366a8e737c402c726e53d50f1d9",
-      "size": 171686,
-      "mtime": 1782365617213.655,
-      "chunks": 27,
-      "title": "EMIS Reception Reference (2)",
-      "processedAt": "2026-06-25T05:34:06.366Z"
+      "processedAt": "2026-07-03T08:24:34.549Z"
     }
   }
 }
