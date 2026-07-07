@@ -59,7 +59,7 @@ export default function DocFileAnswer({ v }) {
             {v.hasActions ? (
               <div style={s('margin:16px 22px 0;border:1px solid #f0c9c5;background:#fdf2f2;border-radius:8px;padding:12px 16px;')}>
                 <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a5130b;margin-bottom:8px;')}>
-                  <Svg w={15} sw={2.2} stroke="#a5130b">{Icons.alertCircle}</Svg>For the GP to action
+                  <Svg w={15} sw={2.2} stroke="#a5130b">{Icons.alertCircle}</Svg>Needs action now
                 </div>
                 <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
                   {v.actions.map((a, i) => (
@@ -72,7 +72,7 @@ export default function DocFileAnswer({ v }) {
             ) : (
               <div style={s('margin:16px 22px 0;display:flex;gap:10px;align-items:center;background:#eaf5ee;border:1px solid #b8d9c4;border-radius:8px;padding:11px 14px;')}>
                 <span style={s('flex:none;color:#007f3b;')}><Svg w={17} sw={2.4} stroke="#007f3b">{Icons.check}</Svg></span>
-                <div style={s('font-size:16px;line-height:1.4;color:#00602c;')}>Nothing for the GP to action &mdash; file only.</div>
+                <div style={s('font-size:16px;line-height:1.4;color:#00602c;')}>No immediate action &mdash; file only.</div>
               </div>
             )}
 

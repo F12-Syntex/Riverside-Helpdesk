@@ -258,9 +258,11 @@ export async function POST(request) {
     // so the format stays identical whatever the model writes. No citations —
     // the title comes from the pasted document itself, not the knowledge base.
     if (parsed.kind === 'docfile') {
-      const date = normaliseDocDate(parsed.date);
+      // Undated documents keep the date slot with a visible placeholder, so the
+      // title's shape is stable and staff notice the gap and fill it in.
+      const date = normaliseDocDate(parsed.date) || 'ddmmyyyy';
       const tail = parsed.actions.length ? parsed.actions.join('; ') : (parsed.note || 'no action');
-      const title = [date && '(' + date + ')', parsed.source, parsed.department, tail]
+      const title = ['(' + date + ')', parsed.source, parsed.department, tail]
         .filter(Boolean).join(' ');
       return NextResponse.json({
         kind: 'docfile',
