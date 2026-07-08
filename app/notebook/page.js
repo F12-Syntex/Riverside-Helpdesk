@@ -319,6 +319,7 @@ export default function NotebookPage() {
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
+  const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections): null | {status:'loading'|'applying'} | {status:'error',message} | {status:'ready',plan} | {status:'done',applied}
   const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page (from PageEditor)
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
@@ -475,6 +476,46 @@ export default function NotebookPage() {
     }
   }
 
+  // AI organise: for a section (typically "Uncategorised"), ask the server for
+  // a plan of where every page's content belongs — existing sections, new ones
+  // or sub-sections — then show the plan for review. Nothing moves until the
+  // user applies it; applying redistributes the content (formatted for its new
+  // home), moves attachments along, and removes the emptied pages.
+  async function runAiOrganize() {
+    if (!selected || !isSection || (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying'))) return;
+    await flush();
+    setAiOrg({ status: 'loading' });
+    try {
+      const res = await fetch('/api/notebook/organize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sectionId: selected.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Organise failed.');
+      setAiOrg({ status: 'ready', plan: data.plan });
+    } catch (e) {
+      setAiOrg({ status: 'error', message: String(e.message || e) });
+    }
+  }
+
+  async function applyAiOrganize() {
+    if (!aiOrg || aiOrg.status !== 'ready') return;
+    const plan = aiOrg.plan;
+    setAiOrg({ status: 'applying' });
+    try {
+      const res = await fetch('/api/notebook/organize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sectionId: plan.sectionId, plan }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not apply the plan.');
+      await reloadAll();
+      setAiOrg({ status: 'done', applied: data.applied || {} });
+    } catch (e) {
+      setAiOrg({ status: 'error', message: String(e.message || e) });
+    }
+  }
+
   function applyAiFormat() {
     if (!aiFmt || aiFmt.status !== 'ready') return;
     // Load the formatted markdown into the editor; emitting the update runs
@@ -494,6 +535,7 @@ export default function NotebookPage() {
     await flush();
     setUploadErr('');
     setAiFmt(null);
+    setAiOrg(null);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
     setExpanded((e) => {
@@ -805,6 +847,13 @@ export default function NotebookPage() {
           <span style={s('flex:none;font-size:13px;min-width:64px;text-align:right;color:' + (saveState === 'unsaved' ? C.red : C.dim) + ';')}>
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
           </span>
+          {selected && isSection && (
+            <Hover tag="button" onClick={runAiOrganize} aria-label="AI organise" title="AI organise — move every page's content in this section to the section it belongs in (you review the plan first)"
+              base={'flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:' + C.blue + ';' + (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') ? 'opacity:.55;' : '')}
+              hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
+              <Svg w={15} sw={2}>{Icons.sparkle}</Svg>AI organise
+            </Hover>
+          )}
           {selected && !isSection && (
             <>
               <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
@@ -839,6 +888,63 @@ export default function NotebookPage() {
             <p style={s('margin:0 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
               Sections only have a name — they organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
             </p>
+
+            {/* AI organise — status banner and, when ready, the reviewable plan. */}
+            {aiOrg && (
+              <div style={s('margin:0 0 20px;border:1px solid ' + C.line + ';border-radius:12px;background:#fff;overflow:hidden;')}>
+                <div style={s('display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:10px 16px;')}>
+                  <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
+                  <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
+                    {aiOrg.status === 'loading' && 'Reading every page in this section and deciding where each part belongs…'}
+                    {aiOrg.status === 'applying' && 'Moving the content into place…'}
+                    {aiOrg.status === 'error' && aiOrg.message}
+                    {aiOrg.status === 'ready' && 'Review where each page’s content will go. Every fact is kept; emptied pages are removed and their files move with the content. Nothing changes until you apply.'}
+                    {aiOrg.status === 'done' && ('Done — moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
+                      + ((aiOrg.applied.newSections || 0) ? ', created ' + aiOrg.applied.newSections + ' section(s)' : '')
+                      + ((aiOrg.applied.newPages || 0) ? ', created ' + aiOrg.applied.newPages + ' page(s)' : '')
+                      + ((aiOrg.applied.removed || 0) ? ', removed ' + aiOrg.applied.removed + ' emptied page(s)' : '') + '.')}
+                  </span>
+                  {aiOrg.status === 'ready' && (
+                    <Hover tag="button" onClick={applyAiOrganize}
+                      base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
+                      hover="background:#00542b;">Apply plan</Hover>
+                  )}
+                  {(aiOrg.status === 'ready' || aiOrg.status === 'error' || aiOrg.status === 'done') && (
+                    <Hover tag="button" onClick={() => setAiOrg(null)}
+                      base={'flex:none;font:inherit;font-size:13.5px;font-weight:600;color:' + C.mut + ';background:none;border:none;border-radius:7px;padding:7px 10px;cursor:pointer;'}
+                      hover={'color:' + C.ink + ';'}>{aiOrg.status === 'ready' ? 'Cancel' : 'Dismiss'}</Hover>
+                  )}
+                </div>
+                {aiOrg.status === 'ready' && (
+                  <div style={s('padding:6px 16px 14px;display:flex;flex-direction:column;gap:2px;')}>
+                    {aiOrg.plan.allocations.map((a) => (
+                      <div key={a.noteId} style={s('padding:10px 0 4px;border-bottom:1px solid ' + C.soft + ';')}>
+                        <div style={s('display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:' + C.ink + ';')}>
+                          <Svg w={15} sw={2} style={s('flex:none;color:' + C.mut + ';')}>{Icons.fileLines}</Svg>
+                          {a.noteTitle || 'Untitled'}
+                        </div>
+                        {a.parts.map((p, i) => (
+                          <div key={i} style={s('display:flex;gap:9px;align-items:flex-start;margin:8px 0 8px 23px;')}>
+                            <Svg w={14} sw={2.2} style={s('flex:none;margin-top:3px;color:' + C.blue + ';')}>{Icons.arrow}</Svg>
+                            <div style={s('flex:1;min-width:0;')}>
+                              <div style={s('font-size:13.5px;font-weight:600;color:' + C.navy + ';')}>
+                                {p.section}{p.isNewSection ? ' (new section)' : ''}
+                                <span style={s('color:' + C.dim + ';margin:0 5px;')}>›</span>
+                                {p.page || a.noteTitle || 'Untitled'}{p.isNewPage ? ' (new page)' : ''}
+                              </div>
+                              <div style={s('margin-top:3px;font-size:12.5px;line-height:1.5;color:' + C.mut + ';overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;')}>
+                                {p.markdown.replace(/<[^>]+>/g, '').replace(/[#*>`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 240)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={s('display:flex;flex-direction:column;gap:8px;')}>
               {sectionPages.map((p) => (
                 <Hover key={p.id} tag="button" onClick={() => selectNote(p.id)}
