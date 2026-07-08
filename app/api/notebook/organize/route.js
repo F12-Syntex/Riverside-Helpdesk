@@ -27,6 +27,11 @@ const OPENROUTER_HEADERS = (apiKey) => ({
 const MAX_TOTAL_CHARS = 120000; // all source pages together
 const isSectionRow = (r) => !r.parentId || r.isSection;
 
+// Organise applies only to the "Uncategorised" holding section — other
+// sections are already where their content belongs.
+const UNCAT_RE = /^\s*uncategori[sz]ed\s*$/i;
+const canOrganize = (r) => !!r && isSectionRow(r) && UNCAT_RE.test(r.title || '');
+
 // Indented outline of the notebook (sections → pages) for the prompt.
 function outlineFor(rows, skipId) {
   const kids = new Map();
@@ -118,6 +123,10 @@ export async function POST(request) {
   // Phase 2 — a reviewed plan comes back to be applied.
   if (body?.plan) {
     try {
+      const rows = await listNotes();
+      if (!canOrganize(rows.find((r) => r.id === sectionId))) {
+        return NextResponse.json({ error: 'Only the Uncategorised section can be organised.' }, { status: 400 });
+      }
       const applied = await applyOrganizePlan({ sectionId, allocations: body.plan.allocations });
       return NextResponse.json({ applied });
     } catch (e) {
@@ -137,7 +146,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Could not load notes.', detail: String(e).slice(0, 300) }, { status: 500 });
   }
   const section = rows.find((r) => r.id === sectionId);
-  if (!section || !isSectionRow(section)) return NextResponse.json({ error: 'That note is not a section.' }, { status: 400 });
+  if (!canOrganize(section)) return NextResponse.json({ error: 'Only the Uncategorised section can be organised.' }, { status: 400 });
 
   const notes = subtree(rows, sectionId).filter((r) => !isSectionRow(r) && (r.body || '').trim());
   if (!notes.length) return NextResponse.json({ error: 'Nothing to organise — this section has no page content.' }, { status: 400 });

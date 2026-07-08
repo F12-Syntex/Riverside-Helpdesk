@@ -481,14 +481,20 @@ export default function NotebookPage() {
   // or sub-sections — then show the plan for review. Nothing moves until the
   // user applies it; applying redistributes the content (formatted for its new
   // home), moves attachments along, and removes the emptied pages.
-  async function runAiOrganize() {
-    if (!selected || !isSection || (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying'))) return;
-    await flush();
+  // AI organise applies only to the "Uncategorised" holding section — other
+  // sections are already where their content belongs.
+  const canOrganize = (n) => !!n && (!n.parentId || !!n.isSection) && /^\s*uncategori[sz]ed\s*$/i.test(n.title || '');
+
+  async function runAiOrganize(id = selectedId) {
+    const n = byId.get(id);
+    if (!canOrganize(n)) return;
+    if (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')) return;
+    await selectNote(id); // the plan shows in the section view (also flushes edits)
     setAiOrg({ status: 'loading' });
     try {
       const res = await fetch('/api/notebook/organize', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sectionId: selected.id }),
+        body: JSON.stringify({ sectionId: id }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Organise failed.');
@@ -847,8 +853,8 @@ export default function NotebookPage() {
           <span style={s('flex:none;font-size:13px;min-width:64px;text-align:right;color:' + (saveState === 'unsaved' ? C.red : C.dim) + ';')}>
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
           </span>
-          {selected && isSection && (
-            <Hover tag="button" onClick={runAiOrganize} aria-label="AI organise" title="AI organise — move every page's content in this section to the section it belongs in (you review the plan first)"
+          {selected && canOrganize(selected) && (
+            <Hover tag="button" onClick={() => runAiOrganize()} aria-label="AI organise" title="AI organise — move every page's content in this section to the section it belongs in (you review the plan first)"
               base={'flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:' + C.blue + ';' + (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') ? 'opacity:.55;' : '')}
               hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
               <Svg w={15} sw={2}>{Icons.sparkle}</Svg>AI organise
@@ -1120,6 +1126,13 @@ export default function NotebookPage() {
             hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
             <Svg w={15} sw={2.2}>{Icons.edit}</Svg>Rename
           </Hover>
+          {canOrganize(byId.get(menu.id)) && (
+            <Hover tag="button" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}
+              base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.blue + ';cursor:pointer;padding:9px 11px;text-align:left;'}
+              hover={'background:' + C.sel + ';'}>
+              <Svg w={15} sw={2.2}>{Icons.sparkle}</Svg>AI organise
+            </Hover>
+          )}
           {(() => { const n = byId.get(menu.id); return n && n.parentId ? (
             <Hover tag="button" onClick={() => { setMenu(null); toggleSection(menu.id, !n.isSection); }}
               base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.ink + ';cursor:pointer;padding:9px 11px;text-align:left;'}
