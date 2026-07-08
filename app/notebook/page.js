@@ -14,6 +14,7 @@ import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import Link from '@tiptap/extension-link';
+import TipTapImage from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
 import { Mark, mergeAttributes } from '@tiptap/core';
@@ -89,6 +90,8 @@ const CSS = `
 .nb-prose pre code{background:none;padding:0;}
 .nb-prose mark{background:#fff6cc;border-radius:3px;padding:0 2px;}
 .nb-prose kbd{font-family:Consolas,Menlo,monospace;font-size:.85em;background:${C.soft};border:1px solid ${C.line};border-bottom-width:2px;border-radius:5px;padding:1px 6px;}
+.nb-prose img{max-width:100%;height:auto;display:block;margin:6px 0 14px;border-radius:9px;border:1px solid ${C.soft};}
+.nb-prose img.ProseMirror-selectednode{outline:2.5px solid ${C.blue};outline-offset:1px;}
 .nb-prose hr{border:none;border-top:1px solid ${C.line};margin:18px 0;}
 .nb-prose hr.ProseMirror-selectednode{border-top:2px solid ${C.blue};}
 .nb-prose a{color:${C.blue};}
@@ -165,6 +168,12 @@ const EXTENSIONS = [
   TaskList, TaskItem.configure({ nested: true }),
   Table, TableRow, TableHeader, TableCell,
   Link.configure({ openOnClick: false, autolink: true }),
+  // Inline images ("![alt](url)" in the stored markdown). inline:true matches
+  // how markdown treats images (inside paragraphs), so the body round-trips
+  // cleanly; CSS still displays them as blocks. Pasted pictures are uploaded
+  // to blob storage first (see PageEditor's handlePaste) — data URLs would
+  // bloat the note body and the assistant's index.
+  TipTapImage.configure({ inline: true, allowBase64: false }),
   Placeholder.configure({ placeholder: 'Write here — headings, lists and tables format as you type ("## ", "- ", "1. ", "> "). Everything you write is used by the assistant to answer and triage.' }),
   // html:true keeps the <mark>/<u>/<span style="color:…">/<kbd> subset intact
   // in both directions (stored markdown → editor, editor → stored markdown).
@@ -174,16 +183,38 @@ const EXTENSIONS = [
 // Keyed by note id in the parent, so switching pages gets a fresh editor and
 // its own undo history. onChange receives the serialized markdown on every
 // edit and feeds the existing dirty → interval-save pipeline.
-function PageEditor({ initialBody, onChange, onReady }) {
+function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
+  const uploadRef = React.useRef(uploadImage);
+  uploadRef.current = uploadImage;
+  const editorRef = React.useRef(null);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: EXTENSIONS,
     content: initialBody || '',
-    editorProps: { attributes: { class: 'nb-prose' } },
+    editorProps: {
+      attributes: { class: 'nb-prose' },
+      // Pasted pictures: upload to blob storage (tracked as attachments of
+      // this note), then insert inline at the caret as an image node.
+      handlePaste: (view, event) => {
+        const files = Array.from((event.clipboardData && event.clipboardData.files) || [])
+          .filter((f) => /^image\//.test(f.type));
+        if (!files.length || !uploadRef.current) return false;
+        event.preventDefault();
+        (async () => {
+          for (const f of files) {
+            const url = await uploadRef.current(f);
+            const ed = editorRef.current;
+            if (url && ed) ed.chain().focus().setImage({ src: url, alt: f.name || '' }).run();
+          }
+        })();
+        return true;
+      },
+    },
     onUpdate: ({ editor: ed }) => onChangeRef.current(ed.storage.markdown.getMarkdown()),
   });
+  editorRef.current = editor;
   // Hand the instance up for the toolbar (and take it back on unmount).
   React.useEffect(() => {
     onReady(editor || null);
@@ -365,7 +396,11 @@ export default function NotebookPage() {
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
   const isSection = !!selected && (!selected.parentId || !!selected.isSection);
-  const selectedFiles = attachments.filter((a) => a.noteId === selectedId);
+  // Files docked below the page. Images embedded inline in the text are shown
+  // there, not repeated here — a chip reappears if its image is deleted from
+  // the text, so the file can still be removed (or re-embedded) from the strip.
+  const selectedFiles = attachments.filter((a) => a.noteId === selectedId
+    && !(selected && (selected.body || '').includes(a.url)));
 
   // Ancestor chain of the selection, root first (breadcrumb + auto-expand).
   const ancestors = React.useMemo(() => {
@@ -635,6 +670,30 @@ export default function NotebookPage() {
     }
     setUploading(false);
     if (fileInput.current) fileInput.current.value = '';
+  }
+
+  // A pasted image goes through the same attachments API (so the file is tied
+  // to the note and its blob is cleaned up with it) and returns the URL the
+  // editor embeds inline.
+  async function uploadInlineImage(file) {
+    if (!selectedId || isSection || !file) return null;
+    setUploading(true);
+    setUploadErr('');
+    try {
+      const form = new FormData();
+      form.append('noteId', String(selectedId));
+      form.append('file', file, file.name || 'pasted-image.png');
+      const res = await fetch('/api/notebook/attachments', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Upload failed.');
+      setAttachments((as) => as.concat([data.attachment]));
+      return data.attachment.url;
+    } catch (e) {
+      setUploadErr(String(e.message || e));
+      return null;
+    } finally {
+      setUploading(false);
+    }
   }
 
   function askRemoveAttachment(a) {
@@ -1078,6 +1137,7 @@ export default function NotebookPage() {
                 initialBody={selected.body || ''}
                 onChange={(md) => editSelected({ body: md })}
                 onReady={setEditor}
+                uploadImage={uploadInlineImage}
               />
             )}
 

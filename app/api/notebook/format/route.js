@@ -33,6 +33,7 @@ Structure — apply all of these wherever they fit:
 
 Content rules — never break these:
 - Keep EVERY fact. Do not invent, drop, merge away or summarise away any information.
+- The note may contain inline images, written as ![alt](url) on their own line. Keep every image, character-for-character (never alter or shorten the URL), and place each one where it belongs in the new structure — directly after the step, section or fact it illustrates. Never invent an image.
 - You may tighten and clarify wording, but medical/procedural meaning, names, phone numbers, doses and times must stay exactly as written.
 - Do not add a # title — the page already has one. Start at ##.
 - Output ONLY the reformatted note text. No preamble, no explanation, no code fences.

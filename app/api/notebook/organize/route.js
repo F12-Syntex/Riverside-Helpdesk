@@ -84,7 +84,8 @@ Rules:
 - "section": the exact title of an existing section where the content fits; otherwise a sensible new section name. Never "${sectionTitle}". You may nest one level with " / " (e.g. "Clinical / Referrals") when a sub-section genuinely helps.
 - "page": the page inside that section to put the text on — an existing page's exact title to add to it, or a short new page name for the topic.
 - "markdown": the content itself, reformatted to read well on the target page: ## / ### headings, bullet and numbered lists, markdown tables for anything tabular, **bold** key facts, <mark>highlight</mark> for safety-critical warnings. Start each part with a ## heading naming its topic so it stands on its own inside the target page.
-- Keep EVERY fact. Never invent, drop or summarise away information; names, phone numbers, doses, dates and times must stay exactly as written. Fixing spelling and grammar is fine.`;
+- Keep EVERY fact. Never invent, drop or summarise away information; names, phone numbers, doses, dates and times must stay exactly as written. Fixing spelling and grammar is fine.
+- A note may contain inline images, written as ![alt](url) on their own line. Keep every image, character-for-character (never alter the URL), inside the part whose content it illustrates, placed right after the text it belongs to.`;
 }
 
 // The model's JSON, tolerantly parsed and reduced to the exact shape we apply.
