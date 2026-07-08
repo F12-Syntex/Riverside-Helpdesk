@@ -53,13 +53,18 @@ function citeImages(chunk) {
 }
 
 function citationFor(chunk, quote = '') {
-  const body = (chunk.text || '').replace(/\s+/g, ' ').trim();
-  const q = (quote || '').replace(/\s+/g, ' ').trim();
+  // Collapse runs of spaces but keep line breaks: passages (notebook chunks
+  // especially) are markdown, and the source panel renders their structure —
+  // headings, lists, bold — instead of showing raw markers.
+  const tidy = (t) => String(t || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  const body = tidy(chunk.text);
+  const q = tidy(quote);
+  const flat = body.replace(/\s+/g, ' ');
   return {
     docId: chunk.docId,
     docTitle: chunk.docTitle,
     location: locationOf(chunk),
-    snippet: body.length > 220 ? body.slice(0, 218).trim() + '…' : body,
+    snippet: flat.length > 220 ? flat.slice(0, 218).trim() + '…' : flat,
     // The full extract that was given to the model as this Source — kept for
     // context and as a fallback when there is no verified quote.
     text: body,

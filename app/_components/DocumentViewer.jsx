@@ -3,6 +3,20 @@
 import React from 'react';
 import { s, Hover, Svg, Icons } from './ui';
 import PdfSourceView from './PdfSourceView';
+import Md from './chat/Md';
+
+// The passage is markdown (notebook chunks especially) — render it formatted.
+// Older saved chats collapsed passages onto one line, leaving "###" and "* "
+// markers mid-sentence; for those, put heading and bullet markers back on
+// their own lines so the structure renders. Multi-line passages (everything
+// the server produces now) are left exactly as written.
+function passageMd(text) {
+  const t = String(text || '');
+  if (/\n/.test(t)) return t;
+  return t
+    .replace(/(\S)\s+(#{1,6}\s)/g, '$1\n\n$2')
+    .replace(/(\S)\s(\*\s)/g, '$1\n$2');
+}
 
 // Right-hand side panel for a citation. On desktop it shows the entire document
 // in its own formatting (an iframe of the source file), highlights the exact
@@ -187,8 +201,8 @@ export default function DocumentViewer({ v }) {
               missing — it's here whenever the highlight couldn't be placed. */}
           <div className={hidePassageOnDesktop ? 'riva-doc-passage' : ''} style={s('flex:0 1 auto;min-height:0;overflow-y:auto;padding:16px 20px;min-width:0;')}>
             <div style={s(label)}>What this is based on</div>
-            <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;font-size:16px;line-height:1.6;color:#212b32;text-wrap:pretty;overflow-wrap:anywhere;')}>
-              &ldquo;{vm.text}&rdquo;
+            <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;text-wrap:pretty;overflow-wrap:anywhere;')}>
+              <Md text={passageMd(vm.text)} />
             </div>
           </div>
         </div>
