@@ -40,6 +40,18 @@ function locationOf(chunk) {
   return 'Document';
 }
 
+// Images that belong to this exact source: a notebook note's attached pictures,
+// or the rendered image of the cited PDF page. HTML documents list images for
+// the whole document — too imprecise to show against one section, so skipped.
+function citeImages(chunk) {
+  const imgs = Array.isArray(chunk.images)
+    ? chunk.images.filter((u) => typeof u === 'string' && u)
+    : [];
+  if (!imgs.length) return [];
+  if (chunk.view && chunk.view.kind === 'html') return [];
+  return imgs.slice(0, 4);
+}
+
 function citationFor(chunk, quote = '') {
   const body = (chunk.text || '').replace(/\s+/g, ' ').trim();
   const q = (quote || '').replace(/\s+/g, ' ').trim();
@@ -56,6 +68,9 @@ function citationFor(chunk, quote = '') {
     // exact-passage highlight and the "what this is based on" text.
     quote: q,
     view: chunk.view || null,
+    // Pictures that live in this source (notebook attachments / the cited PDF
+    // page render) — shown inline in the chat next to the section they back.
+    images: citeImages(chunk),
   };
 }
 
@@ -215,7 +230,7 @@ export async function POST(request) {
     const supp = nb.sources.concat(remote); // notebook first — it's the staff's own guidance
     for (const s of supp) {
       const ref = extracts.length + 1;
-      const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null };
+      const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null, images: s.images || [] };
       refMap.set(ref, chunk);
       extracts.push({ ref, title: chunk.docTitle, location: s.section || 'Note', text: chunk.text });
     }
@@ -331,6 +346,18 @@ export async function POST(request) {
     // precise text. Judgement sections carry no citation and stay flagged.
     const sections = parsed.sections.map((sec) => ({ markdown: redact(sec.markdown), ...provenance(sec) }));
     const messageCite = resolveCite(refMap, parsed.messageSource, parsed.messageQuote);
+
+    // Each source image appears once, against the first section it backs —
+    // several sections often cite the same note or page.
+    const seenImg = new Set();
+    for (const cite of sections.map((sec) => sec.cite).concat([messageCite])) {
+      if (!cite || !cite.images || !cite.images.length) continue;
+      cite.images = cite.images.filter((u) => {
+        if (seenImg.has(u)) return false;
+        seenImg.add(u);
+        return true;
+      });
+    }
 
     // The distinct sources this answer relied on (for any list/summary use).
     const citations = dedupeCitations(sections.map((s) => s.cite).concat([messageCite]));

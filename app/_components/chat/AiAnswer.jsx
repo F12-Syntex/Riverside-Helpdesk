@@ -9,8 +9,24 @@ import Md from './Md';
 
 // The assistant's answer, laid out like an AI-formatted notebook page: markdown
 // sections (headings, lists, tables, highlights) with per-section provenance —
-// a citation chip for document-backed sections, and a clearly marked amber
-// block for anything that comes from the assistant's own judgement.
+// a quiet citation link for document-backed sections (with any pictures from
+// that source shown as thumbnails), and a clearly marked amber block for
+// anything that comes from the assistant's own judgement.
+
+// Thumbnails of the pictures that live in a section's source — a notebook
+// note's attached images, or the cited PDF page. Click to view full-size.
+function SourceImages({ images }) {
+  return (
+    <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;')}>
+      {images.map((im, i) => (
+        <Hover key={i} tag="button" type="button" onClick={im.onOpen} aria-label="Open image from the source" title="Open image from the source" base="padding:0;border:1px solid #d8dde0;border-radius:10px;background:#fff;cursor:pointer;overflow:hidden;display:block;line-height:0;" hover="border-color:#005eb8;box-shadow:0 2px 8px rgba(33,43,50,.14);">
+          <img src={im.src} alt="Image from the source" style={s('display:block;max-height:150px;max-width:230px;width:auto;height:auto;')} />
+        </Hover>
+      ))}
+    </div>
+  );
+}
+
 export default function AiAnswer({ v }) {
   return (
     <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
@@ -18,10 +34,6 @@ export default function AiAnswer({ v }) {
         <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
       </div>
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
-        <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
-          <span style={s('flex:none;')}><Svg w={16}>{Icons.fileLines}</Svg></span>From the practice&rsquo;s documents first &mdash; anything from AI judgement is clearly marked
-        </div>
-
         {v.aiLoading && (
           <div style={s('padding:20px 22px;display:flex;align-items:center;gap:12px;color:#4c6272;font-size:17px;')}>
             <span style={s('display:inline-flex;gap:5px;align-items:center;')}>
@@ -66,13 +78,14 @@ export default function AiAnswer({ v }) {
                 {v.sections.map((sec) => sec.isJudgement ? (
                   <div key={sec.key} style={s('border:1px dashed #ecd39a;background:#fffdf5;border-radius:12px;padding:12px 16px 13px;')}>
                     <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
-                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.sparkle}</Svg>AI judgement &mdash; not from the practice&rsquo;s documents
+                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.sparkle}</Svg>AI judgement
                     </div>
                     <Md text={sec.markdown} />
                   </div>
                 ) : (
                   <div key={sec.key}>
                     <Md text={sec.markdown} />
+                    {sec.hasImages && <SourceImages images={sec.images} />}
                     {sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />}
                   </div>
                 ))}
@@ -93,13 +106,10 @@ export default function AiAnswer({ v }) {
             <ContactsCard v={v} />
             {v.hasContacts && <div style={s('height:12px;')} />}
 
-            <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}>
-                <Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>
-                {v.usedJudgement
-                  ? 'Sections with a source chip come from a practice document; amber blocks are AI judgement'
-                  : 'Each section is backed by a practice document'}
-              </span>
+            <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
+              {v.usedJudgement && (
+                <span style={s('font-size:12.5px;color:#768692;')}>Amber blocks are AI judgement, not the practice&rsquo;s documents</span>
+              )}
               <div style={s('margin-left:auto;display:flex;gap:10px;')}>
                 <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;"><Svg w={15}>{Icons.copy}</Svg>{v.copyLabel}</Hover>
                 <Hover onClick={v.onSave} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Save to knowledge base</Hover>

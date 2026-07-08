@@ -613,6 +613,19 @@ class RiversidePracticeQA extends React.Component {
         }
         const sections = this.answerSections(m).map((sec, i) => {
           const cite = sec.cite || null;
+          // Pictures that live in the cited source (a notebook note's attached
+          // images, or the cited PDF page) — shown as thumbnails under the
+          // section; clicking opens the image full-size in the source panel.
+          const images = ((cite && cite.images) || []).map((u) => ({
+            src: assetSrc(u),
+            onOpen: () => self.openViewer({
+              docTitle: cite.docTitle,
+              location: cite.location,
+              quote: cite.quote,
+              text: cite.text,
+              view: { kind: 'image', url: u },
+            }),
+          }));
           return {
             key: i,
             markdown: sec.markdown || '',
@@ -620,6 +633,8 @@ class RiversidePracticeQA extends React.Component {
             hasCite: !!cite,
             citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
             onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
+            images,
+            hasImages: images.length > 0,
           };
         });
         return {
