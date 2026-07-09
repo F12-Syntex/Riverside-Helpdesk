@@ -28,7 +28,8 @@ import AppHeader from '../_components/AppHeader';
  * side is the notes area with its own header bar (breadcrumb, save
  * state, attach/delete). Sections are name-only containers: content
  * lives in pages beneath them, so creating a section also creates its
- * first page and opens that page for writing. Files upload by
+ * first page and opens that page for writing. Pages can be dragged
+ * onto another section in the sidebar to move them. Files upload by
  * drag-and-drop onto a page (or the paperclip button). Notes persist
  * to Postgres (/api/notebook); files go to Vercel Blob
  * (/api/notebook/attachments). Destructive actions confirm through the
@@ -51,6 +52,8 @@ const CSS = `
 .nb-kids{margin-left:13px;padding-left:6px;border-left:1.5px solid ${C.line};}
 .nb-kids>div>.nb-row{position:relative;}
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
+.nb-row.nb-dragging{opacity:.45;}
+.nb-row.nb-drop-ok{background:${C.sel} !important;box-shadow:inset 0 0 0 2px ${C.blue};}
 .nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
 .nb-crumb:hover{color:${C.blue};}
 .nb-scroll{scrollbar-width:none;-ms-overflow-style:none;}
@@ -288,15 +291,43 @@ function ConfirmSheet({ confirm, onClose }) {
 // defining it inline remounted the whole tree on every state change, which is
 // what made the sidebar blink.
 function SideRow({ n, depth, ctx }) {
-  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu } = ctx;
+  const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu,
+    dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo } = ctx;
   const isSel = selectedId === n.id;
   const onPath = ancestors.some((a) => a.id === n.id);
   const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
   const open = !!expanded[n.id] || (!!q && kids.length > 0);
   const fileCount = attachments.filter((a) => a.noteId === n.id).length;
+  // Drag a note (anything below the root) onto a section row to move it there.
+  const draggable = !!n.parentId;
+  const dropOk = dragId != null && canDropOn(dragId, n.id);
   return (
     <div>
-      <div className="nb-row" onContextMenu={(e) => openMenu(e, n.id)}
+      <div className={'nb-row' + (dragId === n.id ? ' nb-dragging' : '') + (dropOk && dropId === n.id ? ' nb-drop-ok' : '')}
+        onContextMenu={(e) => openMenu(e, n.id)}
+        draggable={draggable}
+        onDragStart={draggable ? (e) => {
+          e.dataTransfer.setData('application/x-nb-note', String(n.id));
+          e.dataTransfer.effectAllowed = 'move';
+          setDragId(n.id);
+        } : undefined}
+        onDragEnd={draggable ? () => { setDragId(null); setDropId(null); } : undefined}
+        onDragOver={(e) => {
+          if (!dropOk) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'move';
+          if (dropId !== n.id) setDropId(n.id);
+        }}
+        onDragLeave={() => { if (dropId === n.id) setDropId(null); }}
+        onDrop={(e) => {
+          if (!dropOk) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setDropId(null);
+          setDragId(null);
+          moveNoteTo(dragId, n.id);
+        }}
         style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
         (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
         {kids.length > 0 ? (
@@ -349,6 +380,8 @@ export default function NotebookPage() {
   const [dragging, setDragging] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
+  const [dragId, setDragId] = React.useState(null);           // note being dragged in the sidebar
+  const [dropId, setDropId] = React.useState(null);           // section row currently hovered as a drop target
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
   const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections): null | {status:'loading'|'applying'} | {status:'error',message} | {status:'ready',plan} | {status:'done',applied}
   const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page (from PageEditor)
@@ -719,6 +752,49 @@ export default function NotebookPage() {
     onDrop: (e) => { e.preventDefault(); dragDepth.current = 0; setDragging(false); uploadFiles(e.dataTransfer.files); },
   } : {};
 
+  /* ------------------- Drag notes between sections --------------------- */
+
+  // Whether the dragged note may land on this row: only sections receive
+  // drops, never a note's own subtree (no cycles), never its current parent
+  // (a no-op), and the result must stay within the depth cap.
+  const canDropOn = React.useCallback((id, targetId) => {
+    const drag = byId.get(id);
+    const target = byId.get(targetId);
+    if (!drag || !target || id === targetId) return false;
+    if (!drag.parentId) return false;                            // root sections stay put
+    if (target.parentId && !target.isSection) return false;      // pages aren't containers
+    if (drag.parentId === target.id) return false;               // already there
+    if (descendantIds(id).has(targetId)) return false;           // no cycles
+    let depth = 0;
+    for (let cur = byId.get(target.parentId); cur && depth < 12; cur = byId.get(cur.parentId)) depth++;
+    // Height of the dragged subtree: longest parent chain inside it.
+    let height = 0;
+    const inTree = descendantIds(id);
+    for (const x of notes) {
+      if (!inTree.has(x.id)) continue;
+      let d = 0;
+      for (let cur = x; cur && cur.id !== id && d < 12; cur = byId.get(cur.parentId)) d++;
+      if (d > height) height = d;
+    }
+    return depth + 1 + height <= MAX_DEPTH - 1;
+  }, [byId, notes, descendantIds]);
+
+  // Persist the move, reparent locally and open the target so the note is
+  // visible in its new home.
+  async function moveNoteTo(id, parentId) {
+    if (!canDropOn(id, parentId)) return;
+    try {
+      const res = await fetch('/api/notebook', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, parentId }),
+      });
+      if (!res.ok) throw new Error('bad status');
+      const { note } = await res.json();
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, parentId: note.parentId } : n)));
+      setExpanded((e) => ({ ...e, [parentId]: true }));
+    } catch (e) { /* ignore — the note simply stays where it was */ }
+  }
+
   // Rename = select the note, then put the caret in the header title input.
   async function renameNote(id) {
     await selectNote(id);
@@ -812,7 +888,8 @@ export default function NotebookPage() {
     };
   }, [menu]);
 
-  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu };
+  const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu,
+    dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo };
   const sectionPages = isSection ? childrenOf(selected.id) : [];
 
   /* ------------------------------ Render ------------------------------- */
