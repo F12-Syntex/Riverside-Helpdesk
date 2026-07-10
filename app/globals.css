@@ -172,3 +172,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
 body { overflow-x: hidden; }
+
+/* Instant lookup: the search box sticks to the top while results scroll.
+ * On phones the app header is itself sticky (72px), so sit below it. */
+.riva-lookup-sticky { top: 0; }
+@media (max-width: 600px) {
+  .riva-lookup-sticky { top: 72px; }
+}
+
+/* The lookup page renders its own clear button; hide the browser's built-in
+ * one on type="search" so there aren't two crosses. */
+.riva-lookup-sticky input::-webkit-search-cancel-button,
+.riva-lookup-sticky input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }

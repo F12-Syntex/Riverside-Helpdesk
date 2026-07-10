@@ -13,6 +13,7 @@ import { s, Hover, Svg, Icons } from './ui';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
+  { href: '/lookup', label: 'Instant lookup' },
   { href: '/helpbot', label: 'Practice Q&A' },
   // Medication check and the rota generator are hidden for now — keep in
   // step with TOOLS in app/page.js.

@@ -13,6 +13,11 @@ import AppHeader from './_components/AppHeader';
 
 const TOOLS = [
   {
+    href: '/lookup',
+    title: 'Instant lookup',
+    description: 'Ultra-fast fuzzy search over the practice’s saved numbers — hospital switchboards, departments, community teams and pharmacies. Type a partial or misspelt word and the right number appears instantly, while the patient is still on the line.',
+  },
+  {
     href: '/helpbot',
     title: 'Practice Q&A',
     description: 'Ask anything about how the practice works — answers come from the organisation’s own documents first, with any AI judgement clearly marked. Supports image attachments. For all staff.',
