@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import { CATALOG_PATH, CHUNKS_PATH, EMBEDDINGS_PATH } from './config.mjs';
 import { embedOne } from './embed.mjs';
+import { cosine } from './similarity.mjs';
 
 let _index = null;
 
@@ -61,12 +62,6 @@ export function catalogText() {
   return i.catalog
     .map((d) => `- ${d.title}: ${d.summary || ''}${d.tags && d.tags.length ? ' [' + d.tags.join(', ') + ']' : ''}`)
     .join('\n');
-}
-
-function cosine(a, b) {
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-  return dot / (Math.sqrt(na) * Math.sqrt(nb) + 1e-8);
 }
 
 // Two near-identical chunks above this cosine similarity are treated as the same

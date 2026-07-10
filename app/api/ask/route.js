@@ -22,6 +22,20 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const TOP_K = 5;
+// A retrieved Source sometimes points at a generic process instead of
+// stating it ("same as the standard referral process, but to X clinic").
+// Plain top-K semantic search then hands the model the pointer without the
+// process it points to, and the model has nothing to answer with but the
+// pointer — so it just repeats "standard process" back at the reader.
+// REFERENCE_PHRASES catches that shape so a second, targeted retrieval can
+// fetch the actual steps; REFERENCE_CHASE_K bounds how many extra chunks
+// that second pass can add.
+const REFERENCE_CHASE_K = 3;
+const REFERENCE_PHRASES = [
+  /\b(?:standard|usual|normal|routine|same)\s+(?:process|procedure|protocol|pathway)\b/i,
+  /\bas\s+(?:per|with)\s+(?:the\s+)?(?:standard|usual|normal)\b/i,
+  /\bfollows?\s+(?:the\s+)?(?:standard|usual|normal)\s+(?:process|procedure|protocol)\b/i,
+];
 // provider routing: only providers that do not retain prompt data, so the
 // question and document extracts are never stored by the model provider.
 const NO_RETENTION = { data_collection: 'deny' };
@@ -32,6 +46,25 @@ const OPENROUTER_HEADERS = (apiKey) => ({
   'HTTP-Referer': 'https://riverside-practice.local',
   'X-Title': 'Riverside Practice Q&A',
 });
+
+// Scan the retrieved chunks for a reference-to-elsewhere phrase and return a
+// short snippet of surrounding text (keeps nearby keywords, e.g. the named
+// specialty) to use as a follow-up retrieval query. Null when nothing matches
+// — the common case, so most questions pay no extra retrieval cost at all.
+function referenceHint(chunks) {
+  for (const c of chunks) {
+    const text = c.text || '';
+    for (const re of REFERENCE_PHRASES) {
+      const m = re.exec(text);
+      if (m) {
+        const start = Math.max(0, m.index - 60);
+        const end = Math.min(text.length, m.index + m[0].length + 60);
+        return text.slice(start, end).trim();
+      }
+    }
+  }
+  return null;
+}
 
 function locationOf(chunk) {
   if (chunk.view && chunk.view.page) return 'Page ' + chunk.view.page;
@@ -209,6 +242,20 @@ export async function POST(request) {
   // Tier B — semantically retrieve the most relevant chunks (never fatal).
   let chunks = [];
   try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
+
+  // Reference-chasing: if what came back only points at a generic process
+  // ("same as standard, but to Cardiology") rather than stating it, run one
+  // more targeted retrieval for that process and merge in whatever it finds
+  // that wasn't already retrieved. Only runs when the phrase is actually
+  // present, so the common case costs nothing extra.
+  const hint = referenceHint(chunks);
+  if (hint) {
+    try {
+      const more = await retrieve(hint, REFERENCE_CHASE_K);
+      const known = new Set(chunks.map((c) => c.id));
+      for (const c of more) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
+    } catch (e) { /* best-effort */ }
+  }
 
   // Number them as Sources and keep a ref -> chunk map for citation resolution.
   const refMap = new Map();
