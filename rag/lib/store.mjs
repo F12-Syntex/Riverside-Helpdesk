@@ -94,6 +94,24 @@ export async function retrieve(query, k = 4) {
   return out;
 }
 
+// Every chunk of the documents whose title matches `titleRe`, in document
+// order (chunk ids end __c0, __c1, … so a numeric-aware sort restores it).
+// Used to pin a whole protocol into the prompt when the question is
+// unmistakably about its topic: top-K semantic search returns the passages
+// nearest the query, which for a multi-chunk process document can mean the
+// middle of the process without its beginning or end. Pinning guarantees the
+// model sees the complete document, so it can explain the whole process
+// rather than the fragment retrieval happened to surface.
+export function chunksByTitle(titleRe, max = 8) {
+  const i = loadIndex();
+  const out = [];
+  for (const c of i.chunks.values()) {
+    if (titleRe.test(c.docTitle || '')) out.push(c);
+  }
+  out.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+  return out.slice(0, max);
+}
+
 // Called by ingestion after rewriting the index, so a long-lived dev server
 // picks up new content without a restart.
 export function resetIndexCache() {

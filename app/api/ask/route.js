@@ -13,7 +13,7 @@ import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
-import { retrieve, catalogText } from '@/rag/lib/store.mjs';
+import { retrieve, catalogText, chunksByTitle } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
 import { notebookContext } from '@/lib/notebook';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
@@ -31,6 +31,15 @@ const TOP_K = 5;
 // fetch the actual steps; REFERENCE_CHASE_K bounds how many extra chunks
 // that second pass can add.
 const REFERENCE_CHASE_K = 3;
+// Referral questions must be answered with the complete referral process, not
+// a fragment of it or a pointer to it. Top-K search can return the middle of
+// the multi-chunk referral protocol without its beginning or end, so when the
+// question is about referrals the practice's referral protocol documents (the
+// generic referral protocol and the 2-week-wait protocol) are pinned into the
+// Sources in full. The prompt then instructs the model to walk through the
+// whole process end to end.
+const REFERRAL_QUERY = /\brefer(?:s|red|ral|rals|ring)?\b|\b2\s*ww\b|\b(?:2|two)[\s-]*week\s+(?:wait|referral)/i;
+const REFERRAL_DOC_TITLES = /referral/i;
 const REFERENCE_PHRASES = [
   /\b(?:standard|usual|normal|routine|same)\s+(?:process|procedure|protocol|pathway)\b/i,
   /\bas\s+(?:per|with)\s+(?:the\s+)?(?:standard|usual|normal)\b/i,
@@ -254,6 +263,17 @@ export async function POST(request) {
       const more = await retrieve(hint, REFERENCE_CHASE_K);
       const known = new Set(chunks.map((c) => c.id));
       for (const c of more) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
+    } catch (e) { /* best-effort */ }
+  }
+
+  // Referral pinning: a referral question always gets the referral protocol
+  // documents in full, whatever semantic search happened to return, so the
+  // answer can set out the complete process rather than a fragment.
+  if (REFERRAL_QUERY.test(searchQuery)) {
+    try {
+      const pinned = chunksByTitle(REFERRAL_DOC_TITLES);
+      const known = new Set(chunks.map((c) => c.id));
+      for (const c of pinned) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
     } catch (e) { /* best-effort */ }
   }
 
