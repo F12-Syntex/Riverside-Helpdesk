@@ -402,7 +402,7 @@ export async function POST(request) {
       return NextResponse.json({
         kind: 'answer',
         answerable: false,
-        intro: parsed.intro || 'This needs a clinician’s judgement, so I can’t answer it here.',
+        intro: parsed.intro || 'This needs a clinician’s judgement, so I cannot answer it here.',
         sections: [],
         message: '',
         messageCite: null,

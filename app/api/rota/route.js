@@ -75,7 +75,7 @@ export async function POST(request) {
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   const week = String(body?.weekStarting || '').trim();
   if (!ISO_DATE.test(week)) return NextResponse.json({ error: 'A valid week start date (YYYY-MM-DD) is required.' }, { status: 400 });
-  if (isLockedWeek(week)) return NextResponse.json({ error: 'Past and current weeks are official and locked — only future weeks can be generated.' }, { status: 403 });
+  if (isLockedWeek(week)) return NextResponse.json({ error: 'Past and current weeks are official and locked. Only future weeks can be generated.' }, { status: 403 });
   const rules = cleanRules(body?.rules);
   const seed = Number.isInteger(body?.seed) ? body.seed : Math.floor(Math.random() * 100000);
   const minStaff = 2;

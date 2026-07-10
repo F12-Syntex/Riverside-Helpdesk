@@ -155,7 +155,7 @@ export default function RotaSystem({ page = 'rota' }) {
     try {
       const sched = await applyRules(rules, Math.floor(Math.random() * 100000));
       const issues = analyze(sched.grid, staff);
-      flash(issues.length ? 'Done — a couple of things could still be tidied.' : 'Done — a balanced week.', 'success');
+      flash(issues.length ? 'Done. A couple of things could still be tidied.' : 'Done: a balanced week.', 'success');
     } catch (e) { flash(e.message, 'error'); }
   }
 
@@ -211,7 +211,7 @@ export default function RotaSystem({ page = 'rota' }) {
           await api('/api/rota?week=' + weekISO, { method: 'DELETE' });
           setCache((c) => ({ ...c, [weekISO]: null }));
           setHist((x) => ({ ...x, [weekISO]: { stack: [], ptr: -1 } }));
-          flash('Rota cleared — generate a fresh one whenever you like.');
+          flash('Rota cleared. Generate a fresh one whenever you like.');
         } catch (e) { flash(e.message, 'error'); }
       },
     });
@@ -220,8 +220,8 @@ export default function RotaSystem({ page = 'rota' }) {
   function copyWhatsApp() {
     const text = buildWhatsApp(grid, roster, weekISO, times);
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => flash('Copied — paste it straight into WhatsApp.')).catch(() => flash("Couldn't copy automatically."));
-    } else flash("Copying isn't available here.");
+      navigator.clipboard.writeText(text).then(() => flash('Copied. Paste it straight into WhatsApp.')).catch(() => flash('Could not copy automatically.'));
+    } else flash('Copying is not available here.');
   }
 
   // staff actions
@@ -255,7 +255,7 @@ export default function RotaSystem({ page = 'rota' }) {
   }
   function askRemove(p) {
     setConfirm({
-      title: 'Remove staff member', message: 'Remove ' + p.name + " from the team? This can't be undone.", confirmLabel: 'Remove', noLabel: 'Cancel',
+      title: 'Remove staff member', message: 'Remove ' + p.name + ' from the team? This cannot be undone.', confirmLabel: 'Remove', noLabel: 'Cancel',
       onConfirm: async () => { setConfirm(null); try { await api('/api/staff?id=' + p.id, { method: 'DELETE' }); setStaff((prev) => prev.filter((x) => x.id !== p.id)); flash('Removed.'); } catch (e) { flash(e.message, 'error'); } },
     });
   }
@@ -270,7 +270,7 @@ export default function RotaSystem({ page = 'rota' }) {
         <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid #d8dde0;')}>
           <div style={s('max-width:1000px;margin:0 auto;padding:14px 24px 18px;')}>
             <form onSubmit={sendChat} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Add a rule — e.g. “Simin is off all week”, “Saif works with Iqra”…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Add a rule, e.g. “Simin is off all week”, “Saif works with Iqra”…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" disabled={busy} base={'flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;' + (busy ? 'opacity:.6;' : '')} hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
@@ -281,7 +281,7 @@ export default function RotaSystem({ page = 'rota' }) {
         <Sheet maxWidth={470} onClose={() => setWarning(null)}>
           <div style={s('display:flex;align-items:center;gap:12px;padding:22px 24px 14px;')}>
             <span style={s('flex:none;width:42px;height:42px;border-radius:50%;background:#fff6cc;color:#946800;display:flex;align-items:center;justify-content:center;')}><Svg w={23} sw={2.2}>{Icons.triangle}</Svg></span>
-            <h2 style={s('font-size:21px;font-weight:700;margin:0;')}>Heads up — this causes an issue</h2>
+            <h2 style={s('font-size:21px;font-weight:700;margin:0;')}>Heads up: this causes an issue</h2>
           </div>
           <div style={s('padding:0 24px 18px;')}>
             <ul style={s('margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;')}>
@@ -369,7 +369,7 @@ export default function RotaSystem({ page = 'rota' }) {
 
         {isReadOnly && (
           <div style={s('display:flex;align-items:center;gap:10px;background:#e8edee;border:1px solid #d8dde0;border-radius:8px;padding:12px 16px;font-size:16px;color:#4c6272;margin-bottom:16px;')}>
-            <Svg w={20} sw={2}>{Icons.lock}</Svg>{weekISO === todayMondayISO ? 'This week’s rota is official — locked and can’t be changed.' : 'Past week — locked and can’t be changed.'}
+            <Svg w={20} sw={2}>{Icons.lock}</Svg>{weekISO === todayMondayISO ? 'This week’s rota is official: locked and cannot be changed.' : 'Past week: locked and cannot be changed.'}
           </div>
         )}
 
@@ -399,7 +399,7 @@ export default function RotaSystem({ page = 'rota' }) {
   }
 
   function renderRules() {
-    const builtin = ['At least 2 staff on every shift', 'Early & late shared evenly', 'Annual leave respected'];
+    const builtin = ['At least 2 staff on every shift', 'Early and late shared evenly', 'Annual leave respected'];
     return (
       <div className="riva-rota-rules" style={s(CARD + 'padding:16px 18px;margin-bottom:14px;')}>
         <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;')}>Rules for this rota</div>
@@ -415,7 +415,7 @@ export default function RotaSystem({ page = 'rota' }) {
               {canEdit && <Hover tag="button" onClick={() => removeRule(i)} aria-label="Remove rule" disabled={busy} base="border:none;background:transparent;cursor:pointer;color:#4c6272;display:flex;padding:1px;" hover="color:#d5281b;"><Svg w={15} sw={2.4}>{Icons.close}</Svg></Hover>}
             </span>
           ))}
-          {rules.length === 0 && <span style={s('font-size:14px;color:#768692;align-self:center;')}>No extra rules yet — type a change in the bar below to add one.</span>}
+          {rules.length === 0 && <span style={s('font-size:14px;color:#768692;align-self:center;')}>No extra rules yet. Type a change in the bar below to add one.</span>}
         </div>
       </div>
     );
@@ -487,7 +487,7 @@ export default function RotaSystem({ page = 'rota' }) {
                 return (
                   <div key={p.id} title={firstName(p.name)}
                     style={s('display:flex;align-items:center;justify-content:center;min-height:56px;text-align:center;background:' + (isBlankTemp ? '#fcfdfe' : cv.bg) + ';' + border)}>
-                    <span style={s('font-weight:600;font-size:12.5px;color:' + (isBlankTemp ? '#b1b8bd' : cv.color) + ';font-variant-numeric:tabular-nums;')}>{isBlankTemp ? '—' : cv.main}</span>
+                    <span style={s('font-weight:600;font-size:12.5px;color:' + (isBlankTemp ? '#b1b8bd' : cv.color) + ';font-variant-numeric:tabular-nums;')}>{isBlankTemp ? 'Not set' : cv.main}</span>
                   </div>
                 );
               })}
@@ -524,7 +524,7 @@ export default function RotaSystem({ page = 'rota' }) {
                       ? <Hover tag="button" onClick={() => setCellEdit({ staffId: p.id, day: d })}
                           base={'flex:none;font-family:inherit;cursor:pointer;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;' + (isBlankTemp ? 'color:#005eb8;background:#fff;border:1.5px dashed #9fc3e6;' : 'border:none;background:' + cv.bg + ';color:' + cv.color + ';')}
                           hover="filter:brightness(.96);">{isBlankTemp ? 'Tap to set' : cv.main}</Hover>
-                      : <span style={s('flex:none;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;background:' + (isBlankTemp ? '#f0f4f5' : cv.bg) + ';color:' + (isBlankTemp ? '#b1b8bd' : cv.color) + ';')}>{isBlankTemp ? '—' : (cv.main || 'Off')}</span>}
+                      : <span style={s('flex:none;font-weight:700;font-size:13px;border-radius:7px;padding:6px 12px;background:' + (isBlankTemp ? '#f0f4f5' : cv.bg) + ';color:' + (isBlankTemp ? '#b1b8bd' : cv.color) + ';')}>{isBlankTemp ? 'Not set' : (cv.main || 'Off')}</span>}
                   </div>
                 );
               })}
@@ -551,7 +551,7 @@ export default function RotaSystem({ page = 'rota' }) {
             <h2 style={s('font-size:22px;font-weight:700;margin:0 0 18px;')}>Add a staff member</h2>
             <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Name</label>
             <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Sarah Hughes" style={s(FIELD + 'margin-bottom:16px;')} />
-            <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>— used to tag them on WhatsApp (optional)</span></label>
+            <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>(used to tag them on WhatsApp, optional)</span></label>
             <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="e.g. +44 7459 533082" inputMode="tel" style={s(FIELD + 'margin-bottom:16px;')} />
             <label style={s('display:block;font-size:15px;font-weight:700;margin-bottom:6px;')}>Description</label>
             <textarea value={draft.about} onChange={(e) => setDraft({ ...draft, about: e.target.value })} rows={3} placeholder="What they do, what they're good at, anything the rota should know." style={s(FIELD + 'resize:vertical;margin-bottom:16px;')} />
@@ -578,7 +578,7 @@ export default function RotaSystem({ page = 'rota' }) {
                     </span>
                     {p.phone
                       ? <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4c6272;')}><Svg w={14} sw={2.2}>{Icons.phone}</Svg>{p.phone}</span>
-                      : <span style={s('font-size:13px;color:#aa5d00;')}>No number — WhatsApp will use their name</span>}
+                      : <span style={s('font-size:13px;color:#aa5d00;')}>No number, so WhatsApp will use their name</span>}
                     <p style={s('font-size:16px;line-height:1.5;margin:0;color:#212b32;')}>{p.about || 'No description yet.'}</p>
                     {(p.leave || []).length > 0 && (
                       <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;')}>
@@ -611,7 +611,7 @@ export default function RotaSystem({ page = 'rota' }) {
         </span>
         <span style={s('flex:1;min-width:0;')}>
           <b style={s('display:block;font-size:15px;color:#212b32;')}>Temporary staff</b>
-          <span style={s('font-size:13.5px;color:#768692;line-height:1.4;')}>Picks their own days — the rota won’t auto-fill them. You set each shift by hand on the rota.</span>
+          <span style={s('font-size:13.5px;color:#768692;line-height:1.4;')}>Picks their own days, so the rota will not auto-fill them. You set each shift by hand on the rota.</span>
         </span>
       </Hover>
     );
@@ -625,7 +625,7 @@ export default function RotaSystem({ page = 'rota' }) {
           <input value={editDraft.name} onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })} style={s(FIELD)} />
         </div>
         <div>
-          <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>— used to tag them on WhatsApp</span></label>
+          <label style={s('display:block;font-size:14px;font-weight:700;margin-bottom:5px;')}>Mobile number <span style={s('font-weight:400;color:#768692;')}>(used to tag them on WhatsApp)</span></label>
           <input value={editDraft.phone} onChange={(e) => setEditDraft({ ...editDraft, phone: e.target.value })} placeholder="e.g. +44 7459 533082" inputMode="tel" style={s(FIELD)} />
         </div>
         <div>

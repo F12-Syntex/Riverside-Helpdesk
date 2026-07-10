@@ -58,7 +58,7 @@ export default function MedicationCard({ card }) {
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
           <span style={s('flex:none;')}><Svg w={16}>{Icons.pill}</Svg></span>
-          Medicines information — from public UK sources (general information only)
+          Medicines information from public UK sources (general information only)
           <Hover tag="button" onClick={card.onRemove} aria-label="Remove this result"
             base="margin-left:auto;flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:2px;display:flex;" hover="color:#212b32;">
             <Svg w={18}>{Icons.close}</Svg>
@@ -98,7 +98,7 @@ export default function MedicationCard({ card }) {
             {corrected && (
               <div style={s('display:flex;gap:9px;align-items:flex-start;background:#fff;border-bottom:1px solid #eef2f4;padding:10px 22px;font-size:14px;color:#4c6272;')}>
                 <span style={s('flex:none;color:#768692;margin-top:1px;')}><Svg w={16} sw={2}>{Icons.search}</Svg></span>
-                <span>Showing information for <strong style={s('color:#212b32;')}>{r.name}</strong> — you searched “{r.correctedFrom}”.</span>
+                <span>Showing information for <strong style={s('color:#212b32;')}>{r.name}</strong>. You searched “{r.correctedFrom}”.</span>
               </div>
             )}
             <div style={s('padding:18px 22px 0;display:flex;gap:16px;align-items:flex-start;')}>
@@ -129,8 +129,8 @@ export default function MedicationCard({ card }) {
                   />
                   <figcaption style={s('margin-top:4px;font-size:11px;color:#768692;line-height:1.3;')}>
                     {r.image.sourcePage
-                      ? <a href={r.image.sourcePage} target="_blank" rel="noopener noreferrer" style={s('color:#768692;')}>Illustrative — Wikipedia</a>
-                      : 'Illustrative — Wikipedia'}
+                      ? <a href={r.image.sourcePage} target="_blank" rel="noopener noreferrer" style={s('color:#768692;')}>Illustrative image from Wikipedia</a>
+                      : 'Illustrative image from Wikipedia'}
                   </figcaption>
                 </figure>
               )}

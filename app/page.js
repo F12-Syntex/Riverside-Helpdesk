@@ -15,12 +15,12 @@ const TOOLS = [
   {
     href: '/lookup',
     title: 'Instant lookup',
-    description: 'Ultra-fast fuzzy search over the practice’s saved numbers — hospital switchboards, departments, community teams and pharmacies. Type a partial or misspelt word and the right number appears instantly, while the patient is still on the line.',
+    description: 'Find a saved phone number by typing part of a name, even with spelling mistakes. Covers hospital switchboards, departments, community teams and pharmacies, so you can find the right number while the patient is still on the line.',
   },
   {
     href: '/helpbot',
     title: 'Practice Q&A',
-    description: 'Ask anything about how the practice works — answers come from the organisation’s own documents first, with any AI judgement clearly marked. Supports image attachments. For all staff.',
+    description: 'Ask how the practice works. Answers come from the organisation’s own documents first, and anything based on AI judgement is labelled. You can attach images. For all staff.',
   },
   // Medication check and the Staff rota generator are hidden from the index
   // for now (the /medications and /rota routes still work if visited
@@ -38,19 +38,19 @@ const TOOLS = [
   {
     href: '/notebook',
     title: 'Notebook',
-    description: 'Write practice notes and instructions, with sub-notes. Everything you save is used automatically by the Practice Q&A assistant — no rebuild needed.',
+    description: 'Write practice notes and instructions, with sub-notes. Everything you save is used by the Practice Q&A assistant straight away.',
   },
   {
     href: '/dpia',
     title: 'Data protection check (DPIA)',
-    description: 'The data protection impact assessment for the whole Riverside Helpdesk program — what it does with information, the risks, and how far the check has got.',
+    description: 'The data protection impact assessment for the whole Riverside Helpdesk programme: what it does with information, the risks, and how far the check has got.',
   },
 ];
 
 export default function Page() {
   return (
     <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
-      <AppHeader subtitle="Tools & guidance" />
+      <AppHeader subtitle="Tools and guidance" />
 
       <main style={s('flex:1;width:100%;max-width:760px;margin:0 auto;padding:40px 24px 56px;')}>
         <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>Practice tools</h1>

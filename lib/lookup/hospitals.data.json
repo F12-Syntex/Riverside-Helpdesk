@@ -1,109 +1,250 @@
 [
   {
     "label": "Homerton University Hospital (HUH)",
-    "aliases": ["HUH", "Homerton", "Homerton Healthcare"],
-    "phones": [{ "display": "020 8510 5555", "tel": "02085105555" }],
-    "note": "Main switchboard — the practice's local acute hospital (Homerton Row, E9).",
+    "aliases": [
+      "HUH",
+      "Homerton",
+      "Homerton Healthcare"
+    ],
+    "phones": [
+      {
+        "display": "020 8510 5555",
+        "tel": "02085105555"
+      }
+    ],
+    "note": "Main switchboard. This is the practice's local acute hospital (Homerton Row, E9).",
     "emails": []
   },
   {
     "label": "Royal London Hospital (RLH), Whitechapel",
-    "aliases": ["RLH", "Royal London", "Barts Health", "Whitechapel"],
-    "phones": [{ "display": "020 7377 7000", "tel": "02073777000" }],
+    "aliases": [
+      "RLH",
+      "Royal London",
+      "Barts Health",
+      "Whitechapel"
+    ],
+    "phones": [
+      {
+        "display": "020 7377 7000",
+        "tel": "02073777000"
+      }
+    ],
     "note": "Barts Health switchboard.",
     "emails": []
   },
   {
     "label": "St Bartholomew's Hospital (Barts)",
-    "aliases": ["Barts", "St Barts", "Bartholomews"],
-    "phones": [{ "display": "020 7377 7000", "tel": "02073777000" }],
+    "aliases": [
+      "Barts",
+      "St Barts",
+      "Bartholomews"
+    ],
+    "phones": [
+      {
+        "display": "020 7377 7000",
+        "tel": "02073777000"
+      }
+    ],
     "note": "Via the Barts Health switchboard.",
     "emails": []
   },
   {
     "label": "Whipps Cross University Hospital",
-    "aliases": ["Whipps", "Leytonstone", "Barts Health"],
-    "phones": [{ "display": "020 3416 5000", "tel": "02034165000" }],
+    "aliases": [
+      "Whipps",
+      "Leytonstone",
+      "Barts Health"
+    ],
+    "phones": [
+      {
+        "display": "020 3416 5000",
+        "tel": "02034165000"
+      }
+    ],
     "note": "Barts Health site, Leytonstone.",
     "emails": []
   },
   {
     "label": "Newham University Hospital",
-    "aliases": ["Newham General", "Plaistow", "Barts Health"],
-    "phones": [{ "display": "020 7476 4000", "tel": "02074764000" }],
+    "aliases": [
+      "Newham General",
+      "Plaistow",
+      "Barts Health"
+    ],
+    "phones": [
+      {
+        "display": "020 7476 4000",
+        "tel": "02074764000"
+      }
+    ],
     "note": "Barts Health site, Plaistow.",
     "emails": []
   },
   {
     "label": "Mile End Hospital",
-    "aliases": ["Mile End", "Barts Health"],
-    "phones": [{ "display": "020 7377 7000", "tel": "02073777000" }],
+    "aliases": [
+      "Mile End",
+      "Barts Health"
+    ],
+    "phones": [
+      {
+        "display": "020 7377 7000",
+        "tel": "02073777000"
+      }
+    ],
     "note": "Via the Barts Health switchboard.",
     "emails": []
   },
   {
     "label": "St Leonard's Hospital, Hoxton",
-    "aliases": ["St Leonards", "Hoxton", "community services"],
-    "phones": [{ "display": "0207 683 4040/4000", "tel": "02076834040" }],
-    "note": "Switchboard — community clinics (physiotherapy, foot health, Ivy Centre nearby).",
+    "aliases": [
+      "St Leonards",
+      "Hoxton",
+      "community services"
+    ],
+    "phones": [
+      {
+        "display": "0207 683 4040/4000",
+        "tel": "02076834040"
+      }
+    ],
+    "note": "Switchboard. Community clinics (physiotherapy, foot health, Ivy Centre nearby).",
     "emails": []
   },
   {
     "label": "University College Hospital (UCLH)",
-    "aliases": ["UCLH", "UCH", "University College London Hospitals", "Euston"],
-    "phones": [{ "display": "020 3456 7890", "tel": "02034567890" }],
+    "aliases": [
+      "UCLH",
+      "UCH",
+      "University College London Hospitals",
+      "Euston"
+    ],
+    "phones": [
+      {
+        "display": "020 3456 7890",
+        "tel": "02034567890"
+      }
+    ],
     "note": "Main switchboard, Euston Road.",
     "emails": []
   },
   {
-    "label": "National Hospital for Neurology & Neurosurgery, Queen Square",
-    "aliases": ["NHNN", "Queen Square", "neurology hospital", "UCLH"],
-    "phones": [{ "display": "020 3456 7890", "tel": "02034567890" }],
+    "label": "National Hospital for Neurology and Neurosurgery, Queen Square",
+    "aliases": [
+      "NHNN",
+      "Queen Square",
+      "neurology hospital",
+      "UCLH"
+    ],
+    "phones": [
+      {
+        "display": "020 3456 7890",
+        "tel": "02034567890"
+      }
+    ],
     "note": "Via the UCLH switchboard.",
     "emails": []
   },
   {
     "label": "Moorfields Eye Hospital",
-    "aliases": ["Moorfields", "eye hospital", "City Road", "eye casualty"],
+    "aliases": [
+      "Moorfields",
+      "eye hospital",
+      "City Road",
+      "eye casualty"
+    ],
     "phones": [
-      { "display": "020 7253 3411", "tel": "02072533411" },
-      { "display": "020 7566 2356", "tel": "02075662356" }
+      {
+        "display": "020 7253 3411",
+        "tel": "02072533411"
+      },
+      {
+        "display": "020 7566 2356",
+        "tel": "02075662356"
+      }
     ],
     "note": "Switchboard, then Eye A&E direct line.",
     "emails": []
   },
   {
-    "label": "Guy's & St Thomas' Hospitals",
-    "aliases": ["Guys", "St Thomas", "GSTT", "London Bridge"],
-    "phones": [{ "display": "020 7188 7188", "tel": "02071887188" }],
+    "label": "Guy's and St Thomas' Hospitals",
+    "aliases": [
+      "Guys",
+      "St Thomas",
+      "GSTT",
+      "London Bridge"
+    ],
+    "phones": [
+      {
+        "display": "020 7188 7188",
+        "tel": "02071887188"
+      }
+    ],
     "note": "Shared switchboard for both sites.",
     "emails": []
   },
   {
     "label": "Royal Free Hospital, Hampstead",
-    "aliases": ["Royal Free", "Hampstead"],
-    "phones": [{ "display": "020 7794 0500", "tel": "02077940500" }],
+    "aliases": [
+      "Royal Free",
+      "Hampstead"
+    ],
+    "phones": [
+      {
+        "display": "020 7794 0500",
+        "tel": "02077940500"
+      }
+    ],
     "note": "Main switchboard.",
     "emails": []
   },
   {
     "label": "Great Ormond Street Hospital (children)",
-    "aliases": ["GOSH", "Great Ormond Street", "children's hospital", "paediatric"],
-    "phones": [{ "display": "020 7405 9200", "tel": "02074059200" }],
+    "aliases": [
+      "GOSH",
+      "Great Ormond Street",
+      "children's hospital",
+      "paediatric"
+    ],
+    "phones": [
+      {
+        "display": "020 7405 9200",
+        "tel": "02074059200"
+      }
+    ],
     "note": "Main switchboard.",
     "emails": []
   },
   {
     "label": "Royal National Orthopaedic Hospital, Stanmore",
-    "aliases": ["RNOH", "Stanmore", "orthopaedic"],
-    "phones": [{ "display": "020 8954 2300", "tel": "02089542300" }],
+    "aliases": [
+      "RNOH",
+      "Stanmore",
+      "orthopaedic"
+    ],
+    "phones": [
+      {
+        "display": "020 8954 2300",
+        "tel": "02089542300"
+      }
+    ],
     "note": "Main switchboard.",
     "emails": []
   },
   {
     "label": "St Joseph's Hospice, Hackney",
-    "aliases": ["St Josephs", "hospice", "palliative care", "Mare Street"],
-    "phones": [{ "display": "020 8525 6000", "tel": "02085256000" }],
+    "aliases": [
+      "St Josephs",
+      "hospice",
+      "palliative care",
+      "Mare Street"
+    ],
+    "phones": [
+      {
+        "display": "020 8525 6000",
+        "tel": "02085256000"
+      }
+    ],
     "note": "Main switchboard, Mare Street.",
     "emails": []
   }

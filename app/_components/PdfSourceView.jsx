@@ -182,7 +182,7 @@ export default function PdfSourceView({ url, page = 1, quote = '', onResolve }) 
             left: r.left - 1.5, top: r.top - 1.5,
             width: (r.right - r.left) + 3, height: (r.bottom - r.top) + 3,
           }));
-          if (minLine !== Infinity) line = minLine === maxLine ? String(minLine) : minLine + '–' + maxLine;
+          if (minLine !== Infinity) line = minLine === maxLine ? String(minLine) : minLine + ' to ' + maxLine;
         }
       }
       if (seq !== renderSeq.current) return;

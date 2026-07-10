@@ -18,13 +18,13 @@ import { buildIndex, fuzzySearch, highlightRanges } from '../../lib/lookup/fuzzy
 
 const CAT_COLOURS = {
   'Hospitals': 'background:#e8f1f8;color:#003087;',
-  'Departments & clinics': 'background:#eef7ee;color:#00532a;',
-  'Community & district nursing': 'background:#fdf0e6;color:#7a3b00;',
+  'Departments and clinics': 'background:#eef7ee;color:#00532a;',
+  'Community and district nursing': 'background:#fdf0e6;color:#7a3b00;',
   'Mental health': 'background:#f3ecfa;color:#4c2c92;',
-  'Pharmacies & supplies': 'background:#e9f6f8;color:#005661;',
+  'Pharmacies and supplies': 'background:#e9f6f8;color:#005661;',
   'Transport': 'background:#fff3e0;color:#6d4c00;',
-  'IT & systems': 'background:#f0f4f5;color:#39505f;',
-  'Social care & advocacy': 'background:#fbeef2;color:#7c2855;',
+  'IT and systems': 'background:#f0f4f5;color:#39505f;',
+  'Social care and advocacy': 'background:#fbeef2;color:#7c2855;',
   'Other numbers': 'background:#f0f4f5;color:#4c6272;',
 };
 
@@ -144,7 +144,7 @@ export default function Page() {
       const p = hit.phones[0];
       if (p) {
         navigator.clipboard.writeText(p.display).catch(() => {});
-        flashCopied(p.display + ' — ' + hit.label);
+        flashCopied(p.display + ', ' + hit.label);
       }
     }
   };
@@ -167,9 +167,10 @@ export default function Page() {
       <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:32px 24px 56px;')}>
         <h1 className="riva-hero-h1" style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>Instant lookup</h1>
         <p style={s('font-size:16px;color:#4c6272;margin:0 0 18px;line-height:1.5;text-wrap:pretty;')}>
-          Start typing anything — a partial or misspelt word is fine (&ldquo;pha&rdquo;, &ldquo;homer&rdquo;, &ldquo;fisio&rdquo;) —
-          and the practice&rsquo;s saved numbers filter instantly: hospital switchboards, departments,
-          community teams, pharmacies and systems. Numbers are shown exactly as saved, never retyped by AI.
+          Start typing a name. Part of a word is fine, and so are spelling mistakes
+          (&ldquo;pha&rdquo;, &ldquo;homer&rdquo;, &ldquo;fisio&rdquo;). The list narrows as you type:
+          hospital switchboards, departments, community teams, pharmacies and systems.
+          Numbers are shown exactly as they were saved, so they cannot be mistyped.
         </p>
 
         {/* Search box — stays pinned while the results scroll. */}
@@ -226,7 +227,7 @@ export default function Page() {
           <>
             <div style={s('font-size:13.5px;color:#4c6272;margin:14px 0 8px;')}>
               {results.length
-                ? results.length + (results.length === 1 ? ' match' : ' matches') + ' — ↑ ↓ to move, Enter to copy the top number'
+                ? results.length + (results.length === 1 ? ' match' : ' matches') + '. Use the arrow keys to move and Enter to copy the highlighted number'
                 : ''}
             </div>
             {results.length ? (
@@ -240,7 +241,7 @@ export default function Page() {
             ) : (
               <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;padding:22px 18px;color:#4c6272;font-size:15px;line-height:1.5;')}>
                 No matches for &ldquo;{trimmed}&rdquo;{category !== 'All' ? ' in ' + category : ''}.
-                Try fewer letters — even 2–3 letters of any word in the name will find it
+                Try fewer letters: 2 or 3 letters of any word in the name is enough
                 {category !== 'All' ? ', or switch the filter back to All' : ''}.
               </div>
             )}

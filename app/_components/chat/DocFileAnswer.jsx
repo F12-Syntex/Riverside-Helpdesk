@@ -14,7 +14,7 @@ export default function DocFileAnswer({ v }) {
       </div>
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
-          <span style={s('flex:none;')}><Svg w={16}>{Icons.file}</Svg></span>Document filing &mdash; check the title against the document before filing
+          <span style={s('flex:none;')}><Svg w={16}>{Icons.file}</Svg></span>Document filing: check the title against the document before filing
         </div>
 
         {v.aiLoading && (
@@ -72,12 +72,12 @@ export default function DocFileAnswer({ v }) {
             ) : (
               <div style={s('margin:16px 22px 0;display:flex;gap:10px;align-items:center;background:#eaf5ee;border:1px solid #b8d9c4;border-radius:8px;padding:11px 14px;')}>
                 <span style={s('flex:none;color:#007f3b;')}><Svg w={17} sw={2.4} stroke="#007f3b">{Icons.check}</Svg></span>
-                <div style={s('font-size:16px;line-height:1.4;color:#00602c;')}>No immediate action &mdash; file only.</div>
+                <div style={s('font-size:16px;line-height:1.4;color:#00602c;')}>No immediate action. File only.</div>
               </div>
             )}
 
             <div style={s('border-top:1px solid #d8dde0;margin-top:16px;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Read from the pasted document &mdash; the GP reviews the document itself when needed</span>
+              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Read from the pasted document. The GP reviews the document itself when needed</span>
             </div>
           </>
         )}

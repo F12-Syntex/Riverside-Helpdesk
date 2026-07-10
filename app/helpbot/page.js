@@ -255,7 +255,7 @@ class RiversidePracticeQA extends React.Component {
         return;
       }
       if (!data.answerable || (!data.sections.length && !data.message)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I can’t answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
       this.updateAi(idx, { status: 'done', answerKind: 'answer', intro: data.intro, sections: data.sections, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations, contacts: data.contacts || [] });
@@ -283,13 +283,13 @@ class RiversidePracticeQA extends React.Component {
   }
 
   copyTriage(m, idx) {
-    const label = { emergency: 'EMERGENCY', urgent: 'Urgent — duty doctor', routine: 'Routine', 'self-care': 'Self-care / signpost', unclear: 'Unclear — escalate' }[m.urgency] || 'Unclear';
-    const lines = ['Triage notes', 'Urgency: ' + label + (m.urgencyReason ? ' — ' + plainText(m.urgencyReason) : '')];
+    const label = { emergency: 'EMERGENCY', urgent: 'Urgent: duty doctor', routine: 'Routine', 'self-care': 'Self-care / signpost', unclear: 'Unclear: escalate' }[m.urgency] || 'Unclear';
+    const lines = ['Triage notes', 'Urgency: ' + label + (m.urgencyReason ? ' (' + plainText(m.urgencyReason) + ')' : '')];
     if (m.summary) lines.push('Request: ' + plainText(m.summary));
     if (m.actions && m.actions.length) {
       lines.push('', 'Actions:');
       m.actions.forEach((a, i) => {
-        const src = a && a.cite ? '  [' + a.cite.docTitle + ' — ' + a.cite.location + ']'
+        const src = a && a.cite ? '  [' + a.cite.docTitle + ', ' + a.cite.location + ']'
           : (a && a.basis === 'judgement' ? '  [AI judgement]' : '');
         lines.push((i + 1) + '. ' + plainText(a && a.text ? a.text : a) + src);
       });
@@ -304,7 +304,7 @@ class RiversidePracticeQA extends React.Component {
     }
     if (m.patientMessage) lines.push('', 'Draft reply to patient:', m.patientMessage);
     lines.push(...this.contactLines(m));
-    lines.push('', 'Routing suggestion from the practice’s documents — not clinical advice.');
+    lines.push('', 'Routing suggestion from the practice’s documents. Not clinical advice.');
     try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
     this.flagCopied(idx);
   }
@@ -348,9 +348,9 @@ class RiversidePracticeQA extends React.Component {
     const lines = [m.question, ''];
     if (m.intro) lines.push(plainText(m.intro), '');
     this.answerSections(m).forEach((sec) => {
-      if (sec.basis === 'judgement') lines.push('[AI judgement — not from the practice’s documents]');
+      if (sec.basis === 'judgement') lines.push('[AI judgement, not from the practice’s documents]');
       lines.push(mdPlain(sec.markdown));
-      if (sec.cite) lines.push('[Source: ' + sec.cite.docTitle + ' — ' + sec.cite.location + ']');
+      if (sec.cite) lines.push('[Source: ' + sec.cite.docTitle + ', ' + sec.cite.location + ']');
       lines.push('');
     });
     if (m.tip) lines.push('Tip: ' + plainText(m.tip));
@@ -580,7 +580,7 @@ class RiversidePracticeQA extends React.Component {
         if (m.answerKind === 'triage') {
           const cite = (c) => ({
             hasCite: !!c,
-            citeLabel: c ? (c.docTitle + ' — ' + c.location) : '',
+            citeLabel: c ? (c.docTitle + ', ' + c.location) : '',
             onCite: c ? (() => self.openViewer(c)) : (() => {}),
           });
           return {
@@ -601,7 +601,7 @@ class RiversidePracticeQA extends React.Component {
             hasRoute: !!(m.route && m.route.length),
             patientMessage: m.patientMessage || '',
             hasPatientMessage: !!(m.patientMessage && m.patientMessage.length),
-            patientMessageCiteLabel: m.patientMessageCite ? (m.patientMessageCite.docTitle + ' — ' + m.patientMessageCite.location) : '',
+            patientMessageCiteLabel: m.patientMessageCite ? (m.patientMessageCite.docTitle + ', ' + m.patientMessageCite.location) : '',
             hasPatientMessageCite: !!m.patientMessageCite,
             onPatientMessageCite: m.patientMessageCite ? (() => self.openViewer(m.patientMessageCite)) : (() => {}),
             onRetry: () => self.retryAi(idx),
@@ -631,7 +631,7 @@ class RiversidePracticeQA extends React.Component {
             markdown: sec.markdown || '',
             isJudgement: sec.basis === 'judgement',
             hasCite: !!cite,
-            citeLabel: cite ? (cite.docTitle + ' — ' + cite.location) : '',
+            citeLabel: cite ? (cite.docTitle + ', ' + cite.location) : '',
             onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
             images,
             hasImages: images.length > 0,
@@ -652,7 +652,7 @@ class RiversidePracticeQA extends React.Component {
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
           hasMessageCite: !!m.messageCite,
-          messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ' — ' + m.messageCite.location) : '',
+          messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ', ' + m.messageCite.location) : '',
           onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
           hasTip: !!(m.tip && m.tip.length),
           tip: m.tip || '',
@@ -672,7 +672,7 @@ class RiversidePracticeQA extends React.Component {
           guide: this.buildGuideVM(g),
           feedbackGiven: m.feedback != null,
           showFeedbackButtons: m.feedback == null,
-          thanksText: m.feedback === 'down' ? 'Thanks — we’ll review this guide.' : 'Thanks for your feedback.',
+          thanksText: m.feedback === 'down' ? 'Thanks, we’ll review this guide.' : 'Thanks for your feedback.',
           onHelpful: () => self.feedback(idx, 'up'),
           onNotHelpful: () => self.feedback(idx, 'down'),
           onCopy: () => self.copySteps(g, idx),
@@ -723,7 +723,7 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, paste an incoming patient request to triage, or paste a medical document to get a concise filing title. Answers come from the organisation’s own documents first — anything from AI judgement is clearly marked.',
+      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, paste an incoming patient request to triage, or paste a medical document to get a short filing title. Answers come from the organisation’s own documents first. Anything from AI judgement is clearly marked.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,

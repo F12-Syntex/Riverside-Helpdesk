@@ -11,7 +11,7 @@ export default function ContactsCard({ v }) {
     <div style={s('margin:14px 22px 4px;')}>
       <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>
         <Svg w={14} sw={2.2} stroke="#007f3b" style={s('flex:none;')}>{Icons.shield}</Svg>
-        Contacts &mdash; from Useful telephone numbers
+        Contacts (from Useful telephone numbers)
       </div>
       <div style={s('border:1px solid #d8dde0;border-radius:8px;overflow:hidden;')}>
         {v.contacts.map((c, i) => (

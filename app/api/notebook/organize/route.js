@@ -150,7 +150,7 @@ export async function POST(request) {
   if (!canOrganize(section)) return NextResponse.json({ error: 'Only the Uncategorised section can be organised.' }, { status: 400 });
 
   const notes = subtree(rows, sectionId).filter((r) => !isSectionRow(r) && (r.body || '').trim());
-  if (!notes.length) return NextResponse.json({ error: 'Nothing to organise — this section has no page content.' }, { status: 400 });
+  if (!notes.length) return NextResponse.json({ error: 'Nothing to organise: this section has no page content.' }, { status: 400 });
   if (notes.reduce((n, r) => n + r.body.length, 0) > MAX_TOTAL_CHARS) {
     return NextResponse.json({ error: 'This section is too large to organise in one go.' }, { status: 400 });
   }

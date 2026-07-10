@@ -4,7 +4,7 @@ import Notifications from './_components/Notifications';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
-  description: 'Practice Q&A for The Riverside Practice — answers for all staff, grounded only in the organisation’s own documents.',
+  description: 'Practice Q&A for The Riverside Practice. Answers for all staff, based only on the organisation’s own documents.',
   icons: { icon: '/assets/logo.png', shortcut: '/assets/logo.png', apple: '/assets/logo.png' },
 };
 

@@ -52,7 +52,7 @@ const MAX_QUERIES = 50;         // cap the stored questions per medicine (oldest
 // non-clinical: 999 for the listed emergencies, 111 for urgent non-emergencies,
 // no invented doses or assessment.
 const EMERGENCY_MESSAGE =
-  'If someone may have taken an overdose, is having a severe allergic reaction, is struggling to breathe, or has collapsed, call 999 now. For urgent advice that is not life-threatening, call NHS 111. This tool gives general information only and cannot advise about a specific person — do not delay getting help.';
+  'If someone may have taken an overdose, is having a severe allergic reaction, is struggling to breathe, or has collapsed, call 999 now. For urgent advice that is not life-threatening, call NHS 111. This tool gives general information only and cannot advise about a specific person. Do not delay getting help.';
 
 // Obvious emergencies in the staff member's own question. A deterministic
 // backstop so an urgent case is never reduced to "ask a pharmacist" by the
@@ -172,7 +172,7 @@ async function fetchMedicineImage(name) {
     try { host = new URL(img).hostname.toLowerCase(); } catch (e) { return null; }
     if (!/(^|\.)wikimedia\.org$/.test(host) && !/(^|\.)wikipedia\.org$/.test(host)) return null;
     const page = (data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page) || '';
-    return { url: img, source: 'Wikipedia', sourcePage: page, alt: (data.title || title) + ' — illustrative image from Wikipedia' };
+    return { url: img, source: 'Wikipedia', sourcePage: page, alt: (data.title || title) + ', illustrative image from Wikipedia' };
   } catch (e) {
     return null; // timeout or network error — image is optional
   } finally {

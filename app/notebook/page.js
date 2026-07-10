@@ -177,7 +177,7 @@ const EXTENSIONS = [
   // to blob storage first (see PageEditor's handlePaste) — data URLs would
   // bloat the note body and the assistant's index.
   TipTapImage.configure({ inline: true, allowBase64: false }),
-  Placeholder.configure({ placeholder: 'Write here — headings, lists and tables format as you type ("## ", "- ", "1. ", "> "). Everything you write is used by the assistant to answer and triage.' }),
+  Placeholder.configure({ placeholder: 'Write here. Headings, lists and tables format as you type ("## ", "- ", "1. ", "> "). Everything you write is used by the assistant to answer and triage.' }),
   // html:true keeps the <mark>/<u>/<span style="color:…">/<kbd> subset intact
   // in both directions (stored markdown → editor, editor → stored markdown).
   Markdown.configure({ html: true, linkify: true }),
@@ -537,7 +537,7 @@ export default function NotebookPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Formatting failed.');
       const formatted = String(data.formatted || '');
-      if (formatted.trim() === original.trim()) { setAiFmt({ status: 'error', message: 'Nothing to change — the note is already tidy.' }); return; }
+      if (formatted.trim() === original.trim()) { setAiFmt({ status: 'error', message: 'Nothing to change: the note is already tidy.' }); return; }
       setAiFmt({ status: 'ready', formatted, diff: lineDiff(original, formatted) });
     } catch (e) {
       setAiFmt({ status: 'error', message: String(e.message || e) });
@@ -846,7 +846,7 @@ export default function NotebookPage() {
       }
       setConfirm({
         title: 'Import backup',
-        message: 'Import ' + count + ' note(s) from "' + file.name + '"? They are added alongside your existing notes — nothing is overwritten.',
+        message: 'Import ' + count + ' note(s) from "' + file.name + '"? They are added alongside your existing notes. Nothing is overwritten.',
         confirmLabel: 'Import',
         onConfirm: async () => {
           setConfirm(null);
@@ -930,7 +930,7 @@ export default function NotebookPage() {
           {status === 'error' && <p style={s('color:' + C.red + ';font-size:14px;padding:8px 10px;')}>Could not load notes. Is the database configured?</p>}
           {status === 'ready' && sections.length === 0 && (
             <p style={s('color:' + C.dim + ';font-size:14px;padding:8px 10px;line-height:1.5;')}>
-              {q ? 'No notes match your search.' : 'No sections yet. Create one — e.g. “Instructions” with pages like “How to book appointments”.'}
+              {q ? 'No notes match your search.' : 'No sections yet. Create one, for example “Instructions” with pages like “How to book appointments”.'}
             </p>
           )}
           {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
@@ -990,7 +990,7 @@ export default function NotebookPage() {
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
           </span>
           {selected && canOrganize(selected) && (
-            <Hover tag="button" onClick={() => runAiOrganize()} aria-label="AI organise" title="AI organise — move every page's content in this section to the section it belongs in (you review the plan first)"
+            <Hover tag="button" onClick={() => runAiOrganize()} aria-label="AI organise" title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)"
               base={'flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:' + C.blue + ';' + (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') ? 'opacity:.55;' : '')}
               hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
               <Svg w={15} sw={2}>{Icons.sparkle}</Svg>AI organise
@@ -1028,7 +1028,7 @@ export default function NotebookPage() {
         {selected && isSection && (
           <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;width:100%;max-width:1000px;margin:0 auto;padding:26px 28px;')}>
             <p style={s('margin:0 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
-              Sections only have a name — they organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
+              Sections only have a name. They organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
             </p>
 
             {/* AI organise — status banner and, when ready, the reviewable plan. */}
@@ -1041,7 +1041,7 @@ export default function NotebookPage() {
                     {aiOrg.status === 'applying' && 'Moving the content into place…'}
                     {aiOrg.status === 'error' && aiOrg.message}
                     {aiOrg.status === 'ready' && 'Review where each page’s content will go. Every fact is kept; emptied pages are removed and their files move with the content. Nothing changes until you apply.'}
-                    {aiOrg.status === 'done' && ('Done — moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
+                    {aiOrg.status === 'done' && ('Done: moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
                       + ((aiOrg.applied.newSections || 0) ? ', created ' + aiOrg.applied.newSections + ' section(s)' : '')
                       + ((aiOrg.applied.newPages || 0) ? ', created ' + aiOrg.applied.newPages + ' page(s)' : '')
                       + ((aiOrg.applied.removed || 0) ? ', removed ' + aiOrg.applied.removed + ' emptied page(s)' : '') + '.')}
@@ -1154,7 +1154,7 @@ export default function NotebookPage() {
                   { title: 'Delete table', run: () => chain().deleteTable().run(), label: '✕ Table' },
                 ] : []),
                 null,
-                { title: 'AI format — restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
+                { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
               ].map((btn, i) => btn === null
                 ? <span key={'sep' + i} style={s('flex:none;width:1px;height:18px;background:' + C.line + ';margin:0 7px;')} />
                 : (
@@ -1177,9 +1177,9 @@ export default function NotebookPage() {
               <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:9px 20px;')}>
                 <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
                 <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
-                  {aiFmt.status === 'loading' && 'Restructuring the note — headings, lists, tables and highlights…'}
+                  {aiFmt.status === 'loading' && 'Restructuring the note into headings, lists, tables and highlights…'}
                   {aiFmt.status === 'error' && aiFmt.message}
-                  {aiFmt.status === 'ready' && 'Review the full reformat below — headings, lists, tables and highlights. Every fact is kept. Nothing is saved until you apply.'}
+                  {aiFmt.status === 'ready' && 'Review the full reformat below: headings, lists, tables and highlights. Every fact is kept. Nothing is saved until you apply.'}
                 </span>
                 {aiFmt.status === 'ready' && (
                   <Hover tag="button" onClick={applyAiFormat}
