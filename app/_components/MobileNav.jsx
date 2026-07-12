@@ -20,6 +20,7 @@ const TOOLS = [
   // { href: '/medications', label: 'Medication check' },
   // { href: '/rota', label: 'Staff rota generator' },
   { href: '/notebook', label: 'Notebook' },
+  { href: '/knowledge', label: 'Knowledge manager' },
   { href: '/dpia', label: 'Data protection check (DPIA)' },
 ];
 

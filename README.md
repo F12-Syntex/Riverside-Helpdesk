@@ -46,7 +46,28 @@ clickable sources they can open in-browser.
   way. See `rag/context/README.md`.
 - **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
   telephone directory (exact numbers shown verbatim, never authored by the AI).
+- **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
+  layer and management screen. Documents, Notebook pages and contacts share one
+  entry/passage model, hybrid retrieval, authority, claims and contradictions.
 - **`public/assets/`** — logos, EMIS screenshots, and served document copies.
+
+## Unified knowledge
+
+The live assistant retrieves from one canonical Postgres store. Embeddings are
+only an indexed search signal; the model reasons over the retrieved source text,
+and document-backed output still requires a verified verbatim quote.
+
+- PostgreSQL full-text (`GIN`) and semantic (`pgvector` HNSW) indexes are fused
+  for fast exact and meaning-based retrieval.
+- Notebook saves and future `rag:ingest` runs write through to the same store.
+- Contacts remain structured data inside their canonical entries, so telephone
+  numbers and emails are displayed deterministically rather than copied by AI.
+- Source prose is analysed into explicit claims. Different active sources making
+  incompatible claims appear under `/knowledge` → **Contradictions**; the
+  assistant will not silently pick a side while a contradiction is open.
+- `/api/knowledge/sync` is the idempotent migration bridge for the previous file
+  RAG, Notebook and contacts stores. A legacy read fallback remains only so a
+  deployment stays available before its first migration.
 
 ## Configuration
 

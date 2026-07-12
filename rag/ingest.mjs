@@ -13,6 +13,7 @@ import { embedTexts } from './lib/embed.mjs';
 import { summariseDoc } from './lib/summarize.mjs';
 import { loadStore, upsertDoc, writeStore, cachedVector } from './lib/index-io.mjs';
 import { listSourceFiles, relPath, docIdFor, docTitleFor, sha256 } from './lib/sources.mjs';
+import { upsertUnifiedDocument } from './lib/unified-store.mjs';
 
 function publicCopyFactory(docId) {
   return (absPath) => {
@@ -158,6 +159,12 @@ async function main() {
         vectors,
         catalog: { docId, title, summary, tags, chunks: records.length, source: 'rag/sources/' + rel },
         manifest: { path: 'rag/sources/' + rel, sha256: hash, size: st.size, mtime: st.mtimeMs, chunks: records.length, title, processedAt: new Date().toISOString() },
+      });
+      // The database is the live source of truth. Keep the committed artefacts
+      // above as a portable cache/fallback, then update the canonical entry,
+      // searchable passages and contradiction claims in one operation.
+      await upsertUnifiedDocument({
+        docId, title, sourceRef: 'rag/sources/' + rel, summary, tags, records, vectors,
       });
       const reused = records.length - toEmbed.length;
       console.log(`${records.length} chunks` + (reused ? ` (${toEmbed.length} embedded, ${reused} reused)` : ''));

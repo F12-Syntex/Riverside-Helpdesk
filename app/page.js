@@ -41,6 +41,11 @@ const TOOLS = [
     description: 'Write practice notes and instructions, with sub-notes. Everything you save is used by the Practice Q&A assistant straight away.',
   },
   {
+    href: '/knowledge',
+    title: 'Knowledge manager',
+    description: 'Search and correct documents, practice notes and contacts in one place. Review contradictions before they affect an answer.',
+  },
+  {
     href: '/dpia',
     title: 'Data protection check (DPIA)',
     description: 'The data protection impact assessment for the whole Riverside Helpdesk programme: what it does with information, the risks, and how far the check has got.',

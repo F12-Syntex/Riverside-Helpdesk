@@ -17,6 +17,7 @@ import { retrieve, catalogText, chunksByTitle } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
 import { notebookContext } from '@/lib/notebook';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
+import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, conflictsForEntries, unifiedContacts, unifiedTelephoneSet } from '@/lib/knowledge';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -129,7 +130,9 @@ function citationFor(chunk, quote = '') {
 function resolveCite(refMap, claimedRef, quote) {
   const claimed = refMap.get(claimedRef) || null;
   const quoteN = normForMatch(quote);
-  if (quoteN.length < 12) return claimed ? citationFor(claimed) : null;
+  // A source label is only document-backed when there is enough quoted text to
+  // verify. Short/missing quotes are suggestions, never evidence.
+  if (quoteN.length < 12) return null;
 
   let bestChunk = null, bestScore = 0;
   for (const [ref, c] of refMap) {
@@ -138,7 +141,7 @@ function resolveCite(refMap, claimedRef, quote) {
     if (score > bestScore) { bestScore = score; bestChunk = c; }
   }
   if (bestChunk && bestScore >= 0.5) return citationFor(bestChunk, quote); // verified
-  return claimed ? citationFor(claimed) : (bestChunk ? citationFor(bestChunk) : null); // unverified fallback
+  return null; // never present an unverified source as document-backed
 }
 
 // De-duplicate the distinct sources an answer relied on, keyed by document +
@@ -248,9 +251,29 @@ export async function POST(request) {
   // still receives the full history to interpret the follow-up.
   const searchQuery = buildSearchQuery({ history, question });
 
-  // Tier B — semantically retrieve the most relevant chunks (never fatal).
+  // Canonical hybrid retrieval. Full-text and vector indexes find candidates;
+  // the model still reasons over the original passages rather than embeddings.
   let chunks = [];
-  try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
+  let unifiedHits = [];
+  let usingUnified = false;
+  const hitToChunk = (r) => {
+    const loc = r.location || {};
+    const { images = [], source, ...view } = loc;
+    return {
+      id: r.id, docId: r.entryId,
+      docTitle: r.kind === 'note' ? `Notebook: ${r.title}` : r.title,
+      text: r.content, section: r.heading,
+      view: view.kind || view.url ? view : null,
+      images, score: Number(r.score || 0), authority: r.authority,
+    };
+  };
+  try {
+    unifiedHits = await searchKnowledge(searchQuery, TOP_K + 5);
+    usingUnified = unifiedHits.length > 0;
+    chunks = unifiedHits.filter((r) => r.kind !== 'contact').slice(0, TOP_K).map(hitToChunk);
+  } catch (e) { unifiedHits = []; }
+  // Deployment bridge: the old stores remain readable until migration runs.
+  if (!usingUnified) try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
 
   // Reference-chasing: if what came back only points at a generic process
   // ("same as standard, but to Cardiology") rather than stating it, run one
@@ -260,7 +283,9 @@ export async function POST(request) {
   const hint = referenceHint(chunks);
   if (hint) {
     try {
-      const more = await retrieve(hint, REFERENCE_CHASE_K);
+      const more = usingUnified
+        ? (await searchKnowledge(hint, REFERENCE_CHASE_K)).filter((r) => r.kind !== 'contact').map(hitToChunk)
+        : await retrieve(hint, REFERENCE_CHASE_K);
       const known = new Set(chunks.map((c) => c.id));
       for (const c of more) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
     } catch (e) { /* best-effort */ }
@@ -271,7 +296,9 @@ export async function POST(request) {
   // answer can set out the complete process rather than a fragment.
   if (REFERRAL_QUERY.test(searchQuery)) {
     try {
-      const pinned = chunksByTitle(REFERRAL_DOC_TITLES);
+      const pinned = usingUnified
+        ? (await knowledgePassagesByTitles(REFERRAL_DOC_TITLES)).map(hitToChunk)
+        : chunksByTitle(REFERRAL_DOC_TITLES);
       const known = new Set(chunks.map((c) => c.id));
       for (const c of pinned) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
     } catch (e) { /* best-effort */ }
@@ -293,7 +320,7 @@ export async function POST(request) {
   // model must quote them and the server verifies the quote exactly as for any
   // document. Never fatal.
   let noteCatalog = '';
-  try {
+  if (!usingUnified) try {
     const [remote, nb] = await Promise.all([
       supplementarySourcesFor(searchQuery).catch(() => []),
       notebookContext(searchQuery).catch(() => ({ sources: [], catalog: '' })),
@@ -308,12 +335,31 @@ export async function POST(request) {
     }
   } catch (e) { /* supplementary context is optional */ }
 
+  // Configured URL/local context remains optional; Notebook pages are already
+  // part of canonical retrieval and are therefore not added twice.
+  if (usingUnified) try {
+    const remote = await supplementarySourcesFor(searchQuery);
+    for (const s of remote) {
+      const ref = extracts.length + 1;
+      const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null, images: s.images || [] };
+      refMap.set(ref, chunk);
+      extracts.push({ ref, title: chunk.docTitle, location: s.section || 'Note', text: chunk.text });
+    }
+  } catch (e) { /* supplementary context is optional */ }
+
   // Deterministic contacts directory match — exact numbers/emails shown to the
   // reader verbatim (never authored by the model). Also build the set of numbers
   // we can vouch for (directory + anything present in the retrieved Sources), so
   // any other phone number the model writes can be stripped as unverified.
-  const contacts = matchContacts(searchQuery);
-  const verifiedNums = new Set(contactTelSet());
+  let contacts;
+  let verifiedNums;
+  if (usingUnified) {
+    try { contacts = await unifiedContacts(searchQuery, 5); } catch (e) { contacts = []; }
+    try { verifiedNums = await unifiedTelephoneSet(); } catch (e) { verifiedNums = new Set(); }
+  } else {
+    contacts = matchContacts(searchQuery);
+    verifiedNums = new Set(contactTelSet());
+  }
   for (const ex of extracts) {
     for (const run of (ex.text.match(/\d[\d ()\/-]{7,}\d/g) || [])) {
       const d = digitsOf(run);
@@ -325,8 +371,12 @@ export async function POST(request) {
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
   // Tier A catalogue: knowledge-base documents plus every notebook note, so the
   // model is aware of the notebook's coverage even when no chunk was retrieved.
-  const catalog = [catalogText(), noteCatalog].filter(Boolean).join('\n');
-  const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label), imageCount: images.length });
+  let canonicalCatalog = '';
+  if (usingUnified) try { canonicalCatalog = await knowledgeCatalogText(); } catch (e) { canonicalCatalog = ''; }
+  const catalog = usingUnified ? canonicalCatalog : [catalogText(), noteCatalog].filter(Boolean).join('\n');
+  let conflicts = [];
+  if (usingUnified) try { conflicts = await conflictsForEntries(chunks.map((c) => c.docId)); } catch (e) { conflicts = []; }
+  const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label), conflicts, imageCount: images.length });
 
   // With images attached, the message becomes multimodal content parts; the
   // prompt text stays identical either way.
