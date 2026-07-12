@@ -39,16 +39,16 @@ clickable sources they can open in-browser.
   See `rag/README.md`.
 - **`app/notebook/`** + **`app/api/notebook/`** + **`lib/notebook.js`** — the
   in-app Notebook: practice notes/instructions (with sub-notes) stored in
-  Postgres, edited at `/notebook`, and fed to the assistant automatically at
-  request time as citable sources (no rebuild).
+  Postgres, edited at `/notebook`, and mirrored into canonical passages as each
+  revision is saved (no rebuild).
 - **`lib/ai/context.mjs`** + **`rag/context/`** — optional extra supplementary
-  context (direct URLs, or committed files in `rag/context/`), injected the same
-  way. See `rag/context/README.md`.
+  context (direct URLs, or committed files in `rag/context/`), reconciled into
+  the same store. See `rag/context/README.md`.
 - **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
   telephone directory (exact numbers shown verbatim, never authored by the AI).
 - **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
-  layer and management screen. Documents, Notebook pages and contacts share one
-  entry/passage model, hybrid retrieval, authority, claims and contradictions.
+  layer and localhost-only backend screen. Documents, Notebook pages and contacts
+  share one entry/passage model, hybrid retrieval, authority and contradictions.
 - **`public/assets/`** — logos, EMIS screenshots, and served document copies.
 
 ## Unified knowledge
@@ -59,15 +59,21 @@ and document-backed output still requires a verified verbatim quote.
 
 - PostgreSQL full-text (`GIN`) and semantic (`pgvector` HNSW) indexes are fused
   for fast exact and meaning-based retrieval.
-- Notebook saves and future `rag:ingest` runs write through to the same store.
+- Notebook autosaves update canonical passages immediately. Exact hashes reuse
+  unchanged vectors and coalesce claim analysis so repeated saves do no work.
+- `rag:ingest` updates portable parsed artefacts; a persisted bundle fingerprint
+  automatically reconciles only changed documents on the next runtime check.
 - Contacts remain structured data inside their canonical entries, so telephone
   numbers and emails are displayed deterministically rather than copied by AI.
-- Source prose is analysed into explicit claims. Different active sources making
-  incompatible claims appear under `/knowledge` → **Contradictions**; the
-  assistant will not silently pick a side while a contradiction is open.
-- `/api/knowledge/sync` is the idempotent migration bridge for the previous file
-  RAG, Notebook and contacts stores. A legacy read fallback remains only so a
-  deployment stays available before its first migration.
+- Source passages are analysed into exact-quote claims once per content hash.
+  Candidate disagreements are reasoned over and only high-confidence, mutually
+  exclusive claims appear as contradictions.
+- `/knowledge` and `/api/knowledge/**` are deliberately available only from a
+  loopback host in development; they return 404 in deployed production. The
+  public app contains no link to this backend.
+- `/api/knowledge/sync` idempotently reconciles the processed file bundle,
+  Notebook and contacts. A legacy read fallback keeps a fresh deployment
+  available while its first canonical index builds in the background.
 
 ## Configuration
 

@@ -5,14 +5,15 @@
 //                                   or move it { id, parentId } (drag to a section)
 //   DELETE /api/notebook?id=123   — delete a note (its sub-notes cascade)
 //
-// Notes written here are automatically used by the assistant: the /api/ask route
-// pulls them in at request time as citable sources (no re-ingest, no redeploy).
+// Notes written here are automatically mirrored into canonical knowledge as
+// citable sources (no re-ingest or redeploy).
 import { NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
 import { listNotes, createNote, updateNote, moveNote, deleteNote, listAttachments, attachmentsUnderNote } from '@/lib/notebook';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function GET() {
   try {

@@ -1,10 +1,16 @@
-// Knowledge-base listing for the in-app "Knowledge base" tab. Reads the RAG
-// catalogue (the documents every answer is grounded in) and, for each one,
+// Knowledge-base listing for the in-app "Knowledge base" tab. Reads canonical
+// document entries (the same source the assistant searches) and, for each one,
 // finds its openable file and page thumbnails under public/assets/rag, then
 // groups them into human-friendly sections. Read-only; safe to call any time.
 import fs from 'node:fs';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
+import { ensureKnowledgeSchema, getSql } from '@/lib/db';
+import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
 const ROOT = process.cwd();
 const CATALOG = path.join(ROOT, 'rag', 'processed', 'catalog.json');
@@ -70,27 +76,44 @@ const GROUPS = [
 ];
 
 export async function GET() {
-  let catalog;
+  let documents = [];
   try {
-    catalog = JSON.parse(fs.readFileSync(CATALOG, 'utf8'));
-  } catch (e) {
-    return NextResponse.json({ groups: [], total: 0 });
+    const ready = await prepareBundledKnowledge();
+    if (ready) {
+      await ensureKnowledgeSchema();
+      const sql = getSql();
+      documents = await sql`
+        SELECT id,title,data,source_ref AS "sourceRef"
+        FROM knowledge_entries WHERE kind='document' AND status='active'
+        ORDER BY title ASC
+      `;
+    }
+  } catch (e) { /* processed catalogue below remains available */ }
+  if (!documents.length) {
+    try {
+      const catalog = JSON.parse(fs.readFileSync(CATALOG, 'utf8'));
+      documents = (catalog.documents || []).map((d) => ({
+        id: `document:${d.docId}`, title: d.title,
+        data: { summary: d.summary || '', tags: d.tags || [] }, sourceRef: d.source || '',
+      }));
+    } catch (e) { documents = []; }
   }
 
   const buckets = new Map(GROUPS.map((g) => [g.key, []]));
-  for (const d of catalog.documents || []) {
-    const ext = extOf(d.source);
-    const info = assetInfo(d.docId, ext);
+  for (const d of documents || []) {
+    const docId = String(d.id).replace(/^document:/, '');
+    const ext = extOf(d.sourceRef);
+    const info = assetInfo(docId, ext);
     const doc = {
-      docId: d.docId,
+      docId,
       title: d.title,
-      summary: d.summary || '',
+      summary: d.data?.summary || '',
       subtitle: typeLabel(ext, info.pages),
       view: info.view,
       thumbs: info.thumbs,
       pages: info.pages,
     };
-    const group = GROUPS.find((g) => g.test(d.title || '', d.source || ''));
+    const group = GROUPS.find((g) => g.test(d.title || '', d.sourceRef || ''));
     buckets.get(group.key).push(doc);
   }
 
@@ -98,5 +121,5 @@ export async function GET() {
     .map((g) => ({ key: g.key, label: g.label, docs: buckets.get(g.key).sort((a, b) => a.title.localeCompare(b.title)) }))
     .filter((g) => g.docs.length);
 
-  return NextResponse.json({ groups, total: (catalog.documents || []).length });
+  return NextResponse.json({ groups, total: (documents || []).length }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

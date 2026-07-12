@@ -54,13 +54,13 @@ Embeddings are stored separately (`embeddings.json`) keyed by chunk `id`.
 
 ## How retrieval works (two tiers)
 
-- **Tier A — catalogue.** Every request includes the compact `catalog.json`
-  (title + summary + tags per document), so it is *aware of everything* even
-  when a specific chunk wasn't retrieved.
-- **Tier B — semantic retrieval.** The question is embedded and the top few
-  chunks by cosine similarity are pulled in full (with their images).
+- **Tier A — catalogue.** Every request includes the compact canonical catalogue
+  (title + summary + tags), so it is aware of all active sources.
+- **Tier B — hybrid retrieval.** PostgreSQL full-text and pgvector HNSW rankings
+  are fused; the top original passages are pulled in full with their provenance.
 
-Both happen server-side in `app/api/ask/route.js` via `rag/lib/store.mjs`.
+Both happen server-side via `lib/knowledge.js`. The committed processed files are
+portable ingestion artefacts and a pre-migration fallback, not the live truth.
 
 ## Parsers (add a file type in one place)
 
@@ -108,12 +108,11 @@ Chunk **count** (number of vectors), not total tokens, decides the tier:
 | Approach | Good up to | Breaks because |
 |----------|-----------|----------------|
 | Keyword scoring | ~20–50 docs | recall — synonyms/paraphrases stop matching |
-| **In-repo vector index (current)** | ~1,000–2,000 docs (≈50k chunks) | serverless memory + cold-start load (switch `embeddings.json` to Float32 binary at ~10k chunks) |
-| Hosted vector DB (pgvector) | unbounded | crossed ~50k chunks, or need metadata filtering / live updates without redeploy |
+| In-repo vector index (fallback) | ~1,000–2,000 docs (≈50k chunks) | serverless memory + cold-start load |
+| **Postgres full-text + pgvector (current)** | unbounded for this practice | operational database capacity |
 
-The chunk schema is storage-agnostic, so moving to a database later is just
-"write the same chunks to a different sink" — parsers, chunker and the retrieval
-interface don't change.
+The parser output remains storage-agnostic. A persisted bundle fingerprint loads
+only new or changed passages into canonical Postgres after ingestion.
 
 ## Embeddings
 

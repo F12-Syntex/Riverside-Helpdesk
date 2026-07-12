@@ -14,6 +14,7 @@ import { listNotes, applyOrganizePlan } from '@/lib/notebook';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 const NO_RETENTION = { data_collection: 'deny' };
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';

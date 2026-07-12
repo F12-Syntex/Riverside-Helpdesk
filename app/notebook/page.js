@@ -388,6 +388,8 @@ export default function NotebookPage() {
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
+  const dirtyAt = React.useRef(new Map()); // id -> last edit time (quiet-period debounce)
+  const saving = React.useRef(new Set());  // prevent overlapping/out-of-order PATCHes
   const notesRef = React.useRef([]);
   const fileInput = React.useRef(null);
   const titleInput = React.useRef(null);
@@ -465,12 +467,14 @@ export default function NotebookPage() {
   const sections = notes.filter((n) => !n.parentId).filter(treeMatch);
 
   /* ------------------------------ Saving ------------------------------ *
-   * Time-based, not per-keystroke: edits only mark the note dirty; a 1s
-   * interval diffs each dirty note against its last persisted snapshot and
+   * Time-based, not per-keystroke: edits mark the note dirty; after 1.8s quiet
+   * the interval diffs it against its last persisted snapshot and
    * PATCHes only the fields that actually changed — no change, no request. */
 
   async function flush() {
     for (const id of Array.from(dirty.current)) {
+      if (saving.current.has(id)) continue;
+      if (Date.now() - (dirtyAt.current.get(id) || 0) < 1800) continue;
       const n = notesRef.current.find((x) => x.id === id);
       if (!n) { dirty.current.delete(id); continue; } // deleted while dirty
       const prev = saved.current.get(id) || {};
@@ -478,16 +482,24 @@ export default function NotebookPage() {
       if ((n.title || '') !== (prev.title || '')) patch.title = n.title || '';
       if ((n.body || '') !== (prev.body || '')) patch.body = n.body || '';
       if (!Object.keys(patch).length) { dirty.current.delete(id); continue; }
+      const sent = { title: n.title || '', body: n.body || '' };
       try {
+        saving.current.add(id);
         setSaveState('saving');
         const res = await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...patch, id }) });
         if (!res.ok) throw new Error('bad status');
-        saved.current.set(id, { title: n.title || '', body: n.body || '' });
-        dirty.current.delete(id);
+        saved.current.set(id, sent);
+        const latest = notesRef.current.find((x) => x.id === id);
+        if (latest && (latest.title || '') === sent.title && (latest.body || '') === sent.body) {
+          dirty.current.delete(id);
+          dirtyAt.current.delete(id);
+        }
         setSaveState('saved');
         setTimeout(() => setSaveState((s2) => (s2 === 'saved' ? '' : s2)), 1500);
       } catch (e) {
         setSaveState('unsaved');
+      } finally {
+        saving.current.delete(id);
       }
     }
   }
@@ -502,6 +514,7 @@ export default function NotebookPage() {
     if (isSection && 'body' in patch) return; // sections are name-only
     setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, ...patch } : n)));
     dirty.current.add(selectedId);
+    dirtyAt.current.set(selectedId, Date.now());
     setSaveState('saving');
   }
 

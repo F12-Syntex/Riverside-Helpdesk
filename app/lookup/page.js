@@ -3,7 +3,7 @@
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
-import { getDirectory, CATEGORIES } from '../../lib/lookup/directory';
+import { CATEGORIES } from '../../lib/lookup/directory';
 import { buildIndex, fuzzySearch, highlightRanges } from '../../lib/lookup/fuzzy';
 
 /* ------------------------------------------------------------------ *
@@ -11,9 +11,9 @@ import { buildIndex, fuzzySearch, highlightRanges } from '../../lib/lookup/fuzzy
  *
  * Type a partial or messy word ("mary", "pha", "homer") and the pre-saved
  * list of hospital switchboards, departments, community teams, pharmacies
- * and system numbers filters instantly. Everything runs in the browser over
- * lib/lookup/directory.js — no network round-trip, no AI, numbers shown
- * verbatim from the data files so they can never be mis-typed.
+ * and system numbers filters instantly. The canonical directory is loaded once
+ * from Postgres, then fuzzy search runs locally with no AI; numbers remain
+ * structured values and are never authored by a model.
  * ------------------------------------------------------------------ */
 
 const CAT_COLOURS = {
@@ -97,13 +97,16 @@ function EntryRow({ entry, query, selected, showCategory, flash }) {
 }
 
 export default function Page() {
+  const [directory, setDirectory] = React.useState([]);
   const [query, setQuery] = React.useState('');
   const [category, setCategory] = React.useState('All');
   const [selIdx, setSelIdx] = React.useState(-1);
   const [flash, setFlash] = React.useState('');
   const inputRef = React.useRef(null);
 
-  const directory = React.useMemo(() => getDirectory(), []);
+  React.useEffect(() => {
+    fetch('/api/directory', { cache: 'no-store' }).then((r) => r.json()).then((data) => setDirectory(Array.isArray(data.entries) ? data.entries : [])).catch(() => setDirectory([]));
+  }, []);
   const index = React.useMemo(() => buildIndex(directory), [directory]);
 
   const trimmed = query.trim();
@@ -267,10 +270,7 @@ export default function Page() {
         )}
 
         <p style={s('margin:26px 0 0;font-size:13px;color:#768692;line-height:1.55;')}>
-          Sources: the practice&rsquo;s &ldquo;Useful telephone numbers&rdquo; sheet plus the main switchboards of the
-          hospitals this practice refers to. To add or correct an entry, edit
-          {' '}<code style={s('font-size:12px;background:#e8edee;border-radius:4px;padding:1px 5px;')}>lib/contacts.data.json</code> or
-          {' '}<code style={s('font-size:12px;background:#e8edee;border-radius:4px;padding:1px 5px;')}>lib/lookup/hospitals.data.json</code>.
+          Sources: the practice&rsquo;s centrally managed contacts plus the main switchboards of hospitals this practice refers to. Report corrections to the knowledge administrator.
         </p>
       </main>
     </div>

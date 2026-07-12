@@ -15,12 +15,13 @@ import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText, chunksByTitle } from '@/rag/lib/store.mjs';
 import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
-import { notebookContext } from '@/lib/notebook';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
-import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, conflictsForEntries, unifiedContacts, unifiedTelephoneSet } from '@/lib/knowledge';
+import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, conflictsForPassages, unifiedContacts, unifiedTelephoneSet } from '@/lib/knowledge';
+import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
 const TOP_K = 5;
 // A retrieved Source sometimes points at a generic process instead of
@@ -267,11 +268,19 @@ export async function POST(request) {
       images, score: Number(r.score || 0), authority: r.authority,
     };
   };
+  try { usingUnified = await prepareBundledKnowledge(); }
+  catch (e) { usingUnified = false; }
   try {
-    unifiedHits = await searchKnowledge(searchQuery, TOP_K + 5);
-    usingUnified = unifiedHits.length > 0;
-    chunks = unifiedHits.filter((r) => r.kind !== 'contact').slice(0, TOP_K).map(hitToChunk);
-  } catch (e) { unifiedHits = []; }
+    if (usingUnified) {
+      unifiedHits = await searchKnowledge(searchQuery, TOP_K, { kind: 'content' });
+      chunks = unifiedHits.map(hitToChunk);
+    }
+  } catch (e) {
+    // A transient canonical-search failure must still leave staff with the
+    // bundled read-only index rather than an empty answer context.
+    unifiedHits = [];
+    usingUnified = false;
+  }
   // Deployment bridge: the old stores remain readable until migration runs.
   if (!usingUnified) try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
 
@@ -284,7 +293,7 @@ export async function POST(request) {
   if (hint) {
     try {
       const more = usingUnified
-        ? (await searchKnowledge(hint, REFERENCE_CHASE_K)).filter((r) => r.kind !== 'contact').map(hitToChunk)
+        ? (await searchKnowledge(hint, REFERENCE_CHASE_K, { kind: 'content' })).map(hitToChunk)
         : await retrieve(hint, REFERENCE_CHASE_K);
       const known = new Set(chunks.map((c) => c.id));
       for (const c of more) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
@@ -312,21 +321,11 @@ export async function POST(request) {
     return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
   });
 
-  // Supplementary context — practice notes / triage instructions gathered at
-  // request time so they can be updated without a redeploy: the in-app Notebook
-  // (semantically retrieved from its own embeddings in Postgres, exactly like
-  // the knowledge base), plus any configured URLs / local rag/context folder.
-  // Appended as extra numbered Sources after the knowledge-base chunks, so the
-  // model must quote them and the server verifies the quote exactly as for any
-  // document. Never fatal.
-  let noteCatalog = '';
+  // Compatibility fallback while a fresh deployment builds its first canonical
+  // index. Once ready, Notebook and supplementary passages are already part of
+  // the unified retrieval above and must not be injected a second time.
   if (!usingUnified) try {
-    const [remote, nb] = await Promise.all([
-      supplementarySourcesFor(searchQuery).catch(() => []),
-      notebookContext(searchQuery).catch(() => ({ sources: [], catalog: '' })),
-    ]);
-    noteCatalog = nb.catalog || '';
-    const supp = nb.sources.concat(remote); // notebook first — it's the staff's own guidance
+    const supp = await supplementarySourcesFor(searchQuery).catch(() => []);
     for (const s of supp) {
       const ref = extracts.length + 1;
       const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null, images: s.images || [] };
@@ -335,17 +334,27 @@ export async function POST(request) {
     }
   } catch (e) { /* supplementary context is optional */ }
 
-  // Configured URL/local context remains optional; Notebook pages are already
-  // part of canonical retrieval and are therefore not added twice.
+  let conflicts = [];
   if (usingUnified) try {
-    const remote = await supplementarySourcesFor(searchQuery);
-    for (const s of remote) {
+    conflicts = await conflictsForPassages(chunks.map((c) => c.id));
+    const known = new Set(chunks.map((c) => c.id));
+    for (const c of conflicts) for (const side of ['A', 'B']) {
+      const pid = c['passage' + side];
+      if (!pid || known.has(pid)) continue;
+      const loc = c['location' + side] || {};
+      const { images = [], source, ...view } = loc;
+      const chunk = {
+        id: pid, docId: c['entry' + side],
+        docTitle: c['kind' + side] === 'note' ? `Notebook: ${c['title' + side]}` : c['title' + side],
+        text: c['content' + side], section: c['heading' + side],
+        view: view.kind || view.url ? view : null, images,
+      };
       const ref = extracts.length + 1;
-      const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null, images: s.images || [] };
       refMap.set(ref, chunk);
-      extracts.push({ ref, title: chunk.docTitle, location: s.section || 'Note', text: chunk.text });
+      extracts.push({ ref, title: chunk.docTitle, location: locationOf(chunk), text: chunk.text });
+      known.add(pid);
     }
-  } catch (e) { /* supplementary context is optional */ }
+  } catch (e) { conflicts = []; }
 
   // Deterministic contacts directory match — exact numbers/emails shown to the
   // reader verbatim (never authored by the model). Also build the set of numbers
@@ -373,9 +382,7 @@ export async function POST(request) {
   // model is aware of the notebook's coverage even when no chunk was retrieved.
   let canonicalCatalog = '';
   if (usingUnified) try { canonicalCatalog = await knowledgeCatalogText(); } catch (e) { canonicalCatalog = ''; }
-  const catalog = usingUnified ? canonicalCatalog : [catalogText(), noteCatalog].filter(Boolean).join('\n');
-  let conflicts = [];
-  if (usingUnified) try { conflicts = await conflictsForEntries(chunks.map((c) => c.docId)); } catch (e) { conflicts = []; }
+  const catalog = usingUnified ? canonicalCatalog : catalogText();
   const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label), conflicts, imageCount: images.length });
 
   // With images attached, the message becomes multimodal content parts; the
