@@ -837,15 +837,6 @@
       "title": "confidentiality policy teenagers",
       "processedAt": "2026-06-20T07:36:23.598Z"
     },
-    "consent-form-for-sharing-medical-records-signed-by-patient": {
-      "path": "rag/sources/CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT..rtf",
-      "sha256": "2379aab25852c45763cb8fd1f336362b264b3e8b6c8323db50f6fc0b4d459e83",
-      "size": 66768,
-      "mtime": 1781939010944.0999,
-      "chunks": 2,
-      "title": "CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT.",
-      "processedAt": "2026-06-20T07:36:24.342Z"
-    },
     "consent-protocol": {
       "path": "rag/sources/consent-protocol.doc",
       "sha256": "269801375af9eefedd93e61f95a2a660cba77be5b734eb72a8efc42b1a56be01",
@@ -864,15 +855,6 @@
       "title": "control of substances hazardous to health policy",
       "processedAt": "2026-06-20T07:36:26.810Z"
     },
-    "data-sharing-policy-1-v-0-0": {
-      "path": "rag/sources/Data Sharing Policy-1__v_0.0.rtf",
-      "sha256": "4e16feee22c53375d4127b919dcafe7367270036c5972e2c88df1bfee71ac407",
-      "size": 58348,
-      "mtime": 1781939014820.4553,
-      "chunks": 1,
-      "title": "Data Sharing Policy 1 v 0.0",
-      "processedAt": "2026-06-20T07:36:27.558Z"
-    },
     "data-management-policy-1": {
       "path": "rag/sources/data-management-policy[1].doc",
       "sha256": "9faacdfe27be92268d913cf99426471e60d4fc6304c4983a9461d0c6b6585b11",
@@ -890,15 +872,6 @@
       "chunks": 14,
       "title": "data sharing agreement",
       "processedAt": "2026-06-20T07:36:31.912Z"
-    },
-    "decontamination-of-medical-equipment": {
-      "path": "rag/sources/Decontamination of medical equipment.rtf",
-      "sha256": "e73f470f4eb7b5841df0676de405dbf158b18d3d36c70ac2360ca9b6c79d17eb",
-      "size": 241823,
-      "mtime": 1781939017329.9348,
-      "chunks": 10,
-      "title": "Decontamination of medical equipment",
-      "processedAt": "2026-06-20T07:36:33.741Z"
     },
     "display-screen-equipment-health-surveillance-questionnaire": {
       "path": "rag/sources/display-screen-equipment-health-surveillance-questionnaire.doc",
@@ -972,15 +945,6 @@
       "title": "emergency telephone call handling protocol",
       "processedAt": "2026-06-20T07:36:42.370Z"
     },
-    "fire-drill-sheet-2023": {
-      "path": "rag/sources/FIRE DRILL SHEET 2023.rtf",
-      "sha256": "f406f74d7f570cfbcb7ee4fe872411da7479dab3285e7950be57f7d022185c72",
-      "size": 175745,
-      "mtime": 1781939022987.9988,
-      "chunks": 1,
-      "title": "FIRE DRILL SHEET 2023",
-      "processedAt": "2026-06-20T07:36:45.538Z"
-    },
     "fire-risk-assessment-checklist": {
       "path": "rag/sources/fire-risk-assessment-checklist.doc",
       "sha256": "42b6ae89df2a5b8b6aaa562c15677ee6c9d06181ae923756ef814acee2b8ee6d",
@@ -1044,15 +1008,6 @@
       "title": "GDPR Compliant Data Protection Policy for Staff",
       "processedAt": "2026-06-20T07:36:54.129Z"
     },
-    "gifts-and-donations-policy": {
-      "path": "rag/sources/GIFTS_AND_DONATIONS_POLICY.rtf",
-      "sha256": "ec991f1f825d3e5cb295d55ea93e04a6a4853ca74569deca744bd90880cf6952",
-      "size": 91888,
-      "mtime": 1781939027990.2725,
-      "chunks": 9,
-      "title": "GIFTS AND DONATIONS POLICY",
-      "processedAt": "2026-06-20T07:36:55.567Z"
-    },
     "handwashing-and-hygiene-protocol-1": {
       "path": "rag/sources/handwashing-and-hygiene-protocol[1].doc",
       "sha256": "002973c6244068fc3a46766c3c494511701028f641d5b85f877770e08f746892",
@@ -1115,15 +1070,6 @@
       "chunks": 2,
       "title": "incident management procedure[1]",
       "processedAt": "2026-06-20T07:37:03.071Z"
-    },
-    "induction-programme-2026": {
-      "path": "rag/sources/Induction Programme 2026.rtf",
-      "sha256": "edad2212651ba9871cd7e6fcd324f79dcce1fe6cf679c459840bdf8e84203393",
-      "size": 157948,
-      "mtime": 1781939034413.0222,
-      "chunks": 3,
-      "title": "Induction Programme 2026",
-      "processedAt": "2026-06-20T07:37:04.107Z"
     },
     "infection-prevention-and-control-audit-checklist": {
       "path": "rag/sources/infection prevention and control_AUDIT_checklist.doc",
@@ -1340,15 +1286,6 @@
       "chunks": 5,
       "title": "phlebotomy protocol",
       "processedAt": "2026-06-20T07:37:35.848Z"
-    },
-    "phone-lines-down-doc1": {
-      "path": "rag/sources/Phone lines down-Doc1.rtf",
-      "sha256": "e45c2bfd9da0e7893a403765593d6ff517bf8cdb9318eaa5c4033c34b814522c",
-      "size": 920242,
-      "mtime": 1781939080186.3682,
-      "chunks": 1,
-      "title": "Phone lines down Doc1",
-      "processedAt": "2026-06-20T07:37:36.556Z"
     },
     "portable-appliance-testing-pat-policy": {
       "path": "rag/sources/portable-appliance-testing-PAT-policy.doc",
@@ -1602,24 +1539,6 @@
       "title": "text messaging patients protocol",
       "processedAt": "2026-06-20T07:38:13.876Z"
     },
-    "the-riverside-pracdtice-data-content-policy": {
-      "path": "rag/sources/The Riverside Pracdtice Data content Policy.rtf",
-      "sha256": "d631cde5d359d92bc1b79c9e47951a0b40e64f3ad3adbf61b42dedeebb5382ac",
-      "size": 125133,
-      "mtime": 1781939120515.668,
-      "chunks": 8,
-      "title": "The Riverside Pracdtice Data content Policy",
-      "processedAt": "2026-06-20T07:38:15.273Z"
-    },
-    "the-riverside-practice-fy2-induction-signature-sheet": {
-      "path": "rag/sources/The Riverside Practice FY2 INDUCTION SIGNATURE SHEET.rtf",
-      "sha256": "06efbb9c538d39b62a360e807889d2d8ee02ae6676186d3c5872913ca64543e1",
-      "size": 53439,
-      "mtime": 1781939122658.3855,
-      "chunks": 1,
-      "title": "The Riverside Practice FY2 INDUCTION SIGNATURE SHEET",
-      "processedAt": "2026-06-20T07:38:16.101Z"
-    },
     "transfer-of-patient-records-protocol": {
       "path": "rag/sources/transfer-of-patient-records-protocol.doc",
       "sha256": "c99bac36e429129c8b8398ea344a3272e24eae1c33fa6570b54e2933c4776794",
@@ -1673,6 +1592,106 @@
       "chunks": 8,
       "title": "data protection policy",
       "processedAt": "2026-07-03T08:24:34.549Z"
+    },
+    "consent-form-for-sharing-medical-records-signed-by-patient": {
+      "path": "rag/sources/CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT..rtf",
+      "sha256": "d475b3a1add590e96492b1849cfae5770d5292a68176e3bac3a7630b65ae89a5",
+      "size": 66427,
+      "mtime": 1783936875659.8044,
+      "chunks": 2,
+      "title": "CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT.",
+      "processedAt": "2026-07-13T11:02:27.660Z",
+      "missingEmbeddings": 0
+    },
+    "data-protection-policy-docx": {
+      "path": "rag/sources/Data Protection Policy.docx",
+      "sha256": "109054056e6f0f3c4cea77c9c6669d1e55b21bd2b113c278edf1fe9bae221150",
+      "size": 29521,
+      "mtime": 1783936875663.8044,
+      "chunks": 16,
+      "title": "Data Protection Policy",
+      "processedAt": "2026-07-13T11:02:27.811Z",
+      "missingEmbeddings": 16
+    },
+    "data-sharing-policy-1-v-0-0": {
+      "path": "rag/sources/Data Sharing Policy-1__v_0.0.rtf",
+      "sha256": "489e2ce69d1bb1a56a4fc62ee7508a049bf8e2edcd1b0b83170a8ee40273c0df",
+      "size": 58062,
+      "mtime": 1783936875663.8044,
+      "chunks": 1,
+      "title": "Data Sharing Policy 1 v 0.0",
+      "processedAt": "2026-07-13T11:02:27.818Z",
+      "missingEmbeddings": 0
+    },
+    "decontamination-of-medical-equipment": {
+      "path": "rag/sources/Decontamination of medical equipment.rtf",
+      "sha256": "cd2f7a4d3ad51915b23efc242a0ff0bb786fddbd2c372a8cbd935f82341a1258",
+      "size": 240063,
+      "mtime": 1783936875663.8044,
+      "chunks": 10,
+      "title": "Decontamination of medical equipment",
+      "processedAt": "2026-07-13T11:02:27.838Z",
+      "missingEmbeddings": 0
+    },
+    "fire-drill-sheet-2023": {
+      "path": "rag/sources/FIRE DRILL SHEET 2023.rtf",
+      "sha256": "a32e46da97a3109b558ebeff83be189875e7f76d1376cb1ae85a58e1298f844e",
+      "size": 174843,
+      "mtime": 1783936875667.8044,
+      "chunks": 1,
+      "title": "FIRE DRILL SHEET 2023",
+      "processedAt": "2026-07-13T11:02:27.845Z",
+      "missingEmbeddings": 0
+    },
+    "gifts-and-donations-policy": {
+      "path": "rag/sources/GIFTS_AND_DONATIONS_POLICY.rtf",
+      "sha256": "4f932fc3ea35b27738353b7abbe41fee96344678e9bdfdcd2f68b0289b81932f",
+      "size": 91413,
+      "mtime": 1783936875667.8044,
+      "chunks": 9,
+      "title": "GIFTS AND DONATIONS POLICY",
+      "processedAt": "2026-07-13T11:02:27.852Z",
+      "missingEmbeddings": 0
+    },
+    "induction-programme-2026": {
+      "path": "rag/sources/Induction Programme 2026.rtf",
+      "sha256": "bfc8f47ebdf161e675a5493a81521acbc2f546cafacdc05b282afab35c984df7",
+      "size": 157186,
+      "mtime": 1783936875667.8044,
+      "chunks": 3,
+      "title": "Induction Programme 2026",
+      "processedAt": "2026-07-13T11:02:27.858Z",
+      "missingEmbeddings": 0
+    },
+    "phone-lines-down-doc1": {
+      "path": "rag/sources/Phone lines down-Doc1.rtf",
+      "sha256": "d92895251f55ee162dc1891f15d57603378ea5b48fd29aba4618e4753a4df650",
+      "size": 913418,
+      "mtime": 1783936875683.8042,
+      "chunks": 1,
+      "title": "Phone lines down Doc1",
+      "processedAt": "2026-07-13T11:02:27.934Z",
+      "missingEmbeddings": 0
+    },
+    "the-riverside-pracdtice-data-content-policy": {
+      "path": "rag/sources/The Riverside Pracdtice Data content Policy.rtf",
+      "sha256": "66c5f9e387675bd695f27aad5b83fdbbfb0985922be2ff17fb007ba1019cdab2",
+      "size": 124502,
+      "mtime": 1783936875703.804,
+      "chunks": 8,
+      "title": "The Riverside Pracdtice Data content Policy",
+      "processedAt": "2026-07-13T11:02:27.944Z",
+      "missingEmbeddings": 0
+    },
+    "the-riverside-practice-fy2-induction-signature-sheet": {
+      "path": "rag/sources/The Riverside Practice FY2 INDUCTION SIGNATURE SHEET.rtf",
+      "sha256": "043a7bcdae1f91ce284372d3b709cdadd92583fb2c9fef3b150c29a284fcda03",
+      "size": 53154,
+      "mtime": 1783936875703.804,
+      "chunks": 1,
+      "title": "The Riverside Practice FY2 INDUCTION SIGNATURE SHEET",
+      "processedAt": "2026-07-13T11:02:27.947Z",
+      "missingEmbeddings": 0
     }
   }
 }

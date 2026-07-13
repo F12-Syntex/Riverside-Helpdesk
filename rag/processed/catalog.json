@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-03T08:24:35.317Z",
+  "generatedAt": "2026-07-13T11:02:28.376Z",
   "model": "openai/text-embedding-3-small",
   "documents": [
     {
@@ -1289,20 +1289,6 @@
       "source": "rag/sources/confidentiality-policy-teenagers.doc"
     },
     {
-      "docId": "consent-form-for-sharing-medical-records-signed-by-patient",
-      "title": "CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT.",
-      "summary": "Patient consent form for sharing medical records with authorised family members.",
-      "tags": [
-        "consent",
-        "medical records",
-        "data sharing",
-        "patient information",
-        "family access"
-      ],
-      "chunks": 2,
-      "source": "rag/sources/CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT..rtf"
-    },
-    {
       "docId": "consent-protocol",
       "title": "consent protocol",
       "summary": "This protocol outlines the practice's approach to obtaining informed consent for treatments and procedures.",
@@ -1329,20 +1315,6 @@
       ],
       "chunks": 11,
       "source": "rag/sources/control-of-substances-hazardous-to-health-policy.doc"
-    },
-    {
-      "docId": "data-sharing-policy-1-v-0-0",
-      "title": "Data Sharing Policy 1 v 0.0",
-      "summary": "Policy for sharing patient data with third parties via fax or secure email.",
-      "tags": [
-        "data sharing",
-        "policy",
-        "patient data",
-        "nhs net",
-        "secure email"
-      ],
-      "chunks": 1,
-      "source": "rag/sources/Data Sharing Policy-1__v_0.0.rtf"
     },
     {
       "docId": "data-management-policy-1",
@@ -1372,21 +1344,6 @@
       ],
       "chunks": 14,
       "source": "rag/sources/data-sharing-agreement.doc"
-    },
-    {
-      "docId": "decontamination-of-medical-equipment",
-      "title": "Decontamination of medical equipment",
-      "summary": "This policy outlines the procedures for cleaning, disinfecting, and sterilizing medical equipment to prevent infection transmission.",
-      "tags": [
-        "decontamination",
-        "medical equipment",
-        "infection control",
-        "cleaning",
-        "disinfection",
-        "sterilisation"
-      ],
-      "chunks": 10,
-      "source": "rag/sources/Decontamination of medical equipment.rtf"
     },
     {
       "docId": "display-screen-equipment-health-surveillance-questionnaire",
@@ -1501,19 +1458,6 @@
       "source": "rag/sources/emergency-telephone-call-handling-protocol.doc"
     },
     {
-      "docId": "fire-drill-sheet-2023",
-      "title": "FIRE DRILL SHEET 2023",
-      "summary": "Record of monthly fire drill dates, locations, and reset details for 2023.",
-      "tags": [
-        "fire drill",
-        "record sheet",
-        "safety",
-        "maintenance"
-      ],
-      "chunks": 1,
-      "source": "rag/sources/FIRE DRILL SHEET 2023.rtf"
-    },
-    {
       "docId": "fire-risk-assessment-checklist",
       "title": "fire risk assessment checklist",
       "summary": "Checklist for conducting a fire risk assessment in a GP practice.",
@@ -1612,20 +1556,6 @@
       "source": "rag/sources/GDPR-Compliant-Data-Protection-Policy-for-Staff.doc"
     },
     {
-      "docId": "gifts-and-donations-policy",
-      "title": "GIFTS AND DONATIONS POLICY",
-      "summary": "Policy on accepting and registering gifts and donations to the practice and staff.",
-      "tags": [
-        "gifts",
-        "donations",
-        "policy",
-        "declaration",
-        "nhs"
-      ],
-      "chunks": 9,
-      "source": "rag/sources/GIFTS_AND_DONATIONS_POLICY.rtf"
-    },
-    {
       "docId": "handwashing-and-hygiene-protocol-1",
       "title": "handwashing and hygiene protocol[1]",
       "summary": "Protocol for handwashing and hygiene, including levels, facilities, and when to perform hand hygiene.",
@@ -1722,20 +1652,6 @@
       ],
       "chunks": 2,
       "source": "rag/sources/incident-management-procedure[1].doc"
-    },
-    {
-      "docId": "induction-programme-2026",
-      "title": "Induction Programme 2026",
-      "summary": "Covers the preparation, content, and review of a new employee induction programme.",
-      "tags": [
-        "induction",
-        "onboarding",
-        "new staff",
-        "gp practice",
-        "hr"
-      ],
-      "chunks": 3,
-      "source": "rag/sources/Induction Programme 2026.rtf"
     },
     {
       "docId": "infection-prevention-and-control-audit-checklist",
@@ -2070,19 +1986,6 @@
       ],
       "chunks": 5,
       "source": "rag/sources/phlebotomy-protocol.doc"
-    },
-    {
-      "docId": "phone-lines-down-doc1",
-      "title": "Phone lines down Doc1",
-      "summary": "Procedure for when GP practice phone lines are unavailable.",
-      "tags": [
-        "phone lines",
-        "outage",
-        "procedure",
-        "emergency"
-      ],
-      "chunks": 1,
-      "source": "rag/sources/Phone lines down-Doc1.rtf"
     },
     {
       "docId": "portable-appliance-testing-pat-policy",
@@ -2476,35 +2379,6 @@
       "source": "rag/sources/text-messaging-patients-protocol.doc"
     },
     {
-      "docId": "the-riverside-pracdtice-data-content-policy",
-      "title": "The Riverside Pracdtice Data content Policy",
-      "summary": "This policy outlines the Riverside Practice's procedures for scanning and managing patient data content.",
-      "tags": [
-        "data sharing",
-        "scanning",
-        "patient records",
-        "document management",
-        "nhs practice"
-      ],
-      "chunks": 8,
-      "source": "rag/sources/The Riverside Pracdtice Data content Policy.rtf"
-    },
-    {
-      "docId": "the-riverside-practice-fy2-induction-signature-sheet",
-      "title": "The Riverside Practice FY2 INDUCTION SIGNATURE SHEET",
-      "summary": "Induction checklist for FY2 doctors at The Riverside Practice covering EMIS, pathways, and referrals.",
-      "tags": [
-        "induction",
-        "fy2",
-        "riverside practice",
-        "emis",
-        "pathways",
-        "referrals"
-      ],
-      "chunks": 1,
-      "source": "rag/sources/The Riverside Practice FY2 INDUCTION SIGNATURE SHEET.rtf"
-    },
-    {
       "docId": "transfer-of-patient-records-protocol",
       "title": "transfer of patient records protocol",
       "summary": "Protocol for transferring physical patient records in and out of the practice.",
@@ -2588,6 +2462,147 @@
       ],
       "chunks": 8,
       "source": "rag/sources/data-protection-policy.doc"
+    },
+    {
+      "docId": "consent-form-for-sharing-medical-records-signed-by-patient",
+      "title": "CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT.",
+      "summary": "Patient consent form for sharing medical records with authorised family members.",
+      "tags": [
+        "consent",
+        "medical records",
+        "data sharing",
+        "patient information",
+        "family access"
+      ],
+      "chunks": 2,
+      "source": "rag/sources/CONSENT FORM FOR SHARING MEDICAL RECORDS SIGNED BY PATIENT..rtf"
+    },
+    {
+      "docId": "data-protection-policy-docx",
+      "title": "Data Protection Policy",
+      "summary": "Explains staff duties, governance, security, sharing, retention and breach handling for personal data at Riverside Practice.",
+      "tags": [
+        "data protection",
+        "uk gdpr",
+        "information governance",
+        "data breaches",
+        "data sharing",
+        "staff responsibilities"
+      ],
+      "chunks": 16,
+      "source": "rag/sources/Data Protection Policy.docx"
+    },
+    {
+      "docId": "data-sharing-policy-1-v-0-0",
+      "title": "Data Sharing Policy 1 v 0.0",
+      "summary": "Policy for sharing patient data with third parties via fax or secure email.",
+      "tags": [
+        "data sharing",
+        "policy",
+        "patient data",
+        "nhs net",
+        "secure email"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Data Sharing Policy-1__v_0.0.rtf"
+    },
+    {
+      "docId": "decontamination-of-medical-equipment",
+      "title": "Decontamination of medical equipment",
+      "summary": "This policy outlines the procedures for cleaning, disinfecting, and sterilizing medical equipment to prevent infection transmission.",
+      "tags": [
+        "decontamination",
+        "medical equipment",
+        "infection control",
+        "cleaning",
+        "disinfection",
+        "sterilisation"
+      ],
+      "chunks": 10,
+      "source": "rag/sources/Decontamination of medical equipment.rtf"
+    },
+    {
+      "docId": "fire-drill-sheet-2023",
+      "title": "FIRE DRILL SHEET 2023",
+      "summary": "Record of monthly fire drill dates, locations, and reset details for 2023.",
+      "tags": [
+        "fire drill",
+        "record sheet",
+        "safety",
+        "maintenance"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/FIRE DRILL SHEET 2023.rtf"
+    },
+    {
+      "docId": "gifts-and-donations-policy",
+      "title": "GIFTS AND DONATIONS POLICY",
+      "summary": "Policy on accepting and registering gifts and donations to the practice and staff.",
+      "tags": [
+        "gifts",
+        "donations",
+        "policy",
+        "declaration",
+        "nhs"
+      ],
+      "chunks": 9,
+      "source": "rag/sources/GIFTS_AND_DONATIONS_POLICY.rtf"
+    },
+    {
+      "docId": "induction-programme-2026",
+      "title": "Induction Programme 2026",
+      "summary": "Covers the preparation, content, and review of a new employee induction programme.",
+      "tags": [
+        "induction",
+        "onboarding",
+        "new staff",
+        "gp practice",
+        "hr"
+      ],
+      "chunks": 3,
+      "source": "rag/sources/Induction Programme 2026.rtf"
+    },
+    {
+      "docId": "phone-lines-down-doc1",
+      "title": "Phone lines down Doc1",
+      "summary": "Procedure for when GP practice phone lines are unavailable.",
+      "tags": [
+        "phone lines",
+        "outage",
+        "procedure",
+        "emergency"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/Phone lines down-Doc1.rtf"
+    },
+    {
+      "docId": "the-riverside-pracdtice-data-content-policy",
+      "title": "The Riverside Pracdtice Data content Policy",
+      "summary": "This policy outlines the Riverside Practice's procedures for scanning and managing patient data content.",
+      "tags": [
+        "data sharing",
+        "scanning",
+        "patient records",
+        "document management",
+        "nhs practice"
+      ],
+      "chunks": 8,
+      "source": "rag/sources/The Riverside Pracdtice Data content Policy.rtf"
+    },
+    {
+      "docId": "the-riverside-practice-fy2-induction-signature-sheet",
+      "title": "The Riverside Practice FY2 INDUCTION SIGNATURE SHEET",
+      "summary": "Induction checklist for FY2 doctors at The Riverside Practice covering EMIS, pathways, and referrals.",
+      "tags": [
+        "induction",
+        "fy2",
+        "riverside practice",
+        "emis",
+        "pathways",
+        "referrals"
+      ],
+      "chunks": 1,
+      "source": "rag/sources/The Riverside Practice FY2 INDUCTION SIGNATURE SHEET.rtf"
     }
   ]
 }
