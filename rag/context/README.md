@@ -28,13 +28,12 @@ Three sources, gathered together:
 
 ## How it is used
 
-- Each note is split into chunks. **Short notes are treated as standing
-  instructions and are always applied**; **longer notes are matched to the
-  request** and only relevant parts are pulled in — so a large notebook stays
-  affordable.
-- Selected chunks are added as extra numbered **Sources**. The assistant must
+- Every non-empty Notebook page is read from Postgres and included in full on
+  every Q&A request. It is not chunked, shortened or relevance-filtered.
+- Configured URL and baseline-folder notes are also included in full.
+- Complete notes are added as numbered **Sources**. The assistant must
   quote them, and the server verifies the quote — the same grounding every answer
-  gets. Citations show as "Practice note: <name>".
+  gets. Citations identify the Notebook path or practice-context note.
 
 ## Keep it safe
 

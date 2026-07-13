@@ -94,12 +94,12 @@ It can come from three places:
 - **URLs** — any direct text/markdown links you configure (optional).
 - **`rag/context/`** — committed baseline notes (these do need a redeploy).
 
-Whatever is gathered is split into chunks; **short notes are treated as standing
-instructions and always applied**, while **longer notes are matched to the
-request** so a big notebook stays affordable. The selected chunks are added as
-extra numbered **Sources**, so they go through the *exact same* quote check as
-everything else: the model has to quote your note, and the server verifies it.
-Your instructions influence the answer, but they can't be silently invented —
-each one shows up as a citation ("Practice note: …") you can open and read.
+Every non-empty Notebook page is added to every request **in full**. Notebook
+pages are never chunked, shortened or selected by similarity. Configured URLs
+and committed baseline notes are also supplied in full. They are added as
+numbered **Sources**, so they go through the same quote check as document
+passages: the model has to quote the note, and the server verifies it. Your
+instructions influence the answer, but they cannot be silently invented; each
+one appears as a citation.
 
 Write notes at `/notebook`; more detail is in `rag/context/README.md`.

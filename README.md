@@ -7,10 +7,10 @@ clickable sources they can open in-browser.
 
 ## How it works
 
-- Questions go to `POST /api/ask`, which retrieves the most relevant passages
-  from the knowledge base, builds the prompt, calls the model via **OpenRouter**,
-  and returns a structured answer with citations. The API key and the full
-  knowledge base never reach the browser.
+- Questions go to `POST /api/ask`. It retrieves relevant document passages,
+  loads every non-empty Notebook page in full, retrieves matching contacts, then
+  calls the model via **OpenRouter** and returns a structured answer with
+  citations. The API key and server-side knowledge never reach the browser.
 - Answers are grounded **strictly** in the documents: every answer cites the
   source(s) it used, and if the answer isn't in the knowledge base it says so
   rather than guessing.
@@ -39,32 +39,33 @@ clickable sources they can open in-browser.
   See `rag/README.md`.
 - **`app/notebook/`** + **`app/api/notebook/`** + **`lib/notebook.js`** — the
   in-app Notebook: practice notes/instructions (with sub-notes) stored in
-  Postgres, edited at `/notebook`, and mirrored into canonical passages as each
-  revision is saved (no rebuild).
+  Postgres and edited at `/notebook`. Every non-empty page is read fresh and
+  supplied in full to every Q&A request (no rebuild or retrieval cutoff).
 - **`lib/ai/context.mjs`** + **`rag/context/`** — optional extra supplementary
   context (direct URLs, or committed files in `rag/context/`), reconciled into
   the same store. See `rag/context/README.md`.
 - **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
   telephone directory (exact numbers shown verbatim, never authored by the AI).
 - **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
-  layer and localhost-only backend screen. Documents, Notebook pages and contacts
-  share one entry/passage model, hybrid retrieval, authority and contradictions.
+  layer and localhost-only backend screen. The source types share storage and
+  conflict review, while the live assistant keeps their context paths separate.
 - **`public/assets/`** — logos, EMIS screenshots, and served document copies.
 
-## Unified knowledge
+## Knowledge paths
 
-The live assistant retrieves from one canonical Postgres store. Embeddings are
-only an indexed search signal; the model reasons over the retrieved source text,
-and document-backed output still requires a verified verbatim quote.
+The assistant keeps each source type predictable:
 
-- PostgreSQL full-text (`GIN`) and semantic (`pgvector` HNSW) indexes are fused
-  for fast exact and meaning-based retrieval.
-- Notebook autosaves update canonical passages immediately. Exact hashes reuse
-  unchanged vectors and coalesce claim analysis so repeated saves do no work.
+- **Documents:** PostgreSQL full-text (`GIN`) and semantic (`pgvector` HNSW)
+  rankings retrieve the most relevant original passages from the document set.
+- **Notebook:** every non-empty page is loaded directly from the live Notebook
+  tables and included whole on every request. It is never top-K retrieved,
+  chunked or shortened for the answer prompt.
+- **Contacts:** a separate full-text + semantic search retrieves matching
+  structured directory entries. Telephone numbers and emails are displayed
+  deterministically rather than copied by the AI.
+- Document and Notebook output still requires a server-verified verbatim quote.
 - `rag:ingest` updates portable parsed artefacts; a persisted bundle fingerprint
   automatically reconciles only changed documents on the next runtime check.
-- Contacts remain structured data inside their canonical entries, so telephone
-  numbers and emails are displayed deterministically rather than copied by AI.
 - Source passages are analysed into exact-quote claims once per content hash.
   Candidate disagreements are reasoned over and only high-confidence, mutually
   exclusive claims appear as contradictions.
@@ -72,8 +73,8 @@ and document-backed output still requires a verified verbatim quote.
   loopback host in development; they return 404 in deployed production. The
   public app contains no link to this backend.
 - `/api/knowledge/sync` idempotently reconciles the processed file bundle,
-  Notebook and contacts. A legacy read fallback keeps a fresh deployment
-  available while its first canonical index builds in the background.
+  Notebook and contacts. A legacy document/contact fallback keeps a fresh
+  deployment available while its first canonical index builds in the background.
 
 ## Configuration
 

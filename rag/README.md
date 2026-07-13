@@ -52,15 +52,18 @@ Embeddings are stored separately (`embeddings.json`) keyed by chunk `id`.
 | `embeddings.json` | `{ model, dim, ids, vectors }`, aligned to chunk order. |
 | `manifest.json` | Per-document `{ path, sha256, size, mtime, chunks, title, processedAt }` — drives `rag:status`. |
 
-## How retrieval works (two tiers)
+## How document retrieval works (two tiers)
 
 - **Tier A — catalogue.** Every request includes the compact canonical catalogue
   (title + summary + tags), so it is aware of all active sources.
 - **Tier B — hybrid retrieval.** PostgreSQL full-text and pgvector HNSW rankings
   are fused; the top original passages are pulled in full with their provenance.
 
-Both happen server-side via `lib/knowledge.js`. The committed processed files are
-portable ingestion artefacts and a pre-migration fallback, not the live truth.
+Both happen server-side via `lib/knowledge.js`, filtered to `kind='document'`.
+The Notebook is not part of document RAG: every Notebook page is supplied whole
+on every request. Contacts use a separate hybrid RAG query over their structured
+directory entries. The committed processed files are portable ingestion
+artefacts and a pre-migration fallback, not the live truth.
 
 ## Parsers (add a file type in one place)
 

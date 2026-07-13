@@ -8,6 +8,7 @@
     "build": "node scripts/copy-pdf-worker.mjs && next build",
     "pdf:worker": "node scripts/copy-pdf-worker.mjs",
     "start": "next start",
+    "test": "node --test",
     "lint": "next lint",
     "rag:status": "node rag/status.mjs",
     "rag:ingest": "node rag/ingest.mjs",

@@ -14,10 +14,12 @@ import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
 import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText, chunksByTitle } from '@/rag/lib/store.mjs';
-import { supplementarySourcesFor } from '@/lib/ai/context.mjs';
+import { getSupplementaryEntries } from '@/lib/ai/context.mjs';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, conflictsForPassages, unifiedContacts, unifiedTelephoneSet } from '@/lib/knowledge';
 import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
+import { fullNotebookContext } from '@/lib/notebook';
+import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -252,36 +254,52 @@ export async function POST(request) {
   // still receives the full history to interpret the follow-up.
   const searchQuery = buildSearchQuery({ history, question });
 
-  // Canonical hybrid retrieval. Full-text and vector indexes find candidates;
-  // the model still reasons over the original passages rather than embeddings.
+  // Keep the three knowledge paths separate. Documents and contacts use their
+  // own RAG searches. Every live Notebook page is loaded in full, regardless of
+  // the question, so no staff instruction disappears because it ranked below a
+  // top-K cutoff.
   let chunks = [];
-  let unifiedHits = [];
   let usingUnified = false;
-  const hitToChunk = (r) => {
-    const loc = r.location || {};
-    const { images = [], source, ...view } = loc;
-    return {
-      id: r.id, docId: r.entryId,
-      docTitle: r.kind === 'note' ? `Notebook: ${r.title}` : r.title,
-      text: r.content, section: r.heading,
-      view: view.kind || view.url ? view : null,
-      images, score: Number(r.score || 0), authority: r.authority,
-    };
-  };
-  try { usingUnified = await prepareBundledKnowledge(); }
-  catch (e) { usingUnified = false; }
+  let notebookChunks = [];
+  let supplementaryChunks = [];
+  const [readiness, notebook, supplementary] = await Promise.allSettled([
+    prepareBundledKnowledge(),
+    fullNotebookContext(),
+    getSupplementaryEntries(),
+  ]);
+  usingUnified = readiness.status === 'fulfilled' && !!readiness.value;
+  // Notebook guidance is authoritative and requested in full. Never silently
+  // answer without it when the live Notebook cannot be read.
+  if (notebook.status !== 'fulfilled') {
+    return NextResponse.json(
+      { error: 'The practice Notebook is temporarily unavailable, so no answer was generated.' },
+      { status: 503 },
+    );
+  }
+  notebookChunks = notebook.value;
+  if (supplementary.status === 'fulfilled') {
+    supplementaryChunks = supplementary.value
+      .filter((item) => item && String(item.text || '').trim())
+      .map((item, index) => ({
+        id: `supplementary:${index}:full`,
+        docId: `supplementary:${item.origin}:${item.name}`,
+        docTitle: `Practice context: ${item.name}`,
+        text: String(item.text),
+        section: 'Complete note', view: null, images: [], kind: 'notebook',
+      }));
+  }
   try {
     if (usingUnified) {
-      unifiedHits = await searchKnowledge(searchQuery, TOP_K, { kind: 'content' });
-      chunks = unifiedHits.map(hitToChunk);
+      const documentHits = await searchKnowledge(searchQuery, TOP_K, { kind: 'document' });
+      chunks = documentHits.map(knowledgeHitToDocumentChunk);
     }
   } catch (e) {
     // A transient canonical-search failure must still leave staff with the
     // bundled read-only index rather than an empty answer context.
-    unifiedHits = [];
     usingUnified = false;
   }
-  // Deployment bridge: the old stores remain readable until migration runs.
+  // Deployment bridge: the committed document index remains readable until a
+  // new canonical schema has completed its first reconciliation.
   if (!usingUnified) try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
 
   // Reference-chasing: if what came back only points at a generic process
@@ -293,7 +311,7 @@ export async function POST(request) {
   if (hint) {
     try {
       const more = usingUnified
-        ? (await searchKnowledge(hint, REFERENCE_CHASE_K, { kind: 'content' })).map(hitToChunk)
+        ? (await searchKnowledge(hint, REFERENCE_CHASE_K, { kind: 'document' })).map(knowledgeHitToDocumentChunk)
         : await retrieve(hint, REFERENCE_CHASE_K);
       const known = new Set(chunks.map((c) => c.id));
       for (const c of more) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
@@ -306,33 +324,26 @@ export async function POST(request) {
   if (REFERRAL_QUERY.test(searchQuery)) {
     try {
       const pinned = usingUnified
-        ? (await knowledgePassagesByTitles(REFERRAL_DOC_TITLES)).map(hitToChunk)
+        ? (await knowledgePassagesByTitles(REFERRAL_DOC_TITLES, { kind: 'document' })).map(knowledgeHitToDocumentChunk)
         : chunksByTitle(REFERRAL_DOC_TITLES);
       const known = new Set(chunks.map((c) => c.id));
       for (const c of pinned) { if (!known.has(c.id)) { chunks.push(c); known.add(c.id); } }
     } catch (e) { /* best-effort */ }
   }
 
-  // Number them as Sources and keep a ref -> chunk map for citation resolution.
+  // Number retrieved document passages first, then append every complete
+  // Notebook/practice-context page. All remain citable, but the prompt presents
+  // the two groups separately so the model understands their different paths.
   const refMap = new Map();
-  const extracts = chunks.map((c, i) => {
-    const ref = i + 1;
-    refMap.set(ref, c);
-    return { ref, title: c.docTitle, location: locationOf(c), text: c.text };
-  });
-
-  // Compatibility fallback while a fresh deployment builds its first canonical
-  // index. Once ready, Notebook and supplementary passages are already part of
-  // the unified retrieval above and must not be injected a second time.
-  if (!usingUnified) try {
-    const supp = await supplementarySourcesFor(searchQuery).catch(() => []);
-    for (const s of supp) {
-      const ref = extracts.length + 1;
-      const chunk = { docId: s.docId, docTitle: s.docTitle, text: s.text, section: s.section, view: null, images: s.images || [] };
-      refMap.set(ref, chunk);
-      extracts.push({ ref, title: chunk.docTitle, location: s.section || 'Note', text: chunk.text });
-    }
-  } catch (e) { /* supplementary context is optional */ }
+  const extracts = [];
+  const addExtract = (chunk, sourceType) => {
+    const ref = extracts.length + 1;
+    refMap.set(ref, chunk);
+    extracts.push({ ref, title: chunk.docTitle, location: locationOf(chunk), text: chunk.text, sourceType });
+  };
+  for (const chunk of chunks) addExtract(chunk, 'document');
+  for (const chunk of notebookChunks) addExtract(chunk, 'notebook');
+  for (const chunk of supplementaryChunks) addExtract(chunk, 'notebook');
 
   let conflicts = [];
   if (usingUnified) try {
@@ -341,17 +352,18 @@ export async function POST(request) {
     for (const c of conflicts) for (const side of ['A', 'B']) {
       const pid = c['passage' + side];
       if (!pid || known.has(pid)) continue;
+      // Notes are already present in full and contacts have their own RAG/card
+      // path. Conflict expansion may only add another document passage.
+      if (c['kind' + side] !== 'document') continue;
       const loc = c['location' + side] || {};
       const { images = [], source, ...view } = loc;
       const chunk = {
         id: pid, docId: c['entry' + side],
-        docTitle: c['kind' + side] === 'note' ? `Notebook: ${c['title' + side]}` : c['title' + side],
+        docTitle: c['title' + side],
         text: c['content' + side], section: c['heading' + side],
         view: view.kind || view.url ? view : null, images,
       };
-      const ref = extracts.length + 1;
-      refMap.set(ref, chunk);
-      extracts.push({ ref, title: chunk.docTitle, location: locationOf(chunk), text: chunk.text });
+      addExtract(chunk, 'document');
       known.add(pid);
     }
   } catch (e) { conflicts = []; }
@@ -378,10 +390,10 @@ export async function POST(request) {
   const redact = (t) => redactUnverifiedNumbers(t, verifiedNums);
 
   const guideCatalog = allGuides(customGuides).map((g) => '- ' + g.question).join('\n');
-  // Tier A catalogue: knowledge-base documents plus every notebook note, so the
-  // model is aware of the notebook's coverage even when no chunk was retrieved.
+  // The catalogue is document-only. Notebook pages are already supplied in full
+  // and contacts are selected by their own RAG query.
   let canonicalCatalog = '';
-  if (usingUnified) try { canonicalCatalog = await knowledgeCatalogText(); } catch (e) { canonicalCatalog = ''; }
+  if (usingUnified) try { canonicalCatalog = await knowledgeCatalogText({ kind: 'document' }); } catch (e) { canonicalCatalog = ''; }
   const catalog = usingUnified ? canonicalCatalog : catalogText();
   const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label), conflicts, imageCount: images.length });
 
