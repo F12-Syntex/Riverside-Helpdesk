@@ -11,6 +11,7 @@ the browser.
 npm run rag:status          # what's indexed, what's new/changed/unsupported
 npm run rag:ingest          # process new or changed files only
 npm run rag:ingest -- -f    # force re-process everything
+npm run rag:ingest -- --offline  # parse locally and preserve/report missing vectors
 npm run rag:migrate-legacy  # one-time import of lib/emis-knowledge.js
 ```
 
@@ -48,7 +49,7 @@ Embeddings are stored separately (`embeddings.json`) keyed by chunk `id`.
 | File | What |
 |------|------|
 | `catalog.json` | One entry per document: `title`, `summary`, `tags`. The always-on "awareness" layer (Tier A). |
-| `chunks.jsonl` | One chunk record per line. |
+| `chunks.jsonl.gz` | Deterministic gzip containing one JSON chunk record per line. Legacy plain JSONL remains readable. |
 | `embeddings.json` | `{ model, dim, ids, vectors }`, aligned to chunk order. |
 | `manifest.json` | Per-document `{ path, sha256, size, mtime, chunks, title, processedAt }` — drives `rag:status`. |
 

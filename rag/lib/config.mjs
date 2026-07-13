@@ -13,6 +13,7 @@ export const PUBLIC_ASSETS_RAG = path.join(ROOT, 'public', 'assets', 'rag');
 
 export const CATALOG_PATH = path.join(PROCESSED_DIR, 'catalog.json');
 export const CHUNKS_PATH = path.join(PROCESSED_DIR, 'chunks.jsonl');
+export const CHUNKS_GZIP_PATH = path.join(PROCESSED_DIR, 'chunks.jsonl.gz');
 export const EMBEDDINGS_PATH = path.join(PROCESSED_DIR, 'embeddings.json');
 export const MANIFEST_PATH = path.join(PROCESSED_DIR, 'manifest.json');
 

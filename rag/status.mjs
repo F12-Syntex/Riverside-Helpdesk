@@ -3,24 +3,28 @@
 import path from 'node:path';
 import { getParser, SUPPORTED_EXTS } from './parsers/index.mjs';
 import { loadStore } from './lib/index-io.mjs';
-import { listSourceFiles, relPath, docIdFor, sha256 } from './lib/sources.mjs';
+import { listSourceFiles, relPath, resolveSourceDocIds, sha256 } from './lib/sources.mjs';
 
 function main() {
   const store = loadStore();
   const files = listSourceFiles();
+  const supportedFiles = files.filter((file) => getParser(path.extname(file).toLowerCase()));
+  const docIds = resolveSourceDocIds(supportedFiles, store.manifest);
   const seenDocIds = new Set();
 
-  const rows = { new: [], changed: [], current: [], unsupported: [] };
+  const rows = { new: [], changed: [], current: [], unsupported: [], semanticGaps: [] };
   for (const file of files) {
     const ext = path.extname(file).toLowerCase();
     const rel = relPath(file);
     if (!getParser(ext)) { rows.unsupported.push(rel); continue; }
-    const docId = docIdFor(file);
+    const docId = docIds.get(file);
     seenDocIds.add(docId);
     const prev = store.manifest.documents[docId];
     if (!prev) rows.new.push(rel);
     else if (prev.sha256 !== sha256(file)) rows.changed.push(rel);
-    else rows.current.push(rel);
+    else if (Number(prev.missingEmbeddings) > 0) {
+      rows.semanticGaps.push(`${rel} (${prev.missingEmbeddings} passage(s))`);
+    } else rows.current.push(rel);
   }
 
   // Documents indexed but whose source file is gone (candidates for cleanup).
@@ -45,12 +49,14 @@ function main() {
   list('NEW — not yet processed', rows.new);
   list('CHANGED — will re-process', rows.changed);
   list('UNSUPPORTED — no parser', rows.unsupported);
+  list('SEMANTIC GAPS — lexical RAG is available', rows.semanticGaps);
   list('ORPHANED — indexed but source missing', orphans);
   console.log(`\nUp to date: ${rows.current.length} file(s).`);
 
   const pending = rows.new.length + rows.changed.length;
   if (pending) console.log(`\n${pending} file(s) pending. Run:  npm run rag:ingest`);
-  else console.log('\nEverything is up to date.');
+  if (rows.semanticGaps.length) console.log('\nRun npm run rag:ingest with an embedding key to backfill semantic gaps.');
+  if (!pending && !rows.semanticGaps.length) console.log('\nEverything is up to date.');
 }
 
 main();

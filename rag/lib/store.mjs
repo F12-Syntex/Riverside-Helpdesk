@@ -3,7 +3,8 @@
 // neighbour queries by brute-force cosine similarity. No database needed at this
 // scale (see rag/README.md for when to graduate to a vector DB).
 import fs from 'node:fs';
-import { CATALOG_PATH, CHUNKS_PATH, EMBEDDINGS_PATH } from './config.mjs';
+import { CATALOG_PATH, EMBEDDINGS_PATH } from './config.mjs';
+import { readChunksText } from './chunk-artifact.mjs';
 import { embedOne } from './embed.mjs';
 import { cosine } from './similarity.mjs';
 
@@ -16,13 +17,11 @@ function loadIndex() {
   // the same vector — we resolve that mapping here at load time.
   const idx = { chunks: new Map(), entries: [], dim: 0, catalog: [] };
   try {
-    if (fs.existsSync(CHUNKS_PATH)) {
-      for (const line of fs.readFileSync(CHUNKS_PATH, 'utf8').split(/\n/)) {
-        const l = line.trim();
-        if (!l) continue;
-        const c = JSON.parse(l);
-        idx.chunks.set(c.id, c);
-      }
+    for (const line of readChunksText().split(/\n/)) {
+      const l = line.trim();
+      if (!l) continue;
+      const c = JSON.parse(l);
+      idx.chunks.set(c.id, c);
     }
     if (fs.existsSync(EMBEDDINGS_PATH)) {
       const e = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf8'));

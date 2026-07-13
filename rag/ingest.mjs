@@ -1,6 +1,7 @@
 // Ingestion pipeline:  source file -> parser -> chunks -> embeddings + catalogue.
 // Run with:  npm run rag:ingest        (process new/changed files only)
 //            npm run rag:ingest -- -f  (force re-process everything)
+//            npm run rag:ingest -- --offline  (parse locally; leave new vectors missing)
 //
 // Idempotent: each file is hashed; unchanged files are skipped. Output is the
 // committed index under rag/processed that the live app reads from.
@@ -12,7 +13,7 @@ import { chunkText, makeChunkId, estTokens, contentHashOf } from './lib/chunk.mj
 import { embedTexts } from './lib/embed.mjs';
 import { summariseDoc } from './lib/summarize.mjs';
 import { loadStore, upsertDoc, writeStore, cachedVector } from './lib/index-io.mjs';
-import { listSourceFiles, relPath, docIdFor, docTitleFor, sha256 } from './lib/sources.mjs';
+import { listSourceFiles, relPath, resolveSourceDocIds, docTitleFor, sha256 } from './lib/sources.mjs';
 
 function publicCopyFactory(docId) {
   return (absPath) => {
@@ -41,8 +42,9 @@ function publicWriteFactory(docId) {
 async function main() {
   const args = process.argv.slice(2);
   const force = args.includes('--force') || args.includes('-f');
+  const offline = args.includes('--offline');
   const cfg = config();
-  if (!cfg.apiKey) {
+  if (!offline && !cfg.apiKey) {
     console.error('OPENROUTER_API_KEY is not set (.env.local). Cannot embed.');
     process.exit(1);
   }
@@ -53,13 +55,15 @@ async function main() {
     console.log('No source files in rag/sources/. Drop documents there and re-run.');
     return;
   }
+  const supportedFiles = files.filter((file) => getParser(path.extname(file).toLowerCase()));
+  const docIds = resolveSourceDocIds(supportedFiles, store.manifest);
 
   let processed = 0, skipped = 0, failed = 0;
   for (const file of files) {
     const ext = path.extname(file).toLowerCase();
     const rel = relPath(file);
     const parser = getParser(ext);
-    const docId = docIdFor(file);
+    const docId = docIds.get(file);
     if (!parser) {
       console.log(`SKIP   ${rel}  (no parser for ${ext}; supported: ${SUPPORTED_EXTS.join(', ')})`);
       skipped++;
@@ -67,7 +71,8 @@ async function main() {
     }
     const hash = sha256(file);
     const prev = store.manifest.documents[docId];
-    if (!force && prev && prev.sha256 === hash) { skipped++; continue; }
+    const hasSemanticGaps = Number(prev?.missingEmbeddings) > 0;
+    if (!force && prev && prev.sha256 === hash && (!hasSemanticGaps || offline)) { skipped++; continue; }
 
     process.stdout.write(`INGEST ${rel}  … `);
     try {
@@ -134,11 +139,12 @@ async function main() {
       records.forEach((r, i) => {
         const hit = cachedVector(store, r.contentHash) || localByHash.get(r.contentHash);
         if (hit) { vectors[i] = hit; return; }
+        if (localByHash.has(r.contentHash)) return;
         localByHash.set(r.contentHash, null); // reserve so duplicates within this doc embed once
         toEmbed.push(r.text);
         toEmbedIdx.push(i);
       });
-      if (toEmbed.length) {
+      if (toEmbed.length && !offline) {
         const fresh = await embedTexts(toEmbed);
         fresh.forEach((v, k) => {
           const i = toEmbedIdx[k];
@@ -148,19 +154,32 @@ async function main() {
         // Backfill any same-doc duplicates that reserved before their vector existed.
         records.forEach((r, i) => { if (!vectors[i]) vectors[i] = localByHash.get(r.contentHash); });
       }
-      const sample = records.map((r) => r.text).join('\n\n').slice(0, 4000);
-      const { summary, tags } = await summariseDoc(title, sample);
+      const previousCatalog = store.catalog.get(docId);
+      let metadata;
+      if (offline) {
+        metadata = {
+          summary: previousCatalog?.summary || '',
+          tags: Array.isArray(previousCatalog?.tags) ? previousCatalog.tags : [],
+        };
+      } else {
+        const sample = records.map((r) => r.text).join('\n\n').slice(0, 4000);
+        metadata = await summariseDoc(title, sample);
+      }
+      const missingEmbeddings = records.filter((record, index) => !vectors[index]).length;
 
       const st = fs.statSync(file);
       upsertDoc(store, {
         docId,
         chunks: records,
         vectors,
-        catalog: { docId, title, summary, tags, chunks: records.length, source: 'rag/sources/' + rel },
-        manifest: { path: 'rag/sources/' + rel, sha256: hash, size: st.size, mtime: st.mtimeMs, chunks: records.length, title, processedAt: new Date().toISOString() },
+        catalog: { docId, title, summary: metadata.summary, tags: metadata.tags, chunks: records.length, source: 'rag/sources/' + rel },
+        manifest: { path: 'rag/sources/' + rel, sha256: hash, size: st.size, mtime: st.mtimeMs, chunks: records.length, title, processedAt: new Date().toISOString(), missingEmbeddings },
       });
-      const reused = records.length - toEmbed.length;
-      console.log(`${records.length} chunks` + (reused ? ` (${toEmbed.length} embedded, ${reused} reused)` : ''));
+      const reused = records.length - missingEmbeddings;
+      const details = offline && missingEmbeddings
+        ? `${reused} vectors reused, ${missingEmbeddings} semantic embeddings pending`
+        : `${toEmbed.length} embedded, ${reused} reused`;
+      console.log(`${records.length} chunks (${details})`);
       processed++;
     } catch (e) {
       console.log('FAILED: ' + e.message);

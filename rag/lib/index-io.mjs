@@ -10,18 +10,17 @@
 //   catalog.json     { generatedAt(ISO), model, documents:[{docId,title,summary,tags,chunks,source}] }
 //   manifest.json    { documents: { docId: {path,sha256,size,mtime,chunks,title,processedAt(ISO)} } }
 import fs from 'node:fs';
-import { PROCESSED_DIR, CHUNKS_PATH, EMBEDDINGS_PATH, CATALOG_PATH, MANIFEST_PATH } from './config.mjs';
+import { PROCESSED_DIR, EMBEDDINGS_PATH, CATALOG_PATH, MANIFEST_PATH } from './config.mjs';
+import { readChunksText, writeChunksText } from './chunk-artifact.mjs';
 
 export function loadStore() {
   // vecByHash maps a chunk's contentHash -> its embedding vector. Because it is
   // keyed by content, a vector survives across re-ingests as long as *some* live
   // chunk still has that text — that is what powers the embedding cache.
   const store = { chunks: [], vecByHash: new Map(), catalog: new Map(), manifest: { documents: {} }, dim: 0, model: '' };
-  if (fs.existsSync(CHUNKS_PATH)) {
-    for (const line of fs.readFileSync(CHUNKS_PATH, 'utf8').split(/\n/)) {
-      const l = line.trim();
-      if (l) store.chunks.push(JSON.parse(l));
-    }
+  for (const line of readChunksText().split(/\n/)) {
+    const l = line.trim();
+    if (l) store.chunks.push(JSON.parse(l));
   }
   if (fs.existsSync(EMBEDDINGS_PATH)) {
     const e = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf8'));
@@ -80,17 +79,18 @@ export function upsertDoc(store, { docId, chunks, vectors, catalog, manifest }) 
 export function writeStore(store, { model } = {}) {
   fs.mkdirSync(PROCESSED_DIR, { recursive: true });
 
-  fs.writeFileSync(CHUNKS_PATH, store.chunks.map((c) => JSON.stringify(c)).join('\n') + (store.chunks.length ? '\n' : ''));
+  writeChunksText(store.chunks.map((c) => JSON.stringify(c)).join('\n') + (store.chunks.length ? '\n' : ''));
 
   // GC: emit one vector per unique contentHash still referenced by a live chunk.
   // Any vector no longer pointed at by a chunk is dropped automatically.
   const hashes = [];
   const vectors = [];
-  const seen = new Set();
-  for (const c of store.chunks) {
-    if (seen.has(c.contentHash)) continue;
-    const v = store.vecByHash.get(c.contentHash);
-    if (v) { seen.add(c.contentHash); hashes.push(c.contentHash); vectors.push(v); }
+  const liveHashes = new Set(store.chunks.map((chunk) => chunk.contentHash));
+  // Map insertion order follows the existing embeddings file, while newly
+  // embedded hashes are appended by upsertDoc. Keeping that order prevents an
+  // otherwise no-op re-ingest from rewriting the entire large vector artifact.
+  for (const [hash, vector] of store.vecByHash) {
+    if (liveHashes.has(hash) && vector) { hashes.push(hash); vectors.push(vector); }
   }
   fs.writeFileSync(EMBEDDINGS_PATH, JSON.stringify({ model: model || store.model, dim: store.dim, hashes, vectors }));
 
