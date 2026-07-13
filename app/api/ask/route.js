@@ -20,6 +20,7 @@ import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, confl
 import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 import { fullNotebookContext } from '@/lib/notebook';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
+import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -160,19 +161,6 @@ function dedupeCitations(cites) {
     out.push(c);
   }
   return out;
-}
-
-// Coerce the filing-title date to dd-mm-yyyy. The prompt asks for that format,
-// but models drift into yyyy-mm-dd or slashes; anything unrecognisable is left
-// as written so the reader can see and correct it rather than lose it.
-function normaliseDocDate(raw) {
-  const t = (raw || '').trim();
-  if (!t) return '';
-  let m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
-  if (m) return m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0') + '-' + m[3];
-  m = t.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);
-  if (m) return m[3].padStart(2, '0') + '-' + m[2].padStart(2, '0') + '-' + m[1];
-  return t;
 }
 
 // Attached images arrive as data URLs. Bound them hard: a handful of images,
@@ -410,14 +398,22 @@ export async function POST(request) {
     const parsed = parseAiJson(text);
 
     // A pasted medical document to file: the model returned the parts of the
-    // filing title; assemble "(dd-mm-yyyy) source department actions/note" here
+    // filing title; assemble "(dd-Mmm-yyyy) source department actions/note" here
     // so the format stays identical whatever the model writes. No citations —
     // the title comes from the pasted document itself, not the knowledge base.
     if (parsed.kind === 'docfile') {
       // Undated documents keep the date slot with a visible placeholder, so the
       // title's shape is stable and staff notice the gap and fill it in.
-      const date = normaliseDocDate(parsed.date) || 'ddmmyyyy';
-      const tail = parsed.actions.length ? parsed.actions.join('; ') : (parsed.note || 'no action');
+      const date = resolveDocfileDate({
+        date: parsed.date, dateEvidence: parsed.dateEvidence,
+        documentText: question, hasImages: images.length > 0,
+      }) || 'dd-Mmm-yyyy';
+      const actions = sanitizeDocfileActions(parsed.actions, { documentText: question, hasImages: images.length > 0 });
+      const note = sanitizeDocfileNote({
+        note: parsed.note, noteEvidence: parsed.noteEvidence,
+        documentText: question, hasImages: images.length > 0,
+      });
+      const tail = actions.length ? actions.join('; ') : note;
       const title = ['(' + date + ')', parsed.source, parsed.department, tail]
         .filter(Boolean).join(' ');
       return NextResponse.json({
@@ -426,8 +422,8 @@ export async function POST(request) {
         date,
         source: parsed.source,
         department: parsed.department,
-        actions: parsed.actions,
-        note: parsed.note,
+        actions,
+        note,
       });
     }
 

@@ -3,8 +3,8 @@
 import { s, Hover, Svg, Icons } from '../ui';
 
 // A pasted medical document, ready to file: the concise filing title
-// "(dd-mm-yyyy) source department actions/note" front and centre with a
-// one-click copy, the parts underneath, and the GP actions (if any) called out
+// "(dd-Mmm-yyyy) source department actions/note" front and centre with a
+// one-click copy, the parts underneath, and explicit practice actions (if any) called out
 // so the reader can see at a glance whether anything needs acknowledging now.
 export default function DocFileAnswer({ v }) {
   return (
@@ -59,7 +59,7 @@ export default function DocFileAnswer({ v }) {
             {v.hasActions ? (
               <div style={s('margin:16px 22px 0;border:1px solid #f0c9c5;background:#fdf2f2;border-radius:8px;padding:12px 16px;')}>
                 <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a5130b;margin-bottom:8px;')}>
-                  <Svg w={15} sw={2.2} stroke="#a5130b">{Icons.alertCircle}</Svg>Needs action now
+                  <Svg w={15} sw={2.2} stroke="#a5130b">{Icons.alertCircle}</Svg>Explicit practice action
                 </div>
                 <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
                   {v.actions.map((a, i) => (
@@ -77,7 +77,7 @@ export default function DocFileAnswer({ v }) {
             )}
 
             <div style={s('border-top:1px solid #d8dde0;margin-top:16px;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Read from the pasted document. The GP reviews the document itself when needed</span>
+              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Only explicit practice actions quoted from the document are shown</span>
             </div>
           </>
         )}
