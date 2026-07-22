@@ -20,7 +20,7 @@ const TOOLS = [
   {
     href: '/helpbot',
     title: 'Practice Q&A',
-    description: 'Ask how the practice works. Answers come from the organisation’s own documents first, and anything based on AI judgement is labelled. You can attach images. For all staff.',
+    description: 'Ask how the practice works. Answers stick strictly to the organisation’s own documents, and anything not verified against them is labelled. You can attach images. For all staff.',
   },
   // Medication check and the Staff rota generator are hidden from the index
   // for now (the /medications and /rota routes still work if visited

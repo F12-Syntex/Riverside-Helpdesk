@@ -4,11 +4,13 @@
 // all happen here, so the API key and the full knowledge base never reach the
 // client.
 //
-// Answers are markdown sections with explicit provenance: sections backed by
-// the practice's documents carry a Source citation with a server-verified
-// verbatim quote (opened in the in-page viewer); sections from the model's own
-// judgement are flagged as such and shown under a clear "AI judgement" marker.
-// Clinical judgement about a specific patient is still declined.
+// Answers are markdown sections with explicit provenance and are strict to
+// source: sections backed by the practice's documents carry a Source citation
+// with a server-verified verbatim quote (opened in the in-page viewer); the
+// only judgement-flagged sections are meta statements ("the documents do not
+// cover this, ask X"), shown under a clear "AI judgement" marker — the model
+// does not add advice or steps of its own. Clinical judgement about a specific
+// patient is still declined.
 import { NextResponse } from 'next/server';
 import { allGuides } from '@/lib/guides';
 import { buildAskPrompt, parseAiJson, buildSearchQuery } from '@/lib/ai/prompt';
@@ -460,9 +462,10 @@ export async function POST(request) {
       });
     }
 
-    // Declines are now rare — only when the message needs clinical judgement
-    // about a specific patient (or is otherwise off-limits); the model answers
-    // document-silent questions with clearly flagged judgement sections instead.
+    // Declines are rare — only when the message needs clinical judgement about
+    // a specific patient (or is otherwise off-limits); for document-silent
+    // questions the model says the documents do not cover it and names who to
+    // ask, rather than answering from its own knowledge.
     if (parsed.answerable === false || (!parsed.sections.length && !parsed.message)) {
       return NextResponse.json({
         kind: 'answer',

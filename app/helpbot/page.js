@@ -723,7 +723,7 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, paste an incoming patient request to triage, or paste a medical document to get a short filing title. Answers come from the organisation’s own documents first. Anything from AI judgement is clearly marked.',
+      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, paste an incoming patient request to triage, or paste a medical document to get a short filing title. Answers stick strictly to the organisation’s own documents. Anything not verified against them is clearly marked.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
