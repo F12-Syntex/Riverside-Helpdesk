@@ -25,16 +25,24 @@ async function save(body) {
     if (!note) throw new Error('Notebook page not found.');
     const data = { ...(body.data || {}), parentId: note.parentId, noteRevision: new Date(note.updatedAt).getTime() };
     delete data.backendOverride; delete data.correctedAt;
+    // updateNote already mirrored the page into canonical knowledge. This upsert
+    // keeps the entry's data/authority in step, but notebook pages never carry
+    // vectors — embed:false avoids re-embedding image-markdown/blob-URL text.
     return upsertKnowledgeEntry({
       ...body, id: `note:${note.id}`, content: note.body, data,
       sourceRef: `notebook:${note.id}`, authority: body.authority ?? 90,
-    });
+    }, { embed: false });
   }
   const entry = await upsertKnowledgeEntry({
     ...body,
     data: { ...(body.data || {}), backendOverride: true, correctedAt: new Date().toISOString() },
   });
-  if (!entry.unchanged || entry.claimsStale) await syncKnowledgeClaims(entry);
+  // The entry is already persisted. Claim analysis is best-effort and is
+  // reconciled by the background jobs, so a failure here must not turn a
+  // successful save into a 500 for the admin.
+  if (!entry.unchanged || entry.claimsStale) {
+    try { await syncKnowledgeClaims(entry); } catch (e) { /* reconciled later */ }
+  }
   return entry;
 }
 
