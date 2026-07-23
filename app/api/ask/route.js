@@ -89,16 +89,24 @@ function locationOf(chunk) {
   return 'Document';
 }
 
+// Only image formats a browser can actually render inline. Word embeds legacy
+// vector art as WMF/EMF ("img-N.x-wmf"), which would show as a broken thumbnail,
+// so those are never offered as a step's picture.
+const DISPLAYABLE_IMAGE = /\.(png|jpe?g|gif|webp|avif|svg)$/i;
+const MAX_CITE_IMAGES = 4;
+
 // Images that belong to this exact source: a notebook note's attached pictures,
-// or the rendered image of the cited PDF page. HTML documents list images for
-// the whole document — too imprecise to show against one section, so skipped.
+// or the rendered image of the cited PDF page. A whole HTML document's images
+// used to be attached to every one of its chunks, which is too imprecise to show
+// against a single section, so HTML images are only shown when the set is already
+// small enough to be section-scoped (the heading-split ingest keeps it so).
 function citeImages(chunk) {
   const imgs = Array.isArray(chunk.images)
-    ? chunk.images.filter((u) => typeof u === 'string' && u)
+    ? chunk.images.filter((u) => typeof u === 'string' && DISPLAYABLE_IMAGE.test(u))
     : [];
   if (!imgs.length) return [];
-  if (chunk.view && chunk.view.kind === 'html') return [];
-  return imgs.slice(0, 4);
+  if (chunk.view && chunk.view.kind === 'html' && imgs.length > MAX_CITE_IMAGES) return [];
+  return imgs.slice(0, MAX_CITE_IMAGES);
 }
 
 function citationFor(chunk, quote = '') {
@@ -134,7 +142,6 @@ function citationFor(chunk, quote = '') {
 // and highlight the exact words. Falls back to the claimed source when the
 // quote can't be verified, so a step is never left without a source.
 function resolveCite(refMap, claimedRef, quote) {
-  const claimed = refMap.get(claimedRef) || null;
   const quoteN = normForMatch(quote);
   // A source label is only document-backed when there is enough quoted text to
   // verify. Short/missing quotes are suggestions, never evidence.
@@ -146,8 +153,13 @@ function resolveCite(refMap, claimedRef, quote) {
     const score = quoteContainment(quoteN, normForMatch(c.text)) + (ref === claimedRef ? 0.001 : 0);
     if (score > bestScore) { bestScore = score; bestChunk = c; }
   }
-  if (bestChunk && bestScore >= 0.5) return citationFor(bestChunk, quote); // verified
-  return null; // never present an unverified source as document-backed
+  if (!bestChunk || bestScore < 0.5) return null; // never present an unverified source as document-backed
+  // Show the model's quote only when it appears in the Source verbatim. A partial
+  // match means the model trimmed or embellished it (a real opening followed by
+  // invented words), so drop the quote and let the UI fall back to the Source's
+  // own extract — the reader is never shown model-authored words as a quotation.
+  const exact = quoteContainment(quoteN, normForMatch(bestChunk.text)) >= 1;
+  return citationFor(bestChunk, exact ? quote : '');
 }
 
 // De-duplicate the distinct sources an answer relied on, keyed by document +
@@ -372,7 +384,9 @@ export async function POST(request) {
     verifiedNums = new Set(contactTelSet());
   }
   for (const ex of extracts) {
-    for (const run of (ex.text.match(/\d[\d ()\/-]{7,}\d/g) || [])) {
+    // Same separator set as the redactor (dots, nbsp, tabs included) so a number
+    // written with those in a Source is recognised as verified, not redacted.
+    for (const run of (ex.text.match(/\\d[-\\d.()\\/ \\t ]{7,}\\d/g) || [])) {
       const d = digitsOf(run);
       if (d.length >= 9) verifiedNums.add(d);
     }
@@ -429,19 +443,24 @@ export async function POST(request) {
       });
     }
 
-    // An item declared as the model's own judgement carries no citation; a
-    // "documents" item whose source can't be resolved at all is downgraded to
-    // judgement too, so nothing unsourced is ever presented as document-backed.
-    const provenance = (s) => {
-      const cite = s.basis === 'judgement' ? null : resolveCite(refMap, s.source, s.quote);
-      return { cite, basis: cite ? 'documents' : 'judgement' };
+    // Decide provenance AND whether an item may be shown at all. An item the model
+    // marked "judgement" is a permitted meta statement (kept, flagged). One it
+    // claimed came from the documents is kept ONLY if its quote verifies against a
+    // Source; an unverifiable "documents" item is unsourced substance and is
+    // dropped entirely — never relabelled and shown under the judgement flag,
+    // which is reserved for meta statements ("the documents do not cover this").
+    const groundItem = (s) => {
+      if (s.basis === 'judgement') return { cite: null, basis: 'judgement', keep: true };
+      const cite = resolveCite(refMap, s.source, s.quote);
+      return { cite, basis: 'documents', keep: !!cite };
     };
+    const shown = (items) => items.filter((it) => it.keep).map(({ keep, ...rest }) => rest);
 
     // The model decides for itself whether the message is a staff question or an
     // incoming patient request to route, and returns the matching shape.
     if (parsed.kind === 'triage') {
-      const actions = parsed.actions.map((s) => ({ text: redact(s.text), ...provenance(s) }));
-      const redFlags = parsed.redFlags.map((s) => ({ text: redact(s.text), ...provenance(s) }));
+      const actions = shown(parsed.actions.map((s) => ({ text: redact(s.text), ...groundItem(s) })));
+      const redFlags = shown(parsed.redFlags.map((s) => ({ text: redact(s.text), ...groundItem(s) })));
       const patientMessageCite = resolveCite(refMap, parsed.patientMessageSource, parsed.patientMessageQuote);
       const citations = dedupeCitations(
         actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
@@ -483,9 +502,27 @@ export async function POST(request) {
     // Resolve each section's citation by verifying the model's verbatim quote
     // against the retrieved Sources — correcting wrong source numbers and
     // attaching the exact supporting words, so the citation shows accurate,
-    // precise text. Judgement sections carry no citation and stay flagged.
-    const sections = parsed.sections.map((sec) => ({ markdown: redact(sec.markdown), ...provenance(sec) }));
+    // precise text. Judgement sections carry no citation and stay flagged; a
+    // section that claimed the documents but does not verify is dropped, not shown.
+    const sections = shown(parsed.sections.map((sec) => ({ markdown: redact(sec.markdown), ...groundItem(sec) })));
     const messageCite = resolveCite(refMap, parsed.messageSource, parsed.messageQuote);
+
+    // Everything the model wrote was unverifiable and was dropped, and there is no
+    // message to fall back on. Decline honestly rather than showing the model's
+    // intro, which was summarising content that is not grounded in any Source.
+    if (!sections.length && !parsed.message) {
+      return NextResponse.json({
+        kind: 'answer',
+        answerable: false,
+        intro: 'I could not find this in the practice’s documents, so I cannot answer it from them here.',
+        sections: [],
+        message: '',
+        messageCite: null,
+        tip: '',
+        citations: [],
+        contacts,
+      });
+    }
 
     // Each source image appears once, against the first section it backs —
     // several sections often cite the same note or page.
