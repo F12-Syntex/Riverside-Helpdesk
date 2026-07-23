@@ -110,7 +110,15 @@ async function main() {
       let ci = 0;
       for (const sec of sections) {
         const view = buildView(sec);
-        for (const piece of chunkText(sec.text)) {
+        // A section can be all picture and no words — a scanned page the vision
+        // model returned nothing for, or an image-only slide. chunkText('') is
+        // empty, which would orphan the rendered image (it rides on a chunk). Give
+        // it one minimal placeholder chunk so the page/image stays citable.
+        const pieces = chunkText(sec.text);
+        if (!pieces.length && Array.isArray(sec.images) && sec.images.length) {
+          pieces.push(sec.section || (sec.headingPath || []).join(' ') || 'See image');
+        }
+        for (const piece of pieces) {
           records.push({
             id: makeChunkId(docId, ci++),
             docId,
@@ -146,6 +154,11 @@ async function main() {
       });
       if (toEmbed.length && !offline) {
         const fresh = await embedTexts(toEmbed);
+        // Vectors are mapped back to chunks by position, so a short or reordered
+        // response would silently attach the wrong vector to a passage. Fail loud.
+        if (!Array.isArray(fresh) || fresh.length !== toEmbed.length) {
+          throw new Error(`Embedding count mismatch: ${Array.isArray(fresh) ? fresh.length : 'non-array'} returned for ${toEmbed.length} inputs`);
+        }
         fresh.forEach((v, k) => {
           const i = toEmbedIdx[k];
           vectors[i] = v;
