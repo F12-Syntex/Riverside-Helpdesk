@@ -17,6 +17,23 @@ test('prefers a labelled clinical event date over DOB and model output', () => {
   }), '07-Aug-2026');
 });
 
+test('keeps a labelled discharge date even when a received stamp follows it', () => {
+  // The "Received" word belongs to the NEXT date; it must not demote the
+  // correctly-labelled discharge date that precedes it.
+  const documentText = 'Discharge date: 07/08/2026 Received by practice: 09/08/2026\nFollow-up clinic in 6 weeks.';
+  assert.equal(resolveDocfileDate({
+    date: '09-Aug-2026', dateEvidence: '09/08/2026', documentText,
+  }), '07-Aug-2026');
+});
+
+test('does not read a version token like v1.2.34 as the filing date', () => {
+  // The only date-like string is a template version footer — there is no real
+  // clinical date, so the date must be left blank rather than "01-Feb-2034".
+  assert.equal(resolveDocfileDate({
+    date: '', dateEvidence: '', documentText: 'Outcome letter. Template v1.2.34. Please file.',
+  }), '');
+});
+
 test('rejects a date that is not present in a pasted text document', () => {
   assert.equal(resolveDocfileDate({
     date: '21-Jun-2024', dateEvidence: '21/06/24',
