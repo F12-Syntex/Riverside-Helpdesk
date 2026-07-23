@@ -375,7 +375,7 @@ export default function RotaSystem({ page = 'rota' }) {
 
         {curStatus === 'loading' && <div style={s('color:#4c6272;font-size:16px;padding:24px 0;')}>Loading…</div>}
 
-        {curStatus === 'done' && !hasRota && (
+        {curStatus === 'done' && !hasRota && !isReadOnly && (
           <div style={s(CARD + 'padding:48px 32px;text-align:center;')}>
             <div style={s('width:72px;height:72px;border-radius:50%;background:#e8f1f8;color:#005eb8;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;')}><Svg w={36} sw={2}>{Icons.calendar}</Svg></div>
             <h2 style={s('font-size:26px;font-weight:700;margin:0 0 8px;')}>No rota for this week yet</h2>
