@@ -3,7 +3,6 @@
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
-import { CATEGORIES } from '../../lib/lookup/directory';
 import { buildIndex, fuzzySearch, highlightRanges } from '../../lib/lookup/fuzzy';
 
 /* ------------------------------------------------------------------ *
@@ -99,7 +98,7 @@ function EntryRow({ entry, query, selected, showCategory, flash }) {
 export default function Page() {
   const [directory, setDirectory] = React.useState([]);
   const [query, setQuery] = React.useState('');
-  const [category, setCategory] = React.useState('All');
+  const [showAll, setShowAll] = React.useState(false);
   const [selIdx, setSelIdx] = React.useState(-1);
   const [flash, setFlash] = React.useState('');
   const inputRef = React.useRef(null);
@@ -111,28 +110,26 @@ export default function Page() {
 
   const trimmed = query.trim();
   const results = React.useMemo(() => {
-    const pool = trimmed
-      ? fuzzySearch(index, trimmed).map((r) => r.entry)
-      : directory;
-    return category === 'All' ? pool : pool.filter((e) => e.category === category);
-  }, [index, directory, trimmed, category]);
+    if (trimmed) return fuzzySearch(index, trimmed).map((r) => r.entry);
+    if (showAll) return directory;
+    return [];
+  }, [index, directory, trimmed, showAll]);
 
   // Keep keyboard selection in range as the list changes under it.
-  React.useEffect(() => { setSelIdx(trimmed ? 0 : -1); }, [trimmed, category]);
-
-  const counts = React.useMemo(() => {
-    const m = { All: directory.length };
-    for (const e of directory) m[e.category] = (m[e.category] || 0) + 1;
-    return m;
-  }, [directory]);
+  React.useEffect(() => { setSelIdx(trimmed || showAll ? 0 : -1); }, [trimmed, showAll]);
 
   const flashCopied = (label) => {
     setFlash(label);
     setTimeout(() => setFlash(''), 1600);
   };
 
+  const onChange = (e) => {
+    setQuery(e.target.value);
+    if (e.target.value.trim()) setShowAll(false);
+  };
+
   const onKeyDown = (e) => {
-    if (e.key === 'Escape') { setQuery(''); return; }
+    if (e.key === 'Escape') { setQuery(''); setShowAll(false); return; }
     if (!results.length) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -152,33 +149,43 @@ export default function Page() {
     }
   };
 
-  // Grouped view for browsing (no query): sections in category order.
-  const grouped = React.useMemo(() => {
-    if (trimmed) return null;
-    const by = new Map();
-    for (const e of results) {
-      if (!by.has(e.category)) by.set(e.category, []);
-      by.get(e.category).push(e);
-    }
-    return CATEGORIES.filter((c) => by.has(c)).map((c) => [c, by.get(c)]);
-  }, [results, trimmed]);
-
   return (
     <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Instant lookup" />
 
-      <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:32px 24px 56px;')}>
-        <h1 className="riva-hero-h1" style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>Instant lookup</h1>
-        <p style={s('font-size:16px;color:#4c6272;margin:0 0 18px;line-height:1.5;text-wrap:pretty;')}>
-          Start typing a name. Part of a word is fine, and so are spelling mistakes
-          (&ldquo;pha&rdquo;, &ldquo;homer&rdquo;, &ldquo;fisio&rdquo;). The list narrows as you type:
-          hospital switchboards, departments, community teams, pharmacies and systems.
-          Numbers are shown exactly as they were saved, so they cannot be mistyped.
-        </p>
+      <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:24px 24px 140px;')}>
+        {/* Copied toast. */}
+        {flash ? (
+          <div role="status" style={s('display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:9px 13px;background:#007f3b;color:#fff;border-radius:8px;font-size:14px;font-weight:600;animation:rivaUp .18s ease;')}>
+            <Svg w={16} sw={2.4}>{Icons.check}</Svg>Copied {flash}
+          </div>
+        ) : null}
 
-        {/* Search box — stays pinned while the results scroll. */}
-        <div className="riva-lookup-sticky" style={s('position:sticky;z-index:10;background:#f0f4f5;padding:4px 0 10px;')}>
-          <div style={s('position:relative;')}>
+        {/* Results. */}
+        {results.length ? (
+          <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
+            {results.map((e, i) => (
+              <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
+                <EntryRow entry={e} query={trimmed} selected={i === selIdx} showCategory flash={() => flashCopied(e.label)} />
+              </div>
+            ))}
+          </div>
+        ) : trimmed ? (
+          <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;padding:22px 18px;color:#4c6272;font-size:15px;line-height:1.5;')}>
+            No matches for &ldquo;{trimmed}&rdquo;. Try fewer letters.
+          </div>
+        ) : (
+          <div style={s('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:80px 20px;color:#8a99a3;text-align:center;')}>
+            <Svg w={34} sw={1.6}>{Icons.search}</Svg>
+            <span style={s('font-size:16px;')}>Start typing a name to find a number</span>
+          </div>
+        )}
+      </main>
+
+      {/* Docked search bar. */}
+      <div style={s('position:sticky;bottom:0;z-index:10;background:#f0f4f5;border-top:1px solid #d8dde0;box-shadow:0 -6px 18px rgba(0,0,0,.05);')}>
+        <div style={s('max-width:860px;margin:0 auto;padding:14px 24px;display:flex;gap:10px;')}>
+          <div style={s('position:relative;flex:1;')}>
             <span style={s('position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
               <Svg w={20} sw={2.2}>{Icons.search}</Svg>
             </span>
@@ -188,9 +195,9 @@ export default function Page() {
               className="riva-input"
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={onChange}
               onKeyDown={onKeyDown}
-              placeholder="Search extensions, departments, hospitals, pharmacies…"
+              placeholder="Type a name…"
               aria-label="Search the practice directory"
               style={s('width:100%;height:52px;padding:0 44px 0 44px;font:inherit;font-size:17px;border:2px solid #4c6272;border-radius:10px;background:#fff;color:#212b32;')}
             />
@@ -202,77 +209,13 @@ export default function Page() {
               </Hover>
             ) : null}
           </div>
-
-          {/* Category filter chips. */}
-          <div style={s('display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;')}>
-            {['All', ...CATEGORIES].map((c) => {
-              const active = category === c;
-              return (
-                <Hover key={c} tag="button" onClick={() => setCategory(c)}
-                  base={'border:1px solid ' + (active ? '#005eb8;background:#005eb8;color:#fff;' : '#d8dde0;background:#fff;color:#39505f;') + 'border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;'}
-                  hover={active ? '' : 'border-color:#005eb8;color:#005eb8;'}>
-                  {c}{counts[c] ? <span style={s('opacity:.7;font-weight:500;')}> {counts[c]}</span> : null}
-                </Hover>
-              );
-            })}
-          </div>
+          <Hover tag="button" onClick={() => { setQuery(''); setShowAll((v) => !v); }}
+            base={'flex:none;height:52px;padding:0 18px;font:inherit;font-size:15px;font-weight:600;border-radius:10px;cursor:pointer;' + (showAll ? 'border:2px solid #005eb8;background:#005eb8;color:#fff;' : 'border:2px solid #d8dde0;background:#fff;color:#39505f;')}
+            hover={showAll ? '' : 'border-color:#005eb8;color:#005eb8;'}>
+            View all
+          </Hover>
         </div>
-
-        {/* Copied toast. */}
-        {flash ? (
-          <div role="status" style={s('display:flex;align-items:center;gap:8px;margin:10px 0 0;padding:9px 13px;background:#007f3b;color:#fff;border-radius:8px;font-size:14px;font-weight:600;animation:rivaUp .18s ease;')}>
-            <Svg w={16} sw={2.4}>{Icons.check}</Svg>Copied {flash}
-          </div>
-        ) : null}
-
-        {/* Results. */}
-        {trimmed ? (
-          <>
-            <div style={s('font-size:13.5px;color:#4c6272;margin:14px 0 8px;')}>
-              {results.length
-                ? results.length + (results.length === 1 ? ' match' : ' matches') + '. Use the arrow keys to move and Enter to copy the highlighted number'
-                : ''}
-            </div>
-            {results.length ? (
-              <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
-                {results.map((e, i) => (
-                  <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
-                    <EntryRow entry={e} query={trimmed} selected={i === selIdx} showCategory flash={() => flashCopied(e.label)} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;padding:22px 18px;color:#4c6272;font-size:15px;line-height:1.5;')}>
-                No matches for &ldquo;{trimmed}&rdquo;{category !== 'All' ? ' in ' + category : ''}.
-                Try fewer letters: 2 or 3 letters of any word in the name is enough
-                {category !== 'All' ? ', or switch the filter back to All' : ''}.
-              </div>
-            )}
-          </>
-        ) : (
-          <div style={s('margin-top:14px;display:flex;flex-direction:column;gap:18px;')}>
-            {grouped.map(([cat, entries]) => (
-              <section key={cat}>
-                <h2 style={s('display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin:0 0 8px;')}>
-                  {cat}
-                  <span style={s('font-weight:600;color:#aeb7bd;')}>{entries.length}</span>
-                </h2>
-                <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
-                  {entries.map((e, i) => (
-                    <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
-                      <EntryRow entry={e} query="" selected={false} showCategory={false} flash={() => flashCopied(e.label)} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-
-        <p style={s('margin:26px 0 0;font-size:13px;color:#768692;line-height:1.55;')}>
-          Sources: the practice&rsquo;s centrally managed contacts plus the main switchboards of hospitals this practice refers to. Report corrections to the knowledge administrator.
-        </p>
-      </main>
+      </div>
     </div>
   );
 }
