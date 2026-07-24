@@ -15,12 +15,12 @@ import { s, Hover, Svg, Icons } from './ui';
 const TOOLS = [
   { href: '/lookup', label: 'Instant lookup' },
   { href: '/helpbot', label: 'Practice Q&A' },
-  { href: '/accurx', label: 'AccurX & documents' },
-  // Medication check and the rota generator are hidden for now — keep in
-  // step with TOOLS in app/page.js.
+  { href: '/diagram', label: 'How the system works' },
+  // Notebook, medication check and the rota generator are hidden for now —
+  // keep in step with TOOLS in app/page.js. The routes still work directly.
+  // { href: '/notebook', label: 'Notebook' },
   // { href: '/medications', label: 'Medication check' },
   // { href: '/rota', label: 'Staff rota generator' },
-  { href: '/notebook', label: 'Notebook' },
   { href: '/dpia', label: 'Data protection check (DPIA)' },
 ];
 

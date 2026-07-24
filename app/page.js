@@ -13,12 +13,13 @@ import AppHeader from './_components/AppHeader';
 
 const TOOLS = [
   { href: '/helpbot', title: 'Ask a practice question', icon: Icons.chat },
-  { href: '/accurx', title: 'AccurX & documents', icon: Icons.folder },
   { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
-  { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
-  // Medication check and the Staff rota generator are hidden from the index
-  // for now (the /medications and /rota routes still work if visited
-  // directly). Uncomment to bring them back.
+  { href: '/diagram', title: 'How the system works', icon: Icons.sitemap },
+  // Notebook is hidden from the index for now; the /notebook route still
+  // works if visited directly. Medication check and the Staff rota generator
+  // are likewise hidden (the /medications and /rota routes still work if
+  // visited directly). Uncomment to bring them back.
+  // { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
   // {
   //   href: '/medications',
   //   title: 'Medication check',
