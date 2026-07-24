@@ -115,6 +115,7 @@ export const Icons = {
   paperclip: (<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />),
   folder: (<path d="M4 4h5l2 3h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />),
   stethoscope: (<><path d="M4 3v6a5 5 0 0 0 10 0V3" /><path d="M5 3H3M13 3h2" /><path d="M9 14v2a5 5 0 0 0 10 0v-2" /><circle cx="19" cy="10" r="2" /></>),
+  sitemap: (<><rect x="9" y="2" width="6" height="5" rx="1" /><rect x="3" y="17" width="6" height="5" rx="1" /><rect x="15" y="17" width="6" height="5" rx="1" /><path d="M12 7v4M6 17v-3h12v3" /></>),
 };
 
 export function assetSrc(p) {
