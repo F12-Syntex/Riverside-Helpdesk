@@ -6,37 +6,41 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 
 /* ------------------------------------------------------------------ *
- * /diagram — the complete, explained system map.
+ * /diagram — the whole system as connected flow diagrams.
  *
- * One reference page covering the whole stack: the request flowchart and
- * the three answer shapes, every public page, every UI component, every
- * API route, all the server libraries, the full RAG knowledge pipeline,
- * the data / external services, the configuration and the build/access
- * pieces. Hidden from the tools index; reachable directly at /diagram.
+ * Two SVG diagrams, almost no prose:
+ *   1. the request flow — how a question becomes a checked answer;
+ *   2. the full architecture — every page, route, library, service and
+ *      the RAG pipeline, drawn as connected nodes with arrows.
  *
- * Reflects the current Notebook-only Q&A setup: document (RAG) search and
- * the contacts directory are switched off for answering, though the code
- * and index still exist and are mapped here.
+ * Hidden from the tools index; reachable directly at /diagram. Reflects
+ * the current Notebook-only Q&A (document search + contacts off for
+ * answering, but still shown in the map).
  * ------------------------------------------------------------------ */
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 const INK = '#212b32';
 const MUTED = '#4c6272';
 const BLUE = '#005eb8';
 const GREEN = '#007f3b';
 const EDGE = '#9fb1ba';
 
-/* ---------- the request flowchart (hero) ---------- */
-const NODES = [
-  { id: 'staff', x: 40, y: 60, w: 190, h: 100, icon: Icons.chat, title: 'Staff', sub: 'ask in plain English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { id: 'app', x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/ask', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5', ic: '#fff' },
-  { id: 'ai', x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'AI wording', sub: 'plain NHS English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { id: 'check', x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'matched to the Notebook', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { id: 'answer', x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { id: 'notebook', x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'ONLY SOURCE' },
-];
+/* dependency dot colours */
+const DEP = { A: { c: '#005eb8', t: 'OpenRouter (AI)' }, D: { c: '#8a6100', t: 'Postgres' }, B: { c: '#5b3ca8', t: 'Vercel Blob' }, L: { c: '#c0271b', t: 'localhost only' } };
 
-const EDGES = [
+/* =============================================================== *
+ * Diagram 1 — the request flow (the loop staff experience).
+ * =============================================================== */
+const F1_NODES = [
+  { x: 40, y: 60, w: 190, h: 100, icon: Icons.chat, title: 'Staff', sub: 'ask in plain English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
+  { x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/ask', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5', ic: '#fff' },
+  { x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'AI wording', sub: 'plain NHS English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
+  { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'matched to the Notebook', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
+  { x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
+  { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'ONLY SOURCE' },
+];
+const F1_EDGES = [
   { d: 'M230 110 L320 110', label: '1 · asks', lx: 275, ly: 100 },
   { d: 'M520 110 L820 110', label: '2 · sends question + Notebook', lx: 670, ly: 100 },
   { d: 'M920 160 L920 430', label: '3 · draft', lx: 932, ly: 300, anchor: 'start' },
@@ -44,311 +48,85 @@ const EDGES = [
   { d: 'M320 480 L150 480 L150 160', label: '4 · reply + source', lx: 162, ly: 320, anchor: 'start' },
   { d: 'M470 245 L440 160', label: 'reads', lx: 482, ly: 210, anchor: 'start', dim: true },
 ];
-
-function NodeShape(n) {
+function F1Node(n, i) {
   return (
-    <g key={n.id}>
+    <g key={i}>
       <rect x={n.x} y={n.y} width={n.w} height={n.h} rx="16" fill={n.fill} stroke={n.border} strokeWidth="2" />
       <g transform={`translate(${n.x + 20}, ${n.y + 18})`} fill="none" stroke={n.ic} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{n.icon}</g>
       <text x={n.x + 20} y={n.y + 66} fontFamily={FONT} fontSize="18" fontWeight="700" fill={n.ink}>{n.title}</text>
       <text x={n.x + 20} y={n.y + 88} fontFamily={FONT} fontSize="13" fill={n.subInk}>{n.sub}</text>
-      {n.tag && (
-        <>
-          <rect x={n.x + n.w - 118} y={n.y + 16} width="102" height="22" rx="11" fill={GREEN} />
-          <text x={n.x + n.w - 67} y={n.y + 31} fontFamily={FONT} fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle" letterSpacing="0.4">{n.tag}</text>
-        </>
-      )}
+      {n.tag && (<><rect x={n.x + n.w - 118} y={n.y + 16} width="102" height="22" rx="11" fill={GREEN} /><text x={n.x + n.w - 67} y={n.y + 31} fontFamily={FONT} fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle" letterSpacing="0.4">{n.tag}</text></>)}
     </g>
   );
 }
 
-/* ---------- tag chips ---------- */
-const TAGS = {
-  AI: { bg: '#e8f1fb', fg: '#005eb8', label: 'AI' },
-  Postgres: { bg: '#fdf3e0', fg: '#8a6100', label: 'Postgres' },
-  Blob: { bg: '#f0ebfb', fg: '#5b3ca8', label: 'Vercel Blob' },
-  Local: { bg: '#fdeceb', fg: '#c0271b', label: 'localhost only' },
-  NoAI: { bg: '#e9f7ee', fg: '#077038', label: 'no AI' },
-  Index: { bg: '#e9f7ee', fg: '#077038', label: 'on the index' },
-  UI: { bg: '#eef2f5', fg: '#42566a', label: 'browser' },
-};
-function Tag({ k }) {
-  const t = TAGS[k];
-  if (!t) return null;
-  return <span style={s(`display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${t.bg};color:${t.fg};`)}>{t.label}</span>;
-}
+/* =============================================================== *
+ * Diagram 2 — the full architecture, drawn as a connected graph.
+ *  Staff → page → route(s) → engine & libraries → data services,
+ *  plus the RAG ingest chain feeding Postgres.
+ * =============================================================== */
+const COL_X0 = 40;
+const COL_STEP = 143;
+const COL_W = 128;
+const colX = (i) => COL_X0 + COL_STEP * i;
 
-/* ---------- a compact card for a page / route / module ---------- */
-function Item({ path, name, desc, tags = [] }) {
-  return (
-    <div style={s('background:#fff;border:1px solid #dce4e8;border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:5px;')}>
-      <div style={s('display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;')}>
-        {path && <code style={s(`font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;font-weight:700;color:${BLUE};`)}>{path}</code>}
-        {name && <span style={s(`font-size:14.5px;font-weight:700;color:${INK};`)}>{name}</span>}
-      </div>
-      <div style={s(`font-size:13px;line-height:1.45;color:${MUTED};`)}>{desc}</div>
-      {tags.length > 0 && <div style={s('display:flex;gap:5px;flex-wrap:wrap;margin-top:1px;')}>{tags.map((t) => <Tag key={t} k={t} />)}</div>}
-    </div>
-  );
-}
+// Each feature is a vertical mini-flow: page box → routes box, with the
+// backend services it uses shown as coloured dots.
+const FEATURES = [
+  { p: '/', name: 'Tools index', routes: ['landing page'], deps: [] },
+  { p: '/helpbot', name: 'Practice Q&A', routes: ['/api/ask', '/api/kb'], deps: ['A', 'D'], hero: true },
+  { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory'], deps: ['D'] },
+  { p: '/notebook', name: 'Notebook', routes: ['/api/notebook', '+ format · organize', '+ attachments', '+ import · export'], deps: ['A', 'D', 'B'] },
+  { p: '/signpost', name: 'Signpost', routes: ['/api/signpost'], deps: ['A'] },
+  { p: '/reason', name: 'Reason', routes: ['/api/reason'], deps: ['A'] },
+  { p: '/coding', name: 'Code a doc', routes: ['/api/docfile'], deps: ['A'] },
+  { p: '/medications', name: 'Medication', routes: ['/api/medication', '+ extract'], deps: ['A'] },
+  { p: '/rota', name: 'Staff rota', routes: ['/api/rota', '/api/staff'], deps: ['A', 'D'] },
+  { p: '/dpia', name: 'DPIA', routes: ['lib/dpia'], deps: [] },
+  { p: '/diagram', name: 'System map', routes: ['this page'], deps: [] },
+  { p: '/knowledge', name: 'Knowledge admin', routes: ['/api/knowledge', '+ analyse · conflicts', '+ status · sync'], deps: ['L', 'D', 'A'] },
+];
 
-function Section({ n, title, intro, children }) {
-  return (
-    <section style={s('margin-top:44px;')}>
-      <div style={s('display:flex;align-items:center;gap:11px;margin-bottom:4px;')}>
-        <span style={s(`flex:none;width:28px;height:28px;border-radius:8px;background:${BLUE};color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;`)}>{n}</span>
-        <h2 style={s(`font-size:21px;margin:0;letter-spacing:-0.01em;color:${INK};`)}>{title}</h2>
-      </div>
-      {intro && <p style={s(`font-size:14.5px;color:${MUTED};margin:0 0 16px 39px;line-height:1.5;max-width:72ch;`)}>{intro}</p>}
-      <div style={s('margin-left:39px;')}>{children}</div>
-    </section>
-  );
-}
+const PAGE_Y = 116, PAGE_H = 52, ROUTE_Y = 196;
+const routeH = (f) => 16 + f.routes.length * 15 + 8;
+const ENGINE_Y = 356, ENGINE_H = 92;
+const DATA_Y = 496, DATA_H = 92;
+const RAG_Y = 636, RAG_H = 60;
+const ARCH_W = colX(FEATURES.length - 1) + COL_W + COL_X0;   // right margin
+const ARCH_H = RAG_Y + RAG_H + 24;
+const BUS_Y = 96, STAFF_CX = (colX(0) + colX(FEATURES.length - 1) + COL_W) / 2;
 
-function Grid({ children, min = 240 }) {
-  return <div style={s(`display:grid;grid-template-columns:repeat(auto-fill,minmax(${min}px,1fr));gap:12px;`)}>{children}</div>;
-}
+const ENGINE_CHIPS = ['ai/prompt', 'ai/quote-match', 'ai/client', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'db', 'dpia', 'text-chunk'];
 
-function GroupLabel({ children }) {
-  return <div style={s(`font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:${MUTED};margin:20px 0 10px;`)}>{children}</div>;
-}
+// Three shared data / service nodes along the bottom band.
+const DATA_NODES = [
+  { cx: 300, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · staff · knowledge · contacts · embeddings', icon: Icons.book, dep: 'D' },
+  { cx: 872, w: 380, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis', icon: Icons.sparkle, dep: 'A' },
+  { cx: 1440, w: 360, label: 'Vercel Blob', sub: 'Notebook attachments', icon: Icons.paperclip, dep: 'B' },
+];
+const RAG_NODES = ['rag/sources', 'parsers', 'chunk', 'embed (AI)', 'rag/processed'];
 
-function Groups({ data, min }) {
-  return data.map((g) => (
-    <div key={g.label}>
-      <GroupLabel>{g.label}</GroupLabel>
-      <Grid min={min}>{g.items.map((it) => <Item key={it.path + it.name} {...it} />)}</Grid>
-    </div>
+// Flow chips across the engine band into up to two rows.
+function layoutChips(items, x0, y0, maxX, rowH) {
+  const out = []; let x = x0, y = y0;
+  for (const label of items) {
+    const w = label.length * 6.4 + 18;
+    if (x + w > maxX) { x = x0; y += rowH; }
+    out.push({ label, x, y, w });
+    x += w + 8;
+  }
+  return out;
+}
+const CHIP_ROWS = layoutChips(ENGINE_CHIPS, 70, ENGINE_Y + 38, ARCH_W - 40, 26);
+
+function Dots({ deps, x, y }) {
+  return deps.map((d, i) => (
+    <g key={d}>
+      <circle cx={x + i * 15} cy={y} r="6.5" fill={DEP[d].c} />
+      <text x={x + i * 15} y={y + 3.4} fontFamily={FONT} fontSize="8.5" fontWeight="700" fill="#fff" textAnchor="middle">{d}</text>
+    </g>
   ));
 }
-
-/* ================= data ================= */
-
-const SHAPES = [
-  { tone: '#005eb8', bg: '#f0f6fb', title: 'answer', desc: 'A step-by-step how-to for staff, drawn from the Notebook, with a source under each part.' },
-  { tone: '#8a6100', bg: '#fff8ec', title: 'triage', desc: 'An incoming patient message routed: an urgency band, the actions to take, who to send it to, and safety-net red flags.' },
-  { tone: '#075e34', bg: '#eefaf1', title: 'docfile', desc: 'A pasted medical document turned into a one-line filing title, ready to code into the record.' },
-];
-
-const PAGES = [
-  { path: '/', name: 'Practice tools', desc: 'The landing page: a list of the tools staff can open.', tags: ['Index'] },
-  { path: '/helpbot', name: 'Practice Q&A', desc: 'The assistant. Two tabs — Assistant (ask a question) and Knowledge base (browse the source documents).', tags: ['AI', 'Index'] },
-  { path: '/lookup', name: 'Instant lookup', desc: 'Fuzzy phone directory. Type part of a name to filter hospital, pharmacy and team numbers. Runs in the browser.', tags: ['NoAI', 'Index'] },
-  { path: '/notebook', name: 'Notebook', desc: 'Rich-text practice notes with sub-pages. Stored in Postgres and read in full by the assistant — the current single source.', tags: ['Postgres'] },
-  { path: '/signpost', name: 'Signpost a request', desc: 'Paste an AccurX consultation; get who should handle it and how urgently.', tags: ['AI'] },
-  { path: '/reason', name: 'Reason for appointment', desc: 'Turn a pasted consultation into a concise clinical reason for the clinician.', tags: ['AI'] },
-  { path: '/coding', name: 'Code a document', desc: 'Paste a medical document (or a screenshot); get its one-line filing title back.', tags: ['AI'] },
-  { path: '/medications', name: 'Medication check', desc: 'Referenced information about one or more medicines, from public UK sources.', tags: ['AI'] },
-  { path: '/rota', name: 'Staff rota', desc: 'Build and balance a weekly staff rota from a saved list of rules.', tags: ['AI', 'Postgres'] },
-  { path: '/dpia', name: 'Data protection check', desc: 'The program-wide DPIA document.', tags: [] },
-  { path: '/diagram', name: 'System map', desc: 'This page — how everything fits together.', tags: [] },
-  { path: '/knowledge', name: 'Knowledge admin', desc: 'Back-office review of documents, notes and conflicts. Returns 404 in production.', tags: ['Local', 'Postgres'] },
-];
-
-const COMPONENTS = [
-  {
-    label: 'Answer & chat',
-    items: [
-      { path: 'ChatView', name: 'Conversation', desc: 'The assistant thread: your messages and each answer / triage / guide card.' },
-      { path: 'AiAnswer', name: 'Answer card', desc: 'A how-to answer: markdown sections, source chips and any AI-judgement note.' },
-      { path: 'TriageAnswer', name: 'Triage card', desc: 'A routed patient request: urgency, actions, red flags and where to send it.' },
-      { path: 'DocFileAnswer', name: 'Filing card', desc: 'The one-line filing title for a pasted document, with a copy button.' },
-      { path: 'GuideCard', name: 'Guide card', desc: 'A built-in step-by-step guide shown as a card.' },
-      { path: 'ContactsCard', name: 'Contacts', desc: 'Exact phone numbers and emails from the directory, shown verbatim.' },
-      { path: 'CiteChip', name: 'Citation link', desc: 'The quiet grey “source” link under a statement; opens the source panel.' },
-      { path: 'JudgementChip', name: 'Judgement marker', desc: 'The amber flag for the assistant’s own judgement, not a document.' },
-      { path: 'SuggestBubble', name: 'Starter questions', desc: 'Suggested questions shown on the empty state.' },
-      { path: 'Md · Rich', name: 'Safe renderers', desc: 'Render only the limited markdown / inline formatting answers may use.' },
-    ],
-  },
-  {
-    label: 'Shell & viewers',
-    items: [
-      { path: 'AppHeader', name: 'Header', desc: 'The top bar, logo and the Assistant / Knowledge base tabs.' },
-      { path: 'MobileNav', name: 'Mobile menu', desc: 'The full-screen navigation overlay on small screens.' },
-      { path: 'KbView', name: 'Knowledge base tab', desc: 'Browse the source documents and their page thumbnails.' },
-      { path: 'DocumentViewer', name: 'Source panel', desc: 'Opens a cited note or passage beside the answer.' },
-      { path: 'PdfSourceView', name: 'PDF page view', desc: 'Renders the exact cited PDF page with the quote highlighted.' },
-      { path: 'DpiaView', name: 'DPIA sheet', desc: 'Renders the DPIA as an ICO-style A4 document.' },
-      { path: 'Notifications · notify', name: 'Toasts', desc: 'The app-wide notification host.' },
-      { path: 'AddGuideModal', name: 'Add guide', desc: 'Create a custom starter guide (saved in the browser).' },
-      { path: 'ui.js', name: 'Style kit', desc: 'Shared helpers: the s() style parser, Hover, Svg and the icon set.' },
-    ],
-  },
-  {
-    label: 'Tool-specific',
-    items: [
-      { path: 'RotaSystem', name: 'Rota UI', desc: 'The weekly staff grid, the rules list and the generate button.' },
-      { path: 'MedicationCard', name: 'Medicine card', desc: 'One medicine’s referenced information.' },
-      { path: 'SourceLink', name: 'Source link', desc: 'A labelled external source link on a medication card.' },
-    ],
-  },
-];
-
-const API_GROUPS = [
-  {
-    label: 'Answering & documents',
-    items: [
-      { path: '/api/ask', name: 'Q&A + triage', desc: 'The main engine: retrieval, prompt, model call, and the server-side quote check. Notebook-only right now.', tags: ['AI', 'Postgres'] },
-      { path: '/api/docfile', name: 'Document coding', desc: 'Builds the one-line filing title for a pasted medical document.', tags: ['AI'] },
-      { path: '/api/signpost', name: 'Signposting', desc: 'A short routing suggestion for a consultation.', tags: ['AI'] },
-      { path: '/api/reason', name: 'Appointment reason', desc: 'A concise clinical reason drawn only from what the patient wrote.', tags: ['AI'] },
-    ],
-  },
-  {
-    label: 'Medication',
-    items: [
-      { path: '/api/medication', name: 'Medicine lookup', desc: 'Looks up one medicine (with an optional question); the browser fans out one request per medicine.', tags: ['AI'] },
-      { path: '/api/medication/extract', name: 'Extract names', desc: 'Pulls a list of medicine names out of pasted text.', tags: ['AI'] },
-    ],
-  },
-  {
-    label: 'Notebook',
-    items: [
-      { path: '/api/notebook', name: 'Notes CRUD', desc: 'List, create, update and delete notes (the Neon notes table).', tags: ['Postgres'] },
-      { path: '/api/notebook/format', name: 'AI format', desc: 'Restructures a note into a rich reference document; shown as a diff to confirm.', tags: ['AI'] },
-      { path: '/api/notebook/organize', name: 'AI organise', desc: 'Sorts a section into sub-pages — dry run first, then apply.', tags: ['AI'] },
-      { path: '/api/notebook/attachments', name: 'Attachments', desc: 'Upload and list files against a note. Files in Vercel Blob, metadata in Postgres.', tags: ['Blob', 'Postgres'] },
-      { path: '/api/notebook/export', name: 'Export', desc: 'Downloads every note and attachment record as one JSON backup.', tags: ['Postgres'] },
-      { path: '/api/notebook/import', name: 'Import', desc: 'Restores a backup additively, keeping the page hierarchy.', tags: ['Postgres'] },
-    ],
-  },
-  {
-    label: 'Rota',
-    items: [
-      { path: '/api/rota', name: 'Rota', desc: 'Load or generate a week: a deterministic base, then the AI applies saved rules.', tags: ['AI', 'Postgres'] },
-      { path: '/api/staff', name: 'Staff', desc: 'Staff CRUD for the rota generator.', tags: ['Postgres'] },
-    ],
-  },
-  {
-    label: 'Directory & knowledge base',
-    items: [
-      { path: '/api/directory', name: 'Directory', desc: 'The canonical phone directory that /lookup loads.', tags: ['Postgres'] },
-      { path: '/api/kb', name: 'Knowledge base', desc: 'Document listing and page thumbnails for the Knowledge base tab.', tags: ['Postgres'] },
-    ],
-  },
-  {
-    label: 'Knowledge admin — localhost only',
-    items: [
-      { path: '/api/knowledge', name: 'Entries', desc: 'Knowledge-entry CRUD and claim sync.', tags: ['Local', 'Postgres'] },
-      { path: '/api/knowledge/analyse', name: 'Analyse', desc: 'Turns a batch of passages into exact-quote claims.', tags: ['Local', 'AI'] },
-      { path: '/api/knowledge/conflicts', name: 'Conflicts', desc: 'Lists and resolves detected contradictions.', tags: ['Local'] },
-      { path: '/api/knowledge/status', name: 'Status', desc: 'What is indexed and what is pending.', tags: ['Local'] },
-      { path: '/api/knowledge/sync', name: 'Sync', desc: 'Reconciles the document bundle, Notebook and contacts.', tags: ['Local'] },
-    ],
-  },
-];
-
-const LIB_GROUPS = [
-  {
-    label: 'AI & answering',
-    items: [
-      { path: 'ai/prompt.js', name: 'Prompt + parse', desc: 'Builds the model prompt and parses the JSON it returns.' },
-      { path: 'ai/quote-match.js', name: 'Quote check', desc: 'Verifies each answer sentence against a real source quote.' },
-      { path: 'ai/client.js', name: 'Ask helper', desc: 'The browser-side askQuestion() call.' },
-      { path: 'ai/claims.js', name: 'Claims', desc: 'Turns source passages into exact-quote claims for conflict review.' },
-      { path: 'ai/context.mjs', name: 'Supplementary context', desc: 'Extra context from URLs or committed rag/context files.' },
-      { path: 'ai/docfile.mjs', name: 'Docfile helpers', desc: 'Date and action helpers for the document filing title.' },
-      { path: 'ai/medication.js', name: 'Medication AI', desc: 'Prompt and parsing for the medication tool.' },
-      { path: 'ai/rota.js', name: 'Rota AI', desc: 'Prompt and parsing for the rota generator.' },
-    ],
-  },
-  {
-    label: 'Knowledge',
-    items: [
-      { path: 'knowledge.js', name: 'Knowledge layer', desc: 'Canonical Postgres store for documents, notes, contacts and conflicts.', tags: ['Postgres'] },
-      { path: 'knowledge-bootstrap.js', name: 'Bootstrap', desc: 'Reconciles the committed index bundle on first run.' },
-      { path: 'knowledge-context.mjs', name: 'Hit → chunk', desc: 'Turns a knowledge hit into a citable source chunk.' },
-      { path: 'knowledge-admin-access.js', name: 'Admin gate', desc: 'The localhost-only check for /knowledge.', tags: ['Local'] },
-    ],
-  },
-  {
-    label: 'Data & tools',
-    items: [
-      { path: 'notebook.js', name: 'Notebook data', desc: 'Reads and writes the notes table; loads full context for the assistant.', tags: ['Postgres'] },
-      { path: 'contacts.js', name: 'Contacts', desc: 'Deterministic phone directory and unverified-number redaction.' },
-      { path: 'lookup/', name: 'Lookup', desc: 'Directory loader and the fuzzy search used by /lookup.' },
-      { path: 'guides/', name: 'Guides', desc: 'Built-in starter questions, categories and seed data.' },
-      { path: 'medications/', name: 'Medications', desc: 'Client fetch and the paste-list parser for the medication tool.' },
-      { path: 'rota/logic.js', name: 'Rota logic', desc: 'The deterministic base rota the AI then adjusts.' },
-      { path: 'db.js', name: 'Database', desc: 'Neon Postgres connection and schema helpers.', tags: ['Postgres'] },
-      { path: 'dpia.js', name: 'DPIA', desc: 'The data-protection assessment content.' },
-      { path: 'text-chunk.mjs', name: 'Chunking', desc: 'Shared text-splitting used across the app.' },
-    ],
-  },
-];
-
-const RAG_GROUPS = [
-  {
-    label: 'Run it (npm run rag:*)',
-    items: [
-      { path: 'rag:ingest', name: 'Ingest', desc: 'Parse, chunk, embed and index new or changed documents.', tags: ['AI'] },
-      { path: 'rag:prune', name: 'Prune', desc: 'Remove index entries for documents that were deleted.' },
-      { path: 'rag:status', name: 'Status', desc: 'Show what is indexed and what is pending.' },
-      { path: 'migrate-legacy', name: 'Migrate', desc: 'One-off migration of the older index format.' },
-    ],
-  },
-  {
-    label: 'Read the documents (parsers)',
-    items: [
-      { path: 'parsers/pdf', name: 'PDF', desc: 'Extracts text and renders each page image.' },
-      { path: 'parsers/docx', name: 'Word .docx', desc: 'Modern Word documents.' },
-      { path: 'parsers/doc', name: 'Word .doc', desc: 'Legacy Word documents.' },
-      { path: 'parsers/pptx', name: 'PowerPoint', desc: 'Slide decks.' },
-      { path: 'parsers/rtf', name: 'RTF', desc: 'Rich-text files.' },
-      { path: 'parsers/image', name: 'Images', desc: 'Reads pictures and scans with the vision model — no OCR.', tags: ['AI'] },
-      { path: 'parsers/text', name: 'Text', desc: 'Plain text and markdown.' },
-      { path: 'parsers/index', name: 'Router', desc: 'Picks the right parser for each file type.' },
-    ],
-  },
-  {
-    label: 'Build the index (rag/lib)',
-    items: [
-      { path: 'sources.mjs', name: 'Sources', desc: 'Lists rag/sources and fingerprints each file for change detection.' },
-      { path: 'chunk · chunk-artifact', name: 'Chunk', desc: 'Splits documents into passages and writes portable chunk records.' },
-      { path: 'embed.mjs', name: 'Embed', desc: 'Turns passages into embeddings for semantic search.', tags: ['AI'] },
-      { path: 'vision.mjs', name: 'Vision', desc: 'Reads images, screenshots and scanned pages.', tags: ['AI'] },
-      { path: 'summarize.mjs', name: 'Summarise', desc: 'Per-document summaries for the catalogue.', tags: ['AI'] },
-      { path: 'store.mjs', name: 'Retrieval store', desc: 'Runtime search over passages (full-text + vector).' },
-      { path: 'similarity.mjs', name: 'Similarity', desc: 'Cosine ranking of passages against the query.' },
-      { path: 'html · rtf', name: 'Format helpers', desc: 'Shared HTML and RTF handling.' },
-      { path: 'config.mjs', name: 'Config', desc: 'Models, paths and limits for the pipeline.' },
-      { path: 'index-io.mjs', name: 'Index I/O', desc: 'Reads and writes the processed artifacts.' },
-    ],
-  },
-  {
-    label: 'On disk',
-    items: [
-      { path: 'rag/sources/', name: 'Source files', desc: '150+ practice documents: Word, PDF, PowerPoint, RTF and images.' },
-      { path: 'rag/processed/', name: 'Built index', desc: 'catalog.json, chunks.jsonl.gz, embeddings.json and manifest.json.' },
-      { path: 'rag/context/', name: 'Baseline notes', desc: 'Committed supplementary notes, reconciled into the store.' },
-    ],
-  },
-];
-
-const INFRA = [
-  { icon: Icons.book, title: 'PostgreSQL (Neon)', desc: 'Notes, staff, the knowledge layer (entries, claims, conflicts), contacts and document embeddings (pgvector).', tags: ['Postgres'] },
-  { icon: Icons.paperclip, title: 'Vercel Blob', desc: 'Stores the actual files attached to Notebook pages; the database keeps only their URLs.', tags: ['Blob'] },
-  { icon: Icons.sparkle, title: 'OpenRouter', desc: 'The AI provider: the chat / vision model that words answers, plus the embedding, analysis and medication models. Reached only from the server, on providers that do not retain prompts.', tags: ['AI'] },
-  { icon: Icons.lock, title: 'Access control', desc: 'middleware.js makes /knowledge and /api/knowledge reachable from localhost only — they return 404 in production.', tags: ['Local'] },
-];
-
-const CONFIG = [
-  { path: 'OPENROUTER_API_KEY', name: '', desc: 'OpenRouter API key. Server-side only; never sent to the browser.' },
-  { path: 'OPENROUTER_AI_MODEL', name: '', desc: 'The chat / vision model that words answers. Must be able to read images.' },
-  { path: 'OPENROUTER_EMBED_MODEL', name: '', desc: 'The embedding model used for document search.' },
-  { path: 'OPENROUTER_ANALYSIS_MODEL', name: '', desc: 'A cheap model for query condensing and document summaries.' },
-  { path: 'OPENROUTER_MEDICATION_MODEL', name: '', desc: 'Model for the medication web-search tool.' },
-  { path: 'DATABASE_URL', name: '', desc: 'Neon Postgres connection (notes, staff, knowledge, embeddings).', tags: ['Postgres'] },
-  { path: 'BLOB_READ_WRITE_TOKEN', name: '', desc: 'Vercel Blob token for Notebook attachments (with BLOB_STORE_ID).', tags: ['Blob'] },
-  { path: 'SUPPLEMENTARY_CONTEXT_URLS', name: '', desc: 'Optional extra context URLs (with _TTL to cache them).' },
-];
-
-const BUILD = [
-  { path: 'middleware.js', name: 'Access gate', desc: 'Serves /knowledge and /api/knowledge only from localhost; 404 elsewhere.', tags: ['Local'] },
-  { path: 'scripts/copy-pdf-worker', name: 'PDF worker', desc: 'Copies the PDF.js worker into public/ at build and dev start.' },
-  { path: 'scripts/reset-and-seed-rota', name: 'Seed rota', desc: 'Resets and seeds the rota tables for a fresh database.', tags: ['Postgres'] },
-];
 
 export default function Page() {
   return (
@@ -363,118 +141,133 @@ export default function Page() {
         </Hover>
 
         <h1 style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>System map</h1>
-        <p style={s(`font-size:16.5px;color:${MUTED};margin:0 0 8px;max-width:68ch;`)}>
-          The whole Riverside Helpdesk on one page, explained: how a question is answered, every page,
-          every screen component, every API route, all the server libraries, the knowledge pipeline,
-          the services it runs on and how it is configured.
+        <p style={s(`font-size:16px;color:${MUTED};margin:0 0 6px;max-width:66ch;`)}>
+          The whole system as one picture. First how a question is answered, then everything it is built from —
+          pages, routes, libraries, the knowledge pipeline and the services — drawn as connected boxes.
         </p>
-        <p style={s(`font-size:14px;color:${MUTED};margin:0 0 18px;max-width:68ch;line-height:1.5;`)}>
-          Q&amp;A currently answers from the <strong>Notebook only</strong>. Document (RAG) search and the
-          contacts directory are switched off for answering, but the code and the built index still exist and are
-          included below.
+        <p style={s(`font-size:13.5px;color:${MUTED};margin:0 0 20px;`)}>
+          Q&amp;A answers from the <strong>Notebook only</strong> right now; document search and contacts are switched off for answering.
         </p>
 
-        <div style={s('display:flex;gap:8px;flex-wrap:wrap;')}>
-          {['AI', 'Postgres', 'Blob', 'Local', 'NoAI', 'Index'].map((k) => <Tag key={k} k={k} />)}
+        {/* -------- Diagram 1 · the request flow -------- */}
+        <h2 style={s(`font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:${MUTED};margin:8px 0 10px;`)}>How a question is answered</h2>
+        <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:16px;padding:14px;overflow-x:auto;')}>
+          <svg viewBox="0 0 1060 560" width="100%" style={s('display:block;min-width:640px;font-family:' + FONT)} role="img"
+            aria-label="Flowchart: staff ask the app, which reads the Notebook, sends it to the AI, checks the quotes, and returns a sourced answer.">
+            <defs>
+              <marker id="a1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill={EDGE} /></marker>
+            </defs>
+            {F1_EDGES.map((e, i) => (
+              <g key={i}>
+                <path d={e.d} fill="none" stroke={EDGE} strokeWidth="2.2" strokeDasharray={e.dim ? '5 5' : 'none'} markerEnd="url(#a1)" />
+                <text x={e.lx} y={e.ly} fontFamily={FONT} fontSize="13" fontWeight="600" fill={MUTED} textAnchor={e.anchor || 'middle'}>{e.label}</text>
+              </g>
+            ))}
+            {F1_NODES.map(F1Node)}
+          </svg>
         </div>
 
-        {/* 1 · request flow + answer shapes */}
-        <Section n="1" title="How a question is answered"
-          intro="Your question loops through the app and comes back as a checked answer, with the Notebook as the single source.">
-          <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:16px;padding:14px;overflow-x:auto;')}>
-            <svg viewBox="0 0 1060 560" width="100%" style={s('display:block;min-width:660px;font-family:' + FONT)} role="img"
-              aria-label="Flowchart: staff ask the practice app, which reads the Notebook, sends the question to the AI, checks its quotes, and returns a sourced answer.">
-              <defs>
-                <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
-                  <path d="M0 0 L10 5 L0 10 z" fill={EDGE} />
-                </marker>
-              </defs>
-              {EDGES.map((e, i) => (
-                <g key={i}>
-                  <path d={e.d} fill="none" stroke={EDGE} strokeWidth="2.2" strokeDasharray={e.dim ? '5 5' : 'none'} markerEnd="url(#ah)" />
-                  <text x={e.lx} y={e.ly} fontFamily={FONT} fontSize="13" fontWeight="600" fill={MUTED} textAnchor={e.anchor || 'middle'}>{e.label}</text>
+        {/* -------- Diagram 2 · the full architecture -------- */}
+        <div style={s('display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:30px 0 10px;')}>
+          <h2 style={s(`font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:${MUTED};margin:0;`)}>Everything, connected</h2>
+          <div style={s('display:flex;gap:14px;flex-wrap:wrap;')}>
+            {Object.entries(DEP).map(([k, d]) => (
+              <span key={k} style={s('display:inline-flex;align-items:center;gap:5px;font-size:12px;color:' + MUTED + ';')}>
+                <span style={s(`width:14px;height:14px;border-radius:50%;background:${d.c};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;`)}>{k}</span>{d.t}
+              </span>
+            ))}
+          </div>
+        </div>
+        <p style={s(`font-size:12.5px;color:${MUTED};margin:0 0 10px;`)}>Scroll sideways to see it all. Each tool flows down: page → its API route(s) → the shared engine &amp; libraries → the data services.</p>
+
+        <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:16px;padding:14px;overflow-x:auto;')}>
+          <svg viewBox={`0 0 ${ARCH_W} ${ARCH_H}`} width={ARCH_W} style={s(`display:block;min-width:${ARCH_W}px;max-width:none;font-family:${FONT};`)} role="img"
+            aria-label="Architecture: staff open pages, pages call API routes, routes use the shared engine and libraries, which read Postgres, OpenRouter and Vercel Blob. A RAG ingest chain feeds Postgres.">
+            <defs>
+              <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill={EDGE} /></marker>
+              <marker id="a2b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill={BLUE} /></marker>
+            </defs>
+
+            {/* Staff + bus */}
+            <rect x={STAFF_CX - 95} y="20" width="190" height="46" rx="12" fill={BLUE} />
+            <text x={STAFF_CX} y="48" fontFamily={FONT} fontSize="16" fontWeight="700" fill="#fff" textAnchor="middle">Staff · browser</text>
+            <path d={`M${STAFF_CX} 66 L${STAFF_CX} ${BUS_Y}`} stroke={EDGE} strokeWidth="2" markerEnd="url(#a2)" />
+            <line x1={colX(0) + COL_W / 2} y1={BUS_Y} x2={colX(FEATURES.length - 1) + COL_W / 2} y2={BUS_Y} stroke={EDGE} strokeWidth="2" />
+
+            {/* Feature columns: page → routes, with dots + connectors down to the engine band */}
+            {FEATURES.map((f, i) => {
+              const x = colX(i), cx = x + COL_W / 2, rh = routeH(f), rBottom = ROUTE_Y + rh;
+              const accent = f.hero ? BLUE : '#c9d4da';
+              const marker = f.hero ? 'url(#a2b)' : 'url(#a2)';
+              const stroke = f.hero ? BLUE : EDGE;
+              return (
+                <g key={f.p}>
+                  {/* bus → page */}
+                  <path d={`M${cx} ${BUS_Y} L${cx} ${PAGE_Y}`} stroke={stroke} strokeWidth="2" markerEnd={marker} />
+                  {/* page box */}
+                  <rect x={x} y={PAGE_Y} width={COL_W} height={PAGE_H} rx="10" fill={f.hero ? '#eaf3fb' : '#fff'} stroke={accent} strokeWidth={f.hero ? 2 : 1.5} />
+                  <text x={cx} y={PAGE_Y + 22} fontFamily={MONO} fontSize="12.5" fontWeight="700" fill={BLUE} textAnchor="middle">{f.p}</text>
+                  <text x={cx} y={PAGE_Y + 39} fontFamily={FONT} fontSize="11" fill={MUTED} textAnchor="middle">{f.name}</text>
+                  {/* page → routes */}
+                  <path d={`M${cx} ${PAGE_Y + PAGE_H} L${cx} ${ROUTE_Y}`} stroke={stroke} strokeWidth="2" markerEnd={marker} />
+                  {/* routes box */}
+                  <rect x={x} y={ROUTE_Y} width={COL_W} height={rh} rx="10" fill="#fff" stroke={accent} strokeWidth={f.hero ? 2 : 1.5} />
+                  {f.routes.map((r, j) => (
+                    <text key={j} x={x + 10} y={ROUTE_Y + 18 + j * 15} fontFamily={r.startsWith('/') || r.startsWith('lib') ? MONO : FONT} fontSize="10.5" fontWeight={r.startsWith('/') ? 700 : 400} fill={r.startsWith('/') ? INK : MUTED}>{r}</text>
+                  ))}
+                  <Dots deps={f.deps} x={x + COL_W - 12 - (f.deps.length - 1) * 15} y={ROUTE_Y - 0} />
+                  {/* routes → engine band */}
+                  <path d={`M${cx} ${rBottom} L${cx} ${ENGINE_Y}`} stroke={stroke} strokeWidth="2" markerEnd={marker} strokeDasharray={f.deps.length ? 'none' : '4 4'} />
                 </g>
-              ))}
-              {NODES.map(NodeShape)}
-            </svg>
-          </div>
+              );
+            })}
 
-          <GroupLabel>The three shapes an answer can take (the model picks)</GroupLabel>
-          <Grid min={260}>
-            {SHAPES.map((sh) => (
-              <div key={sh.title} style={s(`background:${sh.bg};border:1px solid ${sh.tone}33;border-radius:12px;padding:14px 16px;`)}>
-                <div style={s(`font-family:ui-monospace,monospace;font-size:13px;font-weight:800;color:${sh.tone};margin-bottom:5px;`)}>{sh.title}</div>
-                <div style={s(`font-size:13.5px;line-height:1.5;color:${MUTED};`)}>{sh.desc}</div>
-              </div>
+            {/* Engine & libraries band */}
+            <rect x="50" y={ENGINE_Y} width={ARCH_W - 100} height={ENGINE_H} rx="14" fill="#f5f9fc" stroke="#bcd4ea" strokeWidth="1.5" />
+            <text x="70" y={ENGINE_Y + 22} fontFamily={FONT} fontSize="13" fontWeight="700" fill={BLUE}>Server engine &amp; libraries  ·  lib/</text>
+            {CHIP_ROWS.map((c, i) => (
+              <g key={i}>
+                <rect x={c.x} y={c.y - 13} width={c.w} height="20" rx="10" fill="#fff" stroke="#d3e0ea" />
+                <text x={c.x + c.w / 2} y={c.y + 1} fontFamily={MONO} fontSize="10.5" fill={INK} textAnchor="middle">{c.label}</text>
+              </g>
             ))}
-          </Grid>
-        </Section>
 
-        {/* 2 · pages */}
-        <Section n="2" title="Pages staff can open"
-          intro="Every page in the app. Only the ones tagged “on the index” are listed on the landing page; the rest still work at their own address.">
-          <Grid>{PAGES.map((p) => <Item key={p.path} {...p} />)}</Grid>
-        </Section>
-
-        {/* 3 · components */}
-        <Section n="3" title="Screen components"
-          intro="The React building blocks the pages are made of, under app/_components. These run in the browser.">
-          <Groups data={COMPONENTS} min={230} />
-        </Section>
-
-        {/* 4 · API routes */}
-        <Section n="4" title="API routes (the server)"
-          intro="The back-end endpoints the pages call. Keys and knowledge stay here; only the answer goes back to the browser.">
-          <Groups data={API_GROUPS} />
-        </Section>
-
-        {/* 5 · libraries */}
-        <Section n="5" title="Server libraries"
-          intro="Shared code the routes build on, under lib/.">
-          <Groups data={LIB_GROUPS} />
-        </Section>
-
-        {/* 6 · RAG */}
-        <Section n="6" title="Knowledge pipeline (RAG)"
-          intro="Prepared ahead of time, separately from live questions: practice documents are read, chunked, embedded and indexed. It feeds the Knowledge base tab and document search — the search is off for answering right now.">
-          <Groups data={RAG_GROUPS} min={220} />
-        </Section>
-
-        {/* 7 · data & services */}
-        <Section n="7" title="Data & services"
-          intro="Where everything is stored and the outside services the app relies on.">
-          <div style={s('display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;')}>
-            {INFRA.map((x) => (
-              <div key={x.title} style={s('background:#fff;border:1px solid #dce4e8;border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start;')}>
-                <div style={s(`flex:none;width:40px;height:40px;border-radius:10px;background:#f0f6fb;color:${BLUE};display:flex;align-items:center;justify-content:center;`)}>
-                  <Svg w={20} sw={2}>{x.icon}</Svg>
-                </div>
-                <div style={s('flex:1;min-width:0;')}>
-                  <div style={s(`font-size:15.5px;font-weight:700;color:${INK};`)}>{x.title}</div>
-                  <div style={s(`font-size:13.5px;line-height:1.5;color:${MUTED};margin:3px 0 7px;`)}>{x.desc}</div>
-                  <div style={s('display:flex;gap:5px;flex-wrap:wrap;')}>{x.tags.map((t) => <Tag key={t} k={t} />)}</div>
-                </div>
-              </div>
+            {/* Engine → data services */}
+            {DATA_NODES.map((d, i) => (
+              <path key={i} d={`M${d.cx} ${ENGINE_Y + ENGINE_H} L${d.cx} ${DATA_Y}`} stroke={i < 2 ? BLUE : EDGE} strokeWidth="2" markerEnd={i < 2 ? 'url(#a2b)' : 'url(#a2)'} />
             ))}
-          </div>
-        </Section>
 
-        {/* 8 · configuration */}
-        <Section n="8" title="Configuration"
-          intro="Environment variables set in .env.local (documented in .env.local.example). Nothing here reaches the browser.">
-          <Grid min={260}>{CONFIG.map((c) => <Item key={c.path} {...c} />)}</Grid>
-        </Section>
+            {/* Data / service nodes */}
+            {DATA_NODES.map((d, i) => (
+              <g key={i}>
+                <rect x={d.cx - d.w / 2} y={DATA_Y} width={d.w} height={DATA_H} rx="14" fill="#fff" stroke={DEP[d.dep].c} strokeWidth="2" />
+                <g transform={`translate(${d.cx - d.w / 2 + 18}, ${DATA_Y + 20})`} fill="none" stroke={DEP[d.dep].c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d.icon}</g>
+                <text x={d.cx - d.w / 2 + 52} y={DATA_Y + 34} fontFamily={FONT} fontSize="16" fontWeight="700" fill={INK}>{d.label}</text>
+                <text x={d.cx - d.w / 2 + 18} y={DATA_Y + 64} fontFamily={FONT} fontSize="12" fill={MUTED}>{d.sub}</text>
+              </g>
+            ))}
 
-        {/* 9 · build & access */}
-        <Section n="9" title="Build & access"
-          intro="The middleware that guards the admin area, and the scripts that run at build or setup.">
-          <Grid min={260}>{BUILD.map((b) => <Item key={b.path} {...b} />)}</Grid>
-        </Section>
+            {/* RAG ingest chain → Postgres */}
+            <text x="70" y={RAG_Y - 8} fontFamily={FONT} fontSize="12" fontWeight="700" fill={MUTED}>RAG ingest (offline, npm run rag:ingest) — builds the document index</text>
+            {RAG_NODES.map((r, i) => {
+              const w = 150, gap = 34, x = 70 + i * (w + gap);
+              return (
+                <g key={i}>
+                  <rect x={x} y={RAG_Y} width={w} height={RAG_H} rx="10" fill="#fbfdff" stroke="#cddbe6" strokeWidth="1.5" />
+                  <text x={x + w / 2} y={RAG_Y + RAG_H / 2 + 4} fontFamily={MONO} fontSize="11.5" fontWeight="700" fill={INK} textAnchor="middle">{r}</text>
+                  {i < RAG_NODES.length - 1 && <path d={`M${x + w} ${RAG_Y + RAG_H / 2} L${x + w + gap} ${RAG_Y + RAG_H / 2}`} stroke={EDGE} strokeWidth="2" markerEnd="url(#a2)" />}
+                </g>
+              );
+            })}
+            {/* processed → Postgres */}
+            <path d={`M${70 + 4 * (150 + 34) + 75} ${RAG_Y} L${70 + 4 * (150 + 34) + 75} ${RAG_Y - 22} L${DATA_NODES[0].cx + 120} ${RAG_Y - 22} L${DATA_NODES[0].cx + 120} ${DATA_Y + DATA_H}`} fill="none" stroke={DEP.D.c} strokeWidth="2" strokeDasharray="5 4" markerEnd="url(#a2)" />
+            <text x={DATA_NODES[0].cx + 130} y={RAG_Y - 26} fontFamily={FONT} fontSize="11" fill={DEP.D.c}>indexed into Postgres</text>
+          </svg>
+        </div>
 
-        <p style={s(`font-size:13px;color:${MUTED};margin:48px 0 0;line-height:1.5;text-align:center;max-width:76ch;margin-left:auto;margin-right:auto;`)}>
-          In short: staff pages (built from the components) call server routes, the routes lean on the libraries, and the
-          libraries read the Notebook and knowledge index in Postgres — with every answer checked back against its source
-          before it reaches the screen.
+        <p style={s(`font-size:13px;color:${MUTED};margin:26px auto 0;line-height:1.5;text-align:center;max-width:76ch;`)}>
+          Staff open a page, the page calls its API route, the route uses the shared engine &amp; libraries, and those read
+          Postgres, OpenRouter and Vercel Blob — with every answer checked against its source before it reaches the screen.
         </p>
       </main>
     </div>
