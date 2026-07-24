@@ -5,15 +5,23 @@
 //
 // Run with:  npm run rag:prune            (remove orphaned documents)
 //            npm run rag:prune -- --dry    (list what would be removed only)
+import path from 'node:path';
 import { config } from './lib/config.mjs';
+import { getParser } from './parsers/index.mjs';
 import { loadStore, removeDoc, writeStore } from './lib/index-io.mjs';
-import { listSourceFiles, docIdFor } from './lib/sources.mjs';
+import { listSourceFiles, resolveSourceDocIds } from './lib/sources.mjs';
 
 function main() {
   const dry = process.argv.slice(2).some((a) => a === '--dry' || a === '--dry-run' || a === '-n');
 
   const store = loadStore();
-  const live = new Set(listSourceFiles().map(docIdFor));
+  // Resolve the live ids exactly as ingest/status do: a document whose id was
+  // suffixed to avoid a name collision (for example a `.doc` and a `.docx` that
+  // slugify the same) must not look orphaned just because prune re-derived the
+  // bare slug. Using the collision-aware resolver keeps prune from deleting a
+  // document whose source file is still present.
+  const supportedFiles = listSourceFiles().filter((file) => getParser(path.extname(file).toLowerCase()));
+  const live = new Set(resolveSourceDocIds(supportedFiles, store.manifest).values());
   const orphans = Object.entries(store.manifest.documents)
     .filter(([docId]) => !live.has(docId))
     .map(([docId, m]) => ({ docId, path: m.path, chunks: m.chunks || 0 }));

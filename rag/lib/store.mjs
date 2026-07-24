@@ -78,17 +78,27 @@ export async function retrieve(query, k = 4) {
   let qv;
   try { qv = await embedOne(query); } catch (e) { return []; }
   if (!qv) return [];
+  // A query embedded with a different model than the index cannot be scored
+  // meaningfully; return nothing rather than a page of near-zero "matches".
+  if (i.dim && qv.length !== i.dim) return [];
   const scored = [];
   for (const en of i.entries) scored.push({ id: en.id, vec: en.vec, score: cosine(qv, en.vec) });
   scored.sort((a, b) => b.score - a.score);
 
   const out = [];
-  const kept = [];
+  const kept = []; // { vec, docId } for each passage already chosen
   for (const s of scored) {
     if (out.length >= k) break;
-    if (kept.some((v) => cosine(v, s.vec) >= NEAR_DUP_SIM)) continue; // redundant with one already chosen
     const c = i.chunks.get(s.id);
-    if (c) { out.push({ ...c, score: s.score }); kept.push(s.vec); }
+    if (!c) continue;
+    // Collapse a passage that repeats WITHIN one document (overlapping chunks,
+    // boilerplate reused across its own pages), but never drop a DIFFERENT
+    // document that happens to share the same text: each distinct source must
+    // stay retrievable so the answer can cite it. Content-addressed vectors mean
+    // two documents can share a vector, so a cross-document match here scores 1.
+    if (kept.some((kv) => kv.docId === c.docId && cosine(kv.vec, s.vec) >= NEAR_DUP_SIM)) continue;
+    out.push({ ...c, score: s.score });
+    kept.push({ vec: s.vec, docId: c.docId });
   }
   return out;
 }

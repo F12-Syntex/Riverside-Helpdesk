@@ -159,7 +159,9 @@ export default function DocumentViewer({ v }) {
   // The standalone passage is hidden on desktop ONLY when it was highlighted in
   // place; if we couldn't locate it, it stays visible so the source text shows.
   const hidePassageOnDesktop = vm.hasFile && vm.isHtml && located;
-  const locParts = [vm.location].filter(Boolean);
+  // Show the located line/block once the passage has been found in the document,
+  // so the header reads e.g. "Order blood tests · line 3".
+  const locParts = [vm.location, located && line ? 'line ' + line : ''].filter(Boolean);
 
   return (
     <div onClick={v.onCloseViewer} style={s('position:fixed;inset:0;background:rgba(33,43,50,.5);display:flex;align-items:stretch;justify-content:flex-end;z-index:60;')}>

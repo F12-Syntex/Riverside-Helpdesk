@@ -133,15 +133,19 @@ class RiversidePracticeQA extends React.Component {
   /* ------------------------- Image attachments ------------------------- */
 
   async addImages(files) {
-    const imgs = this.state.pendingImages.slice();
+    const prepared = [];
     for (const f of Array.from(files || [])) {
       if (!f || !/^image\//.test(f.type)) continue;
-      if (imgs.length >= MAX_IMAGES) break;
+      if (prepared.length >= MAX_IMAGES) break;
       try {
-        imgs.push({ name: f.name || 'Pasted image', dataUrl: await prepareImage(f) });
+        prepared.push({ name: f.name || 'Pasted image', dataUrl: await prepareImage(f) });
       } catch (e) { /* unreadable file — skip it */ }
     }
-    this.setState({ pendingImages: imgs });
+    if (!prepared.length) return;
+    // Append to the LATEST pending list via a functional update. A paste and a
+    // file-pick can overlap, and both await the async re-encode; a snapshot taken
+    // at entry would let the slower call clobber the faster one and lose an image.
+    this.setState((state) => ({ pendingImages: state.pendingImages.concat(prepared).slice(0, MAX_IMAGES) }));
   }
 
   removePendingImage(i) {
@@ -340,23 +344,27 @@ class RiversidePracticeQA extends React.Component {
   }
 
   copyAi(m, idx) {
-    if (m.message) {
-      try { navigator.clipboard.writeText(m.message); } catch (e) {}
-      this.flagCopied(idx);
-      return;
-    }
+    // An answer can carry BOTH a procedure (sections) and a suggested message —
+    // copy everything, never just one part. Copying only the message here used
+    // to silently drop the whole procedure the reader meant to paste.
+    const hasSections = this.answerSections(m).some((sec) => (sec.markdown || '').trim());
     const lines = [m.question, ''];
     if (m.intro) lines.push(plainText(m.intro), '');
     this.answerSections(m).forEach((sec) => {
+      if (!(sec.markdown || '').trim()) return;
       if (sec.basis === 'judgement') lines.push('[AI judgement, not from the practice’s documents]');
       lines.push(mdPlain(sec.markdown));
       if (sec.cite) lines.push('[Source: ' + sec.cite.docTitle + ', ' + sec.cite.location + ']');
       lines.push('');
     });
+    if (m.message) {
+      lines.push(hasSections ? 'Suggested message:' : '', m.message, '');
+      if (m.messageCite) lines.push('[Source: ' + m.messageCite.docTitle + ', ' + m.messageCite.location + ']', '');
+    }
     if (m.tip) lines.push('Tip: ' + plainText(m.tip));
     lines.push(...this.contactLines(m));
     lines.push('', 'From the practice’s documents; AI judgement marked where used.');
-    try { navigator.clipboard.writeText(lines.join('\n').replace(/\n{3,}/g, '\n\n')); } catch (e) {}
+    try { navigator.clipboard.writeText(lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()); } catch (e) {}
     this.flagCopied(idx);
   }
 
@@ -465,6 +473,23 @@ class RiversidePracticeQA extends React.Component {
       // The document URL to open/download; pdfSrc also jumps to the right page.
       pdfSrc,
     };
+  }
+
+  // Turn a citation's source images (a notebook note's attachments, or a cited
+  // PDF page render) into clickable thumbnails. Shared by the answer sections and
+  // the suggested-message block so a picture is shown wherever its source lands.
+  citeThumbs(cite) {
+    if (!cite || !Array.isArray(cite.images) || !cite.images.length) return [];
+    return cite.images.map((u) => ({
+      src: assetSrc(u),
+      onOpen: () => this.openViewer({
+        docTitle: cite.docTitle,
+        location: cite.location,
+        quote: cite.quote,
+        text: cite.text,
+        view: { kind: 'image', url: u },
+      }),
+    }));
   }
 
   setDraftField(k, v) { this.setState({ draft: Object.assign({}, this.state.draft, { [k]: v }) }); }
@@ -616,16 +641,7 @@ class RiversidePracticeQA extends React.Component {
           // Pictures that live in the cited source (a notebook note's attached
           // images, or the cited PDF page) — shown as thumbnails under the
           // section; clicking opens the image full-size in the source panel.
-          const images = ((cite && cite.images) || []).map((u) => ({
-            src: assetSrc(u),
-            onOpen: () => self.openViewer({
-              docTitle: cite.docTitle,
-              location: cite.location,
-              quote: cite.quote,
-              text: cite.text,
-              view: { kind: 'image', url: u },
-            }),
-          }));
+          const images = self.citeThumbs(cite);
           return {
             key: i,
             markdown: sec.markdown || '',
@@ -637,6 +653,9 @@ class RiversidePracticeQA extends React.Component {
             hasImages: images.length > 0,
           };
         });
+        // Pictures on the suggested-message citation (each source image is shown
+        // once, against the first cite it belongs to — which can be the message).
+        const messageImages = self.citeThumbs(m.messageCite);
         return {
           isAi: true,
           aiLoading: m.status === 'loading',
@@ -654,6 +673,8 @@ class RiversidePracticeQA extends React.Component {
           hasMessageCite: !!m.messageCite,
           messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ', ' + m.messageCite.location) : '',
           onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
+          messageImages,
+          hasMessageImages: messageImages.length > 0,
           hasTip: !!(m.tip && m.tip.length),
           tip: m.tip || '',
           onRetry: () => self.retryAi(idx),
