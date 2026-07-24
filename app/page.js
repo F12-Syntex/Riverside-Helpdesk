@@ -14,13 +14,13 @@ import AppHeader from './_components/AppHeader';
 const TOOLS = [
   {
     href: '/lookup',
-    title: 'Instant lookup',
-    description: 'Find a saved phone number by typing part of a name, even with spelling mistakes. Covers hospital switchboards, departments, community teams and pharmacies, so you can find the right number while the patient is still on the line.',
+    title: 'Find a phone number',
+    description: 'Search hospitals, departments and pharmacies by name — typos OK.',
   },
   {
     href: '/helpbot',
-    title: 'Practice Q&A',
-    description: 'Ask how the practice works. Answers stick strictly to the organisation’s own documents, and anything not verified against them is labelled. You can attach images. For all staff.',
+    title: 'Ask a practice question',
+    description: 'Answers come only from the practice’s own documents.',
   },
   // Medication check and the Staff rota generator are hidden from the index
   // for now (the /medications and /rota routes still work if visited
@@ -37,13 +37,13 @@ const TOOLS = [
   // },
   {
     href: '/notebook',
-    title: 'Notebook',
-    description: 'Write practice notes and instructions, with sub-notes. Everything you save is used by the Practice Q&A assistant straight away.',
+    title: 'Write a practice note',
+    description: 'Saved notes feed the practice Q&A instantly.',
   },
   {
     href: '/dpia',
     title: 'Data protection check (DPIA)',
-    description: 'The data protection impact assessment for the whole Riverside Helpdesk programme: what it does with information, the risks, and how far the check has got.',
+    description: 'Status of the programme’s data protection impact assessment.',
   },
 ];
 
