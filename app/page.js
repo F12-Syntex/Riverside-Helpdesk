@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { s, Hover } from './_components/ui';
+import { s, Hover, Svg, Icons } from './_components/ui';
 import AppHeader from './_components/AppHeader';
 
 /* ------------------------------------------------------------------ *
@@ -12,16 +12,9 @@ import AppHeader from './_components/AppHeader';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
-  {
-    href: '/lookup',
-    title: 'Find a phone number',
-    description: 'Search hospitals, departments and pharmacies by name — typos OK.',
-  },
-  {
-    href: '/helpbot',
-    title: 'Ask a practice question',
-    description: 'Answers come only from the practice’s own documents.',
-  },
+  { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
+  { href: '/helpbot', title: 'Ask a practice question', icon: Icons.chat },
+  { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
   // Medication check and the Staff rota generator are hidden from the index
   // for now (the /medications and /rota routes still work if visited
   // directly). Uncomment to bring them back.
@@ -35,16 +28,6 @@ const TOOLS = [
   //   title: 'Staff rota generator',
   //   description: 'Build and balance staff rotas with help from the practice assistant.',
   // },
-  {
-    href: '/notebook',
-    title: 'Write a practice note',
-    description: 'Saved notes feed the practice Q&A instantly.',
-  },
-  {
-    href: '/dpia',
-    title: 'Data protection check (DPIA)',
-    description: 'Status of the programme’s data protection impact assessment.',
-  },
 ];
 
 export default function Page() {
@@ -56,15 +39,15 @@ export default function Page() {
         <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>Practice tools</h1>
         <p style={s('font-size:17px;color:#4c6272;margin:0 0 28px;')}>Choose a tool to get started.</p>
 
-        <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px;')}>
+        <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;')}>
           {TOOLS.map((t) => (
             <li key={t.href}>
               <Hover tag={Link} href={t.href}
-                base="font-size:20px;font-weight:600;color:#005eb8;text-decoration:underline;text-underline-offset:.12em;"
-                hover="color:#003087;text-decoration-thickness:2px;">
+                base="display:flex;align-items:center;gap:14px;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;font-size:20px;font-weight:600;color:#212b32;text-decoration:none;"
+                hover="border-color:#005eb8;background:#f0f6fb;">
+                <Svg style={s('flex:none;color:#005eb8;')}>{t.icon}</Svg>
                 {t.title}
               </Hover>
-              <p style={s('margin:4px 0 0;font-size:16px;color:#4c6272;line-height:1.5;text-wrap:pretty;')}>{t.description}</p>
             </li>
           ))}
         </ul>
