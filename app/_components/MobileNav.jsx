@@ -15,9 +15,9 @@ import { s, Hover, Svg, Icons } from './ui';
 const TOOLS = [
   { href: '/lookup', label: 'Instant lookup' },
   { href: '/helpbot', label: 'Practice Q&A' },
-  { href: '/diagram', label: 'How the system works' },
-  // Notebook, medication check and the rota generator are hidden for now —
-  // keep in step with TOOLS in app/page.js. The routes still work directly.
+  // Hidden for now — keep in step with TOOLS in app/page.js. The routes still
+  // work directly (/diagram is the full system map).
+  // { href: '/diagram', label: 'System map' },
   // { href: '/notebook', label: 'Notebook' },
   // { href: '/medications', label: 'Medication check' },
   // { href: '/rota', label: 'Staff rota generator' },

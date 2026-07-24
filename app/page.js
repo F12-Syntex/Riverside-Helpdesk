@@ -14,11 +14,12 @@ import AppHeader from './_components/AppHeader';
 const TOOLS = [
   { href: '/helpbot', title: 'Ask a practice question', icon: Icons.chat },
   { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
-  { href: '/diagram', title: 'How the system works', icon: Icons.sitemap },
-  // Notebook is hidden from the index for now; the /notebook route still
-  // works if visited directly. Medication check and the Staff rota generator
-  // are likewise hidden (the /medications and /rota routes still work if
-  // visited directly). Uncomment to bring them back.
+  // Hidden from the index but still reachable directly:
+  //  - /diagram    — the full system map (documentation, not a daily tool)
+  //  - /notebook   — write a practice note
+  //  - /medications, /rota — medication check and the staff rota generator
+  // Uncomment to bring any back onto the index.
+  // { href: '/diagram', title: 'How the system works', icon: Icons.sitemap },
   // { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
   // {
   //   href: '/medications',
