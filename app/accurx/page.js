@@ -39,12 +39,6 @@ export default function Page() {
       <AppHeader subtitle="AccurX & documents" />
 
       <main style={s('flex:1;width:100%;max-width:760px;margin:0 auto;padding:40px 24px 56px;')}>
-        <Hover tag={Link} href="/"
-          base="display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:#4c6272;text-decoration:none;margin-bottom:18px;"
-          hover="color:#005eb8;">
-          <Svg w={17} sw={2.2}>{Icons.arrowLeft}</Svg>All practice tools
-        </Hover>
-
         <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>AccurX &amp; documents</h1>
         <p style={s('font-size:17px;color:#4c6272;margin:0 0 28px;')}>Tools for handling incoming AccurX requests and documents.</p>
 
@@ -52,9 +46,9 @@ export default function Page() {
           {TOOLS.map((t) => (
             <li key={t.href}>
               <Hover tag={Link} href={t.href}
-                base="display:flex;align-items:flex-start;gap:14px;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;text-decoration:none;color:#212b32;"
+                base="display:flex;align-items:center;gap:14px;min-height:96px;box-sizing:border-box;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;text-decoration:none;color:#212b32;"
                 hover="border-color:#005eb8;background:#f0f6fb;">
-                <Svg style={s('flex:none;margin-top:2px;color:#005eb8;')}>{t.icon}</Svg>
+                <Svg style={s('flex:none;color:#005eb8;')}>{t.icon}</Svg>
                 <span style={s('display:flex;flex-direction:column;gap:3px;')}>
                   <span style={s('font-size:20px;font-weight:600;')}>{t.title}</span>
                   <span style={s('font-size:15px;color:#4c6272;line-height:1.45;')}>{t.description}</span>
