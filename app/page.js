@@ -12,8 +12,8 @@ import AppHeader from './_components/AppHeader';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
-  { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
   { href: '/helpbot', title: 'Ask a practice question', icon: Icons.chat },
+  { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
   { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
   // Medication check and the Staff rota generator are hidden from the index
   // for now (the /medications and /rota routes still work if visited
