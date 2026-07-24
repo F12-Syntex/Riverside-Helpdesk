@@ -29,6 +29,13 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const TOP_K = 5;
+// Q&A source scope (temporary). The assistant currently answers from the
+// practice Notebook ONLY: document (RAG) retrieval, the knowledge catalogue and
+// conflict detection are switched off, and the contacts directory is not shown.
+// Every non-empty Notebook page is still loaded in full. Flip either flag back
+// to true to restore that channel.
+const USE_DOCUMENTS = false;
+const USE_CONTACTS = false;
 // A retrieved Source sometimes points at a generic process instead of
 // stating it ("same as the standard referral process, but to X clinic").
 // Plain top-K semantic search then hands the model the pointer without the
@@ -290,26 +297,31 @@ export async function POST(request) {
         section: 'Complete note', view: null, images: [], kind: 'notebook',
       }));
   }
-  try {
-    if (usingUnified) {
-      const documentHits = await searchKnowledge(searchQuery, TOP_K, { kind: 'document' });
-      chunks = documentHits.map(knowledgeHitToDocumentChunk);
+  if (USE_DOCUMENTS) {
+    try {
+      if (usingUnified) {
+        const documentHits = await searchKnowledge(searchQuery, TOP_K, { kind: 'document' });
+        chunks = documentHits.map(knowledgeHitToDocumentChunk);
+      }
+    } catch (e) {
+      // A transient canonical-search failure must still leave staff with the
+      // bundled read-only index rather than an empty answer context.
+      usingUnified = false;
     }
-  } catch (e) {
-    // A transient canonical-search failure must still leave staff with the
-    // bundled read-only index rather than an empty answer context.
+    // Deployment bridge: the committed document index remains readable until a
+    // new canonical schema has completed its first reconciliation.
+    if (!usingUnified) try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
+  } else {
+    // Notebook-only mode: never surface the document store as a canonical source.
     usingUnified = false;
   }
-  // Deployment bridge: the committed document index remains readable until a
-  // new canonical schema has completed its first reconciliation.
-  if (!usingUnified) try { chunks = await retrieve(searchQuery, TOP_K); } catch (e) { chunks = []; }
 
   // Reference-chasing: if what came back only points at a generic process
   // ("same as standard, but to Cardiology") rather than stating it, run one
   // more targeted retrieval for that process and merge in whatever it finds
   // that wasn't already retrieved. Only runs when the phrase is actually
   // present, so the common case costs nothing extra.
-  const hint = referenceHint(chunks);
+  const hint = USE_DOCUMENTS ? referenceHint(chunks) : null;
   if (hint) {
     try {
       const more = usingUnified
@@ -323,7 +335,7 @@ export async function POST(request) {
   // Referral pinning: a referral question always gets the referral protocol
   // documents in full, whatever semantic search happened to return, so the
   // answer can set out the complete process rather than a fragment.
-  if (REFERRAL_QUERY.test(searchQuery)) {
+  if (USE_DOCUMENTS && REFERRAL_QUERY.test(searchQuery)) {
     try {
       const pinned = usingUnified
         ? (await knowledgePassagesByTitles(REFERRAL_DOC_TITLES, { kind: 'document' })).map(knowledgeHitToDocumentChunk)
@@ -348,7 +360,7 @@ export async function POST(request) {
   for (const chunk of supplementaryChunks) addExtract(chunk, 'notebook');
 
   let conflicts = [];
-  if (usingUnified) try {
+  if (USE_DOCUMENTS && usingUnified) try {
     conflicts = await conflictsForPassages(chunks.map((c) => c.id));
     const known = new Set(chunks.map((c) => c.id));
     for (const c of conflicts) for (const side of ['A', 'B']) {
@@ -374,14 +386,16 @@ export async function POST(request) {
   // reader verbatim (never authored by the model). Also build the set of numbers
   // we can vouch for (directory + anything present in the retrieved Sources), so
   // any other phone number the model writes can be stripped as unverified.
-  let contacts;
-  let verifiedNums;
-  if (usingUnified) {
-    try { contacts = await unifiedContacts(searchQuery, 5); } catch (e) { contacts = []; }
-    try { verifiedNums = await unifiedTelephoneSet(); } catch (e) { verifiedNums = new Set(); }
-  } else {
-    contacts = matchContacts(searchQuery);
-    verifiedNums = new Set(contactTelSet());
+  let contacts = [];
+  let verifiedNums = new Set();
+  if (USE_CONTACTS) {
+    if (usingUnified) {
+      try { contacts = await unifiedContacts(searchQuery, 5); } catch (e) { contacts = []; }
+      try { verifiedNums = await unifiedTelephoneSet(); } catch (e) { verifiedNums = new Set(); }
+    } else {
+      contacts = matchContacts(searchQuery);
+      verifiedNums = new Set(contactTelSet());
+    }
   }
   for (const ex of extracts) {
     // Same separator set as the redactor (dots, nbsp, tabs included) so a number
@@ -397,8 +411,8 @@ export async function POST(request) {
   // The catalogue is document-only. Notebook pages are already supplied in full
   // and contacts are selected by their own RAG query.
   let canonicalCatalog = '';
-  if (usingUnified) try { canonicalCatalog = await knowledgeCatalogText({ kind: 'document' }); } catch (e) { canonicalCatalog = ''; }
-  const catalog = usingUnified ? canonicalCatalog : catalogText();
+  if (USE_DOCUMENTS && usingUnified) try { canonicalCatalog = await knowledgeCatalogText({ kind: 'document' }); } catch (e) { canonicalCatalog = ''; }
+  const catalog = USE_DOCUMENTS ? (usingUnified ? canonicalCatalog : catalogText()) : '';
   const prompt = buildAskPrompt({ question, catalog, extracts, history, guideCatalog, contacts: contacts.map((c) => c.label), conflicts, imageCount: images.length });
 
   // With images attached, the message becomes multimodal content parts; the
