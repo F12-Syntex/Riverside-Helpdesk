@@ -832,7 +832,7 @@ class RiversidePracticeQA extends React.Component {
                 hover={v.canAttachMore ? 'border-color:#005eb8;color:#005eb8;' : ''}>
                 <Svg w={20} sw={2}>{Icons.image}</Svg>
               </Hover>
-              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;height:48px;font:inherit;font-size:17px;padding:0 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
