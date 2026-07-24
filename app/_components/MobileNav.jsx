@@ -16,6 +16,7 @@ const TOOLS = [
   { href: '/lookup', label: 'Instant lookup' },
   { href: '/helpbot', label: 'Practice Q&A' },
   { href: '/signpost', label: 'Signpost an AccurX request' },
+  { href: '/coding', label: 'Code a document' },
   // Medication check and the rota generator are hidden for now — keep in
   // step with TOOLS in app/page.js.
   // { href: '/medications', label: 'Medication check' },
