@@ -20,11 +20,11 @@ export default function ChatView({ v }) {
             </div>
             <h1 className="riva-hero-h1" style={s('font-size:34px;margin:18px 0 8px;letter-spacing:-0.01em;')}>{v.botName}</h1>
             <p style={s('font-size:19px;color:#4c6272;max-width:540px;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
-            <p style={s('font-size:15px;color:#768692;max-width:540px;margin:14px auto 0;text-wrap:pretty;font-weight:600;')}>Ask about a process, paste a patient request to triage, or paste a medical document (patient name removed) for a ready-to-file title. Share only the patient detail you need. This gives routing help, not clinical advice.</p>
+            <p style={s('font-size:14px;color:#c0392b;max-width:540px;margin:12px auto 0;font-weight:700;')}>Don&rsquo;t type patient names.</p>
           </div>
 
           <div>
-            <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 12px;')}>Popular questions</div>
+            <div style={s('font-size:14px;font-weight:600;color:#768692;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 12px;')}>Tap a question to ask it</div>
             <div style={s('display:flex;flex-direction:column;gap:8px;')}>
               {v.popular.map((p, i) => (
                 <Hover key={i} tag="button" onClick={p.onClick} base="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid #d8dde0;border-radius:10px;padding:13px 16px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;" hover="border-color:#005eb8;background:#f7fbff;">

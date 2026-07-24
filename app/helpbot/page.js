@@ -744,7 +744,7 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works, paste an incoming patient request to triage, or paste a medical document to get a short filing title. Answers stick strictly to the organisation’s own documents. Anything not verified against them is clearly marked.',
+      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works. Answers come only from the practice’s own documents.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -832,7 +832,7 @@ class RiversidePracticeQA extends React.Component {
                 hover={v.canAttachMore ? 'border-color:#005eb8;color:#005eb8;' : ''}>
                 <Svg w={20} sw={2}>{Icons.image}</Svg>
               </Hover>
-              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Ask a question, paste a patient request or a document to file, or paste an image…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
