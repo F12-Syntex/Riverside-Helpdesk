@@ -24,6 +24,12 @@ export default function Page() {
       <AppHeader subtitle="AccurX & documents" />
 
       <main style={s('flex:1;width:100%;max-width:760px;margin:0 auto;padding:40px 24px 56px;')}>
+        <Hover tag={Link} href="/"
+          base="display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:#4c6272;text-decoration:none;margin-bottom:18px;"
+          hover="color:#005eb8;">
+          <Svg w={17} sw={2.2}>{Icons.arrowLeft}</Svg>All practice tools
+        </Hover>
+
         <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>AccurX &amp; documents</h1>
         <p style={s('font-size:17px;color:#4c6272;margin:0 0 28px;')}>Tools for handling incoming AccurX requests and documents.</p>
 
