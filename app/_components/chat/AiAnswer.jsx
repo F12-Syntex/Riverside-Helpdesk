@@ -107,15 +107,11 @@ export default function AiAnswer({ v }) {
             <ContactsCard v={v} />
             {v.hasContacts && <div style={s('height:12px;')} />}
 
-            <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-              {v.usedJudgement && (
+            {v.usedJudgement && (
+              <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;')}>
                 <span style={s('font-size:12.5px;color:#768692;')}>Amber blocks are AI judgement, not the practice&rsquo;s documents</span>
-              )}
-              <div style={s('margin-left:auto;display:flex;gap:10px;')}>
-                <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;"><Svg w={15}>{Icons.copy}</Svg>{v.copyLabel}</Hover>
-                <Hover onClick={v.onSave} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;" hover="background:#003087;">Save to knowledge base</Hover>
               </div>
-            </div>
+            )}
           </>
         )}
       </div>
