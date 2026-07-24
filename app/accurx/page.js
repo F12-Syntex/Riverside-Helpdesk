@@ -13,24 +13,9 @@ import AppHeader from '../_components/AppHeader';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
-  {
-    href: '/signpost',
-    title: 'Signpost an AccurX request',
-    description: 'Paste a consultation and get a concise pathway — who should handle it, how urgently, and the next steps.',
-    icon: Icons.arrow,
-  },
-  {
-    href: '/reason',
-    title: 'Reason for appointment',
-    description: 'Turn a consultation into a concise clinical reason for the appointment, in medical terms for the doctor.',
-    icon: Icons.stethoscope,
-  },
-  {
-    href: '/coding',
-    title: 'Code a document',
-    description: 'Paste a document or screenshot and get the one-line filing title, ready for the clinical system.',
-    icon: Icons.fileLines,
-  },
+  { href: '/signpost', title: 'Signpost a request', icon: Icons.arrow },
+  { href: '/reason', title: 'Reason for appointment', icon: Icons.stethoscope },
+  { href: '/coding', title: 'Code a document', icon: Icons.fileLines },
 ];
 
 export default function Page() {
@@ -46,13 +31,10 @@ export default function Page() {
           {TOOLS.map((t) => (
             <li key={t.href}>
               <Hover tag={Link} href={t.href}
-                base="display:flex;align-items:center;gap:14px;min-height:96px;box-sizing:border-box;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;text-decoration:none;color:#212b32;"
+                base="display:flex;align-items:center;gap:14px;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;font-size:20px;font-weight:600;color:#212b32;text-decoration:none;"
                 hover="border-color:#005eb8;background:#f0f6fb;">
                 <Svg style={s('flex:none;color:#005eb8;')}>{t.icon}</Svg>
-                <span style={s('display:flex;flex-direction:column;gap:3px;')}>
-                  <span style={s('font-size:20px;font-weight:600;')}>{t.title}</span>
-                  <span style={s('font-size:15px;color:#4c6272;line-height:1.45;')}>{t.description}</span>
-                </span>
+                {t.title}
               </Hover>
             </li>
           ))}
