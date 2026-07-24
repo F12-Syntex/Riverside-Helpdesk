@@ -1,4 +1,5 @@
 html, body { margin: 0; height: 100%; }
+html { scrollbar-gutter: stable; }
 body {
   background: #f0f4f5;
   font-family: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
@@ -184,3 +185,7 @@ body { overflow-x: hidden; }
  * one on type="search" so there aren't two crosses. */
 .riva-lookup-sticky input::-webkit-search-cancel-button,
 .riva-lookup-sticky input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+
+@media (max-width: 600px) {
+  .riva-lookup-all-sheet { height: 100vh !important; border-radius: 0 !important; }
+}

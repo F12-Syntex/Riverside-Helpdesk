@@ -110,26 +110,22 @@ export default function Page() {
 
   const trimmed = query.trim();
   const results = React.useMemo(() => {
-    if (trimmed) return fuzzySearch(index, trimmed).map((r) => r.entry);
-    if (showAll) return directory;
-    return [];
-  }, [index, directory, trimmed, showAll]);
+    if (!trimmed) return [];
+    return fuzzySearch(index, trimmed).map((r) => r.entry);
+  }, [index, trimmed]);
 
   // Keep keyboard selection in range as the list changes under it.
-  React.useEffect(() => { setSelIdx(trimmed || showAll ? 0 : -1); }, [trimmed, showAll]);
+  React.useEffect(() => { setSelIdx(trimmed ? 0 : -1); }, [trimmed]);
 
   const flashCopied = (label) => {
     setFlash(label);
     setTimeout(() => setFlash(''), 1600);
   };
 
-  const onChange = (e) => {
-    setQuery(e.target.value);
-    if (e.target.value.trim()) setShowAll(false);
-  };
+  const onChange = (e) => setQuery(e.target.value);
 
   const onKeyDown = (e) => {
-    if (e.key === 'Escape') { setQuery(''); setShowAll(false); return; }
+    if (e.key === 'Escape') { setQuery(''); return; }
     if (!results.length) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -162,7 +158,7 @@ export default function Page() {
         ) : null}
 
         {/* Results. */}
-        {results.length ? (
+        {trimmed && results.length ? (
           <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
             {results.map((e, i) => (
               <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
@@ -182,9 +178,10 @@ export default function Page() {
         )}
       </main>
 
-      {/* Docked search bar. */}
-      <div style={s('position:sticky;bottom:0;z-index:10;background:#f0f4f5;border-top:1px solid #d8dde0;box-shadow:0 -6px 18px rgba(0,0,0,.05);')}>
-        <div style={s('max-width:860px;margin:0 auto;padding:14px 24px;display:flex;gap:10px;')}>
+      {/* Docked search bar — fixed to the viewport bottom so its position and
+          width never shift as results grow/shrink or a scrollbar appears. */}
+      <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:10;background:#f0f4f5;border-top:1px solid #d8dde0;box-shadow:0 -6px 18px rgba(0,0,0,.05);')}>
+        <div style={s('max-width:860px;margin:0 auto;padding:14px 24px;padding-bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:10px;')}>
           <div style={s('position:relative;flex:1;')}>
             <span style={s('position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
               <Svg w={20} sw={2.2}>{Icons.search}</Svg>
@@ -209,13 +206,41 @@ export default function Page() {
               </Hover>
             ) : null}
           </div>
-          <Hover tag="button" onClick={() => { setQuery(''); setShowAll((v) => !v); }}
-            base={'flex:none;height:52px;padding:0 18px;font:inherit;font-size:15px;font-weight:600;border-radius:10px;cursor:pointer;' + (showAll ? 'border:2px solid #005eb8;background:#005eb8;color:#fff;' : 'border:2px solid #d8dde0;background:#fff;color:#39505f;')}
-            hover={showAll ? '' : 'border-color:#005eb8;color:#005eb8;'}>
+          <Hover tag="button" onClick={() => setShowAll(true)}
+            base="flex:none;height:52px;padding:0 18px;font:inherit;font-size:15px;font-weight:600;border-radius:10px;cursor:pointer;border:2px solid #d8dde0;background:#fff;color:#39505f;"
+            hover="border-color:#005eb8;color:#005eb8;">
             View all
           </Hover>
         </div>
       </div>
+
+      {/* "View all" — a sheet that rises to fill almost the full screen. */}
+      {showAll ? (
+        <div style={s('position:fixed;inset:0;z-index:80;background:rgba(33,43,50,.45);display:flex;align-items:flex-end;justify-content:center;')}
+          onClick={() => setShowAll(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="riva-lookup-all-sheet"
+            style={s('width:100%;max-width:860px;height:92vh;background:#f0f4f5;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(33,43,50,.25);display:flex;flex-direction:column;overflow:hidden;animation:rivaSheetUp .22s ease;')}>
+            <div style={s('flex:none;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #d8dde0;background:#fff;')}>
+              <span style={s('font-size:18px;font-weight:700;')}>All numbers <span style={s('color:#8a99a3;font-weight:600;')}>({directory.length})</span></span>
+              <Hover tag="button" onClick={() => setShowAll(false)} aria-label="Close"
+                base="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:none;border-radius:8px;background:#f0f4f5;color:#39505f;cursor:pointer;"
+                hover="background:#e4e9eb;color:#212b32;">
+                <Svg w={18} sw={2.2}>{Icons.close}</Svg>
+              </Hover>
+            </div>
+            <div style={s('flex:1;overflow-y:auto;padding:16px 20px;')}>
+              <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
+                {directory.map((e, i) => (
+                  <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
+                    <EntryRow entry={e} query="" selected={false} showCategory flash={() => flashCopied(e.label)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
