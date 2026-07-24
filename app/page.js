@@ -13,8 +13,7 @@ import AppHeader from './_components/AppHeader';
 
 const TOOLS = [
   { href: '/helpbot', title: 'Ask a practice question', icon: Icons.chat },
-  { href: '/signpost', title: 'Signpost an AccurX request', icon: Icons.arrow },
-  { href: '/coding', title: 'Code a document', icon: Icons.fileLines },
+  { href: '/accurx', title: 'AccurX & documents', icon: Icons.folder },
   { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
   { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
   // Medication check and the Staff rota generator are hidden from the index

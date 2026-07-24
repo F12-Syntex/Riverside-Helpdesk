@@ -113,6 +113,8 @@ export const Icons = {
   pill: (<><rect x="3" y="8" width="18" height="8" rx="4" /><line x1="12" y1="8" x2="12" y2="16" /></>),
   search: (<><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>),
   paperclip: (<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />),
+  folder: (<path d="M4 4h5l2 3h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />),
+  stethoscope: (<><path d="M4 3v6a5 5 0 0 0 10 0V3" /><path d="M5 3H3M13 3h2" /><path d="M9 14v2a5 5 0 0 0 10 0v-2" /><circle cx="19" cy="10" r="2" /></>),
 };
 
 export function assetSrc(p) {
