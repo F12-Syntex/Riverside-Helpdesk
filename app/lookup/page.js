@@ -179,35 +179,37 @@ export default function Page() {
       </main>
 
       {/* Docked search bar — fixed to the viewport bottom so its position and
-          width never shift as results grow/shrink or a scrollbar appears. */}
-      <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:10;background:#f0f4f5;border-top:1px solid #d8dde0;box-shadow:0 -6px 18px rgba(0,0,0,.05);')}>
-        <div style={s('max-width:860px;margin:0 auto;padding:14px 24px;padding-bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:10px;')}>
+          width never shift as results grow/shrink or a scrollbar appears.
+          Styled to match the chat composer on /helpbot (white bar, pill input,
+          same heights) for a consistent feel across the tools. */}
+      <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:10;background:#fff;border-top:1px solid #d8dde0;box-shadow:0 -4px 14px rgba(33,43,50,.04);')}>
+        <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;padding-bottom:calc(18px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;')}>
           <div style={s('position:relative;flex:1;')}>
-            <span style={s('position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
+            <span style={s('position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
               <Svg w={20} sw={2.2}>{Icons.search}</Svg>
             </span>
             <input
               ref={inputRef}
               autoFocus
               className="riva-input"
-              type="search"
+              type="text"
               value={query}
               onChange={onChange}
               onKeyDown={onKeyDown}
               placeholder="Type a name…"
               aria-label="Search the practice directory"
-              style={s('width:100%;height:52px;padding:0 44px 0 44px;font:inherit;font-size:17px;border:2px solid #4c6272;border-radius:10px;background:#fff;color:#212b32;')}
+              style={s('width:100%;height:48px;padding:0 46px;font:inherit;font-size:17px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;color:#212b32;outline:none;')}
             />
             {query ? (
               <Hover tag="button" onClick={() => { setQuery(''); if (inputRef.current) inputRef.current.focus(); }} aria-label="Clear search"
-                base="position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:8px;background:none;color:#4c6272;cursor:pointer;"
-                hover="background:#f0f4f5;color:#212b32;">
+                base="position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:50%;background:none;color:#4c6272;cursor:pointer;"
+                hover="background:#e4e9eb;color:#212b32;">
                 <Svg w={18} sw={2.2}>{Icons.close}</Svg>
               </Hover>
             ) : null}
           </div>
           <Hover tag="button" onClick={() => setShowAll(true)}
-            base="flex:none;height:52px;padding:0 18px;font:inherit;font-size:15px;font-weight:600;border-radius:10px;cursor:pointer;border:2px solid #d8dde0;background:#fff;color:#39505f;"
+            base="flex:none;height:48px;padding:0 20px;font:inherit;font-size:15px;font-weight:600;border-radius:999px;cursor:pointer;border:2px solid #d8dde0;background:#fff;color:#39505f;"
             hover="border-color:#005eb8;color:#005eb8;">
             View all
           </Hover>
