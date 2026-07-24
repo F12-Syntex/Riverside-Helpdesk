@@ -1,193 +1,256 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 
 /* ------------------------------------------------------------------ *
- * /diagram — a plain-English map of the whole stack.
+ * /diagram — a visual, paged walk-through of how an answer is made.
  *
- * One screen that shows every moving part of the Riverside assistant and
- * how a question flows through it: browser → server → search the
- * practice's own knowledge → LLM wording → verify → answer. Meant to be
- * readable at a glance by non-technical staff, so it uses labelled boxes
- * and down-arrows rather than any diagramming library.
+ * A persistent pipeline "rail" across the top shows the whole flow at a
+ * glance; below it, one card per step explains that stage with a simple
+ * picture and a sentence or two. Paged so no single screen is crowded.
+ *
+ * Reflects the current Notebook-only setup: the assistant answers from
+ * the practice Notebook alone (document search and the contacts
+ * directory are switched off for now).
  * ------------------------------------------------------------------ */
 
 const BLUE = '#005eb8';
 const INK = '#212b32';
 const MUTED = '#4c6272';
-const LINE = '#c3d0d6';
+const GREEN = '#007f3b';
 
-/* A titled box in the flow. `tone` picks the accent colour. */
-function Box({ tone = 'plain', kicker, title, children, style }) {
+/* A rounded node used both in the rail (small) and the hero scenes (big). */
+function Node({ icon, label, size = 56, tone = 'idle', style }) {
   const tones = {
-    plain: { bg: '#fff', border: '#d8e1e5', accent: MUTED },
-    blue: { bg: '#f0f6fb', border: '#9dc3e6', accent: BLUE },
-    green: { bg: '#effaf2', border: '#a7d8b6', accent: '#006644' },
-    amber: { bg: '#fff8ec', border: '#e8cf9a', accent: '#8a6100' },
-    ink: { bg: '#212b32', border: '#212b32', accent: '#fff' },
+    idle: 'background:#fff;border:1.5px solid #cdd8dd;color:#7a8b95;',
+    done: 'background:#eaf3fb;border:1.5px solid #9dc3e6;color:#005eb8;',
+    active: `background:${BLUE};border:1.5px solid ${BLUE};color:#fff;box-shadow:0 6px 16px rgba(0,94,184,.28);`,
+    green: `background:${GREEN};border:1.5px solid ${GREEN};color:#fff;`,
   };
-  const t = tones[tone] || tones.plain;
-  const dark = tone === 'ink';
   return (
-    <div style={s(`background:${t.bg};border:1px solid ${t.border};border-radius:12px;padding:16px 18px;${style || ''}`)}>
-      {kicker && (
-        <div style={s(`font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${t.accent};margin-bottom:4px;`)}>{kicker}</div>
-      )}
-      {title && (
-        <div style={s(`font-size:17px;font-weight:700;color:${dark ? '#fff' : INK};`)}>{title}</div>
-      )}
-      {children && (
-        <div style={s(`font-size:14.5px;line-height:1.5;color:${dark ? '#cfd8dd' : MUTED};margin-top:6px;`)}>{children}</div>
-      )}
-    </div>
-  );
-}
-
-/* A downward connector with an optional label on the line. */
-function Down({ label }) {
-  return (
-    <div style={s('display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;')}>
-      {label && <div style={s(`font-size:12.5px;font-weight:600;color:${MUTED};`)}>{label}</div>}
-      <Svg w={22} sw={2} style={s(`color:${LINE};`)}><line x1="12" y1="4" x2="12" y2="19" /><polyline points="6 13 12 19 18 13" /></Svg>
-    </div>
-  );
-}
-
-/* Small numbered step marker used inside the engine card. */
-function Step({ n, title, children }) {
-  return (
-    <div style={s('display:flex;gap:12px;align-items:flex-start;')}>
-      <div style={s(`flex:none;width:26px;height:26px;border-radius:50%;background:${BLUE};color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;`)}>{n}</div>
-      <div style={s('flex:1;min-width:0;')}>
-        <div style={s(`font-size:15.5px;font-weight:700;color:${INK};`)}>{title}</div>
-        <div style={s(`font-size:14px;line-height:1.5;color:${MUTED};margin-top:2px;`)}>{children}</div>
+    <div style={s(`display:flex;flex-direction:column;align-items:center;gap:6px;${style || ''}`)}>
+      <div style={s(`flex:none;width:${size}px;height:${size}px;border-radius:${Math.round(size * 0.32)}px;display:flex;align-items:center;justify-content:center;transition:all .2s;${tones[tone]}`)}>
+        <Svg w={Math.round(size * 0.44)} sw={2}>{icon}</Svg>
       </div>
+      {label && <div style={s(`font-size:12px;font-weight:700;color:${tone === 'active' ? INK : MUTED};text-align:center;max-width:82px;line-height:1.2;`)}>{label}</div>}
     </div>
   );
 }
+
+/* A small connector between rail nodes. */
+function Link2({ done }) {
+  return <div style={s(`flex:1;height:2px;min-width:10px;margin:0 2px;margin-bottom:22px;border-radius:2px;background:${done ? '#9dc3e6' : '#dbe3e7'};`)} />;
+}
+
+/* A little labelled card used inside the hero scenes. */
+function Card({ children, tone = 'plain', style }) {
+  const tones = {
+    plain: 'background:#fff;border:1.5px solid #dbe3e7;color:#212b32;',
+    blue: 'background:#f0f6fb;border:1.5px solid #9dc3e6;color:#0b4a86;',
+    green: 'background:#effaf2;border:1.5px solid #a7d8b6;color:#075e34;',
+  };
+  return <div style={s(`border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:600;line-height:1.4;${tones[tone]}${style || ''}`)}>{children}</div>;
+}
+
+/* Small pill, e.g. "Only source". */
+function Chip({ children, tone = 'blue' }) {
+  const tones = {
+    blue: `background:${BLUE};color:#fff;`,
+    green: `background:${GREEN};color:#fff;`,
+    ghost: 'background:#eef3f5;color:#4c6272;',
+  };
+  return <span style={s(`display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:999px;${tones[tone]}`)}>{children}</span>;
+}
+
+/* A right-pointing flow arrow for hero scenes. */
+function Flow() {
+  return (
+    <Svg w={30} sw={2} style={s('color:#b7c4cb;flex:none;')}>
+      <line x1="3" y1="12" x2="19" y2="12" /><polyline points="14 6 20 12 14 18" />
+    </Svg>
+  );
+}
+
+/* Center a hero scene consistently. */
+function Scene({ children }) {
+  return <div style={s('display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;')}>{children}</div>;
+}
+
+/* The five pipeline steps. `hero` renders the picture for that step. */
+const STEPS = [
+  {
+    node: 'You ask',
+    icon: Icons.chat,
+    title: 'You ask a question',
+    blurb: 'Type a question in plain English, the way you would ask a colleague. That question is the only thing that leaves the page.',
+    hero: () => (
+      <Scene>
+        <Card tone="blue" style="max-width:280px;padding:16px 18px;font-size:15px;border-radius:14px;">
+          “How do I book a smear test on EMIS?”
+        </Card>
+        <Flow />
+        <Node icon={Icons.home} label="Practice app" size={64} tone="active" />
+      </Scene>
+    ),
+  },
+  {
+    node: 'Practice app',
+    icon: Icons.home,
+    title: 'It stays on the practice’s own server',
+    blurb: 'Your question arrives at the app’s own back end. Nothing is sent to any outside company except the wording step, and no keys or practice data ever reach the browser.',
+    hero: () => (
+      <Scene>
+        <Node icon={Icons.home} label="Practice app" size={64} tone="active" />
+        <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+          <Chip tone="green"><Svg w={13} sw={2.5}>{Icons.lock}</Svg> Secure server</Chip>
+          <Chip tone="ghost">No data kept by the AI</Chip>
+        </div>
+      </Scene>
+    ),
+  },
+  {
+    node: 'Your Notebook',
+    icon: Icons.book,
+    title: 'It reads your Notebook',
+    blurb: 'The app loads every page of the practice Notebook, in full. Right now the Notebook is the only thing the assistant looks at — nothing else.',
+    hero: () => (
+      <Scene>
+        <div style={s('display:grid;gap:8px;')}>
+          <Card style="width:150px;">📄 Booking appointments</Card>
+          <Card style="width:150px;">📄 Duty doctor rules</Card>
+          <Card style="width:150px;">📄 Signposting notes</Card>
+        </div>
+        <Flow />
+        <div style={s('display:flex;flex-direction:column;align-items:center;gap:10px;')}>
+          <Node icon={Icons.book} label="Notebook" size={64} tone="active" />
+          <Chip tone="blue">Only source</Chip>
+        </div>
+      </Scene>
+    ),
+  },
+  {
+    node: 'AI wording',
+    icon: Icons.sparkle,
+    title: 'The AI words the answer',
+    blurb: 'The Notebook pages are handed to the AI, which puts the answer into clear NHS English. It may only use those pages — it is not allowed to add anything from its own knowledge.',
+    hero: () => (
+      <Scene>
+        <Node icon={Icons.book} label="Notebook" size={56} tone="done" />
+        <Flow />
+        <div style={s('display:flex;flex-direction:column;align-items:center;gap:10px;')}>
+          <Node icon={Icons.sparkle} label="AI wording" size={64} tone="active" />
+          <Chip tone="ghost"><Svg w={13} sw={2.5}>{Icons.lock}</Svg> No outside knowledge</Chip>
+        </div>
+      </Scene>
+    ),
+  },
+  {
+    node: 'Checked answer',
+    icon: Icons.check,
+    title: 'Checked, then shown to you',
+    blurb: 'Every sentence is checked against the exact words in your Notebook. Anything that cannot be matched is dropped, so you get a clear answer with a link to the page it came from.',
+    hero: () => (
+      <Scene>
+        <Node icon={Icons.shield} label="Quote check" size={56} tone="green" />
+        <Flow />
+        <div style={s('background:#fff;border:1.5px solid #dbe3e7;border-radius:14px;padding:14px 16px;max-width:270px;box-shadow:0 8px 20px rgba(33,43,50,.08);')}>
+          <div style={s(`font-size:14px;font-weight:700;color:${INK};margin-bottom:6px;`)}>Book a smear test</div>
+          <div style={s(`font-size:12.5px;color:${MUTED};line-height:1.45;`)}>Open the patient record, then…</div>
+          <div style={s('margin-top:10px;')}>
+            <Chip tone="green"><Svg w={12} sw={3}>{Icons.check}</Svg> From: Booking appointments</Chip>
+          </div>
+        </div>
+      </Scene>
+    ),
+  },
+];
 
 export default function Page() {
+  const [i, setI] = React.useState(0);
+  const step = STEPS[i];
+  const atStart = i === 0;
+  const atEnd = i === STEPS.length - 1;
+
   return (
     <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="How the system works" />
 
-      <main style={s('flex:1;width:100%;max-width:820px;margin:0 auto;padding:40px 24px 64px;')}>
+      <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:32px 24px 56px;')}>
         <Hover tag={Link} href="/"
-          base={`display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:${MUTED};text-decoration:none;margin-bottom:18px;`}
+          base={`display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:${MUTED};text-decoration:none;margin-bottom:14px;`}
           hover={`color:${BLUE};`}>
           <Svg w={17} sw={2.2}>{Icons.arrowLeft}</Svg>All practice tools
         </Hover>
 
-        <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>How the system works</h1>
-        <p style={s(`font-size:17px;color:${MUTED};margin:0 0 30px;max-width:64ch;`)}>
-          A simple map of every part of the assistant and how a question travels
-          through it. Nothing is made up — every answer is built from the
-          practice&rsquo;s own documents and notes, and checked before it&rsquo;s shown.
+        <h1 style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>How the system works</h1>
+        <p style={s(`font-size:16.5px;color:${MUTED};margin:0 0 26px;max-width:60ch;`)}>
+          The whole flow at a glance. Tap a step, or use the buttons, to see what
+          happens to your question.
         </p>
 
-        {/* -------- The live request flow (top to bottom) -------- */}
-        <Box tone="blue" kicker="1 · Staff" title="The browser (what you see)">
-          The React web app: <strong>Ask a practice question</strong>,{' '}
-          <strong>Find a phone number</strong>, the <strong>Notebook</strong> and
-          the other tools. Your question is all that leaves the page — no keys or
-          knowledge live here.
-        </Box>
-
-        <Down label="a question, over HTTPS" />
-
-        <Box tone="plain" kicker="2 · Next.js server" title="API routes  ·  POST /api/ask">
-          The app&rsquo;s own backend. It receives the question and runs the answer
-          engine below. All secrets (API keys) and knowledge stay here on the
-          server, never in the browser.
-        </Box>
-
-        <Down />
-
-        {/* The engine — the four steps that build every answer */}
-        <div style={s(`background:#fff;border:1px solid #d8e1e5;border-radius:14px;padding:22px 22px 24px;box-shadow:0 1px 2px rgba(33,43,50,.05);`)}>
-          <div style={s(`font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${BLUE};margin-bottom:14px;`)}>3 · The answer engine</div>
-          <div style={s('display:flex;flex-direction:column;gap:16px;')}>
-            <Step n="1" title="Search the practice's own knowledge">
-              Find the passages most relevant to the question from the three
-              sources below.
-            </Step>
-
-            {/* Three knowledge sources sit inside step 1 */}
-            <div style={s('display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:2px 0 2px 38px;')}>
-              <Box tone="green" kicker="Documents" title="Top passages"
-                style="padding:13px 15px;">
-                Practice documents, ranked by keyword <em>and</em> meaning
-                (full-text + vector search). The best few passages.
-              </Box>
-              <Box tone="green" kicker="Notebook" title="Every page, in full"
-                style="padding:13px 15px;">
-                All non-empty <Link href="/notebook" style={s(`color:${BLUE};`)}>Notebook</Link>{' '}
-                pages, read live and included whole — never trimmed.
-              </Box>
-              <Box tone="green" kicker="Contacts" title="Matching numbers"
-                style="padding:13px 15px;">
-                The phone directory. Numbers and emails are shown exactly, never
-                written by the AI.
-              </Box>
-            </div>
-
-            <Step n="2" title="Word the answer (the LLM)">
-              The found passages are handed to the language model as numbered
-              <strong> Sources</strong>. It may only use those — no outside
-              knowledge — and must quote the source behind every sentence.
-            </Step>
-            <Step n="3" title="Verify every quote">
-              Back on the server, each quote is checked against the real source.
-              Wrong citations are corrected; if nothing checks out, the answer
-              declines rather than guess.
-            </Step>
-            <Step n="4" title="Decide the shape">
-              A staff how-to gets a step-by-step <strong>answer</strong>; an
-              incoming patient message gets <strong>triage</strong> action notes
-              (urgency, who to route to, red flags). The model picks which.
-            </Step>
+        {/* The pipeline rail — always visible, current step highlighted. */}
+        <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:14px;padding:20px 16px 16px;overflow-x:auto;')}>
+          <div style={s('display:flex;align-items:flex-start;justify-content:space-between;min-width:520px;')}>
+            {STEPS.map((st, idx) => (
+              <React.Fragment key={st.node}>
+                {idx > 0 && <Link2 done={idx <= i} />}
+                <Hover tag="button" onClick={() => setI(idx)}
+                  base="background:none;border:none;padding:0;cursor:pointer;flex:none;" hover="opacity:.9;">
+                  <Node icon={st.icon} label={st.node} size={52}
+                    tone={idx === i ? 'active' : idx < i ? 'done' : 'idle'} />
+                </Hover>
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
-        <Down label="a checked answer, with clickable citations" />
+        {/* The detail card for the current step. */}
+        <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:16px;padding:26px 24px;margin-top:18px;box-shadow:0 1px 2px rgba(33,43,50,.05);')}>
+          <div style={s(`font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${BLUE};`)}>Step {i + 1} of {STEPS.length}</div>
+          <h2 style={s(`font-size:23px;margin:6px 0 8px;letter-spacing:-0.01em;color:${INK};`)}>{step.title}</h2>
+          <p style={s(`font-size:15.5px;line-height:1.55;color:${MUTED};margin:0 0 24px;max-width:62ch;`)}>{step.blurb}</p>
 
-        <Box tone="blue" kicker="Back to staff" title="Answer + sources on screen"
-          style="margin-bottom:34px;">
-          The reply appears with every source it used, so any staff member can
-          open the original document or note and see exactly where it came from.
-        </Box>
-
-        {/* -------- The pieces the flow depends on -------- */}
-        <h2 style={s(`font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:${MUTED};margin:0 0 14px;`)}>What it runs on</h2>
-        <div style={s('display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:34px;')}>
-          <Box tone="amber" kicker="Data store" title="PostgreSQL (Neon)">
-            Holds the documents and their embeddings, the Notebook pages, the
-            contacts directory and the knowledge layer.
-          </Box>
-          <Box tone="amber" kicker="External AI" title="OpenRouter">
-            Runs the chat / vision model that words answers and the embedding
-            model used for search. Reached only from the server.
-          </Box>
+          {/* The picture for this step. */}
+          <div style={s('background:#f7fafb;border:1px dashed #d3dde2;border-radius:14px;padding:28px 18px;min-height:170px;display:flex;align-items:center;justify-content:center;')}>
+            {step.hero()}
+          </div>
         </div>
 
-        {/* -------- Offline pipeline -------- */}
-        <h2 style={s(`font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:${MUTED};margin:0 0 14px;`)}>Prepared ahead of time</h2>
-        <Box tone="ink" title="RAG ingest pipeline">
-          <span style={s('color:#cfd8dd;')}>
-            Separately from live questions, each document in{' '}
-            <code style={s('color:#fff;background:#31404a;padding:1px 6px;border-radius:5px;font-size:13px;')}>rag/sources/</code>{' '}
-            is parsed (including reading images and PDF pages), cut into chunks,
-            turned into embeddings and saved to Postgres. Only changed documents
-            are re-processed. This is what the search in step 1 reads from.
-          </span>
-        </Box>
+        {/* Paging controls. */}
+        <div style={s('display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:12px;')}>
+          <Hover tag="button" onClick={() => setI((n) => Math.max(0, n - 1))} disabled={atStart}
+            base={`display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:10px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:1px solid #cdd8dd;background:#fff;color:${INK};${atStart ? 'opacity:.4;cursor:default;' : ''}`}
+            hover={atStart ? '' : `border-color:${BLUE};color:${BLUE};`}>
+            <Svg w={17} sw={2.2}>{Icons.arrowLeft}</Svg>Back
+          </Hover>
 
-        <p style={s(`font-size:13.5px;color:${MUTED};margin:28px 0 0;line-height:1.5;`)}>
-          In one line: a deterministic search finds the exact practice text, the
-          LLM only rephrases it, and a quote check sits between them — so answers
-          are readable, grounded and fully traceable.
+          <div style={s('display:flex;gap:7px;')}>
+            {STEPS.map((_, idx) => (
+              <button key={idx} onClick={() => setI(idx)} aria-label={`Go to step ${idx + 1}`}
+                style={s(`width:9px;height:9px;border-radius:50%;border:none;padding:0;cursor:pointer;background:${idx === i ? BLUE : '#cdd8dd'};`)} />
+            ))}
+          </div>
+
+          {atEnd ? (
+            <Hover tag={Link} href="/helpbot"
+              base={`display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;background:${BLUE};color:#fff;`}
+              hover="background:#004a94;">
+              Try it<Svg w={17} sw={2.2}>{Icons.arrow}</Svg>
+            </Hover>
+          ) : (
+            <Hover tag="button" onClick={() => setI((n) => Math.min(STEPS.length - 1, n + 1))}
+              base={`display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:10px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:none;background:${BLUE};color:#fff;`}
+              hover="background:#004a94;">
+              Next<Svg w={17} sw={2.2}>{Icons.arrow}</Svg>
+            </Hover>
+          )}
+        </div>
+
+        <p style={s(`font-size:13px;color:${MUTED};margin:24px 0 0;line-height:1.5;text-align:center;`)}>
+          In short: your question in, your Notebook checked, a plain answer out — with the source shown every time.
         </p>
       </main>
     </div>
