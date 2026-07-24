@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildFullNotebookSources,
+  buildSectionNotebookContext,
   contactHitsToCards,
   knowledgeHitToDocumentChunk,
 } from '../lib/knowledge-context.mjs';
@@ -34,6 +35,39 @@ test('Notebook containers and empty pages are excluded, while image attachments 
   assert.deepEqual(sources.map((source) => source.docId), ['note:4']);
   assert.equal(sources[0].docTitle, 'Notebook: Section / Subsection / Live page');
   assert.deepEqual(sources[0].images, ['https://example.test/one.png']);
+});
+
+test('section context gathers a section subtree, skipping containers and empty pages', () => {
+  const notes = [
+    { id: 1, parentId: null, title: 'Triaging notebook', body: '', isSection: false },
+    { id: 2, parentId: 1, title: 'Chest pain', body: 'Route chest pain to the duty GP same-day.', isSection: false },
+    { id: 3, parentId: 1, title: 'Sub-area', body: 'ignored container text', isSection: true },
+    { id: 4, parentId: 3, title: 'Repeat meds', body: 'Send repeat prescription requests to the pharmacist.', isSection: false },
+    { id: 5, parentId: 3, title: 'Empty', body: '   ', isSection: false },
+    // A different section that must not leak in.
+    { id: 6, parentId: null, title: 'Document coding', body: '', isSection: false },
+    { id: 7, parentId: 6, title: 'Sources', body: 'Use HUH for Homerton University Hospital.', isSection: false },
+  ];
+
+  const triage = buildSectionNotebookContext(notes, 'Triaging notebook');
+  assert.equal(triage,
+    '### Triaging notebook / Chest pain\nRoute chest pain to the duty GP same-day.\n\n'
+    + '### Triaging notebook / Sub-area / Repeat meds\nSend repeat prescription requests to the pharmacist.');
+
+  // Case-insensitive match, and only the requested section's own pages.
+  assert.equal(buildSectionNotebookContext(notes, 'document CODING'),
+    '### Document coding / Sources\nUse HUH for Homerton University Hospital.');
+});
+
+test('section context is empty for a missing or blank section, and strips inline images', () => {
+  const notes = [
+    { id: 1, parentId: null, title: 'Triaging notebook', body: '', isSection: false },
+    { id: 2, parentId: 1, title: 'Photo note', body: 'Before ![x](https://blob/x.png) after.', isSection: false },
+  ];
+  assert.equal(buildSectionNotebookContext(notes, 'Nonexistent'), '');
+  assert.equal(buildSectionNotebookContext(notes, ''), '');
+  assert.equal(buildSectionNotebookContext(notes, 'Triaging notebook'),
+    '### Triaging notebook / Photo note\nBefore after.');
 });
 
 test('document hits keep only document passage data', () => {

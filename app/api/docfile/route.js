@@ -2,11 +2,18 @@
 // screenshot of it) with patient identifiers removed, and get back the one-line
 // filing title "(dd-Mmm-yyyy) SOURCE DEPARTMENT actions-or-note" used to code
 // the document into the clinical system. Dedicated, lightweight version of the
-// docfile branch in /api/ask: no retrieval and no Notebook dependency — the
-// pasted document is the only evidence — with the same server-side date and
-// action sanitisation so nothing unevidenced reaches the title.
+// docfile branch in /api/ask: no retrieval — the pasted document is the only
+// evidence for the title — with the same server-side date and action
+// sanitisation so nothing unevidenced reaches the title.
+//
+// The one piece of context it does read is the practice's own coding guidance:
+// the "Document coding" section of the in-app Notebook is loaded live and folded
+// into the prompt (source/department naming, what counts as a practice action
+// here, and so on). It is best-effort — if the Notebook cannot be read the
+// endpoint still codes the document from the pasted text alone.
 import { NextResponse } from 'next/server';
 import { parseAiJson } from '@/lib/ai/prompt';
+import { notebookSectionContext } from '@/lib/notebook';
 import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
 
 export const runtime = 'nodejs';
@@ -32,13 +39,26 @@ function sanitizeImages(raw) {
   return out;
 }
 
+// The Notebook section whose subtree holds the practice's document-coding guidance.
+const CODING_SECTION = 'Document coding';
+
 // The docfile rules from the main ask prompt, standalone. The reply shape keeps
 // kind:"docfile" so the shared parseAiJson returns the docfile object.
-function buildPrompt(text, imageCount) {
+function buildPrompt(text, imageCount, guidance) {
+  // Practice coding guidance from the Notebook is authoritative for this
+  // practice's conventions (source/department naming, local abbreviations, what
+  // counts as a practice action). It supplements — never overrides — the
+  // evidence and safety rules below (no patient identifiers, evidence-quoted
+  // dates and actions only).
+  const guidanceBlock = guidance
+    ? 'PRACTICE DOCUMENT-CODING GUIDANCE (from the practice\'s Notebook — follow it for this practice\'s conventions; it does NOT relax the evidence and no-identifier rules below):\n"""\n'
+      + guidance + '\n"""\n\n'
+    : '';
   return 'You code incoming medical documents for a UK GP practice (The Riverside Practice). '
     + 'The staff member has pasted a medical document about a patient'
     + (imageCount ? ' and attached ' + imageCount + ' screenshot(s) of it' : '')
     + '. Produce the parts of its one-line filing title.\n\n'
+    + guidanceBlock
     + 'Reply with ONLY this JSON (no markdown fences):\n'
     + '{"kind":"docfile","date":"dd-Mmm-yyyy","dateEvidence":"exact date as printed","dateType":"discharge|attendance|clinic|report|letter","source":"Ipswich Hospital","department":"Cardiology","actions":[{"text":"arrange U&E in 2 weeks","evidence":"exact words explicitly assigning that task to the GP or practice"}],"note":"","noteEvidence":""}\n'
     + 'The reader files the document under the one-line title "(date) source department actions-or-note", so every field must be as short as possible:\n'
@@ -74,7 +94,11 @@ export async function POST(request) {
   if (!text && !images.length) return NextResponse.json({ error: 'Paste the document text or attach a screenshot.' }, { status: 400 });
   if (text.length > 40_000) return NextResponse.json({ error: 'Document text is too long.' }, { status: 400 });
 
-  const prompt = buildPrompt(text, images.length);
+  // Practice coding guidance is best-effort: a missing or unreachable Notebook
+  // must never stop staff getting a filing title.
+  const guidance = await notebookSectionContext(CODING_SECTION).catch(() => '');
+
+  const prompt = buildPrompt(text, images.length, guidance);
   const content = images.length
     ? [{ type: 'text', text: prompt }].concat(images.map((url) => ({ type: 'image_url', image_url: { url } })))
     : prompt;

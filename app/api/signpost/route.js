@@ -4,7 +4,13 @@
 // urgently, and the one or two next steps. This is deliberately lightweight —
 // no retrieval, no citations — because the output is a routing suggestion for
 // staff to sanity-check, not clinical advice.
+//
+// The one exception is the practice's own triaging guidance: the "Triaging
+// notebook" section of the in-app Notebook is read live and folded into the
+// prompt, so the routing follows how this practice actually triages. It is
+// best-effort — if the Notebook cannot be read the endpoint still signposts.
 import { NextResponse } from 'next/server';
+import { notebookSectionContext } from '@/lib/notebook';
 
 // Parse the model's JSON reply: strip any markdown fences, then fall back to
 // the first-{…last-} slice for replies with prose around the object. (The
@@ -41,14 +47,27 @@ const TEAM = [
 
 const URGENCIES = new Set(['emergency', 'same-day', 'routine']);
 
-function buildPrompt(text) {
+// The Notebook section whose subtree holds the practice's triaging guidance.
+const TRIAGE_SECTION = 'Triaging notebook';
+
+function buildPrompt(text, guidance) {
   const roster = TEAM.map((t) => `- ${t.key}: ${t.label} — handles: ${t.handles}`).join('\n');
+  // Practice guidance is authoritative: where the notes say how a given request
+  // is triaged at this practice, follow them over the generic rules below.
+  const guidanceBlock = guidance
+    ? `PRACTICE TRIAGING GUIDANCE (from the practice's Notebook — follow this when it applies; it overrides the generic rules below):
+"""
+${guidance}
+"""
+
+`
+    : '';
   return `You are a signposting assistant for a UK GP practice (The Riverside Practice). Reception pastes the text of a patient's AccurX online consultation (patient-identifiable details removed). Suggest which member of the practice team should handle it.
 
 PRACTICE TEAM (route to exactly one, by key):
 ${roster}
 
-RULES
+${guidanceBlock}RULES
 - Be CONCISE. This is a routing hint for trained reception staff, not advice.
 - If ANY red-flag / emergency feature is present (chest pain, severe breathlessness, stroke signs, anaphylaxis, heavy bleeding, sepsis signs, suicidal intent, seriously unwell child), route to urgent-care with urgency "emergency" — regardless of what the request nominally asks for.
 - Asthma routine reviews / inhaler queries go to the pharmacist; an asthma attack or worsening breathlessness is a GP same-day or an emergency.
@@ -89,6 +108,10 @@ export async function POST(request) {
   if (!text) return NextResponse.json({ error: 'Empty consultation text.' }, { status: 400 });
   if (text.length > 20_000) return NextResponse.json({ error: 'Consultation text is too long.' }, { status: 400 });
 
+  // Practice triaging guidance is best-effort: a missing or unreachable Notebook
+  // must never stop reception getting a routing suggestion.
+  const guidance = await notebookSectionContext(TRIAGE_SECTION).catch(() => '');
+
   try {
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -101,7 +124,7 @@ export async function POST(request) {
       // provider: only route to providers that do not retain prompt data.
       body: JSON.stringify({
         model, temperature: 0.1, provider: NO_RETENTION,
-        messages: [{ role: 'user', content: buildPrompt(text) }],
+        messages: [{ role: 'user', content: buildPrompt(text, guidance) }],
       }),
     });
     if (!res.ok) {
