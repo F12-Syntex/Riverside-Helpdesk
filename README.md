@@ -7,17 +7,35 @@ clickable sources they can open in-browser.
 
 ## How it works
 
-- Questions go to `POST /api/ask`. It retrieves relevant document passages,
-  loads every non-empty Notebook page in full, retrieves matching contacts, then
-  calls the model via **OpenRouter** and returns a structured answer with
-  citations. The API key and server-side knowledge never reach the browser.
-- Answers are grounded **strictly** in the documents: every answer cites the
-  source(s) it used, and if the answer isn't in the knowledge base it says so
-  rather than guessing.
+- Questions go to `POST /api/agent`, an **agentic loop** built on the Vercel AI
+  SDK and routed through **OpenRouter**. Retrieval is a *tool the model calls*,
+  not a fixed step that happens before it: it searches the practice's material
+  as many times as the question needs, opens a whole Notebook page when a
+  fragment is not enough, and can search the web when the practice's own
+  material genuinely does not cover the question. The API key and server-side
+  knowledge never reach the browser.
+- The tools it has: `search_practice` (documents + Notebook),
+  `list_practice_sources`, `open_practice_source` and `search_web`. The
+  practice's own material always gets first refusal — a web search with no
+  practice lookup behind it triggers one automatically.
+- Every tool call is **streamed to the browser as it happens** (newline-delimited
+  JSON), so the chat shows which search ran and what it returned instead of a
+  silent spinner. The timeline collapses to one line once the answer arrives.
+- Answers go through a **validation loop**: each section must carry a verbatim
+  quote that really appears in the source it names, checked in code against what
+  the tools actually returned. Failures go back to the model once with the
+  specific reason, and anything still unverified is dropped rather than shown.
+- Provenance is explicit. Practice-backed sections carry an openable citation;
+  anything from a web page is marked "from the web" with a link and never
+  presented as practice policy; whatever the practice's material does not cover
+  is stated plainly, with who to ask, rather than filled in from model knowledge.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching
-  shape — the model returns a `kind` of `"answer"` or `"triage"`:
+  shape. A pasted document or an incoming patient request is recognised by the
+  agent and handed to `POST /api/ask`, which still produces those two cards
+  unchanged — the model returns a `kind` of `"answer"`, `"triage"` or
+  `"docfile"`:
   - **answer** — the step-by-step how-to described above.
   - **triage** — grounded *action notes*: an urgency band, the actions to take,
     who to route it to, safety-net red flags and an optional draft reply. This
@@ -29,10 +47,17 @@ clickable sources they can open in-browser.
 
 - **`app/page.js`** — the chat UI (React). Persists chat + custom guides to
   `localStorage`.
-- **`app/api/ask/route.js`** — server endpoint: retrieval + prompt + model call
-  + citation resolution.
+- **`app/api/agent/route.js`** — the assistant's brain: the research tool loop,
+  the compose + validate phases, and the NDJSON event stream the chat reads.
+- **`lib/agent/`** — `tools.mjs` (the four tools), `evidence.mjs` (what the tools
+  actually returned, and quote verification against it), `compose.mjs` (the
+  structured answer + the validate-and-repair loop), `web-search.mjs`
+  (OpenRouter's web-search server tool).
+- **`app/api/ask/route.js`** — the previous single-shot endpoint, still used for
+  the document-filing and triage card shapes the agent hands off to.
 - **`lib/guides/`** — the built-in practice guides, categories and helpers.
-- **`lib/ai/`** — prompt builder + response parser (server) and the client
+- **`lib/ai/`** — prompt builder + response parser for the hand-off endpoint
+  (server), the streaming `askAgent` client (`agent-client.js`) and the older
   `askQuestion` helper.
 - **`rag/`** — the document knowledge base: ingest pipeline, parsers (including
   vision image reading and PDF page rendering), and the runtime retrieval store.
@@ -57,9 +82,10 @@ The assistant keeps each source type predictable:
 
 - **Documents:** PostgreSQL full-text (`GIN`) and semantic (`pgvector` HNSW)
   rankings retrieve the most relevant original passages from the document set.
-- **Notebook:** every non-empty page is loaded directly from the live Notebook
-  tables and included whole on every request. It is never top-K retrieved,
-  chunked or shortened for the answer prompt.
+- **Notebook:** every non-empty page is loaded fresh from the live Notebook
+  tables on every request and is never chunked or shortened. The agent searches
+  those whole pages lexically and can pull any of them into the answer in full
+  via `open_practice_source`, so a long process is never truncated to a snippet.
 - **Contacts:** a separate full-text + semantic search retrieves matching
   structured directory entries. Telephone numbers and emails are displayed
   deterministically rather than copied by the AI.
