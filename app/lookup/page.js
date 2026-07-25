@@ -167,15 +167,10 @@ export default function Page() {
             ))}
           </div>
         ) : trimmed ? (
-          <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;padding:22px 18px;color:#4c6272;font-size:15px;line-height:1.5;')}>
+          <div style={s('padding:48px 18px;color:#8a99a3;font-size:15px;line-height:1.5;text-align:center;')}>
             No matches for &ldquo;{trimmed}&rdquo;. Try fewer letters.
           </div>
-        ) : (
-          <div style={s('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:80px 20px;color:#8a99a3;text-align:center;')}>
-            <Svg w={34} sw={1.6}>{Icons.search}</Svg>
-            <span style={s('font-size:16px;')}>Start typing a name to find a number</span>
-          </div>
-        )}
+        ) : null}
       </main>
 
       {/* Docked search bar — fixed to the viewport bottom so its position and
