@@ -159,7 +159,26 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-md ul ul, .riva-md ol ol, .riva-md ul ol, .riva-md ol ul { margin-bottom: 0; }
 .riva-md li { margin: 4px 0; }
 .riva-md ul > li::marker { color: #005eb8; }
-.riva-md ol > li::marker { color: #005eb8; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* A numbered list in an answer is a procedure someone is following with a
+   patient waiting, so the top level is rendered as steps: a numbered blue disc
+   per action, with room to breathe between them. Nested lists stay ordinary
+   numerals — they are sub-points of a step, not steps of their own. */
+.riva-md ol { counter-reset: riva-step; list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 9px; }
+.riva-md ol > li { counter-increment: riva-step; position: relative; margin: 0; padding: 1px 0 0 38px; min-height: 26px; }
+.riva-md ol > li::before {
+  content: counter(riva-step);
+  position: absolute; left: 0; top: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #005eb8; color: #fff;
+  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; justify-content: center;
+}
+.riva-md ol ol { counter-reset: none; list-style: decimal; padding-left: 22px; gap: 2px; margin-top: 6px; }
+.riva-md ol ol > li { counter-increment: none; padding: 0; min-height: 0; margin: 3px 0; }
+.riva-md ol ol > li::before { content: none; }
+.riva-md ol ol > li::marker { color: #005eb8; font-weight: 600; font-variant-numeric: tabular-nums; }
+.riva-md ol ul { margin-top: 6px; }
 .riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #005eb8; background: #e8f1f8; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
 .riva-md blockquote p { margin: 0 0 4px; }
 .riva-md blockquote p:last-child { margin-bottom: 0; }

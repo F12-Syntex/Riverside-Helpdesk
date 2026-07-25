@@ -41,6 +41,63 @@ function SourceImages({ images }) {
   );
 }
 
+// The answer in brief, at the top of the card. Someone with a patient at the
+// desk reads this and nothing else, so it carries the whole answer in two to
+// four lines — and a point that risks safety, a breach or a deadline is red,
+// not another grey bullet.
+function KeyPoints({ points }) {
+  return (
+    <div style={s('margin:14px 24px 0;border:1px solid #d8dde0;border-radius:12px;background:#f7fafb;padding:12px 15px 13px;')}>
+      <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;margin-bottom:9px;')}>In brief</div>
+      <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
+        {points.map((p) => (
+          <li key={p.key} style={s('display:flex;gap:9px;align-items:flex-start;')}>
+            <span style={s('flex:none;margin-top:2px;display:flex;color:' + (p.isCritical ? '#d5281b' : '#007f3b') + ';')}>
+              <Svg w={15} sw={2.4}>{p.isCritical ? Icons.alertCircle : Icons.check}</Svg>
+            </span>
+            <span style={s('font-size:15.5px;line-height:1.45;color:#212b32;' + (p.isCritical ? 'font-weight:700;' : ''))}>
+              <Rich text={p.text} />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// One section of the body. Three looks, because the reader must be able to tell
+// them apart without reading: a critical block is a red callout, a web-sourced
+// block is amber-edged and links out, and an ordinary practice-backed block is
+// plain text with its quiet citation.
+function Section({ sec }) {
+  const heading = sec.hasHeading ? (
+    <div style={s('font-size:16px;font-weight:700;color:#212b32;margin:0 0 7px;letter-spacing:-0.01em;')}>{sec.heading}</div>
+  ) : null;
+
+  if (sec.isCritical) {
+    return (
+      <div style={s('border:1px solid #f0c2bd;border-left:4px solid #d5281b;background:#fdf4f3;border-radius:0 12px 12px 0;padding:13px 16px 14px;')}>
+        <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#a51b0f;margin-bottom:8px;')}>
+          <Svg w={14} stroke="#d5281b" sw={2.4} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
+          {sec.hasHeading ? sec.heading : 'Must not be missed'}
+        </div>
+        <Md text={sec.markdown} />
+        {sec.hasImages && <SourceImages images={sec.images} />}
+        {sec.isWeb ? <WebChip label={sec.webLabel} url={sec.webUrl} /> : (sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />)}
+      </div>
+    );
+  }
+
+  return (
+    <div style={s(sec.isWeb ? 'border-left:3px solid #ecd39a;padding-left:13px;' : '')}>
+      {heading}
+      <Md text={sec.markdown} />
+      {sec.hasImages && <SourceImages images={sec.images} />}
+      {sec.isWeb ? <WebChip label={sec.webLabel} url={sec.webUrl} /> : (sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />)}
+    </div>
+  );
+}
+
 export default function AiAnswer({ v }) {
   return (
     <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
@@ -93,6 +150,8 @@ export default function AiAnswer({ v }) {
               {v.hasIntro && <p style={s('margin:8px 0 0;font-size:17px;line-height:1.55;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
 
+            {v.hasKeyPoints && <KeyPoints points={v.keyPoints} />}
+
             {v.hasSteps && (
               <div style={s('padding:14px 24px 0;')}>
                 <ToolTimeline steps={v.steps} />
@@ -109,13 +168,7 @@ export default function AiAnswer({ v }) {
                     <Md text={sec.markdown} />
                   </div>
                 ) : (
-                  <div key={sec.key} style={s(sec.isWeb ? 'border-left:3px solid #ecd39a;padding-left:13px;' : '')}>
-                    <Md text={sec.markdown} />
-                    {sec.hasImages && <SourceImages images={sec.images} />}
-                    {sec.isWeb
-                      ? <WebChip label={sec.webLabel} url={sec.webUrl} />
-                      : (sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />)}
-                  </div>
+                  <Section key={sec.key} sec={sec} />
                 ))}
               </div>
             )}

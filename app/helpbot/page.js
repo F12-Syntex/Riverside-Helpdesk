@@ -267,7 +267,7 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -387,8 +387,15 @@ class RiversidePracticeQA extends React.Component {
     const hasSections = this.answerSections(m).some((sec) => (sec.markdown || '').trim());
     const lines = [m.question, ''];
     if (m.intro) lines.push(plainText(m.intro), '');
+    if (m.keyPoints && m.keyPoints.length) {
+      lines.push('In brief:');
+      m.keyPoints.forEach((p) => lines.push('- ' + (p.critical ? 'CRITICAL: ' : '') + plainText(p.text)));
+      lines.push('');
+    }
     this.answerSections(m).forEach((sec) => {
       if (!(sec.markdown || '').trim()) return;
+      if (sec.heading) lines.push((sec.critical ? 'CRITICAL — ' : '') + sec.heading);
+      else if (sec.critical) lines.push('CRITICAL');
       if (sec.basis === 'judgement') lines.push('[AI judgement, not from the practice’s documents]');
       if (sec.basis === 'web' && sec.web) lines.push('[From the web, not practice policy]');
       lines.push(mdPlain(sec.markdown));
@@ -686,6 +693,12 @@ class RiversidePracticeQA extends React.Component {
           return {
             key: i,
             markdown: sec.markdown || '',
+            heading: sec.heading || '',
+            hasHeading: !!(sec.heading && sec.heading.trim()),
+            // Safety-critical, breach-risk or deadline sections are shown as a
+            // red callout instead of ordinary body text, so they cannot be
+            // skimmed past.
+            isCritical: !!sec.critical && sec.basis !== 'judgement',
             isJudgement: sec.basis === 'judgement',
             // Written from a web page, not the practice's own material — shown
             // with its own marker and a link out, never as practice policy.
@@ -716,6 +729,14 @@ class RiversidePracticeQA extends React.Component {
           question: m.question,
           intro: m.intro || '',
           hasIntro: !!(m.intro && m.intro.length),
+          // The answer in brief: two to four lines, each one already verified
+          // against the section it summarises. Read first, acted on first.
+          keyPoints: (m.keyPoints || []).map((point, i) => ({
+            key: i,
+            text: point.text || '',
+            isCritical: !!point.critical,
+          })),
+          hasKeyPoints: !!(m.keyPoints && m.keyPoints.length),
           sections,
           hasSections: sections.length > 0,
           // The agent's own working — which searches it ran and what they

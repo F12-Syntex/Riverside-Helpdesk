@@ -173,7 +173,17 @@ export async function POST(request) {
         // Drain the stream so the tool loop actually runs. The research model's
         // prose is working notes, not the answer, so none of it is shown; the
         // visible progress comes from the tools themselves.
-        for await (const _ of research.textStream) { /* consumed for its side effects */ }
+        //
+        // Read the full stream rather than the text: a provider or tool failure
+        // arrives as an error part and would otherwise end the text stream
+        // quietly, leaving the turn to report "I found nothing" for what was
+        // really a broken call.
+        let researchError = null;
+        for await (const part of research.fullStream) {
+          if (part.type === 'error') researchError = part.error;
+          else if (part.type === 'tool-error') researchError = part.error;
+        }
+        if (researchError) throw researchError;
 
         if (handOff) {
           send({ type: 'status', text: handOff === 'document-to-file' ? 'Building the filing title' : 'Writing the routing notes' });
@@ -195,6 +205,7 @@ export async function POST(request) {
               kind: 'answer',
               answerable: false,
               intro: 'I could not find anything about this in the practice’s Notebook or documents, and nothing usable on the web, so I have nothing to answer from.',
+              keyPoints: [],
               sections: [],
               message: '',
               messageCite: null,
@@ -221,6 +232,7 @@ export async function POST(request) {
         const verified = verifiedNumbers(evidence);
         const redact = (t) => redactUnverifiedNumbers(t, verified);
         const sections = answer.sections.map((sec) => ({ ...sec, markdown: redact(sec.markdown) }));
+        const keyPoints = answer.keyPoints.map((point) => ({ ...point, text: redact(point.text) }));
 
         // Each source image is shown once, against the first section it backs.
         const seenImage = new Set();
@@ -250,6 +262,7 @@ export async function POST(request) {
             kind: 'answer',
             answerable: answer.answerable,
             intro: redact(answer.intro),
+            keyPoints,
             sections,
             message: redact(answer.message),
             messageCite: answer.messageCite,
