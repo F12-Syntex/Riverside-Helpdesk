@@ -4,8 +4,22 @@ import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
 import JudgementChip from './JudgementChip';
 import ContactsCard from './ContactsCard';
+import ToolTimeline from './ToolTimeline';
 import Rich from './Rich';
 import Md from './Md';
+
+// A section written from a web page rather than the practice's own material.
+// Deliberately unlike a citation chip: it opens the internet, not a practice
+// document, and the reader must be able to tell those apart at a glance.
+function WebChip({ label, url }) {
+  return (
+    <a href={url} target="_blank" rel="noreferrer" title={url}
+      style={s('margin-top:5px;display:inline-flex;align-items:center;gap:5px;max-width:100%;font-size:12px;font-weight:500;color:#8a6100;text-decoration:none;')}>
+      <Svg w={11} sw={2} style={s('flex:none;opacity:.8;')}>{Icons.globe}</Svg>
+      <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px dotted #d8bd7a;')}>From the web: {label}</span>
+    </a>
+  );
+}
 
 // The assistant's answer, laid out like an AI-formatted notebook page: markdown
 // sections (headings, lists, tables, highlights) with per-section provenance —
@@ -34,7 +48,13 @@ export default function AiAnswer({ v }) {
         <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
       </div>
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
-        {v.aiLoading && (
+        {v.aiLoading && (v.hasSteps || v.statusText ? (
+          // The agent is working: show each lookup as it happens rather than a
+          // spinner that says nothing for twenty seconds.
+          <div style={s('padding:14px 16px;')}>
+            <ToolTimeline steps={v.steps} statusText={v.statusText} live />
+          </div>
+        ) : (
           <div style={s('padding:20px 22px;display:flex;align-items:center;gap:12px;color:#4c6272;font-size:17px;')}>
             <span style={s('display:inline-flex;gap:5px;align-items:center;')}>
               <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite;')} />
@@ -43,7 +63,7 @@ export default function AiAnswer({ v }) {
             </span>
             <span>Checking the documents&hellip;</span>
           </div>
-        )}
+        ))}
 
         {v.aiError && (
           <div style={s('padding:18px 22px;font-size:17px;line-height:1.5;color:#212b32;')}>
@@ -73,6 +93,12 @@ export default function AiAnswer({ v }) {
               {v.hasIntro && <p style={s('margin:8px 0 0;font-size:17px;line-height:1.55;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
 
+            {v.hasSteps && (
+              <div style={s('padding:14px 24px 0;')}>
+                <ToolTimeline steps={v.steps} />
+              </div>
+            )}
+
             {v.hasSections && (
               <div style={s('padding:16px 24px 6px;display:flex;flex-direction:column;gap:16px;')}>
                 {v.sections.map((sec) => sec.isJudgement ? (
@@ -83,12 +109,25 @@ export default function AiAnswer({ v }) {
                     <Md text={sec.markdown} />
                   </div>
                 ) : (
-                  <div key={sec.key}>
+                  <div key={sec.key} style={s(sec.isWeb ? 'border-left:3px solid #ecd39a;padding-left:13px;' : '')}>
                     <Md text={sec.markdown} />
                     {sec.hasImages && <SourceImages images={sec.images} />}
-                    {sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />}
+                    {sec.isWeb
+                      ? <WebChip label={sec.webLabel} url={sec.webUrl} />
+                      : (sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />)}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {v.hasGaps && (
+              // What the practice's own material does not cover, said plainly
+              // rather than filled in from the model's general knowledge.
+              <div style={s('margin:12px 24px 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #d8dde0;background:#f7fafb;border-radius:10px;padding:12px 14px;')}>
+                <span style={s('flex:none;color:#4c6272;display:flex;margin-top:2px;')}><Svg w={16} sw={2.2}>{Icons.infoCircle}</Svg></span>
+                <div style={s('font-size:14.5px;line-height:1.5;color:#4c6272;')}>
+                  <strong style={s('color:#212b32;')}>Not in the practice&rsquo;s own material:</strong> <Rich text={v.gaps} />
+                </div>
               </div>
             )}
 
@@ -107,9 +146,11 @@ export default function AiAnswer({ v }) {
             <ContactsCard v={v} />
             {v.hasContacts && <div style={s('height:12px;')} />}
 
-            {v.usedJudgement && (
-              <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;')}>
-                <span style={s('font-size:12.5px;color:#768692;')}>Amber blocks are AI judgement, not the practice&rsquo;s documents</span>
+            {v.hasProvenanceNote && (
+              <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;display:flex;flex-direction:column;gap:3px;')}>
+                {v.usedJudgement && <span style={s('font-size:12.5px;color:#768692;')}>Amber blocks are AI judgement, not the practice&rsquo;s documents</span>}
+                {v.usedWeb && <span style={s('font-size:12.5px;color:#768692;')}>Sections marked &ldquo;from the web&rdquo; are general guidance found online, not practice policy</span>}
+                {v.hasDropped && <span style={s('font-size:12.5px;color:#768692;')}>{v.droppedNote}</span>}
               </div>
             )}
           </>

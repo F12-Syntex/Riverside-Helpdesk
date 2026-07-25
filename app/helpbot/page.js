@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
-import { askQuestion } from '../../lib/ai/client';
+import { askAgent } from '../../lib/ai/agent-client';
 
 // Suggested starter questions on the empty state — organisation-wide topics
 // answered from the practice's own policy/procedure documents.
@@ -213,7 +213,9 @@ class RiversidePracticeQA extends React.Component {
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', intro: '', sections: null, tip: '', message: '', messageCite: null, citations: [], contacts: [] };
+    // `steps` and `statusText` are filled in live from the agent's stream: each
+    // search it runs appears in the card while it is still working.
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [] };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     this.setState({ messages, input: '', pendingImages: [] }, () => { this.save(); this.fetchAI(question, aiIdx); });
@@ -227,7 +229,10 @@ class RiversidePracticeQA extends React.Component {
     const m = this.state.messages[idx];
     const images = (m && m.images) || [];
     try {
-      const data = await askQuestion({ question, history, customGuides: this.state.customGuides, images });
+      const data = await askAgent(
+        { question, history, customGuides: this.state.customGuides, images },
+        (ev) => this.onAgentEvent(idx, ev),
+      );
       if (data.kind === 'docfile') {
         this.updateAi(idx, {
           status: 'done',
@@ -262,16 +267,41 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', intro: data.intro, sections: data.sections, message: data.message, messageCite: data.messageCite, tip: data.tip, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
-      this.updateAi(idx, { status: 'error' });
+      this.updateAi(idx, { status: 'error', statusText: '' });
+    }
+  }
+
+  // One event from the agent's stream. Tool activity is appended as it starts
+  // and completed in place when the tool returns, so the card shows the work in
+  // the order it actually happened.
+  onAgentEvent(idx, ev) {
+    if (!ev || !ev.type) return;
+    if (ev.type === 'status') { this.updateAi(idx, { statusText: ev.text || '' }); return; }
+    if (ev.type === 'tool-start') {
+      this.updateAi(idx, (msg) => ({
+        statusText: '',
+        steps: (msg.steps || []).concat([{
+          id: ev.id, tool: ev.tool, label: ev.label || 'Working', detail: ev.detail || '',
+          status: 'running', summary: '', items: [],
+        }]),
+      }));
+      return;
+    }
+    if (ev.type === 'tool-result') {
+      this.updateAi(idx, (msg) => ({
+        steps: (msg.steps || []).map((st) => (st.id === ev.id
+          ? Object.assign({}, st, { status: 'done', summary: ev.summary || '', items: ev.items || [] })
+          : st)),
+      }));
     }
   }
 
   retryAi(idx) {
     const m = this.state.messages[idx];
     if (!m || m.kind !== 'ai') return;
-    this.updateAi(idx, { status: 'loading' });
+    this.updateAi(idx, { status: 'loading', steps: [], statusText: '' });
     this.fetchAI(m.question, idx);
   }
 
@@ -320,10 +350,17 @@ class RiversidePracticeQA extends React.Component {
     this.flagCopied(idx);
   }
 
+  // `patch` may be a function of the current message. Streamed tool events can
+  // land several to a tick, so a snapshot-based update would drop steps; the
+  // functional form always builds on the newest message.
   updateAi(idx, patch) {
-    const messages = this.state.messages.slice();
-    if (messages[idx]) messages[idx] = Object.assign({}, messages[idx], patch);
-    this.setState({ messages }, () => this.save());
+    this.setState((state) => {
+      const messages = state.messages.slice();
+      const current = messages[idx];
+      if (!current) return null;
+      messages[idx] = Object.assign({}, current, typeof patch === 'function' ? patch(current) : patch);
+      return { messages };
+    }, () => this.save());
   }
 
   flagCopied(idx) {
@@ -353,10 +390,13 @@ class RiversidePracticeQA extends React.Component {
     this.answerSections(m).forEach((sec) => {
       if (!(sec.markdown || '').trim()) return;
       if (sec.basis === 'judgement') lines.push('[AI judgement, not from the practice’s documents]');
+      if (sec.basis === 'web' && sec.web) lines.push('[From the web, not practice policy]');
       lines.push(mdPlain(sec.markdown));
       if (sec.cite) lines.push('[Source: ' + sec.cite.docTitle + ', ' + sec.cite.location + ']');
+      if (sec.basis === 'web' && sec.web) lines.push('[' + sec.web.title + ' — ' + sec.web.url + ']');
       lines.push('');
     });
+    if (m.gaps) lines.push('Not in the practice’s own material: ' + plainText(m.gaps), '');
     if (m.message) {
       lines.push(hasSections ? 'Suggested message:' : '', m.message, '');
       if (m.messageCite) lines.push('[Source: ' + m.messageCite.docTitle + ', ' + m.messageCite.location + ']', '');
@@ -638,6 +678,7 @@ class RiversidePracticeQA extends React.Component {
         }
         const sections = this.answerSections(m).map((sec, i) => {
           const cite = sec.cite || null;
+          const web = sec.basis === 'web' ? (sec.web || null) : null;
           // Pictures that live in the cited source (a notebook note's attached
           // images, or the cited PDF page) — shown as thumbnails under the
           // section; clicking opens the image full-size in the source panel.
@@ -646,6 +687,11 @@ class RiversidePracticeQA extends React.Component {
             key: i,
             markdown: sec.markdown || '',
             isJudgement: sec.basis === 'judgement',
+            // Written from a web page, not the practice's own material — shown
+            // with its own marker and a link out, never as practice policy.
+            isWeb: !!web,
+            webLabel: web ? web.title : '',
+            webUrl: web ? web.url : '',
             hasCite: !!cite,
             citeLabel: cite ? (cite.docTitle + ', ' + cite.location) : '',
             onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
@@ -656,6 +702,11 @@ class RiversidePracticeQA extends React.Component {
         // Pictures on the suggested-message citation (each source image is shown
         // once, against the first cite it belongs to — which can be the message).
         const messageImages = self.citeThumbs(m.messageCite);
+        const steps = m.steps || [];
+        const validation = m.validation || null;
+        const dropped = validation ? validation.dropped : 0;
+        const usedWeb = sections.some((sec) => sec.isWeb);
+        const usedJudgement = sections.some((sec) => sec.isJudgement);
         return {
           isAi: true,
           aiLoading: m.status === 'loading',
@@ -667,7 +718,22 @@ class RiversidePracticeQA extends React.Component {
           hasIntro: !!(m.intro && m.intro.length),
           sections,
           hasSections: sections.length > 0,
-          usedJudgement: sections.some((sec) => sec.isJudgement),
+          // The agent's own working — which searches it ran and what they
+          // returned — shown live while it works and collapsible afterwards.
+          steps,
+          hasSteps: steps.length > 0,
+          statusText: m.statusText || '',
+          usedJudgement,
+          usedWeb,
+          // What the practice's material does not cover, and anything the model
+          // wrote that could not be verified against a source and was dropped.
+          gaps: m.gaps || '',
+          hasGaps: !!(m.gaps && m.gaps.length),
+          hasDropped: dropped > 0,
+          droppedNote: dropped > 0
+            ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
+            : '',
+          hasProvenanceNote: usedJudgement || usedWeb || dropped > 0,
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
           hasMessageCite: !!m.messageCite,
