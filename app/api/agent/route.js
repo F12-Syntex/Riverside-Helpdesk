@@ -271,6 +271,13 @@ export async function POST(request) {
             gaps: redact(answer.gaps),
             // Questions the reader can tap to ask next, in this same chat.
             followUps: (answer.followUps || []).map((q) => redact(q)),
+            // The four e-RS fields, shown on their own above the steps.
+            referralRoute: answer.referralRoute ? {
+              requestType: redact(answer.referralRoute.requestType),
+              priority: redact(answer.referralRoute.priority),
+              specialty: redact(answer.referralRoute.specialty),
+              clinicType: redact(answer.referralRoute.clinicType),
+            } : null,
             citations,
             contacts: [],
             validation: answer.validation,

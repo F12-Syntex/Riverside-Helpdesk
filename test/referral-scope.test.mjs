@@ -97,6 +97,38 @@ test('the letter steps are allowed once the question asks for them', () => {
   assert.equal(problems.filter((p) => /referral letter/i.test(p)).length, 0);
 });
 
+test('the referral route card satisfies the speciality and clinic type check', () => {
+  // The steps no longer have to spell the two fields out in prose — putting them
+  // in referralRoute is the better answer, because that is what is shown first.
+  const draft = {
+    sections: [section('Send the referral', '1. Find the doctor’s document in the **Consultation**.\n2. Send it on e-RS.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', priority: '2WW', specialty: 'Dermatology', clinicType: '2WW Skin' },
+  };
+  const { problems, referralRoute } = validateDraft(draft, evidenceStub(), 'How do I do a cancer dermatology referral?');
+  assert.deepEqual(problems, []);
+  assert.equal(referralRoute.specialty, 'Dermatology');
+  assert.equal(referralRoute.clinicType, '2WW Skin');
+});
+
+test('a half-filled route does not count as naming both fields', () => {
+  const draft = {
+    sections: [section('Send the referral', '1. Find the doctor’s document in the **Consultation**.\n2. Send it on e-RS.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', priority: '2WW', specialty: 'Dermatology', clinicType: '' },
+  };
+  const { problems } = validateDraft(draft, evidenceStub(), 'How do I do a cancer dermatology referral?');
+  assert.ok(problems.some((p) => /speciality and which clinic type/i.test(p)));
+});
+
+test('an empty route is dropped rather than shown as a blank card', () => {
+  const draft = { sections: complete(), keyPoints: POINTS, followUps: LETTER_FOLLOW_UP };
+  const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
+  assert.equal(referralRoute, null);
+});
+
 test('follow-ups are trimmed, deduplicated and capped at two', () => {
   const draft = {
     sections: complete(),

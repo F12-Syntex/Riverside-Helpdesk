@@ -98,6 +98,38 @@ function Section({ sec }) {
   );
 }
 
+// The four fields that decide where a referral goes. Lifted out of the steps and
+// put above them: a receptionist reading this has the e-RS form open, and the
+// speciality + clinic type pairing is the thing they came for. Wrong pairing
+// means the referral lands in the wrong service, so it gets the loudest
+// treatment in the answer — louder than a critical section.
+function ReferralRoute({ route }) {
+  const rows = [
+    ['Request type', route.requestType, false],
+    ['Priority', route.priority, /2ww|urgent/i.test(route.priority || '')],
+    ['Speciality', route.specialty, true],
+    ['Clinic type', route.clinicType, true],
+  ].filter(([, value]) => value);
+  if (!rows.length) return null;
+  return (
+    <div style={s('margin:16px 24px 0;border:2px solid #005eb8;border-radius:12px;overflow:hidden;background:#fff;')}>
+      <div style={s('display:flex;align-items:center;gap:8px;padding:9px 16px;background:#005eb8;color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
+        <Svg w={15} stroke="#fff" sw={2.4}>{Icons.check}</Svg>Set this on e-RS
+      </div>
+      <div>
+        {rows.map(([label, value, strong], i) => (
+          <div key={label} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:10px 16px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
+            <span style={s('flex:none;min-width:104px;font-size:13.5px;font-weight:600;color:#4c6272;')}>{label}</span>
+            <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;color:#212b32;font-size:' + (strong ? '18px' : '16px') + ';font-weight:' + (strong ? '700' : '600') + ';')}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AiAnswer({ v }) {
   return (
     <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
@@ -149,6 +181,8 @@ export default function AiAnswer({ v }) {
               <h3 style={s('font-size:23px;margin:0;letter-spacing:-0.01em;')}>{v.question}</h3>
               {v.hasIntro && <p style={s('margin:8px 0 0;font-size:17px;line-height:1.55;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
+
+            {v.hasReferralRoute && <ReferralRoute route={v.referralRoute} />}
 
             {v.hasKeyPoints && <KeyPoints points={v.keyPoints} />}
 

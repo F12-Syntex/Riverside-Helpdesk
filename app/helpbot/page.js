@@ -267,7 +267,7 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -755,6 +755,11 @@ class RiversidePracticeQA extends React.Component {
           // it asks it here, in the same conversation, so the context is kept.
           followUps: (m.followUps || []).map((q, i) => ({ key: i, question: q, onClick: () => self.ask(q) })),
           hasFollowUps: !!(m.followUps && m.followUps.length),
+          // The four e-RS fields, lifted out of the steps so they are the first
+          // thing seen — getting the speciality or clinic type wrong sends the
+          // referral to the wrong place.
+          referralRoute: m.referralRoute || null,
+          hasReferralRoute: !!(m.referralRoute && (m.referralRoute.specialty || m.referralRoute.clinicType || m.referralRoute.priority)),
           hasDropped: dropped > 0,
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
