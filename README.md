@@ -71,14 +71,17 @@ clickable sources they can open in-browser.
   the same store. See `rag/context/README.md`.
 - **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
   telephone directory (exact numbers shown verbatim, never authored by the AI).
-- **`lib/lookup/`** + **`/lookup`** — Instant Lookup. The practice's own numbers
-  (`directory.js`, `fuzzy.js`) are held on the device and filter on every
-  keystroke. Beneath them sits the CQC register of every service registered in
-  England — ~57k rows in `cqc.data.json.gz`, far too large for a phone, so
-  `cqc.js` searches it on the server behind `/api/cqc` and it appears as a
-  separate second section. Rebuild it from a newer CQC CSV export with
-  `npm run data:cqc -- <path-to-csv>`; numbers there are read verbatim from the
-  export (the script only restores the leading zero the spreadsheet drops).
+- **`lib/lookup/`** + **`/lookup`** — Instant Lookup, a search of the **CQC
+  register**: every service registered in England, ~57k rows in
+  `cqc.data.json.gz`. Far too large for a phone, so `cqc.js` searches it on the
+  server behind `/api/cqc`. Matches on name, town, postcode (either half),
+  service type, phone number, and **acronyms** taken from the initials of each
+  name — HUH reaches Homerton University Hospital, MEH reaches Moorfields.
+  Rebuild from a newer CQC CSV export with `npm run data:cqc -- <path-to-csv>`;
+  numbers are verbatim from the export (the script only restores the leading
+  zero the spreadsheet drops). The practice's own directory
+  (`lib/contacts.data.json`, `/api/directory`) is no longer searched here — it
+  still backs the assistant's contacts card.
 - **`lib/referrals/`** + **`scripts/ingest-snomed-ers.mjs`** — the referral-routing
   fallback. `ereferrals.csv` is the closed list of Specialty + Clinic Type
   pairings e-RS accepts (406 of them); the SNOMED CT description snapshot gives

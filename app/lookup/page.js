@@ -3,34 +3,21 @@
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
-import { buildIndex, fuzzySearch, highlightRanges } from '../../lib/lookup/fuzzy';
+import { highlightRanges } from '../../lib/lookup/fuzzy';
 
 /* ------------------------------------------------------------------ *
- * Instant lookup — the fuzzy-search phone directory.
+ * Instant lookup — search of the CQC register.
  *
- * Type a partial or messy word ("mary", "pha", "homer") and the pre-saved
- * list of hospital switchboards, departments, community teams, pharmacies
- * and system numbers filters instantly. The canonical directory is loaded once
- * from Postgres, then fuzzy search runs locally with no AI; numbers remain
- * structured values and are never authored by a model.
+ * Every service registered with the Care Quality Commission in England:
+ * hospitals, GP practices, dentists, care and nursing homes, homecare
+ * agencies, hospices, clinics. Type a name, a town, a postcode, a service
+ * type ("dentist barnsley"), an acronym ("HUH") or a phone number.
  *
- * Underneath the practice's own numbers sits the CQC register — every service
- * registered in England (~57k rows). That set is far too large to hold on a
- * phone, so it is searched on the server through /api/cqc and shown as a
- * clearly separate second section, never mixed into the practice's own list.
+ * The register is ~57k rows, far too large to hold on a phone, so it is
+ * searched on the server through /api/cqc — the phone sends the query and
+ * gets back the top matches. Numbers, addresses and postcodes come verbatim
+ * from the published CQC extract and are never authored by a model.
  * ------------------------------------------------------------------ */
-
-const CAT_COLOURS = {
-  'Hospitals': 'background:#e8f1f8;color:#003087;',
-  'Departments and clinics': 'background:#eef7ee;color:#00532a;',
-  'Community and district nursing': 'background:#fdf0e6;color:#7a3b00;',
-  'Mental health': 'background:#f3ecfa;color:#4c2c92;',
-  'Pharmacies and supplies': 'background:#e9f6f8;color:#005661;',
-  'Transport': 'background:#fff3e0;color:#6d4c00;',
-  'IT and systems': 'background:#f0f4f5;color:#39505f;',
-  'Social care and advocacy': 'background:#fbeef2;color:#7c2855;',
-  'Other numbers': 'background:#f0f4f5;color:#4c6272;',
-};
 
 function Highlighted({ label, query }) {
   const ranges = query ? highlightRanges(label, query) : [];
@@ -71,7 +58,7 @@ function PhoneChip({ phone, onCopied }) {
   );
 }
 
-function EntryRow({ entry, query, selected, showCategory, flash }) {
+function EntryRow({ entry, query, selected, flash }) {
   return (
     <div id={'lk-' + entry.id}
       style={s('display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:11px 14px;scroll-margin:90px;' +
@@ -81,11 +68,6 @@ function EntryRow({ entry, query, selected, showCategory, flash }) {
           <Highlighted label={entry.label} query={query} />
         </span>
         {entry.note ? <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:1px;')}>{entry.note}</span> : null}
-        {showCategory ? (
-          <span style={s('display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 7px;' + (CAT_COLOURS[entry.category] || CAT_COLOURS['Other numbers']))}>
-            {entry.category}
-          </span>
-        ) : null}
         {entry.source === 'cqc' ? (
           <span style={s('display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;margin-top:5px;')}>
             {/* The export packs several service types into one "|"-joined
@@ -117,43 +99,50 @@ function EntryRow({ entry, query, selected, showCategory, flash }) {
 }
 
 export default function Page() {
-  const [directory, setDirectory] = React.useState([]);
   const [query, setQuery] = React.useState('');
-  const [showAll, setShowAll] = React.useState(false);
   const [selIdx, setSelIdx] = React.useState(-1);
   const [flash, setFlash] = React.useState('');
-  const [cqc, setCqc] = React.useState({ entries: [], loading: false });
+  const [cqc, setCqc] = React.useState({ entries: [], total: 0, loading: false });
+  // The web fallback is never automatic — it costs a model call, so it runs
+  // only when the reader presses Enter, and only for the query they pressed it
+  // on. `for` guards against the results of an old query lingering under a new
+  // one the reader has since typed.
+  const [web, setWeb] = React.useState({ for: '', results: [], loading: false, reason: '' });
   const inputRef = React.useRef(null);
 
-  React.useEffect(() => {
-    fetch('/api/directory', { cache: 'no-store' }).then((r) => r.json()).then((data) => setDirectory(Array.isArray(data.entries) ? data.entries : [])).catch(() => setDirectory([]));
-  }, []);
-  const index = React.useMemo(() => buildIndex(directory), [directory]);
-
   const trimmed = query.trim();
-  const results = React.useMemo(() => {
-    if (!trimmed) return [];
-    return fuzzySearch(index, trimmed).map((r) => r.entry);
-  }, [index, trimmed]);
+  const results = cqc.entries;
+  const nothingFound = !!trimmed && trimmed.length >= 2 && !cqc.loading && !results.length;
+  const webShown = web.for === trimmed && (web.loading || web.results.length || web.reason);
 
   // Keep keyboard selection in range as the list changes under it.
   React.useEffect(() => { setSelIdx(trimmed ? 0 : -1); }, [trimmed]);
 
-  // The CQC register lives on the server. Debounce so a fast typist sends one
-  // request instead of one per letter, and track which query each response
-  // belongs to so a slow reply can't overwrite a newer one.
+  // The register lives on the server — 57k rows is far too much to hold on a
+  // phone. Debounce so a fast typist sends one request instead of one per
+  // letter, and track which query each response belongs to so a slow reply
+  // cannot overwrite a newer one.
   React.useEffect(() => {
-    if (trimmed.length < 2) { setCqc({ entries: [], loading: false }); return; }
-    setCqc((c) => ({ entries: c.entries, loading: true }));
+    if (trimmed.length < 2) { setCqc((c) => ({ entries: [], total: c.total, loading: false })); return; }
+    setCqc((c) => ({ ...c, loading: true }));
     let live = true;
     const timer = setTimeout(() => {
       fetch('/api/cqc?q=' + encodeURIComponent(trimmed), { cache: 'no-store' })
         .then((r) => r.json())
-        .then((d) => { if (live) setCqc({ entries: Array.isArray(d.entries) ? d.entries : [], loading: false }); })
-        .catch(() => { if (live) setCqc({ entries: [], loading: false }); });
+        .then((d) => { if (live) setCqc({ entries: Array.isArray(d.entries) ? d.entries : [], total: d.total || 0, loading: false }); })
+        .catch(() => { if (live) setCqc((c) => ({ entries: [], total: c.total, loading: false })); });
     }, 200);
     return () => { live = false; clearTimeout(timer); };
   }, [trimmed]);
+
+  // How many services are searchable, for the idle state. Cheap: the count
+  // rides along on every search response, so this only runs once.
+  React.useEffect(() => {
+    fetch('/api/cqc', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => setCqc((c) => (c.total ? c : { ...c, total: d.total || 0 })))
+      .catch(() => {});
+  }, []);
 
   const flashCopied = (label) => {
     setFlash(label);
@@ -162,9 +151,22 @@ export default function Page() {
 
   const onChange = (e) => setQuery(e.target.value);
 
+  const searchWeb = React.useCallback((q) => {
+    if (q.length < 3) return;
+    setWeb({ for: q, results: [], loading: true, reason: '' });
+    fetch('/api/lookup-web?q=' + encodeURIComponent(q), { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => setWeb({ for: q, results: Array.isArray(d.results) ? d.results : [], loading: false, reason: d.reason || '' }))
+      .catch(() => setWeb({ for: q, results: [], loading: false, reason: 'Web search is unavailable.' }));
+  }, []);
+
   const onKeyDown = (e) => {
     if (e.key === 'Escape') { setQuery(''); return; }
-    if (!results.length) return;
+    // Nothing in the register: Enter is what asks the web instead.
+    if (!results.length) {
+      if (e.key === 'Enter' && nothingFound && web.for !== trimmed) searchWeb(trimmed);
+      return;
+    }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const next = e.key === 'ArrowDown'
@@ -195,41 +197,73 @@ export default function Page() {
           </div>
         ) : null}
 
-        {/* The practice's own numbers first — these are the ones reception
-            reaches for, and they answer instantly with no round trip. */}
         {trimmed && results.length ? (
           <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
             {results.map((e, i) => (
               <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
-                <EntryRow entry={e} query={trimmed} selected={i === selIdx} showCategory flash={() => flashCopied(e.label)} />
+                <EntryRow entry={e} query={trimmed} selected={i === selIdx} flash={() => flashCopied(e.label)} />
               </div>
             ))}
           </div>
         ) : null}
 
-        {/* Then the wider CQC register, kept visibly separate. */}
-        {trimmed && cqc.entries.length ? (
-          <div style={s(results.length ? 'margin-top:22px;' : '')}>
-            <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 2px 8px;')}>
-              <span style={s('font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4c6272;')}>
-                Elsewhere in England
-              </span>
-              <span style={s('font-size:12.5px;color:#8a99a3;')}>CQC register</span>
-            </div>
-            <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
-              {cqc.entries.map((e, i) => (
-                <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
-                  <EntryRow entry={e} query={trimmed} selected={false} showCategory={false} flash={() => flashCopied(e.label)} />
-                </div>
-              ))}
-            </div>
+        {/* Only give up once the server has had its say. */}
+        {trimmed && !results.length && !nothingFound ? (
+          <div style={s('padding:48px 18px;color:#8a99a3;font-size:15px;line-height:1.5;text-align:center;')}>Searching&hellip;</div>
+        ) : null}
+
+        {/* Nothing in the register. The register only holds CQC-registered
+            services, so a pharmacy, an interpreting line or a number off a
+            letter will legitimately miss — offer the web rather than a dead
+            end. Not automatic: it costs a model call, so the reader asks. */}
+        {nothingFound && !webShown ? (
+          <div style={s('padding:40px 18px;text-align:center;')}>
+            <p style={s('margin:0 0 14px;color:#8a99a3;font-size:15px;line-height:1.5;')}>
+              Nothing in the register for &ldquo;{trimmed}&rdquo;.
+            </p>
+            <Hover tag="button" onClick={() => searchWeb(trimmed)}
+              base="display:inline-flex;align-items:center;gap:9px;padding:10px 18px;border-radius:999px;border:2px solid #d8dde0;background:#fff;color:#005eb8;font:inherit;font-size:15px;font-weight:600;cursor:pointer;"
+              hover="border-color:#005eb8;background:#f7fbff;">
+              <Svg w={16} sw={2.2}>{Icons.search}</Svg>
+              Finish typing, then press <kbd style={s('font:inherit;font-weight:700;')}>Enter</kbd> to search the web
+            </Hover>
           </div>
         ) : null}
 
-        {/* Only give up once the server has had its say. */}
-        {trimmed && !results.length && !cqc.entries.length ? (
-          <div style={s('padding:48px 18px;color:#8a99a3;font-size:15px;line-height:1.5;text-align:center;')}>
-            {cqc.loading ? 'Searching…' : <>No matches for &ldquo;{trimmed}&rdquo;. Try fewer letters.</>}
+        {/* Web results, kept visibly apart from the register. */}
+        {webShown ? (
+          <div>
+            <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 2px 8px;')}>
+              <span style={s('font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a6100;')}>From the web</span>
+              <span style={s('font-size:12.5px;color:#8a99a3;')}>not the CQC register &mdash; check before using</span>
+            </div>
+            {web.loading ? (
+              <div style={s('padding:28px 18px;color:#8a99a3;font-size:15px;text-align:center;')}>Searching the web&hellip;</div>
+            ) : web.results.length ? (
+              <div style={s('border:1px solid #ecd39a;background:#fffdf5;border-radius:10px;overflow:hidden;')}>
+                {web.results.map((r, i) => (
+                  <a key={r.url} href={r.url} target="_blank" rel="noreferrer"
+                    style={s('display:block;padding:12px 14px;text-decoration:none;color:inherit;' + (i ? 'border-top:1px solid #f3e6c6;' : ''))}>
+                    <span style={s('display:block;font-size:15.5px;font-weight:600;color:#005eb8;line-height:1.35;overflow-wrap:anywhere;')}>{r.title}</span>
+                    {r.snippet ? <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:2px;line-height:1.45;')}>{r.snippet.slice(0, 180)}</span> : null}
+                    <span style={s('display:block;font-size:12px;color:#8a99a3;margin-top:3px;overflow-wrap:anywhere;')}>{r.url}</span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div style={s('padding:28px 18px;color:#8a99a3;font-size:15px;text-align:center;')}>
+                {web.reason || 'Nothing useful found on the web either.'}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {/* Idle: say what is being searched, since a register of this size is
+            only useful if you know what you can ask it for. */}
+        {!trimmed ? (
+          <div style={s('padding:48px 18px;color:#8a99a3;font-size:15px;line-height:1.6;text-align:center;')}>
+            {cqc.total ? cqc.total.toLocaleString('en-GB') + ' services registered with the CQC in England.' : 'The CQC register of services in England.'}
+            <br />Search by name, town, postcode, service type or phone number.
           </div>
         ) : null}
       </main>
@@ -252,8 +286,8 @@ export default function Page() {
               value={query}
               onChange={onChange}
               onKeyDown={onKeyDown}
-              placeholder="Type a name…"
-              aria-label="Search the practice directory"
+              placeholder="Name, town, postcode…"
+              aria-label="Search the CQC register"
               style={s('width:100%;height:48px;padding:0 46px;font:inherit;font-size:17px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;color:#212b32;outline:none;')}
             />
             {query ? (
@@ -264,41 +298,9 @@ export default function Page() {
               </Hover>
             ) : null}
           </div>
-          <Hover tag="button" onClick={() => setShowAll(true)}
-            base="flex:none;height:48px;padding:0 20px;font:inherit;font-size:15px;font-weight:600;border-radius:999px;cursor:pointer;border:2px solid #d8dde0;background:#fff;color:#39505f;"
-            hover="border-color:#005eb8;color:#005eb8;">
-            View all
-          </Hover>
         </div>
       </div>
 
-      {/* "View all" — a sheet that rises to fill almost the full screen. */}
-      {showAll ? (
-        <div style={s('position:fixed;inset:0;z-index:80;background:rgba(33,43,50,.45);display:flex;align-items:flex-end;justify-content:center;')}
-          onClick={() => setShowAll(false)}>
-          <div onClick={(e) => e.stopPropagation()}
-            className="riva-lookup-all-sheet"
-            style={s('width:100%;max-width:860px;height:92vh;background:#f0f4f5;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(33,43,50,.25);display:flex;flex-direction:column;overflow:hidden;animation:rivaSheetUp .22s ease;')}>
-            <div style={s('flex:none;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #d8dde0;background:#fff;')}>
-              <span style={s('font-size:18px;font-weight:700;')}>All numbers <span style={s('color:#8a99a3;font-weight:600;')}>({directory.length})</span></span>
-              <Hover tag="button" onClick={() => setShowAll(false)} aria-label="Close"
-                base="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:none;border-radius:8px;background:#f0f4f5;color:#39505f;cursor:pointer;"
-                hover="background:#e4e9eb;color:#212b32;">
-                <Svg w={18} sw={2.2}>{Icons.close}</Svg>
-              </Hover>
-            </div>
-            <div style={s('flex:1;overflow-y:auto;padding:16px 20px;')}>
-              <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
-                {directory.map((e, i) => (
-                  <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
-                    <EntryRow entry={e} query="" selected={false} showCategory flash={() => flashCopied(e.label)} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
