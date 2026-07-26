@@ -13,6 +13,11 @@ import { buildIndex, fuzzySearch, highlightRanges } from '../../lib/lookup/fuzzy
  * and system numbers filters instantly. The canonical directory is loaded once
  * from Postgres, then fuzzy search runs locally with no AI; numbers remain
  * structured values and are never authored by a model.
+ *
+ * Underneath the practice's own numbers sits the CQC register — every service
+ * registered in England (~57k rows). That set is far too large to hold on a
+ * phone, so it is searched on the server through /api/cqc and shown as a
+ * clearly separate second section, never mixed into the practice's own list.
  * ------------------------------------------------------------------ */
 
 const CAT_COLOURS = {
@@ -81,6 +86,22 @@ function EntryRow({ entry, query, selected, showCategory, flash }) {
             {entry.category}
           </span>
         ) : null}
+        {entry.source === 'cqc' ? (
+          <span style={s('display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;margin-top:5px;')}>
+            {/* The export packs several service types into one "|"-joined
+                field; two is enough to tell a dentist from a nursing home. */}
+            {(entry.types || '').split('|').filter(Boolean).slice(0, 2).map((t, i) => (
+              <span key={i} style={s('font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 7px;background:#eef7ee;color:#00532a;')}>{t}</span>
+            ))}
+            {entry.authority ? <span style={s('font-size:12.5px;color:#4c6272;')}>{entry.authority}</span> : null}
+            {entry.url ? (
+              <a href={entry.url} target="_blank" rel="noreferrer" style={s('font-size:12.5px;font-weight:600;color:#005eb8;text-decoration:none;')}>CQC record</a>
+            ) : null}
+            {!entry.phones.length && entry.website ? (
+              <a href={entry.website} target="_blank" rel="noreferrer" style={s('font-size:12.5px;font-weight:600;color:#005eb8;text-decoration:none;word-break:break-all;')}>Website</a>
+            ) : null}
+          </span>
+        ) : null}
       </span>
       <span style={s('display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none;max-width:100%;')}>
         {entry.phones.map((p, j) => <PhoneChip key={'p' + j} phone={p} onCopied={flash} />)}
@@ -101,6 +122,7 @@ export default function Page() {
   const [showAll, setShowAll] = React.useState(false);
   const [selIdx, setSelIdx] = React.useState(-1);
   const [flash, setFlash] = React.useState('');
+  const [cqc, setCqc] = React.useState({ entries: [], loading: false });
   const inputRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -116,6 +138,22 @@ export default function Page() {
 
   // Keep keyboard selection in range as the list changes under it.
   React.useEffect(() => { setSelIdx(trimmed ? 0 : -1); }, [trimmed]);
+
+  // The CQC register lives on the server. Debounce so a fast typist sends one
+  // request instead of one per letter, and track which query each response
+  // belongs to so a slow reply can't overwrite a newer one.
+  React.useEffect(() => {
+    if (trimmed.length < 2) { setCqc({ entries: [], loading: false }); return; }
+    setCqc((c) => ({ entries: c.entries, loading: true }));
+    let live = true;
+    const timer = setTimeout(() => {
+      fetch('/api/cqc?q=' + encodeURIComponent(trimmed), { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((d) => { if (live) setCqc({ entries: Array.isArray(d.entries) ? d.entries : [], loading: false }); })
+        .catch(() => { if (live) setCqc({ entries: [], loading: false }); });
+    }, 200);
+    return () => { live = false; clearTimeout(timer); };
+  }, [trimmed]);
 
   const flashCopied = (label) => {
     setFlash(label);
@@ -157,7 +195,8 @@ export default function Page() {
           </div>
         ) : null}
 
-        {/* Results. */}
+        {/* The practice's own numbers first — these are the ones reception
+            reaches for, and they answer instantly with no round trip. */}
         {trimmed && results.length ? (
           <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
             {results.map((e, i) => (
@@ -166,9 +205,31 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ) : trimmed ? (
+        ) : null}
+
+        {/* Then the wider CQC register, kept visibly separate. */}
+        {trimmed && cqc.entries.length ? (
+          <div style={s(results.length ? 'margin-top:22px;' : '')}>
+            <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 2px 8px;')}>
+              <span style={s('font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4c6272;')}>
+                Elsewhere in England
+              </span>
+              <span style={s('font-size:12.5px;color:#8a99a3;')}>CQC register</span>
+            </div>
+            <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
+              {cqc.entries.map((e, i) => (
+                <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
+                  <EntryRow entry={e} query={trimmed} selected={false} showCategory={false} flash={() => flashCopied(e.label)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Only give up once the server has had its say. */}
+        {trimmed && !results.length && !cqc.entries.length ? (
           <div style={s('padding:48px 18px;color:#8a99a3;font-size:15px;line-height:1.5;text-align:center;')}>
-            No matches for &ldquo;{trimmed}&rdquo;. Try fewer letters.
+            {cqc.loading ? 'Searching…' : <>No matches for &ldquo;{trimmed}&rdquo;. Try fewer letters.</>}
           </div>
         ) : null}
       </main>

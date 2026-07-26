@@ -9,6 +9,9 @@ const nextConfig = {
       '/api/ask': ['./rag/context/**/*', './rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
       '/api/directory': ['./rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
       '/api/kb': ['./rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
+      // The CQC dataset is read from disk (gzipped) rather than bundled, so it
+      // has to be traced in explicitly.
+      '/api/cqc': ['./lib/lookup/cqc.data.json.gz'],
     },
   },
 };
