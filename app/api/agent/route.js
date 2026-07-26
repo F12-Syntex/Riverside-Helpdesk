@@ -30,6 +30,7 @@ import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts
 import { createEvidence } from '@/lib/agent/evidence.mjs';
 import { createTools } from '@/lib/agent/tools.mjs';
 import { composeVerifiedAnswer } from '@/lib/agent/compose.mjs';
+import { lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { POST as askPOST } from '../ask/route';
 
 export const runtime = 'nodejs';
@@ -48,6 +49,7 @@ const RESEARCH_SYSTEM = [
   '- Always search the practice’s own material first with search_practice, and search it more than once when the first wording returns little — staff and documents use different words for the same thing.',
   '- If a result is clearly the middle of a longer process, use list_practice_sources / open_practice_source to read the whole page, so the answer can set the process out end to end.',
   '- Only after the practice material has been tried, and only if it does not cover the question, use search_web. Web pages are general guidance, never practice policy.',
+  '- REFERRAL QUESTIONS: a referral cannot be sent without a Speciality and a Clinic Type. Search the practice material for them first — the Notebook is right and always wins. If, after searching, no page records the pairing for this referral, call suggest_ers_referral_route with the condition being referred. Do not leave the answer telling the reader to look it up in the task when this tool can name the pairing from the e-RS referral-types list.',
   '- Two message shapes are not questions: a pasted medical document (a letter or report to be filed) and an incoming patient request that needs routing. If the message is one of those, call hand_off immediately and do nothing else.',
   '',
   'Stop as soon as you have what is needed. When you are done, reply with a one-line note of what you found — nothing more.',
@@ -220,11 +222,40 @@ export async function POST(request) {
           return;
         }
 
+        // The e-RS referral-type match, run here rather than left to the research
+        // model to remember. Asking it nicely in the system prompt was not
+        // reliable: it would answer "set the type of referral as indicated in the
+        // task" while a lookup that could name the pairing went uncalled.
+        //
+        // Run for every referral question and offered to the writer, which
+        // decides precedence — the practice sources win whenever they record the
+        // pairing for this referral. Gating it here on whether the sources
+        // mention "speciality" and "clinic type" did not work: the standard flow
+        // page names both fields generically, so a referral it gives no values
+        // for still looked covered.
+        let ersSuggestion = null;
+        if (/\brefer(?:ral|rals|red|ring|s)?\b/i.test(question)) {
+          try {
+            const match = await lookupErsMapping(question);
+            if (match.suggestion && (match.suggestion.specialty || match.suggestion.clinicType)) {
+              ersSuggestion = {
+                specialty: match.suggestion.specialty,
+                clinicType: match.suggestion.clinicType,
+                snomed: match.matched,
+                alternatives: match.alternatives,
+              };
+            }
+          } catch (e) {
+            console.warn('[agent] e-RS lookup unavailable:', String(e).slice(0, 160));
+          }
+        }
+
         const answer = await composeVerifiedAnswer({
           model: chat,
           question,
           history,
           evidence,
+          ersSuggestion,
           onStatus: (text) => send({ type: 'status', text }),
         });
 
@@ -277,6 +308,7 @@ export async function POST(request) {
               priority: redact(answer.referralRoute.priority),
               specialty: redact(answer.referralRoute.specialty),
               clinicType: redact(answer.referralRoute.clinicType),
+              source: answer.referralRoute.source,
             } : null,
             citations,
             contacts: [],

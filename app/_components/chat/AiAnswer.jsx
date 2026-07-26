@@ -126,6 +126,15 @@ function ReferralRoute({ route }) {
           </div>
         ))}
       </div>
+      {route.source === 'suggested' && (
+        // Matched against the e-RS referral-types list rather than recorded by
+        // the practice. Saying which is the difference between a shortcut and a
+        // referral sent to the wrong service on the assistant's say-so.
+        <div style={s('display:flex;gap:8px;align-items:flex-start;padding:10px 16px;border-top:1px solid #eef1f2;background:#fffdf5;font-size:13.5px;line-height:1.45;color:#8a6100;')}>
+          <span style={s('flex:none;display:flex;margin-top:1px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.sparkle}</Svg></span>
+          <span>Matched from the e-RS referral types, not recorded in the practice&rsquo;s notes &mdash; check it against the doctor&rsquo;s task before sending.</span>
+        </div>
+      )}
     </div>
   );
 }
