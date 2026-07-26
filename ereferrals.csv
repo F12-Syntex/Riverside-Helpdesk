@@ -1,0 +1,407 @@
+Specialty,Clinic Type
+2WW,2WW Children and Young People
+2WW,2WW Bone
+2WW,2WW Brain
+2WW,2WW Breast
+2WW,2WW Cancer of Unknown Primary
+2WW,2WW Gynaecology
+2WW,2WW Haematology
+2WW,2WW Head and Neck
+2WW,2WW Lower GI
+2WW,2WW Lung
+2WW,2WW Non-specific symptoms
+2WW,2WW Sarcoma
+2WW,2WW Skin
+2WW,2WW Upper GI
+2WW,2WW Urology
+Allergy,Allergy (not Respiratory or Skin)
+Cardiology,Arrhythmia
+Cardiology,Cardiology Genetics
+Cardiology,Congenital Heart Disease
+Cardiology,Heart Failure
+Cardiology,Hypertension
+Cardiology,Ischaemic Heart Disease
+Cardiology,Lipid Management
+Cardiology,Not Otherwise Specified
+Cardiology,Rapid Access Chest Clinic
+Cardiology,Valve Disorders
+Chemical Pathology,Metabolic Disorders
+Chemical Pathology,Lipid Disorders
+Chemical Pathology,Renal Metabolic Disorders
+Children's & Adolescent Services,Allergy
+Children's & Adolescent Services,Audiology
+Children's & Adolescent Services,Cardiology
+Children's & Adolescent Services,Community Paediatrics
+Children's & Adolescent Services,Dentistry / Orthodontics
+Children's & Adolescent Services,Dermatology
+Children's & Adolescent Services,Developmental / Learning Disabilities
+Children's & Adolescent Services,Diabetes
+Children's & Adolescent Services,Endocrinology
+Children's & Adolescent Services,ENT
+Children's & Adolescent Services,Gastroenterology
+Children's & Adolescent Services,Gynaecology
+Children's & Adolescent Services,Pregancy Advice
+Children's & Adolescent Services,Paediatric Haematology
+Children's & Adolescent Services,Immunology
+Children's & Adolescent Services,Metabolic Disorders
+Children's & Adolescent Services,Nephrology
+Children's & Adolescent Services,Neurology
+Children's & Adolescent Services,Oncology (Established Diagnosis)
+Children's & Adolescent Services,Ophthal - Not Otherwise Specified
+Children's & Adolescent Services,Ophthal - Orthoptics
+Children's & Adolescent Services,Ophthal - Strabismus / Ocular Motility
+Children's & Adolescent Services,Oral and Maxillofacial Surgery
+Children's & Adolescent Services,Orthopaedics
+Children's & Adolescent Services,Other Medical
+Children's & Adolescent Services,Plastic Surgery
+Children's & Adolescent Services,Respiratory
+Children's & Adolescent Services,Rheumatology
+Children's & Adolescent Services,Surgery - Not Otherwise Specified
+Children's & Adolescent Services,Urology
+Community Diagnostic Services,Breathlessness (chronic / undiagnosed)
+Community Healthcare,Ambulatory Care
+Community Healthcare,Care Coordination
+Community Healthcare,Community Nursing
+Community Healthcare,Palliative Care
+Community Healthcare,Prevention and Screening
+Complementary Medicine,Allergy
+Complementary Medicine,Dermatology
+Complementary Medicine,Dietetics
+Complementary Medicine,General Medicine
+Complementary Medicine,Musculoskeletal/Rheumatology
+Complementary Medicine,Oncology (established diagnosis)
+Complementary Medicine,Podiatry
+Complementary Medicine,Psychological Medicine
+Complementary Medicine,Women's Health
+Dentistry and Orthodontics,Endodontics
+Dentistry and Orthodontics,Not Otherwise Specified
+Dentistry and Orthodontics,Orthodontics
+Dentistry and Orthodontics,Periodontics
+Dentistry and Orthodontics,Prosthodontics
+Dentistry and Orthodontics,Surgical Dentistry
+Dermatology,Acne
+Dermatology,Basal Cell Carcinoma
+Dermatology,Connective Tissue Disease
+Dermatology,Cosmetic Camouflage
+Dermatology,Eczema and Dermatitis
+Dermatology,Hair
+Dermatology,Laser Clinics
+Dermatology,Leg Ulcer
+Dermatology,Male Genital Skin Disorders
+Dermatology,Nails
+Dermatology,Not Otherwise Specified
+Dermatology,Oncology (Established Diagnosis)
+Dermatology,Patch Testing for Contact Dermatitis
+Dermatology,Psoriasis
+Dermatology,Skin Surgery for Benign Skin Lesions
+Dermatology,Vulval Skin Disorders
+Diabetic Medicine,Erectile Dysfunction
+Diabetic Medicine,Not Otherwise Specified
+Diabetic Medicine,Podiatry and Foot
+Diabetic Medicine,Pregnancy and Maternal
+Diabetic Medicine,Renal Diabetes
+Diagnostic Endoscopy,Colonic Imaging Assessment / Advice
+Diagnostic Endoscopy,Flexible Sigmoidoscopy
+Diagnostic Endoscopy,Gastroscopy
+Diagnostic Imaging,Bone Density Scan (DEXA)
+Diagnostic Imaging,CT
+Diagnostic Imaging,Fluoroscopy and Barium Studies
+Diagnostic Imaging,Intravenous Urogram (IVU)
+Diagnostic Imaging,MRI
+Diagnostic Imaging,Nuclear Medicine
+Diagnostic Imaging,Ultrasound
+Diagnostic Imaging,X Ray Plain Film
+Diagnostic Pathology,Blood Test
+Diagnostic Physiological Measurement,Audiology - Hearing Assess / Reassess
+Diagnostic Physiological Measurement,Cardiac Physiology - BP Monitoring
+Diagnostic Physiological Measurement,Cardiac Physiology - ECG
+Diagnostic Physiological Measurement,Cardiac Physiology - Echocardiogram
+Diagnostic Physiological Measurement,GI Physiology - Urea Breath Test
+Diagnostic Physiological Measurement,Neurophysiology - EEG (Routine)
+Diagnostic Physiological Measurement,Neurophysiology - Nerve Conduction Studies
+Diagnostic Physiological Measurement,Respiratory - Blood Gas Analysis
+Diagnostic Physiological Measurement,Respiratory - Fractional Exhaled Nitric Oxide (FeNO)
+Diagnostic Physiological Measurement,Respiratory - Full Lung Function
+Diagnostic Physiological Measurement,Respiratory - Oxygen Assessment
+Diagnostic Physiological Measurement,Respiratory - Sleep Apnoea Screening
+Diagnostic Physiological Measurement,Respiratory - Spirometry +/- bronchodilator
+Diagnostic Physiological Measurement,Urodynamics - Free Flow / Residual Urine
+Diagnostic Physiological Measurement,Vascular - ABPI Measurement
+Diagnostic Physiological Measurement,Vascular - Aortic Aneurysm Assessment
+Dietetics,Cardiovascular Disease Risk Management
+Dietetics,Diabetes
+Dietetics,Eating Disorders - see Mental Health
+Dietetics,Food Allergy and Intolerance
+Dietetics,Gastroenterology
+Dietetics,Not Otherwise Specified
+Dietetics,Undernutrition
+Dietetics,Weight Management
+Ear, Nose & Throat,Balance / Dizziness
+Ear, Nose & Throat,Ear
+Ear, Nose & Throat,Facial Plastic and Skin Lesions
+Ear, Nose & Throat,Hearing Tests/Aids - see Diag Phys Meas
+Ear, Nose & Throat,Neck Lump / Thyroid
+Ear, Nose & Throat,Nose / Sinus
+Ear, Nose & Throat,Not Otherwise Specified
+Ear, Nose & Throat,Oncology (Established Diagnosis)
+Ear, Nose & Throat,Salivary Gland
+Ear, Nose & Throat,Sleep Apnoea - see Sleep Medicine
+Ear, Nose & Throat,Snoring (not Sleep Apnoea)
+Ear, Nose & Throat,Throat (incl Voice / Swallowing)
+Ear, Nose & Throat,Tinnitus
+Endocrinology and Metabolic Medicine,Adrenal Disorders
+Endocrinology and Metabolic Medicine,Endocrine Pregnancy
+Endocrinology and Metabolic Medicine,Gynaecological Endocrinology Disorders
+Endocrinology and Metabolic Medicine,Lipid Disorders
+Endocrinology and Metabolic Medicine,Metabolic Bone Disorders
+Endocrinology and Metabolic Medicine,Not Otherwise Specified
+Endocrinology and Metabolic Medicine,Oncology (Established Diagnosis)
+Endocrinology and Metabolic Medicine,Pituitary & Hypothalamic
+Endocrinology and Metabolic Medicine,Thyroid / Parathyroid
+Gender Identity Services,Gender Identity
+Gender Identity Services,Post Surgical Issues
+General Medicine,General Medicine
+General Medicine,Transient Ischaemic Attack
+Genetics,Genetics
+Genito-Urinary Medicine,Genito-Urinary Medicine
+Geriatric Medicine,Cognitive Disorders
+Geriatric Medicine,Falls
+Geriatric Medicine,Metabolic Bone Diseases
+Geriatric Medicine,Movement Disorders
+Geriatric Medicine,Not Otherwise Specified
+Geriatric Medicine,Stroke (not TIA)
+GI and Liver (Medicine and Surgery),Colorectal Surgery
+GI and Liver (Medicine and Surgery),Endoscopy - see Diagnostic Endoscopy
+GI and Liver (Medicine and Surgery),Gallstones
+GI and Liver (Medicine and Surgery),Hepatology
+GI and Liver (Medicine and Surgery),Inflammatory Bowel Disease (IBD)
+GI and Liver (Medicine and Surgery),Lower GI (medical) excl IBD
+GI and Liver (Medicine and Surgery),Oncology (Established Diagnosis)
+GI and Liver (Medicine and Surgery),Upper GI inc Dyspepsia
+Gynaecology,Colposcopy
+Gynaecology,Early Pregnancy Assessment
+Gynaecology,Family Planning
+Gynaecology,Infertility
+Gynaecology,Menopause
+Gynaecology,Menstrual Disorders
+Gynaecology,Not Otherwise Specified
+Gynaecology,Oncology (Established Diagnosis)
+Gynaecology,Pelvic Pain
+Gynaecology,Perineal Repair
+Gynaecology,Post Menopausal Bleeding
+Gynaecology,Pregnancy Advisory Service
+Gynaecology,Psychosexual
+Gynaecology,Recurrent Miscarriage
+Gynaecology,Urogynaecology / Prolapse
+Gynaecology,Vulval and Perineal Lesions
+Haematology,Anticoagulation
+Haematology,Bleeding Disorders
+Haematology,"Blood Cancers (Myeloma, Leukaemia, MGUS, MDS)"
+Haematology,Clotting Disorders
+Haematology,"General Haematology (Lab Results, Anaemia, MPNs)"
+Haematology,Haemoglobinopathies & red cell disorders
+Haematology,Immune Haematology & Transfusion
+Haematology,Lymphoma
+Haematology,Not Otherwise Specified
+Haematology,Oncology (Established Diagnosis)
+Haematology,Stem Cell Transplant
+Health Promotion,Exercise
+Health Promotion,Smoking Cessation
+Health Promotion,Weight Management
+Immunology,Autoimmune Disease
+Immunology,Immunodeficiency
+Immunology,Not Otherwise Specified
+Infectious Diseases,Bone and Joint Infection
+Infectious Diseases,Chronic Fatigue Syndrome
+Infectious Diseases,Fever
+Infectious Diseases,HIV
+Infectious Diseases,Not Otherwise Specified
+Infectious Diseases,Travel Advice
+Infectious Diseases,Tropical Infections
+Infectious Diseases,Tuberculosis
+Infectious Diseases,Viral Hepatitis (not Hep A)
+Interventional Radiology,Injection and Drainage
+Interventional Radiology,Tumour Ablation
+Interventional Radiology,Vascular and Stent
+Learning Disabilities,Learning Disabilities
+Medical Examiner Office,Medical Examiner Office
+Medication and Pharmacy,Hospital Admission
+Medication and Pharmacy,Hospital Discharge
+Medication and Pharmacy,Minor Illness Assessment
+Mental Health - Adults of all ages,Anxiety/Depression/Stress: Mild/Moderate
+Mental Health - Adults of all ages,Anxiety/Depression/Stress: Severe
+Mental Health - Adults of all ages,Drug/Alcohol Problems
+Mental Health - Adults of all ages,Eating Disorders
+Mental Health - Adults of all ages,Memory Problems
+Mental Health - Adults of all ages,Not Otherwise Specified
+Mental Health - Adults of all ages,Peri and Post-Natal Issues
+Mental Health - Adults of all ages,Psychological Disorders/Difficulties
+Mental Health - Adults of all ages,Psychotic Disorders
+Mental Health - Adults of all ages,Self Harm
+Mental Health - Adults of all ages,Sexual Issues
+Mental Health - Child and Adolescent,Anxiety/Depression/Stress: Mild/Moderate
+Mental Health - Child and Adolescent,Anxiety/Depression/Stress: Severe
+Mental Health - Child and Adolescent,Behavioural Problems
+Mental Health - Child and Adolescent,Drug/Alcohol Problems
+Mental Health - Child and Adolescent,Eating Disorders
+Mental Health - Child and Adolescent,Emotional Problems
+Mental Health - Child and Adolescent,Not Otherwise Specified
+Mental Health - Child and Adolescent,Psychotic Disorders
+Mental Health - Child and Adolescent,School Refusal
+Mental Health - Child and Adolescent,Self Harm
+Mental Health - Child and Adolescent,Sleep Problems
+Nephrology,Hypertension
+Nephrology,Nephrology
+Nephrology,Renal Diabetes
+Neurology,Cognitive Disorders
+Neurology,Epilepsy
+Neurology,Headache
+Neurology,Multiple Sclerosis
+Neurology,Neuromuscular
+Neurology,Not Otherwise Specified
+Neurology,Oncology (Established Diagnosis)
+Neurology,Parkinsons Disease and Movement Disorders
+Neurology,Sleep - see Sleep Medicine
+Neurology,Stroke (not TIA)
+Neurology,Transient Ischaemic Attack (General Medicine and N
+Neurosurgery,Movement Disorders
+Neurosurgery,Not Otherwise Specified
+Neurosurgery,Spinal
+Obstetrics,Antenatal
+Obstetrics,Diabetes
+Obstetrics,Endocrine Pregnancy
+Obstetrics,Genetics
+Obstetrics,Haemoglobinopathies & red cell disorders
+Obstetrics,Maternal/Foetal Risk
+Obstetrics,Maternal Medicine
+Obstetrics,Multiple Pregnancy
+Obstetrics,Not Otherwise Specified
+Occupational Therapy,Falls - See Geriatric Medicine
+Occupational Therapy,Not Otherwise Specified
+Occupational Therapy,Upper Limb / Splinting
+Occupational Therapy,Wheelchair / Seating
+Ophthalmology,Cataract
+Ophthalmology,Cornea
+Ophthalmology,Diabetic Medical Retina
+Ophthalmology,External Eye Disease
+Ophthalmology,Glaucoma
+Ophthalmology,Laser (YAG capsulotomy)
+Ophthalmology,Low Vision
+Ophthalmology,Neuro-Ophthalmology
+Ophthalmology,Not Otherwise Specified
+Ophthalmology,Oculoplastics/Orbits/Lacrimal
+Ophthalmology,Oncology (Established Diagnosis)
+Ophthalmology,Orthoptics
+Ophthalmology,Other Medical Retina
+Ophthalmology,Squint / Ocular Motility
+Ophthalmology,Vitreoretinal
+Oral and Maxillofacial Surgery,Facial Deformity
+Oral and Maxillofacial Surgery,Facial Plastics
+Oral and Maxillofacial Surgery,Head and Neck Lumps (not 2WW)
+Oral and Maxillofacial Surgery,Not Otherwise Specified
+Oral and Maxillofacial Surgery,Oncology (Established Diagnosis)
+Oral and Maxillofacial Surgery,Oral Surgery
+Oral and Maxillofacial Surgery,Salivary Gland Disease
+Orthopaedics,Foot and Ankle
+Orthopaedics,Fracture - Non Emergency
+Orthopaedics,Hand and Wrist
+Orthopaedics,Hip
+Orthopaedics,Knee
+Orthopaedics,Limb Deformity/Reconstruction
+Orthopaedics,Oncology (Established Diagnosis)
+Orthopaedics,Podiatric Surgery
+Orthopaedics,Shoulder and Elbow
+Orthopaedics,Spine - Back Pain (not Scoliosis/Deform)
+Orthopaedics,Spine - Neck Pain
+Orthopaedics,Spine - Scoliosis and Deformity
+Orthopaedics,Sports Trauma
+Orthotics and Prosthetics,Orthotics
+Orthotics and Prosthetics,Prosthetics
+Pain Management,Pain Management
+Palliative Medicine,Palliative Medicine
+Physiotherapy,Cardiovascular
+Physiotherapy,Falls - see Geriatric Medicine
+Physiotherapy,Gynaecological physiotherapy
+Physiotherapy,Musculoskeletal
+Physiotherapy,Neurological
+Physiotherapy,Not Otherwise Specified
+Physiotherapy,Obstetric physiotherapy
+Physiotherapy,Oncology (established diagnoses)
+Physiotherapy,Respiratory
+Physiotherapy,Urological physiotherapy
+Podiatry,At Risk Foot
+Podiatry,Biomechanical
+Podiatry,Diabetes (not Ulcer)
+Podiatry,Nail Surgery
+Podiatry,Not Otherwise Specified
+Podiatry,Podiatric Dermatology
+Podiatry,Podiatric Health Education
+Podiatry,Podiatric Musculoskeletal incl. rheumatology
+Podiatry,Podiatric Surgery - excl. nail surgery
+Post-COVID-19 Syndrome,Not Otherwise Specified
+Post-COVID-19 Syndrome,Post-COVID-19 Syndrome Service
+Rehabilitation,Neuro-rehabilitation
+Rehabilitation,Not Otherwise Specified
+Respiratory Medicine,Allergy
+Respiratory Medicine,Asthma
+Respiratory Medicine,COPD
+Respiratory Medicine,Cystic Fibrosis
+Respiratory Medicine,Interstitial Lung Disease
+Respiratory Medicine,Not Otherwise Specified
+Respiratory Medicine,Occupational Lung Disease
+Respiratory Medicine,Oncology (Established Diagnosis)
+Respiratory Medicine,Sleep - see Sleep Medicine
+Respiratory Medicine,Tuberculosis
+Rheumatology,Bone / Osteoporosis
+Rheumatology,Inflammatory Arthritis
+Rheumatology,Musculoskeletal
+Rheumatology,Other Autoimmune Rheumatic Disease
+Rheumatology,Spinal Disorders
+Sleep Medicine,Excessive / Intrusive Sleepiness
+Sleep Medicine,Insomnia
+Sleep Medicine,Parasomnia and Other Sleep Disorders
+Sleep Medicine,Sleep Apnoea/Sleep Disordered Breathing
+Speech and Language Therapy,Communication
+Speech and Language Therapy,Swallowing
+Sports and Exercise Medicine,Exercise Medicine
+Sports and Exercise Medicine,Non surgical Musculoskeletal
+Sports and Exercise Medicine,Soft Tissue Injury
+Sports and Exercise Medicine,Sports Injury
+Sports and Exercise Medicine,Sports Medicine
+Stroke Medicine Services,Respiratory - Spirometry +/- bronchodilator
+Stroke Medicine Services,Respiratory - Fractional Exhaled Nitric Oxide (FeNO)
+Surgery - Breast,FH of Breast Cancer (non 2WW)
+Surgery - Breast,Mammoplasty (non 2WW)
+Surgery - Breast,Oncology (Established Diagnosis)
+Surgery - Breast,Other Breast Problems
+Surgery - Cardiothoracic,Cardiac Surgery
+Surgery - Cardiothoracic,Thoracic Surgery
+Surgery - Not Otherwise Specified,Endocrine Surgery
+Surgery - Not Otherwise Specified,Hernias
+Surgery - Not Otherwise Specified,Lumps and Bumps
+Surgery - Plastic,Basal Cell Carcinoma
+Surgery - Plastic,Burns
+Surgery - Plastic,Craniofacial
+Surgery - Plastic,Gynaecology and Perineal Reconstruction
+Surgery - Plastic,Laser
+Surgery - Plastic,Lower Limb
+Surgery - Plastic,Mammoplasty
+Surgery - Plastic,Minor Plastic Surgery
+Surgery - Plastic,Not Otherwise Specified
+Surgery - Plastic,Oncology (Established Diagnosis)
+Surgery - Plastic,Upper Limb
+Surgery - Plastic,Vascular Malformation
+Surgery - Vascular,Arterial
+Surgery - Vascular,Leg Ulcer
+Surgery - Vascular,Lymphoedema under Surgery Vascular
+Surgery - Vascular,Not Otherwise Specified
+Surgery - Vascular,Varicose Veins
+Urology,(In) Continence
+Urology,Erectile Dysfunction / Andrology
+Urology,Haematuria (not 2ww)
+Urology,Male Infertility
+Urology,Not Otherwise Specified
+Urology,Oncology Established diagnosis
+Urology,Prostate
+Urology,Urinary Calculus
+Urology,Vasectomy

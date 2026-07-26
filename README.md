@@ -79,6 +79,17 @@ clickable sources they can open in-browser.
   separate second section. Rebuild it from a newer CQC CSV export with
   `npm run data:cqc -- <path-to-csv>`; numbers there are read verbatim from the
   export (the script only restores the leading zero the spreadsheet drops).
+- **`lib/referrals/`** + **`scripts/ingest-snomed-ers.mjs`** — the referral-routing
+  fallback. `ereferrals.csv` is the closed list of Specialty + Clinic Type
+  pairings e-RS accepts (406 of them); the SNOMED CT description snapshot gives
+  the clinical wording to reach them. `npm run data:ers` loads both into Postgres
+  (`ers_directory`, `snomed_terms`). A note resolves to a SNOMED concept, then the
+  concept and the note's own words are scored against the pairings, weighted by
+  how rare each word is across the list. **The Notebook comes first** — this runs
+  only when the Notebook records no speciality and clinic type, and everything it
+  returns is labelled a suggestion to check against the doctor's task. There is
+  no published SNOMED-to-e-RS mapping (no edition of the UK release carries an
+  e-RS refset), so the join is made on text and is never presented as authoritative.
 - **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
   layer and localhost-only backend screen. The source types share storage and
   conflict review, while the live assistant keeps their context paths separate.
