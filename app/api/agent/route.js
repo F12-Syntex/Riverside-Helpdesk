@@ -269,6 +269,8 @@ export async function POST(request) {
             messageWeb: answer.messageWeb,
             tip: redact(answer.tip),
             gaps: redact(answer.gaps),
+            // Questions the reader can tap to ask next, in this same chat.
+            followUps: (answer.followUps || []).map((q) => redact(q)),
             citations,
             contacts: [],
             validation: answer.validation,

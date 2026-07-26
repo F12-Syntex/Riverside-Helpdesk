@@ -31,18 +31,22 @@ const POINTS = [
   { text: 'Record the referral in the patient notes.', ref: 'P1' },
 ];
 
+// The letter has its own procedure, so a referral answer offers it as a question
+// rather than inlining it. Most drafts below carry it so they clear that check.
+const LETTER_FOLLOW_UP = ['How do I create the referral letter?'];
+
 const complete = () => [
-  section('Make the referral', '1. Open the referral screen.\n2. Set the **speciality** to Dermatology.\n3. Set the **clinic type** to 2WW suspected skin cancer.\n4. Send it.'),
+  section('Make the referral', '1. Find the doctor’s referral document in the patient’s **Consultation**.\n2. Set the **speciality** to Dermatology.\n3. Set the **clinic type** to the 2WW skin cancer option.\n4. Send it.'),
 ];
 
 test('a referral answer that names neither field is sent back for repair', () => {
-  const draft = { sections: [section('Make the referral', '1. Open the referral screen.\n2. Send it.')], keyPoints: POINTS };
+  const draft = { sections: [section('Make the referral', '1. Open the referral screen.\n2. Send it.')], keyPoints: POINTS, followUps: LETTER_FOLLOW_UP };
   const { problems } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
   assert.ok(problems.some((p) => /speciality and which clinic type/i.test(p)));
 });
 
 test('naming both the speciality and the clinic type satisfies the check', () => {
-  const draft = { sections: complete(), keyPoints: POINTS };
+  const draft = { sections: complete(), keyPoints: POINTS, followUps: LETTER_FOLLOW_UP };
   const { problems } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
   assert.deepEqual(problems, []);
 });
@@ -52,21 +56,55 @@ test('saying the notes do not record the fields counts as answering', () => {
   const draft = {
     sections: [section('Make the referral', '1. Open the referral screen.\n2. The notes do not record the **speciality** or **clinic type** for this referral — ask the practice manager before sending.')],
     keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
   };
   const { problems } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
   assert.deepEqual(problems, []);
 });
 
-test('a letter section is rejected when the question never asked about a letter', () => {
-  const draft = { sections: [...complete(), section('Writing the referral letter', 'Dictate the letter within two working days.')], keyPoints: POINTS };
-  const { problems } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
-  assert.ok(problems.some((p) => /does not ask how to create a referral letter/i.test(p)));
+test('walking through creating the letter is rejected when it was not asked for', () => {
+  // The exact failure seen in the chat: a dermatology referral answered with
+  // "Navigate to Add → Document → Create letter", when the doctor's letter was
+  // already sitting in the consultation.
+  const draft = {
+    sections: [section('Create referral letter', '1. Navigate to **Add → Document → Create letter**.\n2. Click the magnifying glass icon to search for forms.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+  };
+  const { problems } = validateDraft(draft, evidenceStub(), 'How do I do a cancer dermatology referral?');
+  assert.ok(problems.some((p) => /must not walk through creating one/i.test(p)));
 });
 
-test('the letter is allowed once the question asks for it', () => {
-  const draft = { sections: [section('Writing the referral letter', '1. Dictate the letter within two working days.\n2. Check it for accuracy.')], keyPoints: POINTS };
+test('leaving the letter out silently still asks for the follow-up to be offered', () => {
+  const draft = { sections: complete(), keyPoints: POINTS, followUps: [] };
+  const { problems } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
+  assert.ok(problems.some((p) => /Add a followUp asking how to create the referral letter/i.test(p)));
+});
+
+test('offering the letter as a follow-up satisfies the check', () => {
+  const draft = { sections: complete(), keyPoints: POINTS, followUps: LETTER_FOLLOW_UP };
+  const { problems, followUps } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
+  assert.deepEqual(problems, []);
+  assert.deepEqual(followUps, LETTER_FOLLOW_UP);
+});
+
+test('the letter steps are allowed once the question asks for them', () => {
+  const draft = {
+    sections: [section('Creating the referral letter', '1. Navigate to **Add → Document → Create letter**.\n2. Set the **speciality** and **clinic type** from the task.')],
+    keyPoints: POINTS,
+  };
   const { problems } = validateDraft(draft, evidenceStub(), 'How do I create a referral letter?');
   assert.equal(problems.filter((p) => /referral letter/i.test(p)).length, 0);
+});
+
+test('follow-ups are trimmed, deduplicated and capped at two', () => {
+  const draft = {
+    sections: complete(),
+    keyPoints: POINTS,
+    followUps: ['  How do I create the referral letter?  ', 'How do I create the referral letter?', 'Which hospital do I pick?', 'What is 2WW?', 'no'],
+  };
+  const { followUps } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
+  assert.deepEqual(followUps, ['How do I create the referral letter?', 'Which hospital do I pick?']);
 });
 
 test('an email referral answer may not also describe the e-RS route', () => {
@@ -82,6 +120,7 @@ test('email-only steps pass unchanged', () => {
   const draft = {
     sections: [section('Send the email referral', '1. Attach the form.\n2. Set the **speciality** to Diabetes and the **clinic type** to Adult diabetes.\n3. Email it to the address in the notes.')],
     keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
   };
   const { problems } = validateDraft(draft, evidenceStub(), 'How do I do an email referral to the diabetes team?');
   assert.deepEqual(problems, []);

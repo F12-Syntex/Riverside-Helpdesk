@@ -267,7 +267,7 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -750,6 +750,11 @@ class RiversidePracticeQA extends React.Component {
           // wrote that could not be verified against a source and was dropped.
           gaps: m.gaps || '',
           hasGaps: !!(m.gaps && m.gaps.length),
+          // A step with its own procedure behind it — creating the referral
+          // letter, say — is offered as a question rather than inlined. Tapping
+          // it asks it here, in the same conversation, so the context is kept.
+          followUps: (m.followUps || []).map((q, i) => ({ key: i, question: q, onClick: () => self.ask(q) })),
+          hasFollowUps: !!(m.followUps && m.followUps.length),
           hasDropped: dropped > 0,
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'

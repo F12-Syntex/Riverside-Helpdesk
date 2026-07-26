@@ -195,6 +195,24 @@ export default function AiAnswer({ v }) {
 
             {v.hasTip && <div style={s('margin:14px 24px 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
 
+            {v.hasFollowUps && (
+              // A step with its own procedure behind it is left out of the answer
+              // and offered here instead. One tap asks it in this same chat, so
+              // the reader never loses the referral they were part way through.
+              <div style={s('margin:14px 24px 4px;')}>
+                <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:7px;')}>Ask next</div>
+                <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+                  {v.followUps.map((f) => (
+                    <Hover key={f.key} onClick={f.onClick}
+                      base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:11px 14px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;"
+                      hover="border-color:#005eb8;background:#f7fbff;">
+                      <span style={s('flex:none;display:flex;')}><Svg w={17}>{Icons.arrow}</Svg></span><span>{f.question}</span>
+                    </Hover>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={s('height:12px;')} />
             <ContactsCard v={v} />
             {v.hasContacts && <div style={s('height:12px;')} />}
