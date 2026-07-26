@@ -34,19 +34,22 @@ const DEP = { A: { c: '#005eb8', t: 'OpenRouter (AI)' }, D: { c: '#8a6100', t: '
  * =============================================================== */
 const L1_NODES = [
   { x: 40, y: 60, w: 190, h: 100, icon: Icons.chat, title: 'Staff', sub: 'ask in plain English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/ask', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5', ic: '#fff' },
-  { x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'AI wording', sub: 'plain NHS English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'matched to the Notebook', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
+  { x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/agent', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5', ic: '#fff' },
+  { x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'Research loop', sub: 'the AI picks its own tools', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
+  { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
   { x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'ONLY SOURCE' },
+  { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'FIRST SOURCE' },
 ];
 const L1_EDGES = [
   { d: 'M230 110 L320 110', label: '1 · asks', lx: 275, ly: 100 },
-  { d: 'M520 110 L820 110', label: '2 · sends question + Notebook', lx: 670, ly: 100 },
+  { d: 'M520 110 L820 110', label: '2 · sends the question', lx: 670, ly: 100 },
+  // The loop back on itself — search, read a page whole, search again with
+  // different words. That is what changed from one shot to an agent.
+  { d: 'M1020 80 q 30 30 -2 56', label: 'searches · reads · repeats', lx: 1026, ly: 66, anchor: 'end', dim: true },
   { d: 'M920 160 L920 430', label: '3 · draft', lx: 932, ly: 300, anchor: 'start' },
   { d: 'M820 480 L520 480', label: 'checked', lx: 670, ly: 470 },
   { d: 'M320 480 L150 480 L150 160', label: '4 · reply + source', lx: 162, ly: 320, anchor: 'start' },
-  { d: 'M470 245 L440 160', label: 'reads', lx: 482, ly: 210, anchor: 'start', dim: true },
+  { d: 'M670 280 L820 175', label: 'tools read it', lx: 700, ly: 245, anchor: 'start', dim: true },
 ];
 function L1Node(n, i) {
   return (
@@ -83,8 +86,8 @@ const colX = (i) => COL_X0 + COL_STEP * i;
 
 const FEATURES = [
   { p: '/', name: 'Tools index', routes: ['landing page'], deps: [] },
-  { p: '/helpbot', name: 'Practice Q&A', routes: ['/api/ask', '/api/kb'], deps: ['A', 'D'], hero: true },
-  { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory'], deps: ['D'] },
+  { p: '/helpbot', name: 'Practice Q&A', routes: ['/api/agent', '+ tool loop · compose', '/api/ask', '/api/kb'], deps: ['A', 'D'], hero: true },
+  { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory', '/api/cqc'], deps: ['D'] },
   { p: '/notebook', name: 'Notebook', routes: ['/api/notebook', '+ format · organize', '+ attachments', '+ import · export'], deps: ['A', 'D', 'B'] },
   { p: '/signpost', name: 'Signpost', routes: ['/api/signpost'], deps: ['A'] },
   { p: '/reason', name: 'Reason', routes: ['/api/reason'], deps: ['A'] },
@@ -95,9 +98,9 @@ const FEATURES = [
   { p: '/diagram', name: 'System map', routes: ['this page'], deps: [] },
   { p: '/knowledge', name: 'Knowledge admin', routes: ['/api/knowledge', '+ analyse · conflicts', '+ status · sync'], deps: ['L', 'D', 'A'] },
 ];
-const ENGINE_CHIPS = ['ai/prompt', 'ai/quote-match', 'ai/client', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'db', 'dpia', 'text-chunk'];
+const ENGINE_CHIPS = ['agent/tools', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'ai/prompt', 'ai/quote-match', 'ai/client', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'db', 'dpia', 'text-chunk'];
 const DATA_NODES = [
-  { cx: 300, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · staff · knowledge · contacts · embeddings', icon: Icons.book, dep: 'D' },
+  { cx: 300, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · staff · knowledge · contacts · embeddings · snomed · e-RS types', icon: Icons.book, dep: 'D' },
   { cx: 872, w: 380, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis', icon: Icons.sparkle, dep: 'A' },
   { cx: 1440, w: 360, label: 'Vercel Blob', sub: 'Notebook attachments', icon: Icons.paperclip, dep: 'B' },
 ];
@@ -249,8 +252,10 @@ export default function Page() {
 
         <h1 style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>System map</h1>
         <p style={s(`font-size:16px;color:${MUTED};margin:0 0 18px;max-width:70ch;`)}>
-          One diagram of the whole system. Use the control to change how much detail is shown. Q&amp;A answers from the
-          <strong> Notebook only</strong> right now; document search and contacts are switched off for answering.
+          One diagram of the whole system. Use the control to change how much detail is shown. Q&amp;A runs as an
+          <strong> agent</strong>: it chooses its own searches, reads whole pages when it needs the full process, and can
+          fall back to the web. The <strong>Notebook comes first</strong>, and every claim must quote a source it
+          actually retrieved or it is dropped before you see it.
         </p>
 
         {/* Detail control */}
