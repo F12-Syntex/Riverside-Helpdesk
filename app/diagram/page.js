@@ -44,8 +44,10 @@ const L1_EDGES = [
   { d: 'M230 110 L320 110', label: '1 · asks', lx: 275, ly: 100 },
   { d: 'M520 110 L820 110', label: '2 · sends the question', lx: 670, ly: 100 },
   // The loop back on itself — search, read a page whole, search again with
-  // different words. That is what changed from one shot to an agent.
-  { d: 'M1020 80 q 30 30 -2 56', label: 'searches · reads · repeats', lx: 1026, ly: 66, anchor: 'end', dim: true },
+  // different words. That is what changed from one shot to an agent. Drawn above
+  // the node, in clear space: edges are painted before nodes, so a label placed
+  // across one is covered by it.
+  { d: 'M872 60 C 872 26, 968 26, 968 58', label: 'searches · reads · repeats', lx: 920, ly: 18, anchor: 'middle', dim: true },
   { d: 'M920 160 L920 430', label: '3 · draft', lx: 932, ly: 300, anchor: 'start' },
   { d: 'M820 480 L520 480', label: 'checked', lx: 670, ly: 470 },
   { d: 'M320 480 L150 480 L150 160', label: '4 · reply + source', lx: 162, ly: 320, anchor: 'start' },
