@@ -123,6 +123,97 @@ test('a half-filled route does not count as naming both fields', () => {
   assert.ok(problems.some((p) => /speciality and which clinic type/i.test(p)));
 });
 
+// The physiotherapy failure: the Notebook makes Extended Scope conditional on
+// the doctor having asked for it, the answer says so in its steps, and the card
+// then prints "Extended Scope Physiotherapy" as though it were settled. The
+// assistant never sees the doctor's task, so it may not pick a side.
+const CONDITIONAL_STEPS = () => [
+  section('Send the physiotherapy referral', '1. Find the doctor’s referral document in the **Consultation**.\n2. Set the **speciality** to Physiotherapy.\n3. Set the **clinic type** to Musculoskeletal, or to Extended Scope Physiotherapy only if the doctor’s task asks for it.\n4. Send it.'),
+];
+
+test('a conditional clinic type is not allowed to be settled on the card', () => {
+  const draft = {
+    sections: CONDITIONAL_STEPS(),
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', priority: 'Routine', specialty: 'Physiotherapy', clinicType: 'Extended Scope Physiotherapy' },
+  };
+  const { problems, referralRoute } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to physiotherapy?');
+  assert.ok(problems.some((p) => /may not pick a side/i.test(p)));
+  // Even before the repair round, the card carries the condition rather than
+  // presenting one branch of it as the answer.
+  assert.match(referralRoute.clinicTypeCondition, /only if the doctor/i);
+});
+
+test('an unconditional clinic type is left exactly as written', () => {
+  const draft = {
+    sections: complete(),
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', priority: '2WW', specialty: 'Dermatology', clinicType: '2WW Skin' },
+  };
+  const { problems, referralRoute } = validateDraft(draft, evidenceStub(), 'How do I do a cancer dermatology referral?');
+  assert.deepEqual(problems, []);
+  assert.equal(referralRoute.clinicTypeCondition, '');
+  assert.deepEqual(referralRoute.clinicTypeOptions, []);
+});
+
+test('a choice of clinic types is kept as a choice, with clinicType left empty', () => {
+  const draft = {
+    sections: CONDITIONAL_STEPS(),
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: {
+      requestType: 'Referral', priority: 'Routine', specialty: 'Physiotherapy',
+      clinicType: 'Extended Scope Physiotherapy',
+      clinicTypeOptions: ['Musculoskeletal', 'Extended Scope Physiotherapy'],
+      clinicTypeCondition: 'Extended Scope only if the doctor’s task asks for it.',
+    },
+  };
+  const { problems, referralRoute } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to physiotherapy?');
+  assert.deepEqual(problems, []);
+  assert.equal(referralRoute.clinicType, '');
+  assert.deepEqual(referralRoute.clinicTypeOptions, ['Musculoskeletal', 'Extended Scope Physiotherapy']);
+});
+
+test('a single option is the clinic type, not a choice', () => {
+  const draft = {
+    sections: complete(),
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', priority: '2WW', specialty: 'Dermatology', clinicType: '', clinicTypeOptions: ['2WW Skin'] },
+  };
+  const { problems, referralRoute } = validateDraft(draft, evidenceStub(), 'How do I do a cancer dermatology referral?');
+  assert.deepEqual(problems, []);
+  assert.equal(referralRoute.clinicType, '2WW Skin');
+  assert.deepEqual(referralRoute.clinicTypeOptions, []);
+});
+
+test('a conditional clinic type in the source alone is still caught', () => {
+  // The steps say nothing conditional; the Notebook page they were written from
+  // does. The card must not be more certain than the material it came from.
+  const conditional = {
+    docId: 'p1', docTitle: 'Physiotherapy referrals',
+    text: 'Set the clinic type to Musculoskeletal. Use Extended Scope Physiotherapy only when the doctor has asked for it in the task.',
+    view: null, images: [],
+  };
+  const evidence = {
+    verifyPractice: (quote, ref) => ({ ref: String(ref || 'P1').toUpperCase(), chunk: conditional, exact: true }),
+    getWeb: () => null,
+    practiceList: () => [conditional],
+    webList: () => [],
+  };
+  const draft = {
+    sections: [section('Send the referral', '1. Find the doctor’s document in the **Consultation**.\n2. Set the **speciality** and **clinic type** as below.\n3. Send it.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', priority: 'Routine', specialty: 'Physiotherapy', clinicType: 'Extended Scope Physiotherapy' },
+  };
+  const { problems, referralRoute } = validateDraft(draft, evidence, 'How do I refer a patient to physiotherapy?');
+  assert.ok(problems.some((p) => /may not pick a side/i.test(p)));
+  assert.match(referralRoute.clinicTypeCondition, /only when the doctor has asked/i);
+});
+
 test('an empty route is dropped rather than shown as a blank card', () => {
   const draft = { sections: complete(), keyPoints: POINTS, followUps: LETTER_FOLLOW_UP };
   const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');

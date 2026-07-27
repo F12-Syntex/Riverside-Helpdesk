@@ -308,6 +308,10 @@ export async function POST(request) {
               priority: redact(answer.referralRoute.priority),
               specialty: redact(answer.referralRoute.specialty),
               clinicType: redact(answer.referralRoute.clinicType),
+              // A clinic type the material leaves conditional is shown as the
+              // choice it really is, with what decides between the options.
+              clinicTypeOptions: (answer.referralRoute.clinicTypeOptions || []).map((v) => redact(v)),
+              clinicTypeCondition: redact(answer.referralRoute.clinicTypeCondition),
               source: answer.referralRoute.source,
             } : null,
             citations,

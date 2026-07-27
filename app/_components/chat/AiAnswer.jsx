@@ -103,13 +103,62 @@ function Section({ sec }) {
 // speciality + clinic type pairing is the thing they came for. Wrong pairing
 // means the referral lands in the wrong service, so it gets the loudest
 // treatment in the answer — louder than a critical section.
+
+// What the card says instead of a value it does not have. Leaving the row out
+// altogether reads as though the field did not matter; a plausible-looking guess
+// in its place is worse still, because this is the box that gets typed into.
+const NOT_RECORDED = 'Not recorded — take it from the doctor’s task';
+
+// A condition the assistant cannot resolve, because it cannot see the doctor's
+// task: "Extended Scope only when the doctor has asked for it". Shown against
+// the field it applies to rather than buried in the steps below.
+function RouteCondition({ text }) {
+  return (
+    <span style={s('display:flex;gap:7px;align-items:flex-start;margin-top:7px;font-size:13.5px;line-height:1.45;font-weight:500;color:#8a6100;')}>
+      <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={14} stroke="#b58500" sw={2.2}>{Icons.alertCircle}</Svg></span>
+      <span>{text}</span>
+    </span>
+  );
+}
+
+function RouteValue({ row }) {
+  const size = row.strong ? '18px' : '16px';
+  const weight = row.strong ? '700' : '600';
+  if (row.options.length > 1) {
+    // The material records a choice, so the card shows the choice. Picking one
+    // of these for the reader is exactly the thing that cannot be done safely.
+    return (
+      <>
+        {row.options.map((option, i) => (
+          <span key={option} style={s('display:block;color:#212b32;overflow-wrap:anywhere;font-size:' + size + ';font-weight:' + weight + ';' + (i ? 'margin-top:3px;' : ''))}>
+            {i > 0 && <span style={s('font-size:13.5px;font-weight:600;color:#768692;margin-right:7px;')}>or</span>}
+            {option}
+          </span>
+        ))}
+      </>
+    );
+  }
+  if (row.value) {
+    return <span style={s('display:block;color:#212b32;overflow-wrap:anywhere;font-size:' + size + ';font-weight:' + weight + ';')}>{row.value}</span>;
+  }
+  return (
+    <span style={s('display:flex;gap:7px;align-items:flex-start;font-size:15px;font-weight:600;color:#8a6100;')}>
+      <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.alertCircle}</Svg></span>
+      <span>{NOT_RECORDED}</span>
+    </span>
+  );
+}
+
 function ReferralRoute({ route }) {
+  const options = (route.clinicTypeOptions || []).filter(Boolean);
   const rows = [
-    ['Request type', route.requestType, false],
-    ['Priority', route.priority, /2ww|urgent/i.test(route.priority || '')],
-    ['Speciality', route.specialty, true],
-    ['Clinic type', route.clinicType, true],
-  ].filter(([, value]) => value);
+    { label: 'Request type', value: route.requestType, strong: false, options: [], skip: !route.requestType },
+    { label: 'Priority', value: route.priority, strong: /2ww|urgent/i.test(route.priority || ''), options: [], skip: !route.priority },
+    // The pairing a referral cannot be sent without. These two rows are shown
+    // even when the material does not record them — saying so IS the answer.
+    { label: 'Speciality', value: route.specialty, strong: true, options: [] },
+    { label: 'Clinic type', value: route.clinicType, strong: true, options, condition: String(route.clinicTypeCondition || '').trim() },
+  ].filter((row) => !row.skip);
   if (!rows.length) return null;
   return (
     <div style={s('margin:16px 24px 0;border:2px solid #005eb8;border-radius:12px;overflow:hidden;background:#fff;')}>
@@ -117,11 +166,12 @@ function ReferralRoute({ route }) {
         <Svg w={15} stroke="#fff" sw={2.4}>{Icons.check}</Svg>Set this on e-RS
       </div>
       <div>
-        {rows.map(([label, value, strong], i) => (
-          <div key={label} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:10px 16px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
-            <span style={s('flex:none;min-width:104px;font-size:13.5px;font-weight:600;color:#4c6272;')}>{label}</span>
-            <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;color:#212b32;font-size:' + (strong ? '18px' : '16px') + ';font-weight:' + (strong ? '700' : '600') + ';')}>
-              {value}
+        {rows.map((row, i) => (
+          <div key={row.label} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:10px 16px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
+            <span style={s('flex:none;min-width:104px;font-size:13.5px;font-weight:600;color:#4c6272;')}>{row.label}</span>
+            <span style={s('flex:1 1 auto;min-width:0;')}>
+              <RouteValue row={row} />
+              {row.condition && <RouteCondition text={row.condition} />}
             </span>
           </div>
         ))}

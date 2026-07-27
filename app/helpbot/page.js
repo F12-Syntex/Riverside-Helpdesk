@@ -759,7 +759,7 @@ class RiversidePracticeQA extends React.Component {
           // thing seen — getting the speciality or clinic type wrong sends the
           // referral to the wrong place.
           referralRoute: m.referralRoute || null,
-          hasReferralRoute: !!(m.referralRoute && (m.referralRoute.specialty || m.referralRoute.clinicType || m.referralRoute.priority)),
+          hasReferralRoute: !!(m.referralRoute && (m.referralRoute.specialty || m.referralRoute.clinicType || m.referralRoute.priority || (m.referralRoute.clinicTypeOptions || []).length)),
           hasDropped: dropped > 0,
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
