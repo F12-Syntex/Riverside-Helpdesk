@@ -18,6 +18,12 @@ clickable sources they can open in-browser.
   `list_practice_sources`, `open_practice_source` and `search_web`. The
   practice's own material always gets first refusal — a web search with no
   practice lookup behind it triggers one automatically.
+- **The model chooses the files.** Nothing is pre-selected for it by embedding
+  similarity: `list_practice_sources` shows every Notebook page and every
+  document with a summary, and `open_practice_source` reads the one it picks.
+  Notebook pages come back whole; documents come back a part at a time with an
+  outline of the rest, and the parsed file is cached between calls, so reading
+  a long policy costs the parts that were needed rather than the whole file.
 - Every tool call is **streamed to the browser as it happens** (newline-delimited
   JSON), so the chat shows which search ran and what it returned instead of a
   silent spinner. The timeline collapses to one line once the answer arrives.
@@ -102,13 +108,17 @@ clickable sources they can open in-browser.
 
 The assistant keeps each source type predictable:
 
-- **Documents:** PostgreSQL full-text (`GIN`) and semantic (`pgvector` HNSW)
-  rankings retrieve the most relevant original passages from the document set.
+- **Documents:** chosen by the agent, not by a vector. PostgreSQL full-text
+  (`GIN`) search points it at a title; the catalogue lists every document with a
+  summary; `open_practice_source` serves one ~6k-character part at a time with
+  an outline of the rest, from a cache keyed on the document's revision.
 - **Notebook:** every non-empty page is loaded fresh from the live Notebook
   tables on every request and is never chunked or shortened. The agent searches
   those whole pages lexically and can pull any of them into the answer in full
   via `open_practice_source`, so a long process is never truncated to a snippet.
-- **Contacts:** a separate full-text + semantic search retrieves matching
+- **Contacts:** the one remaining embedded corpus, because a caller asks for
+  "the district nurses" rather than a title. A full-text + semantic search
+  retrieves matching
   structured directory entries. Telephone numbers and emails are displayed
   deterministically rather than copied by the AI.
 - Document and Notebook output still requires a server-verified verbatim quote.
@@ -132,7 +142,7 @@ Set these in `.env.local` (see `.env.local.example`):
 | --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
 | `OPENROUTER_AI_MODEL` | Chat/vision model slug, e.g. `anthropic/claude-sonnet-4.6`. Must be vision-capable. |
-| `OPENROUTER_EMBED_MODEL` | Embedding model (default `openai/text-embedding-3-small`). |
+| `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory and the committed `rag/` index (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
 
