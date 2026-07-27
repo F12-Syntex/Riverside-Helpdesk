@@ -15,9 +15,14 @@ clickable sources they can open in-browser.
   material genuinely does not cover the question. The API key and server-side
   knowledge never reach the browser.
 - The tools it has: `search_practice` (documents + Notebook),
-  `list_practice_sources`, `open_practice_source` and `search_web`. The
-  practice's own material always gets first refusal — a web search with no
-  practice lookup behind it triggers one automatically.
+  `list_practice_sources`, `open_practice_source`, `search_web` and
+  `find_contact`. The practice's own material always gets first refusal — a web
+  search with no practice lookup behind it triggers one automatically.
+- **A contact question is answered with a contact.** `find_contact` tries the
+  practice directory, then the CQC register, then reads the actual web pages and
+  lifts the number off them. What it finds is shown in the contacts card as
+  structured data, with a line saying where it came from — never retyped through
+  the model's prose, where an unverified number is stripped out.
 - **The model chooses the files.** Nothing is pre-selected for it by embedding
   similarity: `list_practice_sources` shows every Notebook page and every
   document with a summary, and `open_practice_source` reads the one it picks.
@@ -88,6 +93,14 @@ clickable sources they can open in-browser.
   zero the spreadsheet drops). The practice's own directory
   (`lib/contacts.data.json`, `/api/directory`) is no longer searched here — it
   still backs the assistant's contacts card.
+- **`lib/lookup/contact-extract.mjs`** + **`lib/lookup/web-contact.mjs`** — how a
+  number is found for something neither the directory nor the register holds.
+  The web search picks the pages; the pages are then **fetched and read**, and
+  their `tel:`/`mailto:` links and visible numbers are pulled out verbatim
+  (`/api/lookup-web`, and the agent's `find_contact`). Runs that are not numbers
+  to ring — a charity registration, an NHS number, a date — are rejected by
+  shape and by the words around them. No digit anywhere on this path is written
+  by a model, so the guarantee is the same as for the committed directory.
 - **`lib/referrals/`** + **`scripts/ingest-snomed-ers.mjs`** — the referral-routing
   fallback. `ereferrals.csv` is the closed list of Specialty + Clinic Type
   pairings e-RS accepts (406 of them); the SNOMED CT description snapshot gives

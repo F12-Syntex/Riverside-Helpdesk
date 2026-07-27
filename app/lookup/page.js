@@ -107,13 +107,13 @@ export default function Page() {
   // only when the reader presses Enter, and only for the query they pressed it
   // on. `for` guards against the results of an old query lingering under a new
   // one the reader has since typed.
-  const [web, setWeb] = React.useState({ for: '', results: [], loading: false, reason: '' });
+  const [web, setWeb] = React.useState({ for: '', contacts: [], results: [], loading: false, reason: '' });
   const inputRef = React.useRef(null);
 
   const trimmed = query.trim();
   const results = cqc.entries;
   const nothingFound = !!trimmed && trimmed.length >= 2 && !cqc.loading && !results.length;
-  const webShown = web.for === trimmed && (web.loading || web.results.length || web.reason);
+  const webShown = web.for === trimmed && (web.loading || web.contacts.length || web.results.length || web.reason);
 
   // Keep keyboard selection in range as the list changes under it.
   React.useEffect(() => { setSelIdx(trimmed ? 0 : -1); }, [trimmed]);
@@ -153,11 +153,17 @@ export default function Page() {
 
   const searchWeb = React.useCallback((q) => {
     if (q.length < 3) return;
-    setWeb({ for: q, results: [], loading: true, reason: '' });
+    setWeb({ for: q, contacts: [], results: [], loading: true, reason: '' });
     fetch('/api/lookup-web?q=' + encodeURIComponent(q), { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setWeb({ for: q, results: Array.isArray(d.results) ? d.results : [], loading: false, reason: d.reason || '' }))
-      .catch(() => setWeb({ for: q, results: [], loading: false, reason: 'Web search is unavailable.' }));
+      .then((d) => setWeb({
+        for: q,
+        contacts: Array.isArray(d.contacts) ? d.contacts : [],
+        results: Array.isArray(d.results) ? d.results : [],
+        loading: false,
+        reason: d.reason || '',
+      }))
+      .catch(() => setWeb({ for: q, contacts: [], results: [], loading: false, reason: 'Web search is unavailable.' }));
   }, []);
 
   const onKeyDown = (e) => {
@@ -230,7 +236,9 @@ export default function Page() {
           </div>
         ) : null}
 
-        {/* Web results, kept visibly apart from the register. */}
+        {/* Web results, kept visibly apart from the register. The numbers come
+            first and the pages they were read off come second: someone at the
+            desk needs a number, not a reading list. */}
         {webShown ? (
           <div>
             <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 2px 8px;')}>
@@ -238,22 +246,60 @@ export default function Page() {
               <span style={s('font-size:12.5px;color:#8a99a3;')}>not the CQC register &mdash; check before using</span>
             </div>
             {web.loading ? (
-              <div style={s('padding:28px 18px;color:#8a99a3;font-size:15px;text-align:center;')}>Searching the web&hellip;</div>
-            ) : web.results.length ? (
-              <div style={s('border:1px solid #ecd39a;background:#fffdf5;border-radius:10px;overflow:hidden;')}>
-                {web.results.map((r, i) => (
-                  <a key={r.url} href={r.url} target="_blank" rel="noreferrer"
-                    style={s('display:block;padding:12px 14px;text-decoration:none;color:inherit;' + (i ? 'border-top:1px solid #f3e6c6;' : ''))}>
-                    <span style={s('display:block;font-size:15.5px;font-weight:600;color:#005eb8;line-height:1.35;overflow-wrap:anywhere;')}>{r.title}</span>
-                    {r.snippet ? <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:2px;line-height:1.45;')}>{r.snippet.slice(0, 180)}</span> : null}
-                    <span style={s('display:block;font-size:12px;color:#8a99a3;margin-top:3px;overflow-wrap:anywhere;')}>{r.url}</span>
-                  </a>
-                ))}
-              </div>
+              <div style={s('padding:28px 18px;color:#8a99a3;font-size:15px;text-align:center;')}>Reading the pages for a number&hellip;</div>
             ) : (
-              <div style={s('padding:28px 18px;color:#8a99a3;font-size:15px;text-align:center;')}>
-                {web.reason || 'Nothing useful found on the web either.'}
-              </div>
+              <>
+                {web.contacts.length ? (
+                  <div style={s('border:1px solid #ecd39a;background:#fffdf5;border-radius:10px;overflow:hidden;margin-bottom:14px;')}>
+                    {web.contacts.map((c, i) => (
+                      <div key={c.url} style={s('padding:12px 14px;' + (i ? 'border-top:1px solid #f3e6c6;' : ''))}>
+                        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;line-height:1.35;overflow-wrap:anywhere;')}>{c.title}</span>
+                        <span style={s('display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;')}>
+                          {c.phones.map((p, j) => (
+                            <span key={'p' + j} style={s('display:inline-flex;flex-direction:column;gap:2px;')}>
+                              <PhoneChip phone={p} onCopied={() => flashCopied(p.display)} />
+                              {p.label || p.kind === 'fax' ? (
+                                <span style={s('font-size:11.5px;color:#8a99a3;padding-left:12px;overflow-wrap:anywhere;')}>
+                                  {p.kind === 'fax' ? 'Fax' : p.label}
+                                </span>
+                              ) : null}
+                            </span>
+                          ))}
+                          {c.emails.map((e, j) => (
+                            <a key={'e' + j} href={'mailto:' + e}
+                              style={s('display:inline-flex;align-items:center;background:#f0f4f5;color:#005eb8;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;text-decoration:none;word-break:break-all;')}>
+                              {e}
+                            </a>
+                          ))}
+                        </span>
+                        <a href={c.url} target="_blank" rel="noreferrer"
+                          style={s('display:block;font-size:12px;color:#8a99a3;margin-top:6px;overflow-wrap:anywhere;text-decoration:none;')}>
+                          Read off {c.host || c.url}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {web.results.length ? (
+                  <div style={s('border:1px solid #d8dde0;background:#fff;border-radius:10px;overflow:hidden;')}>
+                    <div style={s('padding:8px 14px;background:#f7fafb;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;')}>
+                      {web.contacts.length ? 'Pages searched' : 'Pages found — none of them publishes a number'}
+                    </div>
+                    {web.results.map((r) => (
+                      <a key={r.url} href={r.url} target="_blank" rel="noreferrer"
+                        style={s('display:block;padding:11px 14px;text-decoration:none;color:inherit;border-top:1px solid #eef1f2;')}>
+                        <span style={s('display:block;font-size:14.5px;font-weight:600;color:#005eb8;line-height:1.35;overflow-wrap:anywhere;')}>{r.title}</span>
+                        <span style={s('display:block;font-size:12px;color:#8a99a3;margin-top:3px;overflow-wrap:anywhere;')}>{r.url}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={s('padding:28px 18px;color:#8a99a3;font-size:15px;text-align:center;')}>
+                    {web.reason || 'Nothing useful found on the web either.'}
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : null}

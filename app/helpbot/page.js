@@ -305,13 +305,14 @@ class RiversidePracticeQA extends React.Component {
     this.fetchAI(m.question, idx);
   }
 
-  // Format the exact contacts (numbers/emails from the directory) for copying.
+  // Format the exact contacts for copying. Each line carries where its number
+  // came from, so a number pasted into a task still says how far to trust it.
   contactLines(m) {
     if (!m.contacts || !m.contacts.length) return [];
-    const lines = ['', 'Contacts (from Useful telephone numbers):'];
+    const lines = ['', 'Contacts:'];
     for (const c of m.contacts) {
       const vals = (c.phones || []).map((p) => p.display).concat(c.emails || []);
-      lines.push('- ' + c.label + ': ' + vals.join(', '));
+      lines.push('- ' + c.label + ': ' + vals.join(', ') + (c.source ? ' (' + c.source + ')' : ''));
     }
     return lines;
   }

@@ -51,6 +51,7 @@ const RESEARCH_SYSTEM = [
   '- open_practice_source reads a Notebook page whole, and reads a document ONE PART AT A TIME. Documents are long: use the outline that comes back to go straight to the part you need, and do not read a file end to end to answer one question. Re-opening a part you have already read is free, so open the part you actually need rather than hoarding the whole file.',
   '- If a result is clearly the middle of a longer process, open the source it came from so the answer can set the process out end to end.',
   '- Only after the practice material has been tried, and only if it does not cover the question, use search_web. Web pages are general guidance, never practice policy.',
+  '- CONTACT QUESTIONS: if the question asks for a telephone number, an email address or who to ring, call find_contact — and call it as well whenever the practice material names a service without giving its number. It searches the practice directory, then the CQC register, then reads the web and takes the number off the page. Never write a number yourself, and never leave the answer telling the reader to look one up: the whole point of the question is the number.',
   '- REFERRAL QUESTIONS: a referral cannot be sent without a Speciality and a Clinic Type. Search the practice material for them first — the Notebook is right and always wins. If, after searching, no page records the pairing for this referral, call suggest_ers_referral_route with the condition being referred. Do not leave the answer telling the reader to look it up in the task when this tool can name the pairing from the e-RS referral-types list.',
   '- Two message shapes are not questions: a pasted medical document (a letter or report to be filed) and an incoming patient request that needs routing. If the message is one of those, call hand_off immediately and do nothing else.',
   '',
@@ -61,11 +62,20 @@ const RESEARCH_SYSTEM = [
 // number appearing in a source a tool actually returned. Anything else the
 // model writes is redacted rather than shown to a receptionist who might dial it.
 const NUMBER_RUN = /\d[-\d.()/ \t ]{7,}\d/g;
-function verifiedNumbers(evidence) {
+function verifiedNumbers(evidence, contacts = []) {
   const verified = new Set(contactTelSet());
   for (const chunk of evidence.practiceList()) {
     for (const run of String(chunk.text || '').match(NUMBER_RUN) || []) {
       const d = digitsOf(run);
+      if (d.length >= 9) verified.add(d);
+    }
+  }
+  // Anything find_contact produced counts as verified in the same sense: it was
+  // copied out of the practice directory, the CQC register or a page, never
+  // written by the model. A number it looked up is not stripped as a guess.
+  for (const contact of contacts) {
+    for (const phone of contact.phones || []) {
+      const d = digitsOf(phone.tel || phone.display);
       if (d.length >= 9) verified.add(d);
     }
   }
@@ -140,7 +150,11 @@ export async function POST(request) {
         // A pasted document or an incoming patient request keeps its existing
         // card. The agent flags it and the previous endpoint produces the shape.
         let handOff = '';
-        const tools = createTools({ apiKey, searchModel, notebookChunks, evidence, onEvent: send });
+        // Numbers and addresses find_contact turned up during the turn. They
+        // reach the reader as structured data in the contacts card, never
+        // through the model's prose.
+        const foundContacts = [];
+        const tools = createTools({ apiKey, searchModel, notebookChunks, evidence, onEvent: send, contacts: foundContacts });
         tools.hand_off = tool({
           description: 'Declare that this message is not a staff question but a pasted medical document to file, or an incoming patient request that needs routing. Call this and stop.',
           inputSchema: z.object({
@@ -202,21 +216,29 @@ export async function POST(request) {
           return;
         }
 
+        // Nothing to write an answer FROM. A contact lookup legitimately lands
+        // here — "what is the number for Whipps Cross" needs no policy passage —
+        // and the number that was found is the answer, so it is handed over
+        // rather than thrown away behind "I could not find anything".
         if (!evidence.practiceCount && !evidence.webCount) {
           send({
             type: 'answer',
             payload: {
               kind: 'answer',
               answerable: false,
-              intro: 'I could not find anything about this in the practice’s Notebook or documents, and nothing usable on the web, so I have nothing to answer from.',
+              intro: foundContacts.length
+                ? 'The practice’s own material does not cover this, but here are the contact details I found.'
+                : 'I could not find anything about this in the practice’s Notebook or documents, and nothing usable on the web, so I have nothing to answer from.',
               keyPoints: [],
               sections: [],
               message: '',
               messageCite: null,
               tip: '',
-              gaps: 'Ask the practice manager, or the lead for this area.',
+              gaps: foundContacts.length
+                ? 'Check the details against the service before giving them to a patient.'
+                : 'Ask the practice manager, or the lead for this area.',
               citations: [],
-              contacts: [],
+              contacts: foundContacts,
               validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
             },
           });
@@ -262,7 +284,7 @@ export async function POST(request) {
         });
 
         // Redact any number the model wrote that no source vouches for.
-        const verified = verifiedNumbers(evidence);
+        const verified = verifiedNumbers(evidence, foundContacts);
         const redact = (t) => redactUnverifiedNumbers(t, verified);
         const sections = answer.sections.map((sec) => ({ ...sec, markdown: redact(sec.markdown) }));
         const keyPoints = answer.keyPoints.map((point) => ({ ...point, text: redact(point.text) }));
@@ -317,7 +339,9 @@ export async function POST(request) {
               source: answer.referralRoute.source,
             } : null,
             citations,
-            contacts: [],
+            // Shown as structured data in their own card, so a number reaches
+            // the reader exactly as its source wrote it.
+            contacts: foundContacts,
             validation: answer.validation,
           },
         });

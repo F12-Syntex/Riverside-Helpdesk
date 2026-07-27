@@ -17,6 +17,7 @@ const TOOL_ICON = {
   list_practice_sources: Icons.book,
   open_practice_source: Icons.fileLines,
   search_web: Icons.globe,
+  find_contact: Icons.phone,
   hand_off: Icons.sitemap,
 };
 
