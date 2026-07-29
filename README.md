@@ -112,6 +112,10 @@ clickable sources they can open in-browser.
   returns is labelled a suggestion to check against the doctor's task. There is
   no published SNOMED-to-e-RS mapping (no edition of the UK release carries an
   e-RS refset), so the join is made on text and is never presented as authoritative.
+- **`lib/settings.js`** + **`/settings`** — runtime settings in Postgres
+  (`app_settings`), not the environment. Today that is the AI model: `/settings`
+  fuzzy-searches the live OpenRouter catalogue (`/api/settings/models`) and
+  stores the chosen slug, so the model can be changed without a redeploy.
 - **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
   layer and localhost-only backend screen. The source types share storage and
   conflict review, while the live assistant keeps their context paths separate.
@@ -154,7 +158,7 @@ Set these in `.env.local` (see `.env.local.example`):
 | Variable | Purpose |
 | --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
-| `OPENROUTER_AI_MODEL` | Chat/vision model slug, e.g. `anthropic/claude-sonnet-4.6`. Must be vision-capable. |
+| ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Must be vision-capable — the ingester reads images with it. |
 | `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory and the committed `rag/` index (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |

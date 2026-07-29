@@ -21,6 +21,7 @@
 // advice about a specific patient. That framing lives in lib/ai/medication.js.
 import { NextResponse } from 'next/server';
 import { getSql, ensureMedicationSchema } from '@/lib/db';
+import { getAiModel } from '@/lib/settings';
 import {
   buildMedicationPrompt,
   parseMedicationJson,
@@ -337,9 +338,10 @@ export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   // This tool needs a model that reliably follows the "return JSON, grounded in
   // sources" instruction with the web-search tool. A dedicated var lets us use a
-  // solid, cheap one here (e.g. openai/gpt-4.1-nano) without changing the global
-  // OPENROUTER_AI_MODEL the Q&A tool and the vision RAG ingester rely on.
-  const model = process.env.OPENROUTER_MEDICATION_MODEL || process.env.OPENROUTER_AI_MODEL;
+  // solid, cheap one here (e.g. openai/gpt-4.1-nano) without changing the model
+  // the Q&A tool and the vision RAG ingester rely on (a practice setting now,
+  // changed at /settings — see lib/settings.js).
+  const model = process.env.OPENROUTER_MEDICATION_MODEL || await getAiModel();
 
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
@@ -407,8 +409,8 @@ export async function POST(request) {
     });
   }
 
-  if (!apiKey || !model) {
-    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY or OPENROUTER_AI_MODEL.' }, { status: 500 });
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
   }
 
   // 4) Miss — fetch. The model gets the ORIGINAL typed name so it can correct and

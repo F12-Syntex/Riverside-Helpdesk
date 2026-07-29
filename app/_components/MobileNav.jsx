@@ -22,6 +22,7 @@ const TOOLS = [
   // { href: '/medications', label: 'Medication check' },
   // { href: '/rota', label: 'Staff rota generator' },
   { href: '/dpia', label: 'Data protection check (DPIA)' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 const VIEWS = [

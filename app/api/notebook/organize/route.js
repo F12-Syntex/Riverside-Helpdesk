@@ -11,6 +11,7 @@
 //                               emptied source pages.
 import { NextResponse } from 'next/server';
 import { listNotes, applyOrganizePlan } from '@/lib/notebook';
+import { getAiModel } from '@/lib/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -138,9 +139,10 @@ export async function POST(request) {
 
   // Phase 1 — build the plan.
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_AI_MODEL;
-  if (!apiKey || !model) {
-    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY or OPENROUTER_AI_MODEL.' }, { status: 500 });
+  // The model is a practice setting now, changed at /settings — see lib/settings.js.
+  const model = await getAiModel();
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
   }
 
   let rows;

@@ -73,7 +73,7 @@ array of `{ text, headingPath?, section?, page?, images? }`. Register it in
 `parsers/index.mjs`. That's the only change needed for a new format.
 
 - **Images** (`.png/.jpg/.jpeg/.gif/.webp`) — read by the vision-capable chat
-  model (`OPENROUTER_AI_MODEL`). **No OCR engine**, for consistency: one model
+  model chosen at `/settings`. **No OCR engine**, for consistency: one model
   understands every input. A display copy is written to `public/assets/rag/`.
 - **Text / Markdown** (`.txt/.md`) — Markdown is split on headings (each chunk
   carries a heading anchor for citation links).

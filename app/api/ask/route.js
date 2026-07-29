@@ -23,6 +23,7 @@ import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 import { fullNotebookContext } from '@/lib/notebook';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
+import { getAiModel } from '@/lib/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -230,11 +231,12 @@ async function callModel(apiKey, model, content) {
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_AI_MODEL;
+  // The model is a practice setting now, changed at /settings — see lib/settings.js.
+  const model = await getAiModel();
 
-  if (!apiKey || !model) {
+  if (!apiKey) {
     return NextResponse.json(
-      { error: 'Server is missing OPENROUTER_API_KEY or OPENROUTER_AI_MODEL.' },
+      { error: 'Server is missing OPENROUTER_API_KEY.' },
       { status: 500 },
     );
   }

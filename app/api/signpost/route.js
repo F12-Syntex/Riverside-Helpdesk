@@ -11,6 +11,7 @@
 // best-effort — if the Notebook cannot be read the endpoint still signposts.
 import { NextResponse } from 'next/server';
 import { notebookSectionContext } from '@/lib/notebook';
+import { getAiModel } from '@/lib/settings';
 
 // Parse the model's JSON reply: strip any markdown fences, then fall back to
 // the first-{…last-} slice for replies with prose around the object. (The
@@ -93,9 +94,10 @@ ${text}
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_AI_MODEL;
-  if (!apiKey || !model) {
-    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY or OPENROUTER_AI_MODEL.' }, { status: 500 });
+  // The model is a practice setting now, changed at /settings — see lib/settings.js.
+  const model = await getAiModel();
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
   }
 
   let text = '';

@@ -35,11 +35,20 @@ export function loadEnv() {
   }
 }
 
+// The chat model — the one the ingester reads document images with — is a
+// practice setting stored in the database (app_settings, changed at /settings),
+// not an environment variable. Async because of that, and kept out of config()
+// so nothing that does not need a model waits on a database round trip.
+export async function chatModel() {
+  loadEnv();
+  const { getAiModel } = await import('../../lib/settings.js');
+  return getAiModel();
+}
+
 export function config() {
   loadEnv();
   return {
     apiKey: process.env.OPENROUTER_API_KEY,
-    chatModel: process.env.OPENROUTER_AI_MODEL,
     // Embeddings are served by OpenRouter too; one key for everything.
     embedModel: process.env.OPENROUTER_EMBED_MODEL || 'openai/text-embedding-3-small',
     // Cheap text analysis (query condensing, document summarising). A small,

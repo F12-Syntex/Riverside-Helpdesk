@@ -14,6 +14,7 @@
 //     rule can be removed and the week rebuilt without it.
 import { NextResponse } from 'next/server';
 import { getSql, ensureSchema } from '@/lib/db';
+import { getAiModel } from '@/lib/settings';
 import { generateGrid, tallyHistory, sanitiseGrid, rebalance, changedKeys, DEFAULT_TIMES, currentMonday, isoOf } from '@/lib/rota/logic';
 import { buildRotaChatPrompt, parseGridResponse } from '@/lib/ai/rota';
 
@@ -107,7 +108,7 @@ export async function POST(request) {
 
     // 2) Apply all rules together via the AI, then rebalance coverage around them.
     const apiKey = process.env.OPENROUTER_API_KEY;
-    const model = process.env.OPENROUTER_AI_MODEL;
+    const model = await getAiModel();
     if (rules.length && apiKey && model) {
       const message = rules.length === 1
         ? rules[0]

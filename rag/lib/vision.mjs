@@ -1,9 +1,9 @@
-// Reads an image into searchable text using the vision-capable chat model
-// (OPENROUTER_AI_MODEL) — deliberately NOT a separate OCR engine, so every
-// input type is understood by the same model for consistency.
+// Reads an image into searchable text using the vision-capable chat model the
+// practice has chosen (/settings) — deliberately NOT a separate OCR engine, so
+// every input type is understood by the same model for consistency.
 import fs from 'node:fs';
 import path from 'node:path';
-import { config } from './config.mjs';
+import { chatModel, config } from './config.mjs';
 
 const MIME = {
   '.png': 'image/png',
@@ -27,8 +27,10 @@ function instructionFor(hint) {
 
 // Core call — describes an image given as a data URL.
 async function describeDataUrl(dataUrl, hint = '') {
-  const { apiKey, chatModel, base, referer, title } = config();
-  if (!apiKey || !chatModel) throw new Error('OPENROUTER_API_KEY / OPENROUTER_AI_MODEL not set');
+  const { apiKey, base, referer, title } = config();
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
+  // The practice's chosen model, from the database rather than the environment.
+  const model = await chatModel();
 
   const res = await fetch(base + '/chat/completions', {
     method: 'POST',
@@ -39,7 +41,7 @@ async function describeDataUrl(dataUrl, hint = '') {
       'X-Title': title,
     },
     body: JSON.stringify({
-      model: chatModel,
+      model,
       temperature: 0.1,
       messages: [{
         role: 'user',

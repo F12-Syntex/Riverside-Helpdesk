@@ -16,6 +16,7 @@
 // model; see lib/lookup/contact-extract.mjs.
 import { NextResponse } from 'next/server';
 import { findWebContacts } from '@/lib/lookup/web-contact.mjs';
+import { getAiModel } from '@/lib/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,7 @@ export async function GET(request) {
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   // The cheapest, fastest model configured — this is a lookup, not research.
-  const model = process.env.OPENROUTER_MEDICATION_MODEL || process.env.OPENROUTER_ANALYSIS_MODEL || process.env.OPENROUTER_AI_MODEL;
+  const model = process.env.OPENROUTER_MEDICATION_MODEL || process.env.OPENROUTER_ANALYSIS_MODEL || await getAiModel();
   if (!apiKey || !model) {
     return NextResponse.json({ ok: false, contacts: [], results: [], reason: 'Web search is not set up on this server.' }, { headers: noStore });
   }
