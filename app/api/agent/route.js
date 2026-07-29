@@ -30,7 +30,8 @@ import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts
 import { createEvidence } from '@/lib/agent/evidence.mjs';
 import { createTools } from '@/lib/agent/tools.mjs';
 import { composeVerifiedAnswer } from '@/lib/agent/compose.mjs';
-import { lookupErsMapping } from '@/lib/referrals/ers-lookup';
+import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
+import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
 import { getAiModel } from '@/lib/settings';
 import { POST as askPOST } from '../ask/route';
 
@@ -259,6 +260,11 @@ export async function POST(request) {
         // mention "speciality" and "clinic type" did not work: the standard flow
         // page names both fields generically, so a referral it gives no values
         // for still looked covered.
+        //
+        // Everything the lookup used to reach the pairing is kept, not just the
+        // pairing itself: a referral the Notebook does not cover is answered
+        // from what the practice's data implies, and the reader has to be able
+        // to see WHAT it was determined from before acting on it.
         let ersSuggestion = null;
         if (/\brefer(?:ral|rals|red|ring|s)?\b/i.test(question)) {
           try {
@@ -269,6 +275,9 @@ export async function POST(request) {
                 clinicType: match.suggestion.clinicType,
                 snomed: match.matched,
                 alternatives: match.alternatives,
+                confidence: match.confidence,
+                cancer: match.cancer,
+                explanation: explainLookup(match),
               };
             }
           } catch (e) {
@@ -283,6 +292,18 @@ export async function POST(request) {
           evidence,
           ersSuggestion,
           onStatus: (text) => send({ type: 'status', text }),
+        });
+
+        // Which of the two the e-RS card is showing: a pairing the practice's own
+        // material records, or one determined from the practice's e-RS
+        // referral-types export when no Notebook page covers this referral. The
+        // determined one carries its provenance to the card — the writer leaving
+        // the pairing out, or labelling a matched one as the practice's own, is
+        // exactly how it would otherwise reach the reader unmarked.
+        const { route: referralRoute, determination } = determineReferralRoute({
+          route: answer.referralRoute,
+          suggestion: ersSuggestion,
+          sourceTexts: evidence.practiceList().map((chunk) => chunk.text),
         });
 
         // Redact any number the model wrote that no source vouches for.
@@ -329,16 +350,20 @@ export async function POST(request) {
             // Questions the reader can tap to ask next, in this same chat.
             followUps: (answer.followUps || []).map((q) => redact(q)),
             // The four e-RS fields, shown on their own above the steps.
-            referralRoute: answer.referralRoute ? {
-              requestType: redact(answer.referralRoute.requestType),
-              priority: redact(answer.referralRoute.priority),
-              specialty: redact(answer.referralRoute.specialty),
-              clinicType: redact(answer.referralRoute.clinicType),
+            referralRoute: referralRoute ? {
+              requestType: redact(referralRoute.requestType),
+              priority: redact(referralRoute.priority),
+              specialty: redact(referralRoute.specialty),
+              clinicType: redact(referralRoute.clinicType),
               // A clinic type the material leaves conditional is shown as the
               // choice it really is, with what decides between the options.
-              clinicTypeOptions: (answer.referralRoute.clinicTypeOptions || []).map((v) => redact(v)),
-              clinicTypeCondition: redact(answer.referralRoute.clinicTypeCondition),
-              source: answer.referralRoute.source,
+              clinicTypeOptions: (referralRoute.clinicTypeOptions || []).map((v) => redact(v)),
+              clinicTypeCondition: redact(referralRoute.clinicTypeCondition),
+              source: referralRoute.source,
+              // Where a determined pairing came from — the SNOMED concept, the
+              // e-RS referral-types list, how close the match was, and what else
+              // was close. Null when the practice's own material records it.
+              determination,
             } : null,
             citations,
             // Shown as structured data in their own card, so a number reaches

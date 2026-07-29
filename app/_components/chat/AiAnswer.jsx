@@ -149,6 +149,61 @@ function RouteValue({ row }) {
   );
 }
 
+// The pairing above was not recorded in the practice's notes — it was worked out
+// from the practice's own data. That has to be said, and saying "matched from a
+// list" is not enough on its own: the reader is about to type these two values
+// into e-RS, so the block names every source the determination went through —
+// the SNOMED concept the wording resolved to, the e-RS referral-types list the
+// pairing came out of, how close the match was, and what else was close to it.
+function DeterminedFrom({ label, children }) {
+  return (
+    <li style={s('display:flex;flex-wrap:wrap;gap:2px 8px;')}>
+      <span style={s('flex:none;font-weight:700;')}>{label}</span>
+      <span style={s('flex:1 1 180px;min-width:0;overflow-wrap:anywhere;')}>{children}</span>
+    </li>
+  );
+}
+
+function Determined({ determination }) {
+  const d = determination || null;
+  const snomed = d && d.snomed && d.snomed.conceptId ? d.snomed : null;
+  const alternatives = d ? (d.alternatives || []).filter((a) => a && a.specialty && a.clinicType) : [];
+  // A percentage rather than the raw score: the reader is judging how much to
+  // trust a value, not reading a ranking function.
+  const closeness = d && typeof d.confidence === 'number' && d.confidence > 0
+    ? Math.round(d.confidence * 100) + '% match'
+    : '';
+
+  return (
+    <div style={s('padding:11px 16px 12px;border-top:1px solid #eef1f2;background:#fffdf5;font-size:13.5px;line-height:1.5;color:#8a6100;')}>
+      <div style={s('display:flex;gap:8px;align-items:flex-start;')}>
+        <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.sparkle}</Svg></span>
+        <span>
+          <strong>Not recorded in the practice&rsquo;s notes.</strong> This pairing was determined from the practice&rsquo;s
+          own referral data &mdash; check it against the doctor&rsquo;s task before sending.
+        </span>
+      </div>
+      {d && (
+        <ul style={s('margin:9px 0 0 23px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13px;')}>
+          {snomed && (
+            <DeterminedFrom label="Condition">
+              {snomed.term} &mdash; SNOMED CT {snomed.conceptId}
+            </DeterminedFrom>
+          )}
+          <DeterminedFrom label="Pairing">
+            e-RS referral types &mdash; the specialities and clinic types e-RS accepts{closeness ? ' (' + closeness + ')' : ''}
+          </DeterminedFrom>
+          {!!alternatives.length && (
+            <DeterminedFrom label="Also close">
+              {alternatives.map((a) => a.specialty + ' / ' + a.clinicType).join('; ')}
+            </DeterminedFrom>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ReferralRoute({ route }) {
   const options = (route.clinicTypeOptions || []).filter(Boolean);
   const rows = [
@@ -176,15 +231,7 @@ function ReferralRoute({ route }) {
           </div>
         ))}
       </div>
-      {route.source === 'suggested' && (
-        // Matched against the e-RS referral-types list rather than recorded by
-        // the practice. Saying which is the difference between a shortcut and a
-        // referral sent to the wrong service on the assistant's say-so.
-        <div style={s('display:flex;gap:8px;align-items:flex-start;padding:10px 16px;border-top:1px solid #eef1f2;background:#fffdf5;font-size:13.5px;line-height:1.45;color:#8a6100;')}>
-          <span style={s('flex:none;display:flex;margin-top:1px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.sparkle}</Svg></span>
-          <span>Matched from the e-RS referral types, not recorded in the practice&rsquo;s notes &mdash; check it against the doctor&rsquo;s task before sending.</span>
-        </div>
-      )}
+      {route.source === 'suggested' && <Determined determination={route.determination} />}
     </div>
   );
 }

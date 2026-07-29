@@ -40,6 +40,12 @@ clickable sources they can open in-browser.
   anything from a web page is marked "from the web" with a link and never
   presented as practice policy; whatever the practice's material does not cover
   is stated plainly, with who to ask, rather than filled in from model knowledge.
+- **A referral the Notebook does not cover still gets a speciality and a clinic
+  type.** They are determined from the practice's own e-RS referral-types export
+  (via SNOMED), filled into the e-RS card, and shown with what they were
+  determined from — the concept, the list, the closeness of the match and the
+  other close pairings — under a heading saying they are not recorded in the
+  practice's notes and must be checked against the doctor's task.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching
@@ -112,6 +118,12 @@ clickable sources they can open in-browser.
   returns is labelled a suggestion to check against the doctor's task. There is
   no published SNOMED-to-e-RS mapping (no edition of the UK release carries an
   e-RS refset), so the join is made on text and is never presented as authoritative.
+  `route-determination.mjs` settles which of the two the e-RS card is showing
+  after the answer is written: a pairing the Notebook records is shown as it
+  stands, while one determined here fills the card in and carries its provenance
+  onto it — the SNOMED concept, the e-RS referral-types list, how close the match
+  was and what else was close. A determined pairing the writer labelled as the
+  practice's own is relabelled, so it can never reach the reader unmarked.
 - **`lib/settings.js`** + **`/settings`** — runtime settings in Postgres
   (`app_settings`), not the environment. Today that is the AI model: `/settings`
   fuzzy-searches the live OpenRouter catalogue (`/api/settings/models`) and
