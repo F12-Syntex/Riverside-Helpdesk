@@ -14,8 +14,8 @@ import AppHeader from './_components/AppHeader';
 const TOOLS = [
   { href: '/helpbot', title: 'Ask a practice question', icon: Icons.chat },
   { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
-  { href: '/settings', title: 'Settings', icon: Icons.sparkle },
   // Hidden from the index but still reachable directly:
+  //  - /settings   — which AI model the assistant runs on (in the menu, not here)
   //  - /diagram    — the full system map (documentation, not a daily tool)
   //  - /notebook   — write a practice note
   //  - /medications, /rota — medication check and the staff rota generator
