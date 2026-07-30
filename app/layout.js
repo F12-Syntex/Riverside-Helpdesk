@@ -1,6 +1,7 @@
 import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 import Notifications from './_components/Notifications';
+import AuditTracker from './_components/AuditTracker';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
@@ -23,7 +24,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}<Notifications /><Analytics /></body>
+      <body>{children}<Notifications /><AuditTracker /><Analytics /></body>
     </html>
   );
 }
