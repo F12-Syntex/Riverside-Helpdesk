@@ -27,6 +27,22 @@ import { mdPlain } from '../_components/chat/Md';
 // holds only a few MB. Anything over MAX_DIM px is resized and re-encoded as
 // JPEG on a white background; small files are sent as-is.
 const MAX_IMAGES = 4;
+
+// How long ago a cached answer was written, in the words someone would use.
+// The reader is deciding whether to trust it or press Reload, and "3 hours ago"
+// answers that in a way a timestamp does not.
+function timeAgo(iso) {
+  const then = Date.parse(iso || '');
+  if (!Number.isFinite(then)) return 'earlier';
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+  if (mins < 2) return 'just now';
+  if (mins < 60) return mins + ' minutes ago';
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return hours === 1 ? 'an hour ago' : hours + ' hours ago';
+  const days = Math.round(hours / 24);
+  return days === 1 ? 'yesterday' : days + ' days ago';
+}
+
 function prepareImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -215,13 +231,15 @@ class RiversidePracticeQA extends React.Component {
     // The images ride along on the bot message too, so a retry can resend them.
     // `steps` and `statusText` are filled in live from the agent's stream: each
     // search it runs appears in the card while it is still working.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [] };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     this.setState({ messages, input: '', pendingImages: [] }, () => { this.save(); this.fetchAI(question, aiIdx); });
   }
 
-  async fetchAI(question, idx) {
+  // `refresh` is set by Reload on a cached answer: research the question again
+  // rather than serving what the server already has stored for it.
+  async fetchAI(question, idx, { refresh = false } = {}) {
     // History is the conversation BEFORE this question (idx-1 = the user message
     // we're answering). On the first question this is empty, so the server skips
     // the follow-up query-condensing step — no point enriching a standalone query.
@@ -230,7 +248,7 @@ class RiversidePracticeQA extends React.Component {
     const images = (m && m.images) || [];
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images },
+        { question, history, customGuides: this.state.customGuides, images, refresh },
         (ev) => this.onAgentEvent(idx, ev),
       );
       if (data.kind === 'docfile') {
@@ -267,7 +285,7 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', cache: data.cache || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -301,8 +319,18 @@ class RiversidePracticeQA extends React.Component {
   retryAi(idx) {
     const m = this.state.messages[idx];
     if (!m || m.kind !== 'ai') return;
-    this.updateAi(idx, { status: 'loading', steps: [], statusText: '' });
+    this.updateAi(idx, { status: 'loading', steps: [], statusText: '', cache: null });
     this.fetchAI(m.question, idx);
+  }
+
+  // Reload on a cached answer: ask the question again for real, and replace the
+  // stored answer with what comes back. The card returns to its working state
+  // meanwhile, so nobody reads the old answer thinking it is the new one.
+  reloadAi(idx) {
+    const m = this.state.messages[idx];
+    if (!m || m.kind !== 'ai') return;
+    this.updateAi(idx, { status: 'loading', steps: [], statusText: '', cache: null });
+    this.fetchAI(m.question, idx, { refresh: true });
   }
 
   // Format the exact contacts for copying. Each line carries where its number
@@ -721,8 +749,20 @@ class RiversidePracticeQA extends React.Component {
         const dropped = validation ? validation.dropped : 0;
         const usedWeb = sections.some((sec) => sec.isWeb);
         const usedJudgement = sections.some((sec) => sec.isJudgement);
+        // This answer was not researched just now — it was given earlier, to
+        // this question or to one worded differently, and served from the
+        // practice's own cache. Said on the card rather than left to be
+        // guessed, with Reload next to it for anyone who wants it done again.
+        const cache = m.cache && m.cache.hit ? m.cache : null;
         return {
           isAi: true,
+          isCached: !!cache,
+          cachedLabel: cache ? 'Answered from cache — saved ' + timeAgo(cache.cachedAt) : '',
+          // Only worth saying when the wording differed: the reader is entitled
+          // to see the question this answer was actually written for.
+          cachedQuestion: cache && cache.match === 'similar' ? cache.question : '',
+          hasCachedQuestion: !!(cache && cache.match === 'similar' && cache.question),
+          onReload: () => self.reloadAi(idx),
           aiLoading: m.status === 'loading',
           aiError: m.status === 'error',
           aiDeclined: m.status === 'declined',

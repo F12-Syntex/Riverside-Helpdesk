@@ -24,8 +24,10 @@ import { NextResponse } from 'next/server';
 import { streamText, stepCountIs, tool } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from 'zod';
-import { fullNotebookContext } from '@/lib/notebook';
+import { fullNotebookContext, notebookFingerprint } from '@/lib/notebook';
 import { getSupplementaryEntries } from '@/lib/ai/context.mjs';
+import { isCacheableAnswer, isCacheableRequest } from '@/lib/answer-cache/match.mjs';
+import { lookupCachedAnswer, saveCachedAnswer } from '@/lib/answer-cache/store';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { createEvidence } from '@/lib/agent/evidence.mjs';
 import { createTools } from '@/lib/agent/tools.mjs';
@@ -84,6 +86,40 @@ function verifiedNumbers(evidence, contacts = []) {
   return verified;
 }
 
+// The browser reads one stream shape whatever produced the answer, so a cached
+// answer is sent down the same ndjson stream — it just arrives all at once,
+// carrying the marker that says where it came from and when.
+const NDJSON_HEADERS = {
+  'Content-Type': 'application/x-ndjson; charset=utf-8',
+  'Cache-Control': 'no-store, no-transform',
+  Connection: 'keep-alive',
+};
+
+function cachedAnswerStream(hit) {
+  const encoder = new TextEncoder();
+  const payload = {
+    ...hit.payload,
+    // What the card shows: that this was answered earlier, when, and — when the
+    // wording differed — which question it was actually the answer to. Reload
+    // on the card asks it again for real.
+    cache: {
+      hit: true,
+      match: hit.match,
+      similarity: hit.similarity,
+      cachedAt: hit.cachedAt,
+      question: hit.question,
+      hits: hit.hits,
+    },
+  };
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(JSON.stringify({ type: 'answer', payload }) + '\n'));
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: NDJSON_HEADERS });
+}
+
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   // The model is a practice setting now, changed at /settings — see lib/settings.js.
@@ -106,6 +142,33 @@ export async function POST(request) {
   const images = Array.isArray(body?.images)
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)
     : [];
+  // "Answer this one properly" — the reader pressed Reload on a cached answer,
+  // so the stored one is ignored and overwritten with whatever comes back.
+  const refresh = body?.refresh === true;
+
+  // The same questions are asked every day, in slightly different words each
+  // time, and each one otherwise costs a full agent turn. An answer already
+  // given to this question is served straight from the cache — before the
+  // Notebook is even loaded, so a hit costs one or two queries rather than
+  // twenty seconds — and the card says plainly that it came from the cache.
+  const cacheable = isCacheableRequest({ question, history, images });
+  let fingerprint = '';
+  let cacheEmbedding = null;
+  if (cacheable) {
+    try {
+      fingerprint = await notebookFingerprint();
+      if (!refresh) {
+        const { hit, embedding } = await lookupCachedAnswer({ question, model, fingerprint });
+        cacheEmbedding = embedding;
+        if (hit) return cachedAnswerStream(hit);
+      }
+    } catch (e) {
+      // The cache is an optimisation. If it is unavailable the question is
+      // answered the slow way, and nothing is stored for the next asker.
+      console.warn('[agent] answer cache unavailable:', String(e).slice(0, 160));
+      fingerprint = '';
+    }
+  }
 
   // Notebook guidance is authoritative and the agent's main source. Never answer
   // silently without it.
@@ -334,44 +397,54 @@ export async function POST(request) {
           citations.push(cite);
         }
 
-        send({
-          type: 'answer',
-          payload: {
-            kind: 'answer',
-            answerable: answer.answerable,
-            intro: redact(answer.intro),
-            keyPoints,
-            sections,
-            message: redact(answer.message),
-            messageCite: answer.messageCite,
-            messageWeb: answer.messageWeb,
-            tip: redact(answer.tip),
-            gaps: redact(answer.gaps),
-            // Questions the reader can tap to ask next, in this same chat.
-            followUps: (answer.followUps || []).map((q) => redact(q)),
-            // The four e-RS fields, shown on their own above the steps.
-            referralRoute: referralRoute ? {
-              requestType: redact(referralRoute.requestType),
-              priority: redact(referralRoute.priority),
-              specialty: redact(referralRoute.specialty),
-              clinicType: redact(referralRoute.clinicType),
-              // A clinic type the material leaves conditional is shown as the
-              // choice it really is, with what decides between the options.
-              clinicTypeOptions: (referralRoute.clinicTypeOptions || []).map((v) => redact(v)),
-              clinicTypeCondition: redact(referralRoute.clinicTypeCondition),
-              source: referralRoute.source,
-              // Where a determined pairing came from — the SNOMED concept, the
-              // e-RS referral-types list, how close the match was, and what else
-              // was close. Null when the practice's own material records it.
-              determination,
-            } : null,
-            citations,
-            // Shown as structured data in their own card, so a number reaches
-            // the reader exactly as its source wrote it.
-            contacts: foundContacts,
-            validation: answer.validation,
-          },
-        });
+        const payload = {
+          kind: 'answer',
+          answerable: answer.answerable,
+          intro: redact(answer.intro),
+          keyPoints,
+          sections,
+          message: redact(answer.message),
+          messageCite: answer.messageCite,
+          messageWeb: answer.messageWeb,
+          tip: redact(answer.tip),
+          gaps: redact(answer.gaps),
+          // Questions the reader can tap to ask next, in this same chat.
+          followUps: (answer.followUps || []).map((q) => redact(q)),
+          // The four e-RS fields, shown on their own above the steps.
+          referralRoute: referralRoute ? {
+            requestType: redact(referralRoute.requestType),
+            priority: redact(referralRoute.priority),
+            specialty: redact(referralRoute.specialty),
+            clinicType: redact(referralRoute.clinicType),
+            // A clinic type the material leaves conditional is shown as the
+            // choice it really is, with what decides between the options.
+            clinicTypeOptions: (referralRoute.clinicTypeOptions || []).map((v) => redact(v)),
+            clinicTypeCondition: redact(referralRoute.clinicTypeCondition),
+            source: referralRoute.source,
+            // Where a determined pairing came from — the SNOMED concept, the
+            // e-RS referral-types list, how close the match was, and what else
+            // was close. Null when the practice's own material records it.
+            determination,
+          } : null,
+          citations,
+          // Shown as structured data in their own card, so a number reaches
+          // the reader exactly as its source wrote it.
+          contacts: foundContacts,
+          validation: answer.validation,
+        };
+
+        send({ type: 'answer', payload });
+
+        // Keep it for the next person who asks. After the answer has been sent,
+        // never before: storing it must not make this reader wait, and a cache
+        // that cannot be written is not a failed answer.
+        if (cacheable && fingerprint && isCacheableAnswer(payload)) {
+          try {
+            await saveCachedAnswer({ question, model, fingerprint, payload, embedding: cacheEmbedding });
+          } catch (e) {
+            console.warn('[agent] could not store the answer:', String(e).slice(0, 160));
+          }
+        }
         controller.close();
       } catch (e) {
         console.error('[agent] turn failed:', e);
@@ -381,11 +454,5 @@ export async function POST(request) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'application/x-ndjson; charset=utf-8',
-      'Cache-Control': 'no-store, no-transform',
-      Connection: 'keep-alive',
-    },
-  });
+  return new Response(stream, { headers: NDJSON_HEADERS });
 }
