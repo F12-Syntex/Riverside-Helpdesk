@@ -8,12 +8,19 @@
  * practice's own database, changed here: pick from every model OpenRouter
  * serves, searched the same fuzzy way as the phone directory ("son 4" reaches
  * "Claude Sonnet 4.6"), and it applies to the next question asked.
+ *
+ * A model can also carry a routing variant — the ":nitro" in
+ * "openai/gpt-oss-120b:nitro" — which tells OpenRouter to serve it from the
+ * fastest provider rather than whichever it would otherwise pick. That is one
+ * id, not two settings, so it is picked here alongside the model and stored as
+ * the single string the AI routes already read.
  * ------------------------------------------------------------------ */
 
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
+import { MODEL_VARIANTS, isModelSlug, isModelVariant, joinModelId, splitModelId, variantHint } from '@/lib/model-id.mjs';
 
 const LIST_LIMIT = 60;
 
@@ -45,6 +52,64 @@ function ModelRow({ model, active, onPick }) {
         {[contextLabel(model), priceLabel(model), model.vision ? 'reads images' : 'text only'].filter(Boolean).join(' · ')}
       </span>
     </Hover>
+  );
+}
+
+// An id typed rather than picked. The catalogue lists models, not variants, so
+// "openai/gpt-oss-120b:nitro" will never appear as a row — but it is a real id
+// and this is how it gets used.
+function TypedRow({ id, active, onPick }) {
+  return (
+    <Hover tag="button" type="button" role="option" aria-selected={active} onMouseDown={(e) => e.preventDefault()} onClick={() => onPick(id)}
+      base={'display:block;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 11px;font:inherit;cursor:pointer;background:' + (active ? '#e8f1f8' : 'transparent') + ';'}
+      hover="background:#e8f1f8;">
+      <span style={s('display:block;font-size:15px;font-weight:600;color:#212b32;overflow-wrap:anywhere;')}>Use &ldquo;{id}&rdquo;</span>
+      <span style={s('display:block;font-size:12.5px;color:#4c6272;margin-top:1px;')}>Exactly as typed &mdash; including any :variant</span>
+    </Hover>
+  );
+}
+
+// The routing variant, picked as a button or typed. Shown under the selected
+// model because that is what it modifies: same model, different provider
+// choice, one stored id.
+function VariantPicker({ base, variant, onChange }) {
+  const valid = isModelVariant(variant);
+  const hint = variantHint(variant);
+  return (
+    <div style={s('margin-top:14px;padding-top:13px;border-top:1px solid #eef1f2;')}>
+      <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>Routing variant</div>
+      <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
+        {MODEL_VARIANTS.map((v) => (
+          <Hover key={v.id || 'default'} tag="button" type="button" title={v.hint} onClick={() => onChange(v.id)}
+            base={'border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;border:2px solid '
+              + (variant === v.id ? '#005eb8;background:#e8f1f8;color:#005eb8;' : '#d8dde0;background:#fff;color:#4c6272;')}
+            hover="border-color:#005eb8;color:#005eb8;">
+            {v.label}
+          </Hover>
+        ))}
+      </div>
+      <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:11px;')}>
+        <label htmlFor="model-variant" style={s('font-size:14px;color:#4c6272;')}>or type one</label>
+        <input
+          id="model-variant"
+          type="text"
+          autoComplete="off"
+          value={variant}
+          placeholder="nitro, floor, thinking, exacto…"
+          onChange={(e) => onChange(e.target.value.replace(/^:+/, '').trim())}
+          style={s('flex:1 1 200px;min-width:0;box-sizing:border-box;padding:8px 12px;font:inherit;font-size:15px;border:2px solid ' + (valid ? '#4c6272' : '#d5281b') + ';border-radius:8px;background:#fff;color:#212b32;')}
+        />
+      </div>
+      {!valid && (
+        <p style={s('margin:8px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
+          A variant is letters, numbers, dots, dashes or underscores &mdash; no colon.
+        </p>
+      )}
+      {valid && hint && <p style={s('margin:8px 0 0;font-size:13.5px;color:#4c6272;')}>{hint}.</p>}
+      <p style={s('margin:9px 0 0;font-size:13.5px;color:#4c6272;line-height:1.45;')}>
+        Saved as <strong style={s('color:#212b32;overflow-wrap:anywhere;')}>{joinModelId(base, variant) || '—'}</strong>
+      </p>
+    </div>
   );
 }
 
@@ -105,14 +170,49 @@ export default function SettingsPage() {
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
-  const current = models.find((m) => m.id === chosen) || null;
-  const dirty = !!(setting && chosen && chosen !== setting.model);
+  // The id is edited in two halves — the model and its routing variant — and
+  // stored as one string.
+  const { base: chosenBase, variant: chosenVariant } = splitModelId(chosen);
+  // Fall back to the base id so a variant id still shows the model's price,
+  // context and vision support: ":nitro" changes the provider, not the model.
+  const current = models.find((m) => m.id === chosen) || models.find((m) => m.id === chosenBase) || null;
+  const validChoice = isModelSlug(chosen);
+  const dirty = !!(setting && chosen && validChoice && chosen !== setting.model);
 
-  function pick(model) {
-    setChosen(model.id);
+  // Typed rather than picked. The catalogue does not list variant ids (there is
+  // no ":nitro" row for every model), and a brand-new model can be servable
+  // before the list catches up — so anything that IS a valid id can be used,
+  // whether or not it appears below.
+  const typed = query.trim();
+  const typedId = isModelSlug(typed) && !models.some((m) => m.id === typed) ? typed : '';
+
+  function choose(id) {
+    setChosen(id);
     setQuery('');
     setOpen(false);
     setSaved('');
+  }
+
+  // Picking a model keeps whatever variant is already set: someone who has
+  // chosen ":nitro" wants the fast provider for the next model too.
+  function pick(model) {
+    choose(joinModelId(model.id, chosenVariant));
+  }
+
+  function setVariant(variant) {
+    setChosen(joinModelId(chosenBase, variant));
+    setSaved('');
+  }
+
+  // The typed id, when there is one, is the first row — so Enter on a
+  // hand-typed "openai/gpt-oss-120b:nitro" saves that, rather than the nearest
+  // fuzzy match to it.
+  const options = (typedId ? [{ id: typedId, typed: true }] : []).concat(results.map((m) => ({ id: m.id, model: m })));
+
+  function take(option) {
+    if (!option) return;
+    if (option.model) pick(option.model);
+    else choose(option.id);
   }
 
   function onKeyDown(e) {
@@ -121,13 +221,13 @@ export default function SettingsPage() {
       if (!open) { setOpen(true); return; }
       setCursor((c) => {
         const next = e.key === 'ArrowDown' ? c + 1 : c - 1;
-        if (next < 0) return results.length - 1;
-        if (next >= results.length) return 0;
+        if (next < 0) return options.length - 1;
+        if (next >= options.length) return 0;
         return next;
       });
       return;
     }
-    if (e.key === 'Enter' && open && results[cursor]) { e.preventDefault(); pick(results[cursor]); return; }
+    if (e.key === 'Enter' && open && options[cursor]) { e.preventDefault(); take(options[cursor]); return; }
     if (e.key === 'Escape') { setOpen(false); }
   }
 
@@ -167,7 +267,8 @@ export default function SettingsPage() {
           <h2 style={s('font-size:20px;margin:0 0 4px;')}>AI model</h2>
           <p style={s('font-size:15px;color:#4c6272;margin:0 0 18px;line-height:1.5;')}>
             Used by every AI feature: the practice assistant, document filing, the rota helper and the knowledge base.
-            Pick any model OpenRouter serves.
+            Pick any model OpenRouter serves &mdash; or type a full id, including a routing variant such as
+            <strong> openai/gpt-oss-120b:nitro</strong>.
           </p>
 
           <div style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:12px 14px;background:#f7fafb;border:1px solid #d8dde0;border-radius:10px;margin-bottom:18px;')}>
@@ -198,11 +299,13 @@ export default function SettingsPage() {
             />
             {open && (
               <div id="model-list" role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 6px);left:0;right:0;max-height:340px;overflow-y:auto;background:#fff;border:1px solid #d8dde0;border-radius:12px;box-shadow:0 8px 24px rgba(33,43,50,.16);padding:6px;')}>
-                {results.length ? results.map((m, i) => (
-                  <ModelRow key={m.id} model={m} active={i === cursor} onPick={pick} />
-                )) : (
+                {options.length ? options.map((option, i) => (option.typed ? (
+                  <TypedRow key={'typed:' + option.id} id={option.id} active={i === cursor} onPick={choose} />
+                ) : (
+                  <ModelRow key={option.id} model={option.model} active={i === cursor} onPick={pick} />
+                ))) : (
                   <div style={s('padding:14px;font-size:15px;color:#4c6272;')}>
-                    {models.length ? 'No model matches that.' : 'Loading the model list…'}
+                    {models.length ? 'No model matches that. Type a full id (vendor/model) to use one that is not listed.' : 'Loading the model list…'}
                   </div>
                 )}
               </div>
@@ -230,7 +333,14 @@ export default function SettingsPage() {
                 <span>This model cannot read images. Pasted screenshots and scanned pages will not be understood.</span>
               </div>
             )}
+            {chosenBase && <VariantPicker base={chosenBase} variant={chosenVariant} onChange={setVariant} />}
           </div>
+
+          {chosen && !validChoice && (
+            <p style={s('margin:12px 0 0;font-size:14px;color:#d5281b;font-weight:600;line-height:1.45;')}>
+              &ldquo;{chosen}&rdquo; is not an OpenRouter id &mdash; it should look like vendor/model, with an optional :variant.
+            </p>
+          )}
 
           <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
             <Hover tag="button" type="button" disabled={!dirty || saving} onClick={save}
