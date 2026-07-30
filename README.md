@@ -131,6 +131,27 @@ clickable sources they can open in-browser.
 - **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
   layer and localhost-only backend screen. The source types share storage and
   conflict review, while the live assistant keeps their context paths separate.
+- **`lib/routes.js`** + **`/index`** — one registry of every route the app
+  serves, and the deep index built from it. The landing page at `/` stays two
+  links on purpose; `/index` is the whole list — pages and API endpoints, with
+  what each is for and which are kept off the front. (The page lives in
+  `app/site-index/` and is rewritten onto `/index` in `next.config.mjs`:
+  `index` is a reserved route name in the App Router.) Add a route here and it
+  appears on the index and reads properly in the audit log.
+- **`lib/audit/`** + **`/stats`** — the activity audit log: pages opened,
+  questions asked, actions taken and requests that failed, **grouped by machine
+  rather than by IP address**. Every machine at the practice shares one public
+  address and a laptop changes address between the car park and the consulting
+  room, so the browser mints a random id per machine instead and keeps it
+  (`machine.js`); no IP address is stored. `client.js` wraps `window.fetch`
+  once, so every route is covered without a line of logging in any of them, and
+  batches are flushed with `sendBeacon` so the last thing done before a machine
+  is switched off still reaches the log. `describe.js` holds the privacy rule
+  that matters: for the tools patient text is pasted into (`/api/signpost`,
+  `/api/reason`, `/api/docfile` and the rest of `CONTENT_NEVER_RECORDED`) the
+  log records that the tool was used and how much text was pasted — never the
+  text. Stored in `audit_machines` / `audit_events`; `/stats` is deliberately
+  not linked from the tools page or the menu.
 - **`public/assets/`** — logos, EMIS screenshots, and served document copies.
 
 ## Knowledge paths
