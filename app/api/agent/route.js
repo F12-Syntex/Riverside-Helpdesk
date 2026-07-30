@@ -198,7 +198,16 @@ export async function POST(request) {
     apiKey,
     // Only providers that do not retain prompt data, so the question and the
     // practice's own text are never stored by the model provider.
-    extraBody: { provider: { data_collection: 'deny' } },
+    extraBody: {
+      provider: { data_collection: 'deny' },
+      // No extended reasoning. None of the three phases is a puzzle: the
+      // research phase picks which source to open, and the writing phase turns
+      // sources it has been handed into steps. On a model that thinks first,
+      // that deliberation is most of the wait — paid on every question, for
+      // work already pinned down by the prompt and checked in code afterwards.
+      // Models that always reason ignore this; the rest answer straight away.
+      reasoning: { enabled: false, exclude: true },
+    },
   });
   const chat = openrouter(model);
 

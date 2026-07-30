@@ -63,6 +63,7 @@ const REFERENCE_PHRASES = [
 // provider routing: only providers that do not retain prompt data, so the
 // question and document extracts are never stored by the model provider.
 const NO_RETENTION = { data_collection: 'deny' };
+const NO_REASONING = { enabled: false, exclude: true };
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_HEADERS = (apiKey) => ({
   Authorization: `Bearer ${apiKey}`,
@@ -214,7 +215,11 @@ async function callModel(apiKey, model, content) {
       headers: OPENROUTER_HEADERS(apiKey),
       // provider: only route to providers that do not retain prompt data, so the
       // request and document extracts are never stored by the model provider.
-      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content }], provider: NO_RETENTION }),
+      // reasoning: off. This endpoint builds a filing title or routes a patient
+      // request from material it has already been given — deliberation before
+      // answering is time the reader waits for nothing. Models that always
+      // reason ignore it.
+      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content }], provider: NO_RETENTION, reasoning: NO_REASONING }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
