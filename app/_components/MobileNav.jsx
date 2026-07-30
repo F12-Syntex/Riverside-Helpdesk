@@ -23,6 +23,10 @@ const TOOLS = [
   // { href: '/rota', label: 'Staff rota generator' },
   { href: '/dpia', label: 'Data protection check (DPIA)' },
   { href: '/settings', label: 'Settings' },
+  // The deep index: everything the app serves, including the tools the
+  // landing page leaves out. /stats is listed there, but never here — the
+  // audit log is reached by typing its address.
+  { href: '/index', label: 'Full index' },
 ];
 
 const VIEWS = [
