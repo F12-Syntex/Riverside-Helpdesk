@@ -32,6 +32,17 @@ clickable sources they can open in-browser.
 - Every tool call is **streamed to the browser as it happens** (newline-delimited
   JSON), so the chat shows which search ran and what it returned instead of a
   silent spinner. The timeline collapses to one line once the answer arrives.
+- **The same question is not researched twice.** An answered question is kept in
+  Postgres (`answer_cache`) and served again in milliseconds — matched exactly
+  when the wording only differs in case, punctuation or politeness, and by
+  embedding similarity when it is genuinely reworded, so "what's the process for
+  reporting a significant event" finds the answer given to "how do I report a
+  significant event". The card says **"Answered from cache"** with when it was
+  saved and, when the wording differed, the question it was written for; a
+  **Reload** button on the card asks it again for real. Answers are only ever
+  served while the Notebook they were written from and the model that wrote them
+  are unchanged (see `lib/answer-cache/`), and follow-ups, messages with images,
+  triage, filing titles and "I could not find anything" are never cached.
 - Answers go through a **validation loop**: each section must carry a verbatim
   quote that really appears in the source it names, checked in code against what
   the tools actually returned. Failures go back to the model once with the
@@ -124,10 +135,21 @@ clickable sources they can open in-browser.
   onto it — the SNOMED concept, the e-RS referral-types list, how close the match
   was and what else was close. A determined pairing the writer labelled as the
   practice's own is relabelled, so it can never reach the reader unmarked.
-- **`lib/settings.js`** + **`/settings`** — runtime settings in Postgres
-  (`app_settings`), not the environment. Today that is the AI model: `/settings`
-  fuzzy-searches the live OpenRouter catalogue (`/api/settings/models`) and
-  stores the chosen slug, so the model can be changed without a redeploy.
+- **`lib/answer-cache/`** — answers already given, so the same question is not
+  researched twice. `match.mjs` holds the free half (the canonical form of a
+  question, hashed to a key, and the rules for what may be cached at all);
+  `store.js` holds the Postgres half (exact key, then nearest question by
+  embedding, both filtered on the Notebook fingerprint and the model that wrote
+  the answer). Read before the agent runs and written after it, and never on the
+  critical path: if the cache is unavailable the question is simply answered the
+  slow way.
+- **`lib/settings.js`** + **`lib/model-id.mjs`** + **`/settings`** — runtime
+  settings in Postgres (`app_settings`), not the environment. Today that is the
+  AI model: `/settings` fuzzy-searches the live OpenRouter catalogue
+  (`/api/settings/models`) and stores the chosen slug, so the model can be
+  changed without a redeploy. `model-id.mjs` is the id itself — validation plus
+  the split/join of the routing variant (`openai/gpt-oss-120b:nitro`), with no
+  database import, so the browser validates with exactly the rule the save uses.
 - **`lib/knowledge.js`** + **`/knowledge`** — the canonical Postgres knowledge
   layer and localhost-only backend screen. The source types share storage and
   conflict review, while the live assistant keeps their context paths separate.
@@ -191,8 +213,8 @@ Set these in `.env.local` (see `.env.local.example`):
 | Variable | Purpose |
 | --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
-| ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Must be vision-capable — the ingester reads images with it. |
-| `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory and the committed `rag/` index (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
+| ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Must be vision-capable — the ingester reads images with it. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
+| `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the committed `rag/` index and the answer cache's question matching (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
 
