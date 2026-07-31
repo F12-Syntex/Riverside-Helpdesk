@@ -10,9 +10,12 @@ const BASE = 'google/gemini-3.5-flash-lite';
 
 test('with nothing set, every role runs on the chosen model', () => {
   const roles = resolveRoles({ base: BASE, stored: {}, env: {} });
-  for (const key of ['reasoning', 'fast', 'web', 'vision']) {
+  for (const key of ['reasoning', 'fast', 'web']) {
     assert.equal(roles[key].model, BASE, key + ' should inherit');
   }
+  // Images are read by whichever model is answering. A separate vision role only
+  // bought a second model to keep an eye on.
+  assert.equal(roles.vision, undefined);
   assert.equal(roles.fast.source, 'reasoning');
 });
 

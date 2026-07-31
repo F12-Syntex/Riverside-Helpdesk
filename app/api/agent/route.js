@@ -36,6 +36,7 @@ import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { selectSources } from '@/lib/agent/select.mjs';
+import { recordUsage } from '@/lib/ai/usage';
 import { POST as askPOST } from '../ask/route';
 
 export const runtime = 'nodejs';
@@ -216,10 +217,10 @@ export async function POST(request) {
     },
   });
   const chat = openrouter(model);
-  // The research loop is the phase that reads the image, so a turn carrying one
-  // runs the loop on the vision role. The answer is still written by the
-  // reasoning model, from what the loop found.
-  const researchModel = images.length && roles.vision.model !== model ? openrouter(roles.vision.model) : chat;
+  // One id per turn, so the usage rows written by the research loop and by the
+  // writer can be added up into what ONE QUESTION cost rather than what one call
+  // cost. Not derived from the question and never stored beside it.
+  const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -239,7 +240,15 @@ export async function POST(request) {
         // reach the reader as structured data in the contacts card, never
         // through the model's prose.
         const foundContacts = [];
-        const tools = createTools({ apiKey, searchModel, notebookChunks, evidence, onEvent: send, contacts: foundContacts });
+        const tools = createTools({
+          apiKey,
+          searchModel,
+          notebookChunks,
+          evidence,
+          onEvent: send,
+          contacts: foundContacts,
+          onUsage: (role, usedModel, usage) => recordUsage({ turnId, role, phase: 'search_web', model: usedModel, usage }),
+        });
         tools.hand_off = tool({
           description: 'Declare that this message is not a staff question but a pasted medical document to file, or an incoming patient request that needs routing. Call this and stop.',
           inputSchema: z.object({
@@ -275,7 +284,7 @@ export async function POST(request) {
           : Promise.resolve(null);
 
         const research = streamText({
-          model: researchModel,
+          model: chat,
           system: RESEARCH_SYSTEM,
           messages: [
             ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
@@ -299,6 +308,9 @@ export async function POST(request) {
           else if (part.type === 'tool-error') researchError = part.error;
         }
         if (researchError) throw researchError;
+        // What the research phase used, measured. The settings page prices a
+        // question from these rows rather than from an advertised rate.
+        recordUsage({ turnId, role: 'reasoning', phase: 'research', model, usage: await research.totalUsage.catch(() => null) });
 
         if (handOff) {
           send({ type: 'status', text: handOff === 'document-to-file' ? 'Building the filing title' : 'Writing the routing notes' });
@@ -396,6 +408,7 @@ export async function POST(request) {
           ersSuggestion,
           selectedRefs: selection.refs,
           onStatus: (text) => send({ type: 'status', text }),
+          onUsage: (phase, usage) => recordUsage({ turnId, role: 'reasoning', phase, model, usage }),
         });
 
         // Which of the two the e-RS card is showing: a pairing the practice's own

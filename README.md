@@ -216,21 +216,41 @@ Set these in `.env.local` (see `.env.local.example`):
 | ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Must be vision-capable — the ingester reads images with it. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
 | `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the committed `rag/` index and the answer cache's question matching (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
 | `OPENROUTER_WEB_MODEL` | Optional default for the **web search** role — searching the internet and reading a page for a phone number. A search-grounded model such as `perplexity/sonar` belongs here. Falls back to `OPENROUTER_MEDICATION_MODEL`, then `OPENROUTER_ANALYSIS_MODEL`. |
-| `OPENROUTER_VISION_MODEL` | Optional default for the **vision** role — reading a pasted image. Falls back to the model chosen at `/settings`, which must then be vision-capable itself. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
 
 ### Model roles
 
 One turn is not one job. `/settings` picks the model the practice runs on — the
-**reasoning** role, which researches and writes — and three optional overrides sit
+**reasoning** role, which researches and writes — and two optional overrides sit
 beside it for the jobs it is not necessarily the best fit for: **fast** (short
-background work nobody reads, such as claim extraction), **web search**, and
-**vision**. Each is stored in `app_settings`, so changing one needs no redeploy.
+background work nobody reads, such as claim extraction) and **web search** (a
+search-grounded model such as `perplexity/sonar`). Each is stored in
+`app_settings`, so changing one needs no redeploy. There is no separate vision
+role: whichever model is answering reads the images.
 
 Every role is optional. Unset, it falls back to the environment variable that
 used to carry it and then to the reasoning model, so an install that has only
 ever chosen one model is completely unaffected.
+
+### What a question costs
+
+Each row on `/settings` shows its model's advertised rate — input and output per
+1M tokens, live from the OpenRouter catalogue — and, underneath, the tokens a
+question really used on that role. A rate is not a cost: what a question costs is
+the rate multiplied by how many tokens *this* practice's questions use, and that
+depends on its Notebook, its documents and how staff word things. Two installs on
+one model differ by more than two models on one install.
+
+So it is measured, not assumed. Every phase of every turn writes a row to
+`ai_usage` — role, model, tokens in, tokens out, no question text — and the page
+averages the last 30 days *per question* (not per call, so a repaired answer
+counts as the one question it was) and prices it at whatever each role is set to
+now. Change a model in the box and the figure moves before you save.
+
+A role nobody has run yet, or one whose model publishes no price, is excluded
+from the total and named as excluded. Before anything has been measured the page
+says so rather than showing a number from nowhere.
 
 The writer is also given less to read than the research loop found: sources are
 ranked against the question and the weakest held back (`lib/agent/select.mjs`),

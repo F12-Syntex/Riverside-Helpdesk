@@ -17,12 +17,25 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { isModelSlug } from '@/lib/model-id.mjs';
+import { estimateQueryCost, formatCost } from '@/lib/ai/usage-cost.mjs';
 
 const LIST_LIMIT = 40;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'vision'];
+const ROLE_KEYS = ['fast', 'web'];
+
+// A model's advertised rate. Shown per row because it is the number people
+// compare models on — but it is not what a question costs, which is why the
+// measured estimate sits underneath.
+function rateLine(model) {
+  if (!model) return '';
+  const inRate = model.promptPerMillion;
+  const outRate = model.completionPerMillion;
+  if (inRate == null && outRate == null) return 'price not published';
+  const money = (v) => (v ? '$' + v : '$0');
+  return `${money(inRate)} in / ${money(outRate)} out per 1M tokens`;
+}
 
 const INPUT = 'width:100%;box-sizing:border-box;padding:9px 12px;font:inherit;font-size:15px;border:2px solid #d8dde0;border-radius:8px;background:#fff;color:#212b32;';
 
@@ -108,14 +121,21 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
   );
 }
 
-function Row({ name, job, children }) {
+function Row({ name, job, rate, used, children }) {
   return (
     <div style={s('display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:14px 0;border-top:1px solid #eef1f2;')}>
       <div style={s('flex:0 0 150px;min-width:0;')}>
         <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>{name}</span>
         <span style={s('display:block;font-size:13px;color:#4c6272;')}>{job}</span>
       </div>
-      <div style={s('flex:1 1 260px;min-width:0;')}>{children}</div>
+      <div style={s('flex:1 1 260px;min-width:0;')}>
+        {children}
+        {(rate || used) && (
+          <span style={s('display:block;font-size:12.5px;color:#768692;margin-top:5px;font-variant-numeric:tabular-nums;')}>
+            {[rate, used].filter(Boolean).join(' · ')}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -163,10 +183,23 @@ export default function SettingsPage() {
   const dirty = !!setting && (model !== setting.model
     || ROLE_KEYS.some((k) => roleValue(k) !== String((setting.roleStored || {})[k] || '')));
 
-  // The reasoning model reads pasted images unless the vision role takes over.
-  const resolvedVision = roleValue('vision') || model;
-  const visionModel = models.find((m) => m.id === resolvedVision.split(':')[0]);
-  const blindToImages = !!visionModel && !visionModel.vision;
+  // What each role resolves to, and what that model charges. The catalogue is
+  // keyed by base id, so a ":nitro" variant is priced as the model it decorates.
+  const resolved = { reasoning: model, fast: roleValue('fast') || model, web: roleValue('web') || model };
+  const priceOf = (id) => models.find((m) => m.id === id) || models.find((m) => m.id === String(id).split(':')[0]) || null;
+  const prices = React.useMemo(() => Object.fromEntries(models.map((m) => [m.id, m])), [models]);
+
+  // The estimate. Measured tokens per question from ai_usage, priced at whatever
+  // each role is set to now — so changing a model here changes the figure before
+  // anything is saved, and a role nobody has run yet is left out rather than
+  // guessed at.
+  const measured = (setting && setting.usage) || { byRole: {}, turns: 0, windowDays: 0 };
+  const estimate = estimateQueryCost({ averages: measured.byRole, roleModels: resolved, prices });
+  const usedLine = (role) => {
+    const u = measured.byRole[role];
+    if (!u) return '';
+    return `${u.inputTokens.toLocaleString()} in / ${u.outputTokens.toLocaleString()} out per question`;
+  };
 
   async function save() {
     setSaving(true);
@@ -202,31 +235,46 @@ export default function SettingsPage() {
         </p>
 
         <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:4px 20px 20px;')}>
-          <Row name="Reasoning" job="Researches and writes">
+          <Row name="Reasoning" job="Researches and writes" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
             <ModelField
               label="Reasoning model" value={model} models={models} index={index}
               placeholder={setting ? setting.defaultModel : 'vendor/model'}
               onChange={(v) => { setModel(v); setNote(''); }}
             />
           </Row>
-          <Row name="Fast" job="Background jobs">
+          <Row name="Fast" job="Background jobs" rate={rateLine(priceOf(resolved.fast))} used={usedLine('fast')}>
             <ModelField
               label="Fast model" value={roleValue('fast')} models={models} index={index}
               placeholder={model || 'inherit'} onChange={(v) => setRole('fast', v)}
             />
           </Row>
-          <Row name="Web search" job="Searches the internet">
+          <Row name="Web search" job="Searches the internet" rate={rateLine(priceOf(resolved.web))} used={usedLine('web')}>
             <ModelField
               label="Web search model" value={roleValue('web')} models={models} index={index}
               placeholder={model || 'inherit'} onChange={(v) => setRole('web', v)}
             />
           </Row>
-          <Row name="Vision" job="Reads pasted images">
-            <ModelField
-              label="Vision model" value={roleValue('vision')} models={models} index={index}
-              placeholder={model || 'inherit'} onChange={(v) => setRole('vision', v)}
-            />
-          </Row>
+
+          <div style={s('border-top:1px solid #eef1f2;padding:14px 0 2px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;')}>
+            <span style={s('flex:0 0 150px;font-size:15.5px;font-weight:600;color:#212b32;')}>Per question</span>
+            <span style={s('flex:1 1 260px;font-size:15.5px;color:#212b32;font-variant-numeric:tabular-nums;')}>
+              {estimate.measured ? (
+                <>
+                  <strong>{formatCost(estimate.total)}</strong>
+                  <span style={s('font-size:13px;color:#768692;')}>
+                    {' '}— measured over {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
+                    {measured.windowDays ? ` in the last ${measured.windowDays} days` : ''}
+                    {estimate.missing.length ? `, excluding ${estimate.missing.join(' and ')} (not run yet)` : ''}
+                    {estimate.unpriced.length ? `, excluding ${estimate.unpriced.join(' and ')} (no published price)` : ''}
+                  </span>
+                </>
+              ) : (
+                <span style={s('font-size:13.5px;color:#768692;')}>
+                  Not measured yet — ask a few questions and the real cost appears here.
+                </span>
+              )}
+            </span>
+          </div>
 
           <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
             <Hover tag="button" type="button" disabled={!dirty || !valid || saving} onClick={save}
@@ -245,11 +293,6 @@ export default function SettingsPage() {
           {!valid && (
             <p style={s('margin:12px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
               An id looks like vendor/model, with an optional :variant.
-            </p>
-          )}
-          {blindToImages && (
-            <p style={s('margin:12px 0 0;font-size:13.5px;color:#8a6100;')}>
-              {resolvedVision} cannot read images. Pasted screenshots will not be understood.
             </p>
           )}
           {error && (

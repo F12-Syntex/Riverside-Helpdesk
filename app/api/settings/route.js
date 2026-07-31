@@ -5,6 +5,7 @@
 // reading an image) can run on a model chosen for that job.
 import { NextResponse } from 'next/server';
 import { getAiModelSetting, getModelRoleSettings, setAiModel, setModelRole, ROLE_SETTING_KEY } from '@/lib/settings';
+import { readUsageAverages } from '@/lib/ai/usage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,16 +13,28 @@ export const dynamic = 'force-dynamic';
 const noStore = { 'Cache-Control': 'no-store' };
 
 // One shape for the page: the main model, and the roles that sit beside it.
+// How many tokens a question really uses, per role, measured over the recent
+// window. The page multiplies this by whatever each role's model charges, so
+// the price it shows is this practice's, not a brochure figure.
+async function usage() {
+  try {
+    return await readUsageAverages();
+  } catch (e) {
+    console.warn('[settings] could not read measured usage:', String(e).slice(0, 140));
+    return { byRole: {}, turns: 0, windowDays: 0 };
+  }
+}
+
 async function state() {
   const setting = await getAiModelSetting();
   try {
-    const roles = await getModelRoleSettings();
-    return { ...setting, roles: roles.roles, roleStored: roles.stored, roleResolved: roles.resolved };
+    const [roles, measured] = await Promise.all([getModelRoleSettings(), usage()]);
+    return { ...setting, roles: roles.roles, roleStored: roles.stored, roleResolved: roles.resolved, usage: measured };
   } catch (e) {
     // The roles are an addition to a page that worked without them. If they
     // cannot be read, the model picker must still load.
     console.warn('[settings] could not read the model roles:', String(e).slice(0, 160));
-    return { ...setting, roles: [], roleStored: {}, roleResolved: {} };
+    return { ...setting, roles: [], roleStored: {}, roleResolved: {}, usage: { byRole: {}, turns: 0, windowDays: 0 } };
   }
 }
 
