@@ -270,18 +270,21 @@ export default function AiAnswer({ v }) {
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         {v.aiLoading && (v.hasSteps || v.statusText ? (
           // The agent is working: show each lookup as it happens rather than a
-          // spinner that says nothing for twenty seconds.
-          <div style={s('padding:14px 16px;')}>
+          // spinner that says nothing for twenty seconds. Quietly, though — the
+          // working state must not be louder than the answer that replaces it.
+          <div style={s('padding:14px 18px;')}>
             <ToolTimeline steps={v.steps} statusText={v.statusText} live />
           </div>
         ) : (
-          <div style={s('padding:20px 22px;display:flex;align-items:center;gap:12px;color:#4c6272;font-size:17px;')}>
-            <span style={s('display:inline-flex;gap:5px;align-items:center;')}>
-              <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite;')} />
-              <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .2s;')} />
-              <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .4s;')} />
+          // The same line, same size, same place as the first lookup that will
+          // replace it — so the bubble does not lurch when the agent starts.
+          <div style={s('padding:14px 18px;display:flex;align-items:center;gap:9px;')}>
+            <span style={s('flex:none;width:20px;height:20px;border-radius:50%;background:#e8f1f8;display:inline-flex;gap:2px;align-items:center;justify-content:center;')}>
+              <span style={s('width:3px;height:3px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite;')} />
+              <span style={s('width:3px;height:3px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .2s;')} />
+              <span style={s('width:3px;height:3px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .4s;')} />
             </span>
-            <span>Checking the documents&hellip;</span>
+            <span style={s('font-size:13.5px;font-weight:600;color:#212b32;')}>Checking the documents&hellip;</span>
           </div>
         ))}
 
