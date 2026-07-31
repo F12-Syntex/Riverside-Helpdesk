@@ -252,12 +252,19 @@ one model differ by more than two models on one install.
 So it is measured, not assumed. Every phase of every turn writes a row to
 `ai_usage` — role, model, tokens in, tokens out, no question text — and the page
 averages the last 30 days *per question* (not per call, so a repaired answer
-counts as the one question it was) and prices it at whatever each role is set to
-now. Change a model in the box and the figure moves before you save.
+counts as the one question it was).
 
-A role nobody has run yet, or one whose model publishes no price, is excluded
-from the total and named as excluded. Before anything has been measured the page
-says so rather than showing a number from nowhere.
+**Measurements belong to the model that produced them.** Tokens measured on one
+model say nothing about the next: a terser model writes fewer, a hungrier one
+reads more, and pricing yesterday's counts at today's rate reports a number that
+was never true of either. So a change of model shows nothing until it has been
+used — and changing back brings the old model's record back untouched, because
+nothing is ever reset or deleted. A **cost per question, by model** table lists
+every model that has answered anything, marking the ones in use.
+
+A role nobody has run on its current model, or one whose model publishes no
+price, is excluded from the total and named as excluded. Unpriced models sort
+last in the table rather than cheapest — unknown is not $0.
 
 The writer is also given less to read than the research loop found: sources are
 ranked against the question and the weakest held back (`lib/agent/select.mjs`),

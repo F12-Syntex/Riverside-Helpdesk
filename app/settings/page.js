@@ -17,7 +17,7 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { isModelSlug } from '@/lib/model-id.mjs';
-import { estimateQueryCost, formatCost } from '@/lib/ai/usage-cost.mjs';
+import { estimateQueryCost, summariseModelCosts, formatCost } from '@/lib/ai/usage-cost.mjs';
 
 const LIST_LIMIT = 40;
 
@@ -193,11 +193,17 @@ export default function SettingsPage() {
   // each role is set to now — so changing a model here changes the figure before
   // anything is saved, and a role nobody has run yet is left out rather than
   // guessed at.
-  const measured = (setting && setting.usage) || { byRole: {}, turns: 0, windowDays: 0 };
+  const measured = (setting && setting.usage) || { byRole: {}, byModel: {}, turns: 0, windowDays: 0 };
   const estimate = estimateQueryCost({ averages: measured.byRole, roleModels: resolved, prices });
+  // Every model that has ever answered a question here, with what it cost. Kept
+  // per model, so switching away does not erase a model's record and switching
+  // back brings it straight back.
+  const history = summariseModelCosts({ byModel: measured.byModel || {}, prices, roleModels: resolved });
   const usedLine = (role) => {
-    const u = measured.byRole[role];
-    if (!u) return '';
+    // Only what this role used ON THE MODEL IT IS SET TO NOW. A model that has
+    // not run this job yet shows nothing rather than the last model's figures.
+    const u = (measured.byRole[role] || {})[resolved[role]];
+    if (!u) return 'not measured on this model yet';
     return `${u.inputTokens.toLocaleString()} in / ${u.outputTokens.toLocaleString()} out per question`;
   };
 
@@ -270,11 +276,42 @@ export default function SettingsPage() {
                 </>
               ) : (
                 <span style={s('font-size:13.5px;color:#768692;')}>
-                  Not measured yet — ask a few questions and the real cost appears here.
+                  Not measured on these models yet — ask a few questions and the real cost appears here.
                 </span>
               )}
             </span>
           </div>
+
+          {history.length > 0 && (
+            <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding-top:14px;')}>
+              <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>
+                Cost per question, by model
+              </div>
+              <div style={s('overflow-x:auto;')}>
+                <table style={s('width:100%;border-collapse:collapse;font-size:13.5px;')}>
+                  <tbody>
+                    {history.map((row) => (
+                      <tr key={row.model}>
+                        <td style={s('padding:5px 10px 5px 0;color:#212b32;overflow-wrap:anywhere;')}>
+                          {row.model}
+                          {row.inUse ? <span style={s('margin-left:7px;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 6px;background:#eef7ee;color:#00532a;')}>IN USE</span> : null}
+                        </td>
+                        <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#212b32;font-variant-numeric:tabular-nums;')}>
+                          {row.priced ? formatCost(row.cost) : 'no published price'}
+                        </td>
+                        <td style={s('padding:5px 0;text-align:right;white-space:nowrap;color:#768692;font-variant-numeric:tabular-nums;')}>
+                          {row.turns.toLocaleString()} question{row.turns === 1 ? '' : 's'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={s('margin:8px 0 0;font-size:12.5px;color:#768692;line-height:1.45;')}>
+                Kept per model. Switching model shows nothing until it has been used; switching back brings its record with it.
+              </p>
+            </div>
+          )}
 
           <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
             <Hover tag="button" type="button" disabled={!dirty || !valid || saving} onClick={save}
