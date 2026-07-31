@@ -43,6 +43,16 @@ function timeAgo(iso) {
   return days === 1 ? 'yesterday' : days + ' days ago';
 }
 
+// How long one lookup took, for the timeline. Tenths up to a minute — the
+// interesting difference is between a lookup that was instant and one the
+// reader actually waited on, and neither needs milliseconds.
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+  const mins = Math.floor(ms / 60000);
+  return mins + 'm ' + Math.round((ms % 60000) / 1000) + 's';
+}
+
 function prepareImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -302,7 +312,10 @@ class RiversidePracticeQA extends React.Component {
         statusText: '',
         steps: (msg.steps || []).concat([{
           id: ev.id, tool: ev.tool, label: ev.label || 'Working', detail: ev.detail || '',
-          status: 'running', summary: '', items: [],
+          // Started-at is kept so the finished step can say how long it took.
+          // The agent does not time itself; the clock that matters is the one
+          // the reader waited on, which is this one.
+          status: 'running', summary: '', items: [], startedAt: Date.now(),
         }]),
       }));
       return;
@@ -310,7 +323,15 @@ class RiversidePracticeQA extends React.Component {
     if (ev.type === 'tool-result') {
       this.updateAi(idx, (msg) => ({
         steps: (msg.steps || []).map((st) => (st.id === ev.id
-          ? Object.assign({}, st, { status: 'done', summary: ev.summary || '', items: ev.items || [] })
+          ? Object.assign({}, st, {
+            status: 'done',
+            // A lookup that could not run reports ok:false, and reads as a
+            // failure rather than as a search that simply found nothing.
+            ok: ev.ok !== false,
+            summary: ev.summary || '',
+            items: ev.items || [],
+            duration: st.startedAt ? formatDuration(Date.now() - st.startedAt) : '',
+          })
           : st)),
       }));
     }
