@@ -213,21 +213,30 @@ Set these in `.env.local` (see `.env.local.example`):
 | Variable | Purpose |
 | --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
-| ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Must be vision-capable — the ingester reads images with it. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
+| ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Should be vision-capable — the ingester reads images with it whenever the fast model cannot. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
 | `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the committed `rag/` index and the answer cache's question matching (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
+| `OPENROUTER_ANALYSIS_MODEL` | Optional default for the **fast** role — the reading: the agent's research loop, claim extraction, the medicine-name extractor, the ingester's image transcription. Wants a cheap model that calls tools reliably. |
 | `OPENROUTER_WEB_MODEL` | Optional default for the **web search** role — searching the internet and reading a page for a phone number. A search-grounded model such as `perplexity/sonar` belongs here. Falls back to `OPENROUTER_MEDICATION_MODEL`, then `OPENROUTER_ANALYSIS_MODEL`. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
 
 ### Model roles
 
-One turn is not one job. `/settings` picks the model the practice runs on — the
-**reasoning** role, which researches and writes — and two optional overrides sit
-beside it for the jobs it is not necessarily the best fit for: **fast** (short
-background work nobody reads, such as claim extraction) and **web search** (a
-search-grounded model such as `perplexity/sonar`). Each is stored in
-`app_settings`, so changing one needs no redeploy. There is no separate vision
-role: whichever model is answering reads the images.
+One turn is not one job, and it splits cleanly in two. **Reading** — searching
+the practice's material, skimming what comes back, choosing the next file to
+open, pulling the names out of a pasted list, transcribing a screenshot — is most
+of the model calls in a turn and none of its output. **Deciding** is the answer
+itself and every judgement in it: one call, and the only thing anybody reads.
+
+So `/settings` picks the model the practice runs on — the **reasoning** role,
+which decides and writes — and two optional overrides sit beside it: **fast**,
+which does the reading (the agent's research loop, claim extraction, the
+medicine-name extractor, the ingester's image transcription), and **web search**,
+a search-grounded model such as `perplexity/sonar` for the internet and for
+reading a page to lift a number off it. Each is stored in `app_settings`, so
+changing one needs no redeploy. There is no separate vision role: the ingester
+reads images with the fast model and falls back to the reasoning model if that
+one cannot see.
 
 Every role is optional. Unset, it falls back to the environment variable that
 used to carry it and then to the reasoning model, so an install that has only
@@ -237,8 +246,17 @@ ever chosen one model is completely unaffected.
 not a tunable: writing is the one job that needs the whole context held at once —
 every source, the conversation, which claims the practice's own material actually
 backs, and what the reader will do next. The cheaper roles exist to keep work
-*away* from that model (fewer sources put in front of it, background jobs run
-elsewhere); they never take the writing off it.
+*away* from that model (the reading, fewer sources put in front of it, background
+jobs); they never take the writing, or a judgement inside it, off it.
+
+The one risk in moving the research loop off the reasoning model is a fast model
+too weak to drive tools: it answers in prose instead of searching, and the turn
+reports "the practice has nothing on this" for a question the Notebook covers in
+full. That failure is silent, so it is caught in code — a loop that ends without
+having called a single tool, or one that fails outright, is run again on the
+reasoning model (`lib/agent/research-model.mjs`). A loop that searched and found
+nothing is *not* re-run: that is a finding, and "the practice's material does not
+cover this" is the right answer to it.
 
 ### What a question costs
 

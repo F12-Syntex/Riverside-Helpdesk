@@ -241,14 +241,14 @@ export default function SettingsPage() {
         </p>
 
         <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:4px 20px 20px;')}>
-          <Row name="Reasoning" job="Researches and writes" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
+          <Row name="Reasoning" job="Decides and writes the answer" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
             <ModelField
               label="Reasoning model" value={model} models={models} index={index}
               placeholder={setting ? setting.defaultModel : 'vendor/model'}
               onChange={(v) => { setModel(v); setNote(''); }}
             />
           </Row>
-          <Row name="Fast" job="Background jobs" rate={rateLine(priceOf(resolved.fast))} used={usedLine('fast')}>
+          <Row name="Fast" job="Reads, searches, background jobs" rate={rateLine(priceOf(resolved.fast))} used={usedLine('fast')}>
             <ModelField
               label="Fast model" value={roleValue('fast')} models={models} index={index}
               placeholder={model || 'inherit'} onChange={(v) => setRole('fast', v)}
