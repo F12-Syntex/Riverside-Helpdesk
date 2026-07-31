@@ -65,10 +65,21 @@ function StepIcon({ status, tool }) {
 // The expand/collapse the original does with `grid-rows-[1fr]` → `grid-rows-[0fr]`.
 // The trick is worth keeping — it animates to the content's real height without
 // anyone having to measure it — and it needs no Tailwind to express.
+//
+// `visibility` is the part the original leaves out, and it matters. A drawer
+// collapsed by grid-rows alone is only visually gone: its text is still in the
+// document, so it is still read by a screen reader, still found by the browser's
+// find-on-page, and still swept up when someone selects the answer to paste it
+// somewhere — which is how a copied answer ends up with a run of empty bullets
+// through the middle of it. Hiding it makes it properly inert; the delay when
+// closing lets the collapse finish before it disappears.
 function Drawer({ open, children }) {
+  const motion = 'grid-template-rows .3s ease,opacity .2s ease,visibility 0s' + (open ? '' : ' linear .3s');
   return (
     <div style={s('display:grid;grid-template-rows:' + (open ? '1fr' : '0fr')
-      + ';opacity:' + (open ? '1' : '0') + ';transition:grid-template-rows .3s ease,opacity .2s ease;')}>
+      + ';opacity:' + (open ? '1' : '0')
+      + ';visibility:' + (open ? 'visible' : 'hidden')
+      + ';transition:' + motion + ';')}>
       <div style={s('overflow:hidden;min-height:0;')}>{children}</div>
     </div>
   );
