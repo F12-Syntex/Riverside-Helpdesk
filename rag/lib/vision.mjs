@@ -1,9 +1,9 @@
-// Reads an image into searchable text using the vision-capable chat model the
-// practice has chosen (/settings) — deliberately NOT a separate OCR engine, so
-// every input type is understood by the same model for consistency.
+// Reads an image into searchable text using a vision-capable model the practice
+// has chosen (/settings) — deliberately NOT a separate OCR engine, so every
+// input type is understood by the same model for consistency.
 import fs from 'node:fs';
 import path from 'node:path';
-import { chatModel, config } from './config.mjs';
+import { config, imageReaderModels } from './config.mjs';
 
 const MIME = {
   '.png': 'image/png',
@@ -25,13 +25,9 @@ function instructionFor(hint) {
     + (hint ? ('\nContext: ' + hint) : '');
 }
 
-// Core call — describes an image given as a data URL.
-async function describeDataUrl(dataUrl, hint = '') {
+// One attempt, on one model.
+async function readWith(model, dataUrl, hint) {
   const { apiKey, base, referer, title } = config();
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
-  // The practice's chosen model, from the database rather than the environment.
-  const model = await chatModel();
-
   const res = await fetch(base + '/chat/completions', {
     method: 'POST',
     headers: {
@@ -58,6 +54,30 @@ async function describeDataUrl(dataUrl, hint = '') {
   }
   const data = await res.json();
   return (data?.choices?.[0]?.message?.content || '').trim();
+}
+
+// Core call — describes an image given as a data URL.
+//
+// Tried on the fast role first and the reasoning model second (see
+// imageReaderModels): transcribing a screenshot is reading, and this runs over
+// a whole folder of them, but a fast model the practice has chosen may not read
+// images at all. Only the last model's failure is raised — a fallback that
+// worked is not an error, and one that did not must not hide the real reason.
+async function describeDataUrl(dataUrl, hint = '') {
+  const { apiKey } = config();
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
+  const models = await imageReaderModels();
+  if (!models.length) throw new Error('No model is configured to read images');
+
+  for (let i = 0; i < models.length; i++) {
+    try {
+      return await readWith(models[i], dataUrl, hint);
+    } catch (e) {
+      if (i === models.length - 1) throw e;
+      console.warn(`[vision] ${models[i]} could not read the image (${String(e.message || e).slice(0, 160)}) — trying ${models[i + 1]}`);
+    }
+  }
+  return '';
 }
 
 export async function describeImageBuffer(buffer, mime = 'image/png', hint = '') {

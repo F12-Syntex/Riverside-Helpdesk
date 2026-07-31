@@ -35,14 +35,38 @@ export function loadEnv() {
   }
 }
 
-// The chat model — the one the ingester reads document images with — is a
-// practice setting stored in the database (app_settings, changed at /settings),
-// not an environment variable. Async because of that, and kept out of config()
-// so nothing that does not need a model waits on a database round trip.
-export async function chatModel() {
+// Which models may read an image, in the order they are tried.
+//
+// Models are a practice setting stored in the database (app_settings, changed at
+// /settings), not environment variables. Async because of that, and kept out of
+// config() so nothing that does not need a model waits on a database round trip.
+//
+// Transcribing a screenshot is reading, so the fast role goes first: it is
+// offline background work, nobody reads its output directly, and a page of
+// EMIS screenshots is a lot of it. The reasoning model follows as the fallback,
+// because "reads images" is a property of a model rather than of a role — a
+// practice is free to put a text-only model on the fast role, and an ingest
+// that fails on the first image would be a bad way to find that out.
+export async function imageReaderModels() {
   loadEnv();
-  const { getAiModel } = await import('../../lib/settings.js');
-  return getAiModel();
+  const { getModelRoles } = await import('../../lib/settings.js');
+  const roles = await getModelRoles();
+  return [...new Set([roles.fast.model, roles.reasoning.model].filter(Boolean))];
+}
+
+// The model for the ingester's own reading — summarising a document so the agent
+// can choose it from the catalogue. The fast role, chosen at /settings; the
+// analysis env var below is only its fallback, and stays the answer when the
+// database is unreachable, which is the normal case for an offline ingest run.
+export async function readingModel() {
+  loadEnv();
+  try {
+    const { getModelRoles } = await import('../../lib/settings.js');
+    const roles = await getModelRoles();
+    return roles.fast.model || config().analysisModel;
+  } catch (e) {
+    return config().analysisModel;
+  }
 }
 
 export function config() {

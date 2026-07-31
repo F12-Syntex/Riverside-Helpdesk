@@ -4,7 +4,7 @@
 // each name out to /api/medication. No web search and a tiny token budget, so
 // this is cheap and fast; the client falls back to a local parser if it fails.
 import { NextResponse } from 'next/server';
-import { getAiModel } from '@/lib/settings';
+import { getModelRoles } from '@/lib/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,8 +61,12 @@ function parseNames(raw) {
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  // Falls back to the practice's model setting (/settings — see lib/settings.js).
-  const model = process.env.OPENROUTER_MEDICATION_MODEL || await getAiModel();
+  // Reading a pasted list and picking the medicine names out of it is exactly
+  // what the fast role is for: nothing it returns is shown to anyone — the names
+  // are fanned back out to /api/medication, which does the actual work — and a
+  // failure here costs nothing, because the client falls back to its own parser.
+  // Unset, the role resolves to the practice's model (/settings, lib/settings.js).
+  const model = (await getModelRoles()).fast.model;
 
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }

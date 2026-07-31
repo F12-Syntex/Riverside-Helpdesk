@@ -16,7 +16,7 @@
 // model; see lib/lookup/contact-extract.mjs.
 import { NextResponse } from 'next/server';
 import { findWebContacts } from '@/lib/lookup/web-contact.mjs';
-import { getAiModel } from '@/lib/settings';
+import { getModelRoles } from '@/lib/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,8 +31,13 @@ export async function GET(request) {
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
-  // The cheapest, fastest model configured — this is a lookup, not research.
-  const model = process.env.OPENROUTER_MEDICATION_MODEL || process.env.OPENROUTER_ANALYSIS_MODEL || await getAiModel();
+  // The web role: this is searching the internet and reading a page for a
+  // number, which is precisely the job that role exists for — and it is the same
+  // role the agent's find_contact uses, so the lookup page and the assistant
+  // read the web with one model rather than two. Unset, the role falls back to
+  // the environment variables this line used to read directly, and then to the
+  // practice's model (/settings — see lib/settings.js).
+  const model = (await getModelRoles()).web.model;
   if (!apiKey || !model) {
     return NextResponse.json({ ok: false, contacts: [], results: [], reason: 'Web search is not set up on this server.' }, { headers: noStore });
   }

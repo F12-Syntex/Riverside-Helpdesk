@@ -1,10 +1,13 @@
 // Produces the one-line summary and topic tags stored in the catalogue (Tier A,
-// the "awareness" layer). Uses the same chat model as everything else. Best
-// effort — if it fails, the document still ingests with an empty summary.
-import { config } from './config.mjs';
+// the "awareness" layer). Reading a document to say what it covers is the fast
+// role's work, and this summary is what the agent's list_practice_sources shows
+// when it chooses a file — so the two are read by the same model. Best effort —
+// if it fails, the document still ingests with an empty summary.
+import { config, readingModel } from './config.mjs';
 
 export async function summariseDoc(title, sampleText) {
-  const { apiKey, analysisModel, noRetentionProvider, base, referer, title: appTitle } = config();
+  const { apiKey, noRetentionProvider, base, referer, title: appTitle } = config();
+  const analysisModel = await readingModel();
   if (!apiKey || !analysisModel) return { summary: '', tags: [] };
 
   const prompt =
