@@ -34,7 +34,8 @@ import { createTools } from '@/lib/agent/tools.mjs';
 import { composeVerifiedAnswer } from '@/lib/agent/compose.mjs';
 import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
-import { getAiModel } from '@/lib/settings';
+import { getModelRoles } from '@/lib/settings';
+import { selectSources } from '@/lib/agent/select.mjs';
 import { POST as askPOST } from '../ask/route';
 
 export const runtime = 'nodejs';
@@ -122,9 +123,14 @@ function cachedAnswerStream(hit) {
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  // The model is a practice setting now, changed at /settings — see lib/settings.js.
-  const model = await getAiModel();
-  const searchModel = process.env.OPENROUTER_MEDICATION_MODEL || process.env.OPENROUTER_ANALYSIS_MODEL || model;
+  // Which model does which job — a practice setting now, changed at /settings.
+  // The reasoning role researches and writes; the web role searches the
+  // internet and reads pages for a number; the vision role reads a pasted
+  // image. An unset role falls back to the reasoning model, so an install that
+  // has only ever chosen one model is unaffected.
+  const roles = await getModelRoles();
+  const model = roles.reasoning.model;
+  const searchModel = roles.web.model;
 
   if (!apiKey) {
     return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
@@ -210,6 +216,10 @@ export async function POST(request) {
     },
   });
   const chat = openrouter(model);
+  // The research loop is the phase that reads the image, so a turn carrying one
+  // runs the loop on the vision role. The answer is still written by the
+  // reasoning model, from what the loop found.
+  const researchModel = images.length && roles.vision.model !== model ? openrouter(roles.vision.model) : chat;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -252,8 +262,20 @@ export async function POST(request) {
           ? [{ type: 'text', text: question }].concat(images.map((url) => ({ type: 'image', image: url })))
           : question;
 
+        // Started HERE, not after the research loop. The e-RS referral-type
+        // lookup depends on the question alone — not on anything the loop finds
+        // — so it has no reason to wait its turn behind six model calls. It runs
+        // against Postgres while the loop is still choosing what to open, and is
+        // collected further down, by which time it has long finished.
+        const ersPending = /\brefer(?:ral|rals|red|ring|s)?\b/i.test(question)
+          ? lookupErsMapping(question).catch((e) => {
+            console.warn('[agent] e-RS lookup unavailable:', String(e).slice(0, 160));
+            return null;
+          })
+          : Promise.resolve(null);
+
         const research = streamText({
-          model: chat,
+          model: researchModel,
           system: RESEARCH_SYSTEM,
           messages: [
             ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
@@ -337,24 +359,33 @@ export async function POST(request) {
         // pairing itself: a referral the Notebook does not cover is answered
         // from what the practice's data implies, and the reader has to be able
         // to see WHAT it was determined from before acting on it.
-        let ersSuggestion = null;
-        if (/\brefer(?:ral|rals|red|ring|s)?\b/i.test(question)) {
-          try {
-            const match = await lookupErsMapping(question);
-            if (match.suggestion && (match.suggestion.specialty || match.suggestion.clinicType)) {
-              ersSuggestion = {
-                specialty: match.suggestion.specialty,
-                clinicType: match.suggestion.clinicType,
-                snomed: match.matched,
-                alternatives: match.alternatives,
-                confidence: match.confidence,
-                cancer: match.cancer,
-                explanation: explainLookup(match),
-              };
-            }
-          } catch (e) {
-            console.warn('[agent] e-RS lookup unavailable:', String(e).slice(0, 160));
+        const match = await ersPending;
+        const ersSuggestion = match?.suggestion && (match.suggestion.specialty || match.suggestion.clinicType)
+          ? {
+            specialty: match.suggestion.specialty,
+            clinicType: match.suggestion.clinicType,
+            snomed: match.matched,
+            alternatives: match.alternatives,
+            confidence: match.confidence,
+            cancer: match.cancer,
+            explanation: explainLookup(match),
           }
+          : null;
+
+        // What the writer is allowed to read.
+        //
+        // The research loop is free to open whatever it likes — reading a source
+        // is a database query. The writer is the opposite: it runs on the
+        // reasoning model and every character it is handed is paid for at that
+        // model's input rate. A loop that opened eight sources to settle one
+        // question was sending all eight, in full, to be read again.
+        //
+        // So the sources are ranked against the question and the weakest are
+        // held back. Nothing is lost: everything stays in the evidence registry,
+        // which is what quotes are still validated against.
+        const selection = selectSources(evidence.practiceList(), question);
+        if (selection.dropped.length) {
+          console.log(`[agent] writer sees ${selection.kept.length}/${evidence.practiceCount} sources (${selection.chars} chars); held back ${selection.dropped.map((d) => d.ref).join(', ')}`);
         }
 
         const answer = await composeVerifiedAnswer({
@@ -363,6 +394,7 @@ export async function POST(request) {
           history,
           evidence,
           ersSuggestion,
+          selectedRefs: selection.refs,
           onStatus: (text) => send({ type: 'status', text }),
         });
 

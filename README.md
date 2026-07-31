@@ -215,8 +215,29 @@ Set these in `.env.local` (see `.env.local.example`):
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
 | ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Must be vision-capable — the ingester reads images with it. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
 | `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the committed `rag/` index and the answer cache's question matching (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
+| `OPENROUTER_WEB_MODEL` | Optional default for the **web search** role — searching the internet and reading a page for a phone number. A search-grounded model such as `perplexity/sonar` belongs here. Falls back to `OPENROUTER_MEDICATION_MODEL`, then `OPENROUTER_ANALYSIS_MODEL`. |
+| `OPENROUTER_VISION_MODEL` | Optional default for the **vision** role — reading a pasted image. Falls back to the model chosen at `/settings`, which must then be vision-capable itself. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
+
+### Model roles
+
+One turn is not one job. `/settings` picks the model the practice runs on — the
+**reasoning** role, which researches and writes — and three optional overrides sit
+beside it for the jobs it is not necessarily the best fit for: **fast** (short
+background work nobody reads, such as claim extraction), **web search**, and
+**vision**. Each is stored in `app_settings`, so changing one needs no redeploy.
+
+Every role is optional. Unset, it falls back to the environment variable that
+used to carry it and then to the reasoning model, so an install that has only
+ever chosen one model is completely unaffected.
+
+The writer is also given less to read than the research loop found: sources are
+ranked against the question and the weakest held back (`lib/agent/select.mjs`),
+because the loop opens sources for the price of a database query while the
+writer pays the reasoning model's input rate for every character. Nothing is
+lost — the full set stays in the evidence registry, which is what quotes are
+still validated against.
 
 ## Run
 

@@ -22,6 +22,11 @@ import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { MODEL_VARIANTS, isModelSlug, isModelVariant, joinModelId, splitModelId, variantHint } from '@/lib/model-id.mjs';
 
+// The roles that can be overridden. Kept in step with ROLE_SETTING_KEY in
+// lib/settings.js — the reasoning role is the model picked above, so it has no
+// box of its own here.
+const ROLE_SETTING_KEY = { fast: 'ai_model_fast', web: 'ai_model_web', vision: 'ai_model_vision' };
+
 const LIST_LIMIT = 60;
 
 function priceLabel(model) {
@@ -118,6 +123,8 @@ export default function SettingsPage() {
   const [modelsError, setModelsError] = React.useState('');
   const [setting, setSetting] = React.useState(null);
   const [chosen, setChosen] = React.useState('');
+  // The per-role overrides, exactly as stored: a blank one inherits.
+  const [roles, setRoles] = React.useState({});
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
   const [cursor, setCursor] = React.useState(0);
@@ -135,6 +142,7 @@ export default function SettingsPage() {
         if (d.error) { setError(d.error); return; }
         setSetting(d);
         setChosen(d.model);
+        setRoles(d.roleStored || {});
       })
       .catch((e) => live && setError('Could not read the current model: ' + e.message));
     fetch('/api/settings/models')
@@ -177,7 +185,14 @@ export default function SettingsPage() {
   // context and vision support: ":nitro" changes the provider, not the model.
   const current = models.find((m) => m.id === chosen) || models.find((m) => m.id === chosenBase) || null;
   const validChoice = isModelSlug(chosen);
-  const dirty = !!(setting && chosen && validChoice && chosen !== setting.model);
+  // A role is only sendable when it is blank (inherit) or a real id, so a
+  // half-typed slug cannot be saved.
+  const rolesValid = Object.values(roles).every((v) => !String(v || '').trim() || isModelSlug(String(v).trim()));
+  const rolesDirty = !!setting && Object.keys(ROLE_SETTING_KEY).some(
+    (key) => String(roles[key] || '') !== String((setting.roleStored || {})[key] || ''),
+  );
+  const dirty = !!(setting && validChoice && rolesValid
+    && ((chosen && chosen !== setting.model) || rolesDirty));
 
   // Typed rather than picked. The catalogue does not list variant ids (there is
   // no ":nitro" row for every model), and a brand-new model can be servable
@@ -239,12 +254,13 @@ export default function SettingsPage() {
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: chosen }),
+        body: JSON.stringify({ model: chosen, roles }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'The model could not be saved.');
       setSetting(data);
       setChosen(data.model);
+      setRoles(data.roleStored || {});
       setSaved('Saved. Every answer from now on uses ' + data.model + '.');
     } catch (e) {
       setError(e.message);
@@ -368,6 +384,55 @@ export default function SettingsPage() {
             </p>
           )}
         </section>
+
+        {setting && (setting.roles || []).length > 0 && (
+          <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:22px 22px 24px;margin-top:18px;')}>
+            <h2 style={s('font-size:20px;margin:0 0 4px;')}>Different models for different jobs</h2>
+            <p style={s('font-size:15px;color:#4c6272;margin:0 0 18px;line-height:1.5;')}>
+              A turn is not one model doing one thing. Searching the web, cheap background work and reading
+              an image are separate jobs, and the best writer is not automatically the best at any of them.
+              Leave a box empty and that job uses the model above.
+            </p>
+
+            {(setting.roles || []).filter((role) => ROLE_SETTING_KEY[role.key]).map((role) => {
+              const value = String(roles[role.key] || '');
+              const bad = !!value.trim() && !isModelSlug(value.trim());
+              const resolved = (setting.roleResolved || {})[role.key];
+              return (
+                <div key={role.key} style={s('padding:14px 0;border-top:1px solid #eef1f2;')}>
+                  <label htmlFor={'role-' + role.key} style={s('display:block;font-size:16px;font-weight:600;color:#212b32;')}>{role.name}</label>
+                  <p style={s('margin:2px 0 0;font-size:14px;color:#212b32;line-height:1.45;')}>{role.used}</p>
+                  <p style={s('margin:4px 0 10px;font-size:13.5px;color:#4c6272;line-height:1.45;')}>{role.wants}</p>
+                  <input
+                    id={'role-' + role.key}
+                    type="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={value}
+                    placeholder={'Inherit — ' + ((resolved && resolved.model) || setting.model)}
+                    onChange={(e) => { setRoles((cur) => ({ ...cur, [role.key]: e.target.value.trim() })); setSaved(''); }}
+                    style={s('width:100%;box-sizing:border-box;padding:9px 12px;font:inherit;font-size:15px;border:2px solid ' + (bad ? '#d5281b' : '#d8dde0') + ';border-radius:8px;background:#fff;color:#212b32;')}
+                  />
+                  {bad && (
+                    <p style={s('margin:7px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
+                      Not an OpenRouter id &mdash; it should look like vendor/model, with an optional :variant.
+                    </p>
+                  )}
+                  {!bad && !value.trim() && resolved && resolved.source === 'environment' && (
+                    <p style={s('margin:7px 0 0;font-size:13.5px;color:#4c6272;')}>
+                      Currently <strong style={s('color:#212b32;')}>{resolved.model}</strong>, from the server&rsquo;s environment.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+
+            <p style={s('margin:14px 0 0;font-size:13.5px;color:#4c6272;line-height:1.5;')}>
+              Saved with the button above. A search-grounded model such as <strong>perplexity/sonar</strong> belongs
+              in Web search; a small fast one such as <strong>openai/gpt-oss-120b</strong> belongs in Fast.
+            </p>
+          </section>
+        )}
       </main>
     </div>
   );
