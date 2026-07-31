@@ -16,6 +16,13 @@
 //                  the source it names; failures go back to the model once and
 //                  are dropped if they still do not verify (lib/agent/compose)
 //
+// The phases do not all run on the same model, and the split is the point:
+// phase 1 reads — it searches files, skims what comes back and picks the next
+// one to open — so it runs on the FAST role. Phases 2 and 3 decide and write,
+// which is the only output anybody reads, so they run on the REASONING role.
+// See lib/agent/research-model.mjs for the rule and for what happens when a fast
+// model turns out to be too weak to drive the tools.
+//
 // Two message shapes are not questions at all — a pasted medical document to
 // file, and an incoming patient request to route — and those keep their existing
 // dedicated cards: the agent recognises them, calls hand_off, and the request is
@@ -35,6 +42,7 @@ import { composeVerifiedAnswer } from '@/lib/agent/compose.mjs';
 import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
 import { getModelRoles } from '@/lib/settings';
+import { pickResearchModel, shouldEscalateResearch } from '@/lib/agent/research-model.mjs';
 import { selectSources } from '@/lib/agent/select.mjs';
 import { recordUsage } from '@/lib/ai/usage';
 import { POST as askPOST } from '../ask/route';
@@ -125,13 +133,15 @@ function cachedAnswerStream(hit) {
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   // Which model does which job — a practice setting now, changed at /settings.
-  // The reasoning role researches and writes; the web role searches the
-  // internet and reads pages for a number; the vision role reads a pasted
-  // image. An unset role falls back to the reasoning model, so an install that
-  // has only ever chosen one model is unaffected.
+  // The fast role reads: it drives the research loop, searching the practice's
+  // material and choosing what to open. The reasoning role decides and writes:
+  // the answer, and every judgement in it. The web role searches the internet
+  // and reads pages for a number. An unset role falls back to the reasoning
+  // model, so an install that has only ever chosen one model is unaffected.
   const roles = await getModelRoles();
   const model = roles.reasoning.model;
   const searchModel = roles.web.model;
+  const { model: researchModel, role: researchRole } = pickResearchModel(roles);
 
   if (!apiKey) {
     return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
@@ -226,8 +236,10 @@ export async function POST(request) {
   // the only phase whose output anybody reads.
   //
   // The cheaper roles exist to keep work AWAY from this model, not to take work
-  // off it: fewer sources put in front of it (lib/agent/select.mjs), background
-  // jobs run elsewhere. The writing itself stays here.
+  // off it: the research loop reads on the fast model, fewer sources are put in
+  // front of this one (lib/agent/select.mjs), background jobs run elsewhere.
+  // Every one of those is reading or fetching. The writing itself stays here,
+  // and so does every judgement inside it.
   const chat = openrouter(model);
   // One id per turn, so the usage rows written by the research loop and by the
   // writer can be added up into what ONE QUESTION cost rather than what one call
@@ -252,12 +264,20 @@ export async function POST(request) {
         // reach the reader as structured data in the contacts card, never
         // through the model's prose.
         const foundContacts = [];
+        // How many tools the research loop actually ran. A loop that searched
+        // and found nothing has done its job; one that never called a tool has
+        // not, and that is the difference the escalation below turns on.
+        let toolCalls = 0;
+        const onToolEvent = (event) => {
+          if (event && event.type === 'tool-start') toolCalls += 1;
+          send(event);
+        };
         const tools = createTools({
           apiKey,
           searchModel,
           notebookChunks,
           evidence,
-          onEvent: send,
+          onEvent: onToolEvent,
           contacts: foundContacts,
           onUsage: (role, usedModel, usage) => recordUsage({ turnId, role, phase: 'search_web', model: usedModel, usage }),
         });
@@ -295,34 +315,61 @@ export async function POST(request) {
           })
           : Promise.resolve(null);
 
-        const research = streamText({
-          model: chat,
-          system: RESEARCH_SYSTEM,
-          messages: [
-            ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
-            { role: 'user', content: userContent },
-          ],
-          tools,
-          stopWhen: stepCountIs(MAX_RESEARCH_STEPS),
-          temperature: 0.2,
+        // One pass of the research loop. Written as a function because it can be
+        // run twice: once on the fast model, and again on the reasoning model if
+        // the first pass did not work at all.
+        const runResearch = async (usedModel, role) => {
+          const research = streamText({
+            model: openrouter(usedModel),
+            system: RESEARCH_SYSTEM,
+            messages: [
+              ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
+              { role: 'user', content: userContent },
+            ],
+            tools,
+            stopWhen: stepCountIs(MAX_RESEARCH_STEPS),
+            temperature: 0.2,
+          });
+          // Drain the stream so the tool loop actually runs. The research
+          // model's prose is working notes, not the answer, so none of it is
+          // shown; the visible progress comes from the tools themselves.
+          //
+          // Read the full stream rather than the text: a provider or tool
+          // failure arrives as an error part and would otherwise end the text
+          // stream quietly, leaving the turn to report "I found nothing" for
+          // what was really a broken call.
+          let failure = null;
+          for await (const part of research.fullStream) {
+            if (part.type === 'error') failure = part.error;
+            else if (part.type === 'tool-error') failure = part.error;
+          }
+          // What this phase used, measured, and booked against the role that
+          // really ran it. The settings page prices a question from these rows
+          // rather than from an advertised rate — so the reading has to be
+          // charged to the fast model when the fast model did it.
+          recordUsage({ turnId, role, phase: 'research', model: usedModel, usage: await research.totalUsage.catch(() => null) });
+          return failure;
+        };
+
+        // THE READING RUNS ON THE FAST MODEL. Searching the practice's material,
+        // skimming what comes back and picking the next file to open is not the
+        // job the writer is chosen for, and this loop does it up to six times a
+        // question for output nobody reads.
+        let researchError = await runResearch(researchModel, researchRole);
+        // Unless the fast model cannot do it. A model too weak to call a tool
+        // does not report that — it replies with prose, the loop ends with an
+        // empty evidence registry, and the turn says the practice has nothing on
+        // a question its Notebook covers in full. That is worth a second pass on
+        // the reasoning model; a loop that searched and found nothing is not.
+        const escalation = shouldEscalateResearch({
+          error: researchError, toolCalls, handOff, model: researchModel, reasoning: model,
         });
-        // Drain the stream so the tool loop actually runs. The research model's
-        // prose is working notes, not the answer, so none of it is shown; the
-        // visible progress comes from the tools themselves.
-        //
-        // Read the full stream rather than the text: a provider or tool failure
-        // arrives as an error part and would otherwise end the text stream
-        // quietly, leaving the turn to report "I found nothing" for what was
-        // really a broken call.
-        let researchError = null;
-        for await (const part of research.fullStream) {
-          if (part.type === 'error') researchError = part.error;
-          else if (part.type === 'tool-error') researchError = part.error;
+        if (escalation.escalate) {
+          console.warn(`[agent] ${escalation.reason} — researching again on ${model}`);
+          send({ type: 'status', text: 'Looking again' });
+          researchError = await runResearch(model, 'reasoning');
         }
         if (researchError) throw researchError;
-        // What the research phase used, measured. The settings page prices a
-        // question from these rows rather than from an advertised rate.
-        recordUsage({ turnId, role: 'reasoning', phase: 'research', model, usage: await research.totalUsage.catch(() => null) });
 
         if (handOff) {
           send({ type: 'status', text: handOff === 'document-to-file' ? 'Building the filing title' : 'Writing the routing notes' });
