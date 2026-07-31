@@ -216,6 +216,18 @@ export async function POST(request) {
       reasoning: { enabled: false, exclude: true },
     },
   });
+  // THE ANSWER IS ALWAYS WRITTEN BY THE REASONING MODEL.
+  //
+  // Not a default to be tuned. Writing the answer is the one job that needs the
+  // whole context held at once — the sources, the conversation, which of them
+  // the practice's own material actually backs, and what a receptionist is going
+  // to do next — and that understanding is what the reasoning role is chosen
+  // for. Moving the writer onto a cheaper role to save tokens would save them on
+  // the only phase whose output anybody reads.
+  //
+  // The cheaper roles exist to keep work AWAY from this model, not to take work
+  // off it: fewer sources put in front of it (lib/agent/select.mjs), background
+  // jobs run elsewhere. The writing itself stays here.
   const chat = openrouter(model);
   // One id per turn, so the usage rows written by the research loop and by the
   // writer can be added up into what ONE QUESTION cost rather than what one call
@@ -401,6 +413,7 @@ export async function POST(request) {
         }
 
         const answer = await composeVerifiedAnswer({
+          // The reasoning model, always. See where `chat` is built above.
           model: chat,
           question,
           history,

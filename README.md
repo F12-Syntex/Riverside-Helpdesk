@@ -233,6 +233,13 @@ Every role is optional. Unset, it falls back to the environment variable that
 used to carry it and then to the reasoning model, so an install that has only
 ever chosen one model is completely unaffected.
 
+**The answer is always written by the reasoning model.** That is deliberate and
+not a tunable: writing is the one job that needs the whole context held at once —
+every source, the conversation, which claims the practice's own material actually
+backs, and what the reader will do next. The cheaper roles exist to keep work
+*away* from that model (fewer sources put in front of it, background jobs run
+elsewhere); they never take the writing off it.
+
 ### What a question costs
 
 Each row on `/settings` shows its model's advertised rate — input and output per
