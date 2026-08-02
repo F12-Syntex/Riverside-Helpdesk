@@ -10,6 +10,7 @@ import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import DirectoryPanel from './DirectoryPanel';
+import GradientBackground from './GradientBackground';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import { plainText } from './chat/Rich';
@@ -1180,18 +1181,28 @@ class RiversidePracticeQA extends React.Component {
   render() {
     const v = this.renderVals();
     return (
-      <div style={s('display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
+      <div style={s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
+
+        {/* The opening screen is mostly empty by design, so it is the one
+            place a background earns its keep. It goes the moment there is
+            an answer to read — nothing decorative sits behind text. */}
+        {v.isEmpty && !v.isKb && (
+          <div style={s('position:absolute;inset:0;z-index:0;pointer-events:none;animation:rivaHeaderIn .6s ease both;')}>
+            <GradientBackground />
+          </div>
+        )}
+
 
         {/* Keyed on the state so the header fades through a change rather
             than being swapped under the reader. */}
-        <div key={v.isKb ? 'sources' : (v.isEmpty ? 'empty' : 'answers')} style={s('flex:none;animation:rivaHeaderIn .45s ease both;')}>
+        <div key={v.isKb ? 'sources' : (v.isEmpty ? 'empty' : 'answers')} style={s('position:relative;z-index:1;flex:none;animation:rivaHeaderIn .45s ease both;')}>
           <AppHeader v={v} />
         </div>
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
         <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade'}
-          style={s('flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
+          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
           <div key={v.isKb ? 'sources' : 'chat'} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
