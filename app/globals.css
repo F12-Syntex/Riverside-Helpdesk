@@ -292,6 +292,14 @@ body { overflow-x: hidden; }
   transition: transform .5s cubic-bezier(.2,.7,.3,1), opacity .5s ease;
 }
 
+/* Nothing reads from behind the dock: the page fades out as it reaches
+ * it, so a line of an answer is either legible or gone, never half
+ * hidden under the field. The masked band matches the dock's height. */
+.riva-scroll-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 160px), rgba(0,0,0,0) calc(100% - 40px));
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 160px), rgba(0,0,0,0) calc(100% - 40px));
+}
+
 /* Before anything has been asked the dock is the page, so it stands in
  * the middle of it; the first question lets it fall back to the foot. */
 .riva-dock-center > .riva-dock-inner { transform: translateY(-40vh); }
