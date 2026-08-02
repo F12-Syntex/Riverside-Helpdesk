@@ -81,6 +81,62 @@ test('leaving the letter out silently still asks for the follow-up to be offered
   assert.ok(problems.some((p) => /Add a followUp asking how to create the referral letter/i.test(p)));
 });
 
+// The exact failure seen in the chat: "how to do an ECG referral" was answered
+// correctly — ECG referrals are emailed through Accurx, not sent on e-RS — and
+// the answer still carried an e-RS card at the top of it, naming a speciality
+// and clinic type matched from the referral-type list for a form the reader was
+// never going to open.
+const EMAIL_STEPS = () => [
+  section('Email the ECG referral', '1. Open the patient’s **Consultation** and find the ECG referral document.\n2. Open **Accurx** and select **Message → Message professional**.\n3. Click **Attach → EMIS file** and select the referral letter.\n4. Click **Send**.'),
+];
+const ERS_SUGGESTION = {
+  requestType: 'Referral',
+  specialty: 'Diagnostic Physiological Measurement',
+  clinicType: 'Cardiac Physiology - ECG',
+  source: 'suggested',
+};
+
+test('an emailed referral does not carry an e-RS card', () => {
+  const draft = {
+    sections: EMAIL_STEPS(),
+    keyPoints: [
+      { text: 'ECG referrals are emailed, not sent on e-RS.', ref: 'P1' },
+      { text: 'Attach the doctor’s document in Accurx and send it.', ref: 'P1' },
+    ],
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: ERS_SUGGESTION,
+  };
+  const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I do an ECG referral?');
+  assert.equal(referralRoute, null);
+});
+
+test('a matched pairing is dropped when the steps only ever email it', () => {
+  // No "not e-RS" anywhere — the steps simply never open e-RS, so a pairing
+  // guessed from the type list has nothing to attach itself to.
+  const draft = {
+    sections: EMAIL_STEPS(),
+    keyPoints: [
+      { text: 'Attach the doctor’s document in Accurx and send it.', ref: 'P1' },
+      { text: 'Mark the message done in My Inbox afterwards.', ref: 'P1' },
+    ],
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: ERS_SUGGESTION,
+  };
+  const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I do an ECG referral?');
+  assert.equal(referralRoute, null);
+});
+
+test('an e-RS referral keeps its card even when email is mentioned', () => {
+  const draft = {
+    sections: [section('Make the referral', '1. Set the **speciality** to Dermatology **on e-RS**.\n2. Set the **clinic type** to the 2WW skin cancer option.\n3. Email the practice manager if no slot is available.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: { requestType: 'Referral', specialty: 'Dermatology', clinicType: 'Skin cancer (2WW)', source: 'practice' },
+  };
+  const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I do a cancer dermatology referral?');
+  assert.equal(referralRoute?.specialty, 'Dermatology');
+});
+
 test('offering the letter as a follow-up satisfies the check', () => {
   const draft = { sections: complete(), keyPoints: POINTS, followUps: LETTER_FOLLOW_UP };
   const { problems, followUps } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
