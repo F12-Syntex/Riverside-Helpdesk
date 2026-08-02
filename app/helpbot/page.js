@@ -102,6 +102,10 @@ class RiversidePracticeQA extends React.Component {
       // typed and offered above the dock. dirSel is -1 until someone moves
       // into the list with the arrow keys, so Enter still asks the question.
       directory: [],
+      // The query the directory is matched against settles behind the box:
+      // it is only updated once typing pauses, so the panel does not flicker
+      // in and out on the way through a sentence.
+      dirQuery: '',
       dirSel: -1,
       dirClosed: false,
       copiedNumber: '',
@@ -146,6 +150,7 @@ class RiversidePracticeQA extends React.Component {
   componentWillUnmount() {
     clearTimeout(this.emitTimer);
     clearTimeout(this.copyTimer);
+    clearTimeout(this.dirTimer);
   }
 
   /* --------------------------- Directory --------------------------- *
@@ -156,9 +161,20 @@ class RiversidePracticeQA extends React.Component {
    * written by a model.
    * ----------------------------------------------------------------- */
 
+  // Someone writing a sentence is not looking for a number, and the panel
+  // appearing under every third word is worse than not having it. A query
+  // only reaches the directory once it stops looking like a question.
+  looksLikeLookup(text) {
+    const t = (text || '').trim();
+    if (t.length < 3) return false;
+    if (t.includes('?')) return false;
+    if (t.split(/\s+/).length > 4) return false;
+    return !/^(how|what|where|when|why|who|which|can|could|do|does|did|is|are|was|should|would|will|shall|may|might|please|tell|explain|i|we|my)\b/i.test(t);
+  }
+
   matchDirectory() {
-    const q = (this.state.input || '').trim().toLowerCase();
-    if (q.length < 2 || this.state.dirClosed) return [];
+    const q = (this.state.dirQuery || '').trim().toLowerCase();
+    if (this.state.dirClosed || !this.looksLikeLookup(q)) return [];
     const digits = q.replace(/\D/g, '');
     const scored = [];
     for (const e of this.state.directory) {
@@ -172,6 +188,14 @@ class RiversidePracticeQA extends React.Component {
     }
     scored.sort((a, b) => b.score - a.score || String(a.e.label).localeCompare(String(b.e.label)));
     return scored.slice(0, 5).map((x) => x.e);
+  }
+
+  // Typing is answered immediately; the directory waits until the typing
+  // stops, so the panel settles into place instead of blinking.
+  onInput(value) {
+    this.setState({ input: value, dirSel: -1, dirClosed: false });
+    clearTimeout(this.dirTimer);
+    this.dirTimer = setTimeout(() => this.setState({ dirQuery: value }), 260);
   }
 
   copyContact(entry) {
@@ -315,7 +339,7 @@ class RiversidePracticeQA extends React.Component {
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
     // they were reading an earlier one when they asked it.
-    this.setState({ messages, input: '', pendingImages: [], activeTurn: null, emitting: true }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    this.setState({ messages, input: '', pendingImages: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1 }, () => { this.save(); this.fetchAI(question, aiIdx); });
     // The emit plays once, then the strip above the dock goes quiet again.
     clearTimeout(this.emitTimer);
     this.emitTimer = setTimeout(() => this.setState({ emitting: false }), 640);
@@ -1039,8 +1063,6 @@ class RiversidePracticeQA extends React.Component {
       // carries it away; and the dock's own light while an answer is worked
       // out, so the wait is visible without a spinner in the reading area.
       emitting: this.state.emitting,
-      ghost: this.state.input.trim(),
-      hasGhost: !!this.state.input.trim() && !this.state.emitting && !this.state.copiedNumber,
       isGenerating: this.state.messages.some((m) => m.status === 'loading'),
       copiedNumber: this.state.copiedNumber,
       hasCopied: !!this.state.copiedNumber,
@@ -1078,7 +1100,7 @@ class RiversidePracticeQA extends React.Component {
       viewerOpen: !!this.state.viewer,
       viewer: this.buildViewerVM(),
       onCloseViewer: () => self.closeViewer(),
-      onInput: (e) => self.setState({ input: e.target.value, dirSel: -1, dirClosed: false }),
+      onInput: (e) => self.onInput(e.target.value),
       onSubmit: (e) => { e.preventDefault(); self.ask(self.state.input); },
       onOpenAdd: () => self.setState({ showAdd: true, draftError: false }),
       onCloseAdd: () => self.setState({ showAdd: false }),
@@ -1131,16 +1153,13 @@ class RiversidePracticeQA extends React.Component {
               </div>
             )}
 
-            {/* What is being typed shows faintly above the field, and leaves
-                as a bar when it is asked — the question is going up to the
-                heading, and the strip says so. A copied number takes the
-                same line, so nothing else has to move. */}
+            {/* The question leaves the field as a bar travelling up to where
+                the heading is landing. A copied number takes the same line,
+                so nothing else has to move. */}
             <div className="riva-dock-strip" aria-live="polite">
               {v.emitting && <span className="riva-dock-emit" />}
               {v.hasCopied && <span style={s('font-size:14px;font-weight:600;color:#007f3b;')}>Copied {v.copiedNumber}</span>}
-              {v.hasGhost && <span className="riva-dock-ghost">{v.ghost}</span>}
             </div>
-            {v.isEmpty && <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>}
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
                 {v.pendingImages.map((im, i) => (
@@ -1163,6 +1182,9 @@ class RiversidePracticeQA extends React.Component {
               <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" base="flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
+            {/* The warning sits under the field, where the eye finishes
+                rather than where it starts. */}
+            {v.isEmpty && <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>}
           </div>
         </div>
         )}
