@@ -4,8 +4,11 @@ import React from 'react';
 import { s, Hover } from './ui';
 
 /* ------------------------------------------------------------------ *
- * The practice directory, offered just above the field as someone
- * types.
+ * The practice directory, offered against the field as someone types.
+ *
+ * It floats off the field rather than standing in the dock's flow: the
+ * dock never moves when it opens, and nothing on the page is pushed
+ * aside to make room for it.
  *
  * Nothing here snaps. The panel rises out of the dock and settles back
  * into it, holding the rows it was showing while it leaves; when the
@@ -53,8 +56,8 @@ export default function DirectoryPanel({ v, place = 'above' }) {
 
   return (
     <div
-      style={s('background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.14);overflow:hidden;transition:height .24s cubic-bezier(.2,.7,.3,1);'
-        + (place === 'below' ? 'margin-top:10px;transform-origin:top center;' : 'margin-bottom:8px;transform-origin:bottom center;')
+      style={s('position:absolute;left:0;right:0;z-index:5;background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.16);overflow:hidden;transition:height .24s cubic-bezier(.2,.7,.3,1);'
+        + (place === 'below' ? 'top:calc(100% + 10px);transform-origin:top center;' : 'bottom:calc(100% + 10px);transform-origin:bottom center;')
         + (height == null ? '' : 'height:' + height + 'px;')
         + (leaving
           ? 'animation:rivaPanelOut .18s ease both;pointer-events:none;'

@@ -1324,15 +1324,17 @@ class RiversidePracticeQA extends React.Component {
                 ))}
               </div>
             )}
-            {/* The telephone list sits against the field: over it once the
-                page has an answer on it, under it on the opening screen,
-                where anything above the field would cover the heading. */}
-            {!v.isEmpty && <DirectoryPanel v={v} />}
-
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
             <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
+              {/* The telephone list hangs off the field — under it on the
+                  opening screen, where anything above would cover the
+                  heading, and over it once the page has an answer on it.
+                  Either way it is out of the flow, so the dock stays put
+                  and nothing on the page moves to make room. */}
+              <DirectoryPanel v={v} place={v.isEmpty ? 'below' : 'above'} />
+
               <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
                 <Svg w={20} sw={2.2}>{Icons.search}</Svg>
               </span>
@@ -1341,8 +1343,6 @@ class RiversidePracticeQA extends React.Component {
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>
             </form>
-
-            {v.isEmpty && <DirectoryPanel v={v} place="below" />}
 
             {/* Three things people ask at the desk every day, one tap each.
                 Only on the opening screen — once there is an answer the page
