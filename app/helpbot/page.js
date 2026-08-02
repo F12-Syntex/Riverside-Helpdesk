@@ -4,15 +4,6 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 
-// Suggested starter questions on the empty state — organisation-wide topics
-// answered from the practice's own policy/procedure documents.
-const POPULAR_QUESTIONS = [
-  'How do I report a significant event?',
-  'What is the complaints procedure?',
-  'What should I do if a patient is aggressive or abusive?',
-  'How do I report a data breach?',
-  'How are repeat prescription requests handled?',
-];
 import { s, Hover, Svg, Icons, assetSrc } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import ChatView from '../_components/ChatView';
@@ -112,7 +103,6 @@ class RiversidePracticeQA extends React.Component {
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
     };
-    this.imgInput = React.createRef();
   }
 
   blankDraft() {
@@ -869,8 +859,6 @@ class RiversidePracticeQA extends React.Component {
       };
     });
 
-    const popular = POPULAR_QUESTIONS.map((q) => ({ question: q, onClick: () => self.ask(q) }));
-
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
       onChange: (e) => self.setDraftStep(i, e.target.value),
@@ -923,11 +911,8 @@ class RiversidePracticeQA extends React.Component {
         onRemove: () => self.removePendingImage(i),
       })),
       hasPendingImages: this.state.pendingImages.length > 0,
-      canAttachMore: this.state.pendingImages.length < MAX_IMAGES,
-      onPickImages: () => { if (self.imgInput.current) self.imgInput.current.click(); },
-      onImgFiles: (e) => { self.addImages(e.target.files); if (self.imgInput.current) self.imgInput.current.value = ''; },
       onPaste: (e) => self.onPaste(e),
-      messages, popular,
+      messages,
       cats: this.cats(),
       showAdd: this.state.showAdd,
       draft: this.state.draft,
@@ -963,13 +948,16 @@ class RiversidePracticeQA extends React.Component {
           </div>
         )}
 
-        <div id="riva-scroll" style={s('flex:1;overflow-y:auto;')}>
+        {/* The composer floats over this region, so leave room at the foot of
+            the conversation for it (the knowledge base has no composer). */}
+        <div id="riva-scroll" style={s('flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:148px;'))}>
           {v.isKb ? <KbView v={v} /> : <ChatView v={v} />}
         </div>
 
         {!v.isKb && (
-        <div style={s('flex:none;background:#fff;border-top:1px solid #d8dde0;')}>
-          <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;')}>
+        <div className="riva-dock">
+          <div className="riva-dock-inner">
+            <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
                 {v.pendingImages.map((im, i) => (
@@ -984,15 +972,13 @@ class RiversidePracticeQA extends React.Component {
                 ))}
               </div>
             )}
+            {/* One field and one send button. There is no attach control:
+                an image can still be pasted into the box, which is how it
+                is actually done, and the button was one more thing to read
+                past on every visit. */}
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input ref={this.imgInput} type="file" accept="image/*" multiple style={s('display:none;')} onChange={v.onImgFiles} />
-              <Hover tag="button" type="button" onClick={v.onPickImages} disabled={!v.canAttachMore} aria-label="Attach an image" title="Attach an image (or paste one into the message box)"
-                base={'flex:none;width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid #d8dde0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4c6272;' + (v.canAttachMore ? '' : 'opacity:.45;cursor:default;')}
-                hover={v.canAttachMore ? 'border-color:#005eb8;color:#005eb8;' : ''}>
-                <Svg w={20} sw={2}>{Icons.image}</Svg>
-              </Hover>
-              <input className="riva-input" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;height:48px;font:inherit;font-size:17px;padding:0 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-              <Hover tag="button" type="submit" aria-label="Send" base="flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
+              <input className="riva-input riva-dock-field" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" base="flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
         </div>

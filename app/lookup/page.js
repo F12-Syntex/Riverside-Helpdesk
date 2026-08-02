@@ -255,7 +255,7 @@ export default function Page() {
     <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Instant lookup" />
 
-      <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:24px 24px 140px;')}>
+      <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:24px 24px 128px;')}>
         {trimmed && results.length ? (
           <>
             <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 4px 8px;')}>
@@ -457,7 +457,7 @@ export default function Page() {
           results: as a block in the flow it pushed the whole list down by its
           own height the moment anyone copied a number. */}
       {flash ? (
-        <div role="status" style={s('position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:20;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:8px;padding:10px 16px;background:#007f3b;color:#fff;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(33,43,50,.18);animation:rivaUp .18s ease;')}>
+        <div role="status" style={s('position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:20;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:8px;padding:10px 16px;background:#007f3b;color:#fff;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(33,43,50,.18);animation:rivaUp .18s ease;')}>
           <Svg w={16} sw={2.4}>{Icons.check}</Svg>
           <span style={s('min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>Copied {flash}</span>
         </div>
@@ -465,29 +465,29 @@ export default function Page() {
 
       {/* Docked search bar — fixed to the viewport bottom so its position and
           width never shift as results grow/shrink or a scrollbar appears.
-          Styled to match the chat composer on /helpbot (white bar, pill input,
-          same heights) for a consistent feel across the tools. */}
-      <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:10;background:#fff;border-top:1px solid #d8dde0;box-shadow:0 -4px 14px rgba(33,43,50,.04);')}>
-        <div style={s('max-width:820px;margin:0 auto;padding:14px 24px 18px;padding-bottom:calc(18px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;')}>
+          Uses the shared floating dock (see globals.css) so it matches the
+          chat composer on /helpbot and the rule bar on /rota. */}
+      <div className="riva-dock">
+        <div className="riva-dock-inner" style={s('display:flex;gap:10px;align-items:center;')}>
           <div style={s('position:relative;flex:1;')}>
-            <span style={s('position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
-              <Svg w={20} sw={2.2}>{Icons.search}</Svg>
+            <span style={s('position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
+              <Svg w={22} sw={2.2}>{Icons.search}</Svg>
             </span>
             <input
               ref={inputRef}
               autoFocus
-              className="riva-input"
+              className="riva-input riva-dock-field riva-dock-field-icon"
               type="text"
               value={query}
               onChange={onChange}
               onKeyDown={onKeyDown}
               placeholder="Name, town, postcode…"
               aria-label="Search the CQC register"
-              style={s('width:100%;height:48px;padding:0 46px;font:inherit;font-size:17px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;color:#212b32;outline:none;')}
+              style={s('width:100%;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;color:#212b32;outline:none;')}
             />
             {query ? (
               <Hover tag="button" onClick={() => { setQuery(''); if (inputRef.current) inputRef.current.focus(); }} aria-label="Clear search"
-                base="position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:50%;background:none;color:#4c6272;cursor:pointer;"
+                base="position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:none;border-radius:50%;background:none;color:#4c6272;cursor:pointer;"
                 hover="background:#e4e9eb;color:#212b32;">
                 <Svg w={18} sw={2.2}>{Icons.close}</Svg>
               </Hover>

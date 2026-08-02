@@ -37,13 +37,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-color: #212b32 !important;
 }
 
-/* Input focus styling that mirrors the design's style-focus hints. */
-.riva-input:focus { border-color: #212b32 !important; background: #fff !important; }
-.riva-form-field:focus { border-color: #212b32 !important; }
+/* Input focus styling that mirrors the design's style-focus hints. The
+   focused edge is NHS blue rather than black; the yellow focus-visible
+   outline above is untouched, so keyboard focus still meets the NHS
+   accessibility standard. */
+.riva-input:focus { border-color: #005eb8 !important; background: #fff !important; }
+.riva-form-field:focus { border-color: #005eb8 !important; }
 
 #riva-scroll::-webkit-scrollbar { width: 10px; }
 #riva-scroll::-webkit-scrollbar-thumb { background: #d8dde0; border-radius: 8px; border: 2px solid #f0f4f5; }
-::selection { background: #41b6e6; }
+/* Selected text is picked out in NHS blue, the same blue the rest of the
+   interface uses, rather than the browser's default. */
+::selection { background: #005eb8; color: #fff; }
 
 /* Icon wrappers render raw inline SVG; keep them flush with surrounding text. */
 .riva-ico { display: inline-flex; align-items: center; justify-content: center; }
@@ -206,6 +211,37 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
 body { overflow-x: hidden; }
+
+/* ------------------------------------------------------------------ *
+ * Floating dock — the composer or search bar at the foot of a tool
+ * page (/helpbot, /lookup, /rota). It carries no bar of its own: the
+ * controls float over the page, and the scrolling content behind is
+ * padded to clear them. Every tool uses these classes so the foot of
+ * each page behaves the same way.
+ * ------------------------------------------------------------------ */
+.riva-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; pointer-events: none; }
+.riva-dock-inner { max-width: 820px; margin: 0 auto; padding: 12px 24px calc(22px + env(safe-area-inset-bottom)); pointer-events: auto; }
+
+/* With no bar behind them, each control carries its own white surface
+ * and a soft lift so it reads against whatever it is floating over.
+ * The field is deliberately large: it is the one thing on the page
+ * everybody comes to use. */
+.riva-dock-field {
+  min-height: 62px !important;
+  font-size: 18.5px !important;
+  padding: 0 24px !important;
+  background: #fff !important;
+  border-color: #e3e9ec !important;
+  box-shadow: 0 10px 30px rgba(33,43,50,.12);
+}
+.riva-dock-btn { box-shadow: 0 10px 30px rgba(33,43,50,.12); }
+
+/* A dock field with an icon sitting inside it (the lookup search) needs
+ * the gutters back. Declared after .riva-dock-field so it wins. */
+.riva-dock-field-icon { padding: 0 52px !important; }
+
+/* A short standing note above the dock (e.g. the patient-name warning). */
+.riva-dock-note { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: #c0392b; text-align: center; }
 
 /* Instant lookup: the search box sticks to the top while results scroll.
  * On phones the app header is itself sticky (72px), so sit below it. */

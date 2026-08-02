@@ -266,12 +266,14 @@ export default function RotaSystem({ page = 'rota' }) {
     <div>
       {page === 'rota' ? renderRota() : renderStaff()}
 
+      {/* The rule bar uses the shared floating dock (see globals.css), the
+          same one the chat composer and the lookup search sit in. */}
       {page === 'rota' && hasRota && !isReadOnly && (
-        <div style={s('position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid #d8dde0;')}>
-          <div style={s('max-width:1000px;margin:0 auto;padding:14px 24px 18px;')}>
+        <div className="riva-dock">
+          <div className="riva-dock-inner" style={s('max-width:1000px;')}>
             <form onSubmit={sendChat} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className="riva-input" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Add a rule, e.g. “Simin is off all week”, “Saif works with Iqra”…" style={s('flex:1;min-width:0;font:inherit;font-size:17px;padding:14px 18px;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-              <Hover tag="button" type="submit" aria-label="Send" disabled={busy} base={'flex:none;width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;' + (busy ? 'opacity:.6;' : '')} hover="background:#003087;"><Svg w={22} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
+              <input className="riva-input riva-dock-field" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Add a rule, e.g. “Simin is off all week”, “Saif works with Iqra”…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" disabled={busy} base={'flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;' + (busy ? 'opacity:.6;' : '')} hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>
         </div>
@@ -351,7 +353,7 @@ export default function RotaSystem({ page = 'rota' }) {
 
   function renderRota() {
     return (
-      <div style={s('padding-bottom:120px;')}>
+      <div style={s('padding-bottom:136px;')}>
         <div className="riva-rota-head" style={s('display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px;')}>
           <div>
             <h1 className="riva-hero-h1" style={s('font-size:36px;font-weight:700;margin:0;letter-spacing:-0.01em;')}>Duty rota</h1>
