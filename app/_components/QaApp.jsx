@@ -8,6 +8,7 @@ import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
+import DirectoryPanel from './DirectoryPanel';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import { plainText } from './chat/Rich';
@@ -1145,7 +1146,11 @@ class RiversidePracticeQA extends React.Component {
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
         <div id="riva-scroll" style={s('flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
-          {v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />}
+          {/* Keyed on the view so switching fades the new one in rather than
+              swapping it under the reader. */}
+          <div key={v.isKb ? 'sources' : 'chat'} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
+            {v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />}
+          </div>
         </div>
 
         {/* Nothing asked yet: the dock is the page, so it sits in the middle
@@ -1153,28 +1158,6 @@ class RiversidePracticeQA extends React.Component {
         {!v.isKb && (
         <div className={'riva-dock' + (v.isEmpty ? ' riva-dock-center' : '')}>
           <div className="riva-dock-inner">
-            {/* The practice's own telephone list, matched against the box.
-                Numbers are shown verbatim from the directory. */}
-            {v.hasDirectory && (
-              <div role="listbox" aria-label="Practice directory" style={s('background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.14);overflow:hidden;margin-bottom:10px;animation:rivaAnswerIn .2s ease both;')}>
-                <div style={s('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;background:#f0f4f5;border-bottom:1px solid #dde4e7;')}>
-                  <span style={s('font-size:13px;font-weight:700;color:#212b32;')}>Practice directory</span>
-                  <span style={s('font-size:12.5px;color:#4c6272;')}>{v.directoryCount} &middot; &uarr;&darr; to choose</span>
-                </div>
-                {v.directory.map((r) => (
-                  <Hover key={r.key} tag="button" type="button" role="option" aria-selected={r.isSelected} onClick={r.onPick}
-                    base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:none;border-top:1px solid #eef1f2;padding:12px 16px;font:inherit;cursor:pointer;' + (r.isSelected ? 'background:#e8f1f8;' : 'background:#fff;')}
-                    hover="background:#f0f6fb;">
-                    <span style={s('flex:1;min-width:0;')}>
-                      <span style={s('display:block;font-size:15.5px;font-weight:700;color:#212b32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{r.label}</span>
-                      {r.detail && <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{r.detail}</span>}
-                    </span>
-                    <span style={s('flex:none;font-size:16px;font-weight:700;color:#005eb8;')}>{r.number}</span>
-                  </Hover>
-                ))}
-              </div>
-            )}
-
             {/* The question leaves the field as a bar travelling up to where
                 the heading is landing. A copied number takes the same line,
                 so nothing else has to move. */}
@@ -1196,6 +1179,10 @@ class RiversidePracticeQA extends React.Component {
                 ))}
               </div>
             )}
+            {/* The practice's own telephone list, sitting directly on top of
+                the field it is being typed into. */}
+            <DirectoryPanel v={v} />
+
             {/* One field and one send button. There is no attach control:
                 an image can still be pasted into the box, which is how it
                 is actually done, and the button was one more thing to read
@@ -1204,9 +1191,6 @@ class RiversidePracticeQA extends React.Component {
               <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" base="flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
-            {/* The warning sits under the field, where the eye finishes
-                rather than where it starts. */}
-            {v.isEmpty && <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>}
           </div>
         </div>
         )}

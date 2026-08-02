@@ -96,7 +96,7 @@ function KeyPoints({ points }) {
 // plain text with its quiet citation.
 function Section({ sec }) {
   const heading = sec.hasHeading ? (
-    <div style={s('font-size:16px;font-weight:700;color:#212b32;margin:0 0 7px;letter-spacing:-0.01em;')}>{sec.heading}</div>
+    <div style={s('font-size:17.5px;font-weight:700;color:#212b32;margin:0 0 7px;letter-spacing:-0.01em;')}>{sec.heading}</div>
   ) : null;
 
   if (sec.isCritical) {
@@ -297,7 +297,7 @@ export default function AiAnswer({ v }) {
             <div style={s('padding:18px 22px;display:flex;gap:13px;align-items:flex-start;')}>
               <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
               <div style={s('flex:1;min-width:0;')}>
-                <p style={s('margin:0;font-size:17px;line-height:1.5;color:#212b32;')}><Rich text={v.intro} /></p>
+                <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
                 <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function AiAnswer({ v }) {
 
             <div style={s('padding:20px 24px 0;')}>
               <h3 style={s('font-size:23px;margin:0;letter-spacing:-0.01em;')}>{v.question}</h3>
-              {v.hasIntro && <p style={s('margin:8px 0 0;font-size:17px;line-height:1.55;color:#4c6272;')}><Rich text={v.intro} /></p>}
+              {v.hasIntro && <p style={s('margin:8px 0 0;font-size:18px;line-height:1.6;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
 
             {v.hasReferralRoute && <ReferralRoute route={v.referralRoute} />}
@@ -354,13 +354,13 @@ export default function AiAnswer({ v }) {
             {v.hasMessage && (
               <div style={s('margin:10px 24px 4px;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Suggested message</div>
-                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.55;white-space:pre-wrap;')}>{v.message}</div>
+                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
                 {v.hasMessageImages && <SourceImages images={v.messageImages} />}
                 {v.hasMessageCite ? <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} /> : <JudgementChip label="AI-drafted wording: check before sending" />}
               </div>
             )}
 
-            {v.hasTip && <div style={s('margin:14px 24px 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
+            {v.hasTip && <div style={s('margin:14px 24px 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
 
             {v.hasFollowUps && (
               // A step with its own procedure behind it is left out of the answer
