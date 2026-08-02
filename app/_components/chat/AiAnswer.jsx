@@ -302,6 +302,27 @@ export default function AiAnswer({ v }) {
               {v.hasIntro && <p style={s('margin:8px 0 0;font-size:18px;line-height:1.6;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
 
+            {/* The question as asked has more than one answer in the practice's
+                own material, so the assistant asks which was meant rather than
+                choosing one and hoping. Tapping an answer asks it properly. */}
+            {v.hasClarify && (
+              <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
+                <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;margin-bottom:9px;')}>
+                  <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>Which did you mean?
+                </div>
+                <p style={s('margin:0 0 13px;font-size:17px;line-height:1.5;color:#212b32;')}>{v.clarifyQuestion}</p>
+                <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
+                  {v.clarifyOptions.map((o) => (
+                    <Hover key={o.key} tag="button" type="button" className="riva-lift" onClick={o.onPick}
+                      base="background:#f0f6fb;border:1px solid #cfe1f0;border-radius:999px;padding:10px 18px;font:inherit;font-size:15.5px;font-weight:600;color:#005eb8;cursor:pointer;text-align:left;"
+                      hover="background:#005eb8;border-color:#005eb8;color:#fff;">
+                      {o.label}
+                    </Hover>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {v.hasReferralRoute && <ReferralRoute route={v.referralRoute} />}
 
             {v.hasKeyPoints && <KeyPoints points={v.keyPoints} />}

@@ -524,6 +524,11 @@ export async function POST(request) {
           gaps: redact(answer.gaps),
           // Questions the reader can tap to ask next, in this same chat.
           followUps: (answer.followUps || []).map((q) => redact(q)),
+          // A question back, when the question as asked has more than one
+          // documented answer and the assistant may not choose between them.
+          clarify: answer.clarify
+            ? { question: redact(answer.clarify.question), options: answer.clarify.options.map((o) => redact(o)) }
+            : null,
           // The four e-RS fields, shown on their own above the steps.
           referralRoute: referralRoute ? {
             requestType: redact(referralRoute.requestType),

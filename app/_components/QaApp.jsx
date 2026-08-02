@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { isTestQuery, TEST_STEPS, TEST_STATUS, TEST_ANSWER } from '../../lib/test-answer';
@@ -22,14 +23,40 @@ import { mdPlain } from './chat/Md';
 // JPEG on a white background; small files are sent as-is.
 const MAX_IMAGES = 4;
 
-// The opening screen offers three questions rather than a blank field: the
-// ones asked at the desk every day. Short labels, because they are read at a
-// glance; the question asked is the full sentence.
+// The opening screen offers a row of shortcuts rather than a blank field:
+// the questions asked at the desk every day, and the other tools, which are
+// otherwise reachable only by typing their address now the header carries no
+// navigation. A `question` entry asks it here; an `href` entry goes there.
+// Labels are short because they are read at a glance.
 const QUICK_ASKS = [
   { label: 'Duty doctor today', question: 'Who is the duty doctor today?' },
   { label: 'Referral process', question: 'How do I do a referral?' },
-  { label: 'Report a significant event', question: 'How do I report a significant event?' },
+  { label: 'Significant event', question: 'How do I report a significant event?' },
+  { label: 'Find a number', href: '/lookup', icon: Icons.search },
+  { label: 'Notebook', href: '/notebook', icon: Icons.edit },
+  { label: 'Rota', href: '/rota', icon: Icons.calendar },
+  { label: 'System map', href: '/diagram', icon: Icons.sitemap },
+  { label: 'All tools', href: '/tools', icon: Icons.home },
 ];
+
+// A directory entry's numbers, whatever shape they arrive in. The bundled
+// telephone list writes {display, tel}; rows stored in Postgres have been seen
+// carrying {number} or a bare string, and a number search that only knew about
+// `tel` quietly matched nothing at all against those.
+function phoneParts(entry) {
+  return ((entry && entry.phones) || []).map((p) => {
+    if (typeof p === 'string') return { display: p, tel: p };
+    const display = p.display || p.number || p.value || p.tel || '';
+    const tel = p.tel || p.number || p.value || p.display || '';
+    return { display, tel };
+  }).filter((p) => p.display || p.tel);
+}
+
+// Every number on an entry as digits alone, for matching a typed number
+// against a directory that formats its own however it likes.
+function phoneDigits(entry) {
+  return phoneParts(entry).map((p) => String(p.tel || p.display)).join(' ').replace(/\D/g, '');
+}
 
 // How long ago a cached answer was written, in the words someone would use.
 // The reader is deciding whether to trust it or press Reload, and "3 hours ago"
@@ -201,7 +228,10 @@ class RiversidePracticeQA extends React.Component {
     const scored = [];
     for (const e of this.state.directory) {
       const hay = [e.label, e.category, e.note, (e.aliases || []).join(' ')].join(' ').toLowerCase();
-      const tels = (e.phones || []).map((p) => p.tel || '').join(' ');
+      // Digits only, from whatever the entry calls its number. Searching
+      // against the formatted text would fail the moment someone typed a
+      // number without the spaces the directory happens to have used.
+      const tels = phoneDigits(e);
       let score = 0;
       if (hay.startsWith(q)) score = 3;
       else if (hay.includes(q)) score = 2;
@@ -221,7 +251,7 @@ class RiversidePracticeQA extends React.Component {
   }
 
   copyContact(entry) {
-    const phone = (entry && entry.phones && entry.phones[0]) || null;
+    const phone = phoneParts(entry)[0] || null;
     const shown = phone ? (phone.display || phone.tel) : '';
     if (!shown) return;
     try { navigator.clipboard.writeText(phone.tel || shown); } catch (e) {}
@@ -356,7 +386,7 @@ class RiversidePracticeQA extends React.Component {
     // The images ride along on the bot message too, so a retry can resend them.
     // `steps` and `statusText` are filled in live from the agent's stream: each
     // search it runs appears in the card while it is still working.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
@@ -443,6 +473,19 @@ class RiversidePracticeQA extends React.Component {
           patientMessageCite: data.patientMessageCite,
           citations: data.citations,
           contacts: data.contacts || [],
+        });
+        return;
+      }
+      // A question back: the question as asked has more than one documented
+      // answer, so the assistant asks which was meant rather than choosing.
+      if (data.clarify && data.clarify.question && (data.clarify.options || []).length >= 2) {
+        this.updateAi(idx, {
+          status: 'done', answerKind: 'answer', statusText: '',
+          intro: data.intro || '', keyPoints: [], sections: data.sections || [],
+          message: '', messageCite: null, tip: '', gaps: data.gaps || '',
+          followUps: [], referralRoute: null, validation: null,
+          citations: data.citations || [], contacts: data.contacts || [],
+          clarify: data.clarify,
         });
         return;
       }
@@ -996,6 +1039,16 @@ class RiversidePracticeQA extends React.Component {
           onSave: () => self.prefillFromAi(m),
           contacts: m.contacts || [],
           hasContacts: !!(m.contacts && m.contacts.length),
+          // A question back to the reader. Tapping an answer asks the original
+          // question again with the ambiguity settled, so the history keeps
+          // both the question that was too vague and the one that was not.
+          clarifyQuestion: m.clarify ? m.clarify.question : '',
+          clarifyOptions: (m.clarify ? m.clarify.options : []).map((opt, i) => ({
+            key: i,
+            label: opt,
+            onPick: () => self.ask(m.question + ' — ' + opt),
+          })),
+          hasClarify: !!(m.clarify && m.clarify.question && m.clarify.options.length),
         };
       }
       if (m.kind === 'answer') {
@@ -1130,7 +1183,7 @@ class RiversidePracticeQA extends React.Component {
         key: e.id || e.label,
         label: e.label,
         detail: [e.category, e.note].filter(Boolean).join(' · '),
-        number: (e.phones && e.phones[0] && (e.phones[0].display || e.phones[0].tel)) || '',
+        number: (phoneParts(e)[0] || {}).display || '',
         isSelected: i === self.state.dirSel,
         onPick: () => self.copyContact(e),
       })).filter((r) => r.number),
@@ -1138,15 +1191,22 @@ class RiversidePracticeQA extends React.Component {
       directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
       onInputKey: (e) => self.onInputKey(e),
       // The three questions the desk actually asks, offered as one tap each.
-      quickAsks: QUICK_ASKS.map((q, i) => ({ key: i, label: q.label, onAsk: () => self.ask(q.question) })),
+      quickAsks: QUICK_ASKS.map((q, i) => ({
+        key: i,
+        label: q.label,
+        href: q.href || '',
+        icon: q.icon || null,
+        isLink: !!q.href,
+        onAsk: q.href ? undefined : (() => self.ask(q.question)),
+      })),
       // Sources: the same material, listed rather than searched.
       sourceNotes: this.state.notes,
       sourceContacts: this.state.directory
-        .filter((e) => e.phones && e.phones.length)
+        .filter((e) => phoneParts(e).length)
         .map((e) => ({
           key: e.id || e.label,
           label: e.label,
-          number: e.phones[0].display || e.phones[0].tel,
+          number: (phoneParts(e)[0] || {}).display || '',
           onPick: () => self.copyContact(e),
         })),
       sourceGuides: this.allGuides().map((g) => ({
@@ -1269,13 +1329,19 @@ class RiversidePracticeQA extends React.Component {
                 belongs to it. */}
             {v.isEmpty && (
               <div style={s('display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:14px 0 0;')}>
-                {v.quickAsks.map((q) => (
+                {v.quickAsks.map((q) => (q.isLink ? (
+                  <Hover key={q.key} tag={Link} href={q.href} className="riva-lift"
+                    base="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #e0e7ea;border-radius:999px;padding:9px 16px;font:inherit;font-size:14.5px;font-weight:500;color:#4c6272;text-decoration:none;box-shadow:0 1px 2px rgba(33,43,50,.05);"
+                    hover="border-color:#005eb8;color:#005eb8;">
+                    <Svg w={15} sw={2}>{q.icon}</Svg>{q.label}
+                  </Hover>
+                ) : (
                   <Hover key={q.key} tag="button" type="button" className="riva-lift" onClick={q.onAsk}
                     base="background:#fff;border:1px solid #e0e7ea;border-radius:999px;padding:9px 18px;font:inherit;font-size:14.5px;font-weight:500;color:#4c6272;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.05);"
                     hover="border-color:#005eb8;color:#005eb8;">
                     {q.label}
                   </Hover>
-                ))}
+                )))}
               </div>
             )}
 
