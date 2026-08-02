@@ -351,7 +351,7 @@ export default function AiAnswer({ v }) {
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:7px;')}>Ask next</div>
                 <div style={s('display:flex;flex-direction:column;gap:8px;')}>
                   {v.followUps.map((f) => (
-                    <Hover key={f.key} onClick={f.onClick}
+                    <Hover key={f.key} className="riva-lift" onClick={f.onClick}
                       base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:12px 15px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;transition:border-color .16s ease,background-color .16s ease;"
                       hover="border-color:#005eb8;background:#f7fbff;">
                       <span style={s('flex:none;display:flex;')}><Svg w={17}>{Icons.arrow}</Svg></span><span>{f.question}</span>

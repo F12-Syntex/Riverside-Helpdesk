@@ -54,7 +54,7 @@ const TONES = {
   },
 };
 
-export default function GradientBackground({ className = '', style, tone = 'nhs', grain }) {
+export default function GradientBackground({ className = '', style, tone = 'nhs', grain, drift = true, vignette = true }) {
   const recipe = TONES[tone] || TONES.nhs;
   const grainOpacity = grain == null ? recipe.grain : grain;
   // The filter id is per tone, so two backgrounds on one page cannot
@@ -70,7 +70,11 @@ export default function GradientBackground({ className = '', style, tone = 'nhs'
         style,
       )}
     >
+      {/* The gradient itself, drifting slowly under everything. It is
+          scaled past the edges by the animation, so the blobs move
+          without ever bringing a seam into view. */}
       <div
+        className={drift ? 'riva-gradient-drift' : ''}
         style={{
           position: 'absolute',
           inset: 0,
@@ -80,6 +84,19 @@ export default function GradientBackground({ className = '', style, tone = 'nhs'
           backgroundBlendMode: 'overlay, normal, normal, normal, normal',
         }}
       />
+
+      {/* A wash of the page's own colour at the edges, so the gradient
+          reads as light on the page rather than a picture placed behind
+          it — and so text near the margins keeps its contrast. */}
+      {vignette && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(125% 95% at 50% 42%, rgba(240,244,245,0) 38%, rgba(240,244,245,0.55) 74%, rgba(240,244,245,0.9) 100%)',
+          }}
+        />
+      )}
       <svg
         aria-hidden="true"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: grainOpacity, mixBlendMode: 'overlay' }}

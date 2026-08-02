@@ -21,7 +21,7 @@ export default function ContactsCard({ v }) {
       <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;margin-bottom:10px;')}>Contacts</div>
       <div style={s('display:flex;flex-direction:column;gap:6px;')}>
         {v.contacts.map((c, i) => (
-          <div key={i} className="riva-contact-row" style={s('display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:12px 15px;')}>
+          <div key={i} className="riva-contact-row riva-lift" style={s('display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:12px 15px;')}>
             <span style={s('flex:1 1 200px;min-width:0;')}>
               <span style={s('display:block;font-size:15.5px;font-weight:700;color:#212b32;line-height:1.35;')}>{c.label}</span>
               {c.note ? <span style={s('display:block;font-size:13.5px;color:#4c6272;margin-top:2px;')}>{c.note}</span> : null}

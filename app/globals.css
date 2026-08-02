@@ -40,6 +40,15 @@ body {
 @keyframes rivaPanelOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(.985); } }
 /* The wait has no percentage to report, so the bar simply runs. */
 @keyframes rivaBar { 0% { transform: translateX(-110%); } 100% { transform: translateX(300%); } }
+/* The background is never still, but it moves at the speed of weather:
+   a minute for one pass, and always scaled past the edges so no seam can
+   ever come into view. Reduced motion stops it, like everything else. */
+@keyframes rivaDrift {
+  0%   { transform: scale(1.08) translate3d(0, 0, 0); }
+  33%  { transform: scale(1.14) translate3d(-2.5%, 1.6%, 0); }
+  66%  { transform: scale(1.10) translate3d(2.2%, -1.4%, 0); }
+  100% { transform: scale(1.08) translate3d(0, 0, 0); }
+}
 /* While an answer is being worked out the dock stays lit. */
 @keyframes rivaDockGlow {
   0%, 100% { box-shadow: 0 10px 30px rgba(33,43,50,.12); }
@@ -299,6 +308,33 @@ body { overflow-x: hidden; }
      It softens as it goes and comes back up where it lands. */
   transition: transform .5s cubic-bezier(.2,.7,.3,1), opacity .5s ease;
 }
+
+/* ------------------------------------------------------------------ *
+ * Small motions, shared.
+ * ------------------------------------------------------------------ */
+
+/* The gradient's slow pass, and the wash that melts its edges into the
+ * page so it reads as light rather than as a picture behind the text. */
+.riva-gradient-drift { animation: rivaDrift 60s ease-in-out infinite; will-change: transform; }
+
+/* Anything the reader can act on lifts a little under the cursor: the
+ * citation pills, the contact rows, the next questions. One rule, so
+ * they all answer the mouse the same way. */
+.riva-lift { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background-color .16s ease; }
+.riva-lift:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(33,43,50,.10); }
+.riva-lift:active { transform: translateY(0); box-shadow: none; }
+
+/* The opening screen arrives a line at a time rather than as one block. */
+.riva-hero-block > * { animation: rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both; }
+.riva-hero-block > :nth-child(1) { animation-delay: .04s; }
+.riva-hero-block > :nth-child(2) { animation-delay: .14s; }
+.riva-hero-block > :nth-child(3) { animation-delay: .24s; }
+
+/* Earlier questions deal in from the top, one after another. */
+.riva-history-row { animation: rivaAnswerIn .34s cubic-bezier(.2,.7,.3,1) both; }
+.riva-history-row:nth-child(2) { animation-delay: .04s; }
+.riva-history-row:nth-child(3) { animation-delay: .08s; }
+.riva-history-row:nth-child(n+4) { animation-delay: .12s; }
 
 /* Nothing reads from behind the dock: the page fades out as it reaches
  * it, so a line of an answer is either legible or gone, never half
