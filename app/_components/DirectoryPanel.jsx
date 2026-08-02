@@ -19,12 +19,18 @@ import { s, Hover } from './ui';
 
 const EXIT_MS = 180;
 
+// How tall the panel is allowed to get before it starts scrolling instead.
+// About five rows: enough to see there is more, short enough that it never
+// swallows the page it is floating over.
+const MAX_H = 330;
+
 export default function DirectoryPanel({ v, place = 'above' }) {
   const [mounted, setMounted] = React.useState(v.hasDirectory);
   const [rows, setRows] = React.useState(v.directory);
   const [count, setCount] = React.useState(v.directoryCount);
   const [height, setHeight] = React.useState(null);
   const inner = React.useRef(null);
+  const scroller = React.useRef(null);
 
   React.useEffect(() => {
     if (v.hasDirectory) {
@@ -43,13 +49,21 @@ export default function DirectoryPanel({ v, place = 'above' }) {
   React.useLayoutEffect(() => {
     const el = inner.current;
     if (!el) return undefined;
-    const measure = () => setHeight(el.offsetHeight);
+    const measure = () => setHeight(Math.min(el.offsetHeight, MAX_H));
     measure();
     if (typeof ResizeObserver === 'undefined') return undefined;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, [rows, mounted]);
+
+  // Walking the list with the arrow keys scrolls it: a selected row below the
+  // fold is a selection nobody can see.
+  React.useEffect(() => {
+    const box = scroller.current;
+    const el = box && box.querySelector('[aria-selected="true"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }, [v.directory]);
 
   if (!mounted) return null;
   const leaving = !v.hasDirectory;
@@ -62,6 +76,7 @@ export default function DirectoryPanel({ v, place = 'above' }) {
         + (leaving
           ? 'animation:rivaPanelOut .18s ease both;pointer-events:none;'
           : 'animation:rivaPanelIn .22s cubic-bezier(.2,.7,.3,1) both;'))}>
+      <div ref={scroller} style={s('height:100%;overflow-y:auto;overscroll-behavior:contain;')}>
       <div ref={inner} role="listbox" aria-label="Contacts">
         <div style={s('display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:8px 16px;background:#f0f4f5;border-bottom:1px solid #dde4e7;')}>
           <span style={s('font-size:12.5px;color:#4c6272;')}>{count} &middot; &uarr;&darr; to choose</span>
@@ -87,6 +102,7 @@ export default function DirectoryPanel({ v, place = 'above' }) {
           </Hover>
           </React.Fragment>
         ))}
+      </div>
       </div>
     </div>
   );

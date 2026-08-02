@@ -242,7 +242,7 @@ class RiversidePracticeQA extends React.Component {
       if (score) scored.push({ e, score });
     }
     scored.sort((a, b) => b.score - a.score || String(a.e.label).localeCompare(String(b.e.label)));
-    return scored.slice(0, 5).map((x) => x.e);
+    return scored.slice(0, 10).map((x) => x.e);
   }
 
   // Typing is answered immediately; the directory waits until the typing
@@ -267,7 +267,7 @@ class RiversidePracticeQA extends React.Component {
       .then((r) => r.json())
       .then((d) => {
         if (this.cqcToken !== q) return;
-        this.setState({ cqc: Array.isArray(d.entries) ? d.entries.slice(0, 4) : [] });
+        this.setState({ cqc: Array.isArray(d.entries) ? d.entries.slice(0, 12) : [] });
       })
       .catch(() => { if (this.cqcToken === q) this.setState({ cqc: [] }); });
   }
@@ -281,7 +281,7 @@ class RiversidePracticeQA extends React.Component {
     const seen = new Set(practice.map((e) => phoneDigits(e)).filter(Boolean));
     const register = (this.state.dirClosed || !this.looksLikeLookup(this.state.dirQuery) ? [] : this.state.cqc)
       .filter((e) => phoneParts(e).length && !seen.has(phoneDigits(e)));
-    return practice.slice(0, 4)
+    return practice.slice(0, 8)
       .map((e) => ({ entry: e, group: 'Practice directory' }))
       .concat(register.map((e) => ({ entry: e, group: 'CQC register' })));
   }
@@ -1316,14 +1316,15 @@ class RiversidePracticeQA extends React.Component {
           <AppHeader v={v} />
         </div>
 
-        {/* The way back to an empty page. Shown only when there is something
-            to leave, so the opening screen stays clean. */}
+        {/* The way back to an empty page, at the top left where a back
+            control belongs. Shown only when there is something to leave,
+            so the opening screen stays clean. */}
         {v.canReset && (
-          <div style={s('position:relative;z-index:1;flex:none;max-width:820px;width:100%;margin:0 auto;padding:0 24px;')}>
+          <div style={s('position:relative;z-index:1;flex:none;padding:0 24px 10px;')}>
             <Hover tag="button" type="button" onClick={v.onReset}
-              base="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:4px 0 10px;font:inherit;font-size:14.5px;font-weight:600;color:#4c6272;cursor:pointer;"
+              base="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:4px 0;font:inherit;font-size:14.5px;font-weight:600;color:#4c6272;cursor:pointer;"
               hover="color:#005eb8;">
-              <Svg w={16} sw={2.4}>{Icons.arrowLeft}</Svg>Start again
+              <Svg w={16} sw={2.4}>{Icons.arrowLeft}</Svg>Back
             </Hover>
           </div>
         )}
@@ -1334,7 +1335,7 @@ class RiversidePracticeQA extends React.Component {
           style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
-          <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
+          <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s(v.showMap ? '' : 'animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
             {v.showMap
               ? <div className="riva-column" style={s('max-width:1280px;margin:0 auto;padding:8px 24px 48px;')}><SystemMap align="center" /></div>
               : (v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />)}
