@@ -48,7 +48,7 @@ function SourceImages({ images }) {
 // Reload for anyone who would rather have it researched again.
 function CacheBar({ v }) {
   return (
-    <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:9px 24px;background:#f0f4f5;border-bottom:1px solid #e3e9ec;')}>
+    <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:9px 0;background:#f0f4f5;border-bottom:1px solid #e3e9ec;')}>
       <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#4c6272;')}>
         <Svg w={14} sw={2.2} style={s('flex:none;')}>{Icons.refresh}</Svg>{v.cachedLabel}
       </span>
@@ -72,7 +72,7 @@ function CacheBar({ v }) {
 // not another grey bullet.
 function KeyPoints({ points }) {
   return (
-    <div style={s('margin:14px 24px 0;border:1px solid #d8dde0;border-radius:12px;background:#f7fafb;padding:12px 15px 13px;')}>
+    <div style={s('margin:14px 0 0;border:1px solid #d8dde0;border-radius:12px;background:#f7fafb;padding:12px 15px 13px;')}>
       <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;margin-bottom:9px;')}>In brief</div>
       <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
         {points.map((p) => (
@@ -241,7 +241,7 @@ function ReferralRoute({ route }) {
   ].filter((row) => !row.skip);
   if (!rows.length) return null;
   return (
-    <div style={s('margin:16px 24px 0;border:2px solid #005eb8;border-radius:12px;overflow:hidden;background:#fff;')}>
+    <div style={s('margin:16px 0 0;border:2px solid #005eb8;border-radius:12px;overflow:hidden;background:#fff;')}>
       <div style={s('display:flex;align-items:center;gap:8px;padding:9px 16px;background:#005eb8;color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
         <Svg w={15} stroke="#fff" sw={2.4}>{Icons.check}</Svg>Set this on e-RS
       </div>
@@ -264,13 +264,16 @@ function ReferralRoute({ route }) {
 export default function AiAnswer({ v }) {
   return (
     <div>
-      <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
+      {/* No card: the answer is the page. A box around it added a border,
+          a shadow and a colour change for nothing — the reading is the
+          same and the page is quieter without them. */}
+      <div style={s('min-width:0;')}>
         {/* The agent is working: one readable line saying what it is doing
             now, rather than a grid of every lookup in unreadable type. */}
         {v.aiLoading && <WorkingState steps={v.steps} statusText={v.statusText} />}
 
         {v.aiError && (
-          <div style={s('padding:18px 22px;font-size:17px;line-height:1.5;color:#212b32;')}>
+          <div style={s('padding:18px 0;font-size:17px;line-height:1.5;color:#212b32;')}>
             <p style={s('margin:0 0 14px;')}>Sorry, something went wrong reaching the documents. Please try again.</p>
             <Hover onClick={v.onRetry} base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:9px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 0 #002a52;" active="transform:translateY(4px);box-shadow:none;"><Svg w={16} sw={2.2}>{Icons.refresh}</Svg>Try again</Hover>
           </div>
@@ -278,7 +281,7 @@ export default function AiAnswer({ v }) {
 
         {v.aiDeclined && (
           <>
-            <div style={s('padding:18px 22px;display:flex;gap:13px;align-items:flex-start;')}>
+            <div style={s('padding:18px 0;display:flex;gap:13px;align-items:flex-start;')}>
               <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
               <div style={s('flex:1;min-width:0;')}>
                 <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
@@ -294,7 +297,7 @@ export default function AiAnswer({ v }) {
           <>
             {v.isCached && <CacheBar v={v} />}
 
-            <div style={s('padding:20px 24px 0;')}>
+            <div style={s('padding:20px 0 0;')}>
               <h3 style={s('font-size:23px;margin:0;letter-spacing:-0.01em;')}>{v.question}</h3>
               {v.hasIntro && <p style={s('margin:8px 0 0;font-size:18px;line-height:1.6;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
@@ -304,7 +307,7 @@ export default function AiAnswer({ v }) {
             {v.hasKeyPoints && <KeyPoints points={v.keyPoints} />}
 
             {v.hasSections && (
-              <div style={s('padding:16px 24px 6px;display:flex;flex-direction:column;gap:16px;')}>
+              <div style={s('padding:16px 0 6px;display:flex;flex-direction:column;gap:16px;')}>
                 {v.sections.map((sec) => sec.isJudgement ? (
                   <div key={sec.key} style={s('border:1px dashed #ecd39a;background:#fffdf5;border-radius:12px;padding:12px 16px 13px;')}>
                     <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
@@ -321,7 +324,7 @@ export default function AiAnswer({ v }) {
             {v.hasGaps && (
               // What the practice's own material does not cover, said plainly
               // rather than filled in from the model's general knowledge.
-              <div style={s('margin:12px 24px 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #d8dde0;background:#f7fafb;border-radius:10px;padding:12px 14px;')}>
+              <div style={s('margin:12px 0 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #d8dde0;background:#f7fafb;border-radius:10px;padding:12px 14px;')}>
                 <span style={s('flex:none;color:#4c6272;display:flex;margin-top:2px;')}><Svg w={16} sw={2.2}>{Icons.infoCircle}</Svg></span>
                 <div style={s('font-size:14.5px;line-height:1.5;color:#4c6272;')}>
                   <strong style={s('color:#212b32;')}>Not in the practice&rsquo;s own material:</strong> <Rich text={v.gaps} />
@@ -330,7 +333,7 @@ export default function AiAnswer({ v }) {
             )}
 
             {v.hasMessage && (
-              <div style={s('margin:10px 24px 4px;')}>
+              <div style={s('margin:10px 0 4px;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Suggested message</div>
                 <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
                 {v.hasMessageImages && <SourceImages images={v.messageImages} />}
@@ -338,13 +341,13 @@ export default function AiAnswer({ v }) {
               </div>
             )}
 
-            {v.hasTip && <div style={s('margin:14px 24px 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
+            {v.hasTip && <div style={s('margin:14px 0 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
 
             {v.hasFollowUps && (
               // A step with its own procedure behind it is left out of the answer
               // and offered here instead. One tap asks it in this same chat, so
               // the reader never loses the referral they were part way through.
-              <div style={s('margin:14px 24px 4px;')}>
+              <div style={s('margin:14px 0 4px;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:7px;')}>Ask next</div>
                 <div style={s('display:flex;flex-direction:column;gap:8px;')}>
                   {v.followUps.map((f) => (

@@ -1,50 +1,58 @@
 'use client';
 
-import { s } from '../ui';
+import { s, Svg, Icons } from '../ui';
 
 /* ------------------------------------------------------------------ *
  * What the assistant is doing, while it does it.
  *
- * The old timeline listed every lookup in 12px type — a grid nobody
- * could read while waiting with a patient at the desk. This says one
- * thing at a time, at the size of the answer it will become: what is
- * being done now, and how many places have been checked so far.
+ * Every lookup gets its own line, arriving as it starts and ticking
+ * over when it returns, so the work reads as a list of things done
+ * rather than one row that keeps rewriting itself. At the size of the
+ * answer it becomes, not the 12px grid it replaced.
  * ------------------------------------------------------------------ */
 
+function StepRow({ step, index }) {
+  const done = step.status === 'done';
+  const label = step.label || step.detail || 'Working';
+  const detail = step.detail && step.detail !== step.label ? step.detail : '';
+  return (
+    <li style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaAnswerIn .34s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + Math.min(index * 0.04, 0.2).toFixed(2) + 's;')}>
+      <span style={s('flex:none;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;color:' + (done ? '#007f3b' : '#005eb8') + ';' + (done ? '' : 'animation:rivaSpin 1.1s linear infinite;'))}>
+        <Svg w={done ? 17 : 20} sw={done ? 2.6 : 2.4}>{done ? Icons.check : Icons.spinner}</Svg>
+      </span>
+      <span style={s('flex:1;min-width:0;')}>
+        <span style={s('display:block;font-size:16.5px;line-height:1.4;font-weight:' + (done ? 400 : 600) + ';color:' + (done ? '#4c6272' : '#212b32') + ';')}>{label}</span>
+        {detail && (
+          <span style={s('display:block;font-size:14.5px;line-height:1.4;color:#768692;margin-top:2px;overflow-wrap:anywhere;')}>{detail}</span>
+        )}
+      </span>
+    </li>
+  );
+}
+
 export default function WorkingState({ steps = [], statusText = '' }) {
-  const done = steps.filter((st) => st.status === 'done').length;
-  const running = steps.slice().reverse().find((st) => st.status === 'running');
-  const line = (running && (running.label || running.detail))
-    || statusText
-    || 'Reading the practice documents';
-  const detail = running && running.detail && running.detail !== running.label ? running.detail : '';
+  const waiting = !steps.length;
 
   return (
-    <div style={s('padding:20px 24px 22px;')}>
-      <div style={s('display:flex;align-items:center;gap:12px;')}>
-        <span style={s('flex:none;width:22px;height:22px;display:inline-flex;color:#005eb8;animation:rivaSpin 1.1s linear infinite;')}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-            <path d="M21 12a9 9 0 1 1-6.22-8.56" />
-          </svg>
-        </span>
-        <span style={s('flex:1;min-width:0;font-size:18px;font-weight:600;color:#212b32;line-height:1.35;')}>{line}</span>
-      </div>
-
-      {detail && (
-        <div style={s('margin:8px 0 0 34px;font-size:15px;color:#4c6272;line-height:1.45;overflow-wrap:anywhere;')}>{detail}</div>
-      )}
+    <div style={s('padding:16px 0 20px;')}>
+      <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;')}>
+        {waiting ? (
+          <StepRow index={0} step={{ status: 'running', label: statusText || 'Reading the practice documents' }} />
+        ) : (
+          steps.map((st, i) => <StepRow key={st.id || i} step={st} index={i} />)
+        )}
+        {/* Whatever the agent says it is doing between lookups, on its own
+            line under them rather than replacing one. */}
+        {!waiting && statusText && (
+          <StepRow index={steps.length} step={{ status: 'running', label: statusText }} />
+        )}
+      </ul>
 
       {/* An indeterminate bar: the wait has no percentage to report, and a
           fake one would be a lie about how long is left. */}
-      <div style={s('margin:16px 0 0;height:3px;border-radius:2px;background:#e3e9ec;overflow:hidden;')}>
+      <div style={s('margin:18px 0 0;height:3px;border-radius:2px;background:#e3e9ec;overflow:hidden;')}>
         <div style={s('width:38%;height:100%;border-radius:2px;background:#005eb8;animation:rivaBar 1.25s cubic-bezier(.5,0,.5,1) infinite;')} />
       </div>
-
-      {done > 0 && (
-        <div style={s('margin:10px 0 0;font-size:14px;color:#768692;')}>
-          {done} {done === 1 ? 'source' : 'sources'} checked so far
-        </div>
-      )}
     </div>
   );
 }

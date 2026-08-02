@@ -1143,7 +1143,11 @@ class RiversidePracticeQA extends React.Component {
     return (
       <div style={s('display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
 
-        <AppHeader v={v} />
+        {/* Keyed on the state so the header fades through a change rather
+            than being swapped under the reader. */}
+        <div key={v.isKb ? 'sources' : (v.isEmpty ? 'empty' : 'answers')} style={s('flex:none;animation:rivaHeaderIn .45s ease both;')}>
+          <AppHeader v={v} />
+        </div>
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}

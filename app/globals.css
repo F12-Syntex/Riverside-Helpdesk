@@ -20,6 +20,9 @@ body {
 @keyframes rivaAnswerIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 /* Switching between the questions and Sources fades rather than cuts. */
 @keyframes rivaViewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* The header fades through a change of state rather than being replaced
+   under the reader. */
+@keyframes rivaHeaderIn { from { opacity: 0; } to { opacity: 1; } }
 /* The question itself travels further than its answer does, and the rule
    under it wipes out from the left a beat later. */
 @keyframes rivaHeadIn { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: none; } }
@@ -274,27 +277,21 @@ body { overflow-x: hidden; }
  * padded to clear them. Every tool uses these classes so the foot of
  * each page behaves the same way.
  * ------------------------------------------------------------------ */
-.riva-dock {
-  position: fixed; inset: 0; z-index: 50; pointer-events: none;
-  display: flex; flex-direction: column; justify-content: flex-end;
+.riva-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; pointer-events: none; }
+.riva-dock-inner {
+  max-width: 820px; margin: 0 auto;
+  padding: 12px 24px calc(22px + env(safe-area-inset-bottom));
+  pointer-events: auto;
+  /* The dock is always the same dock: it only ever moves. Travelling on a
+     transform means nothing is laid out again, so the field cannot change
+     size on the way between the middle of the page and the foot of it.
+     It softens as it goes and comes back up where it lands. */
+  transition: transform .5s cubic-bezier(.2,.7,.3,1), opacity .5s ease;
 }
-/* The dock travels between the middle of the page and the foot of it
- * rather than cutting between the two: the space above and below it is
- * a pair of flexible spacers, and it is their growth that animates. */
-.riva-dock::before, .riva-dock::after {
-  content: ''; display: block; flex: 0 0 0;
-  transition: flex-grow .45s cubic-bezier(.2,.7,.3,1);
-}
-.riva-dock-center::before, .riva-dock-center::after { flex-grow: 1; }
-/* flex:none — the dock keeps its own size whatever the spacers around it
- * are doing, so moving it between the middle and the foot of the page
- * never squeezes the field. */
-.riva-dock-inner { flex: none; max-width: 820px; margin: 0 auto; padding: 12px 24px calc(22px + env(safe-area-inset-bottom)); pointer-events: auto; }
 
-/* Before anything has been asked the dock is the page, so it sits in the
- * middle of it; the first answer drops it back to the foot (see the
- * spacers above). */
-.riva-dock-center > .riva-dock-inner { width: 100%; }
+/* Before anything has been asked the dock is the page, so it stands in
+ * the middle of it; the first question lets it fall back to the foot. */
+.riva-dock-center > .riva-dock-inner { transform: translateY(-38vh); }
 
 /* With no bar behind them, each control carries its own white surface
  * and a soft lift so it reads against whatever it is floating over.
@@ -335,6 +332,11 @@ body { overflow-x: hidden; }
   transition: opacity .3s ease, filter .3s ease;
 }
 .riva-dock-form:focus-within::before { opacity: 1; filter: blur(22px); }
+/* Focus is said with weight, not just colour: the field lifts further off
+   the page the moment it is being typed into. */
+.riva-dock-form:focus-within .riva-dock-field {
+  box-shadow: 0 3px 6px rgba(33,43,50,.08), 0 22px 56px rgba(33,43,50,.26);
+}
 .riva-dock-form:has(.riva-dock-live)::before { opacity: 1; animation: rivaGlowPulse 2.4s ease-in-out infinite; }
 @keyframes rivaGlowPulse { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
 .riva-dock-btn {
