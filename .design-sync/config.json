@@ -13,7 +13,11 @@
     "Hover": "tag?: React.ElementType; base?: string; hover?: string; active?: string; className?: string; children?: React.ReactNode; [prop: string]: unknown;",
     "Svg": "w?: number; h?: number; stroke?: string; sw?: number; fill?: string; style?: React.CSSProperties; children?: React.ReactNode;"
   },
-  "cssEntry": "app/globals.css",
-  "tokensGlob": ".design-sync/tokens/*.css",
-  "docsDir": ".design-sync/docs"
+  "overrides": {
+    "Hover": { "cardMode": "column" }
+  },
+  "cssEntry": ".design-sync/dist/design-system.css",
+  "runtimeFontPrefixes": ["Hanken Grotesk"],
+  "docsDir": ".design-sync/docs",
+  "readmeHeader": ".design-sync/conventions.md"
 }

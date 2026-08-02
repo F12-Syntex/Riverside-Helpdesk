@@ -38,9 +38,10 @@ menu button, `24` at rest.
 
 ## Icons
 
-37 glyphs, all drawn on the same 24×24 grid:
+38 glyphs, all drawn on the same 24×24 grid:
 
-**Status** — `check` · `alertCircle` · `infoCircle` · `triangle` · `shield` · `lock`
+**Status** — `check` · `alertCircle` · `infoCircle` · `triangle` · `shield` ·
+`lock` · `spinner`
 
 **Navigation** — `arrow` · `arrowLeft` · `up` · `chevronLeft` · `chevronRight` ·
 `home` · `menu` · `close` · `external` · `sitemap`
@@ -82,3 +83,6 @@ A status glyph in a tinted disc (from the notification toast):
 - `.riva-ico` in `app/globals.css` is the wrapper class for an icon that sits
   inline with text and needs to stay flush with it.
 - The glyphs are stroke-only line icons; do not mix a filled icon set in.
+- `spinner` is a three-quarter ring meant to be spun, not drawn static. Pair it
+  with the `rivaSpin` keyframes from `styles.css`, exactly as the product does:
+  `<Svg w={17} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>`.
