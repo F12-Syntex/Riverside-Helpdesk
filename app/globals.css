@@ -81,8 +81,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-doc-passage { display: none; }
 
 @media (max-width: 600px) {
-  /* Keep the header in view while the page scrolls. */
-  .riva-header { padding: 0 14px !important; gap: 10px !important; position: sticky; top: 0; z-index: 40; }
+  /* Keep the header in view while the page scrolls. It is transparent on
+     desktop; sticking it over moving text needs a surface, so it takes the
+     page colour back here. */
+  .riva-header {
+    padding: 0 14px !important; gap: 10px !important;
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(240,244,245,.92) !important;
+    backdrop-filter: blur(8px);
+  }
 
   /* Swap the tab pills for a single menu button that opens the nav overlay. */
   .riva-tabs-desktop { display: none !important; }

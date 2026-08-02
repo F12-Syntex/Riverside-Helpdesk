@@ -898,10 +898,16 @@ class RiversidePracticeQA extends React.Component {
     const lastTurn = groups.length - 1;
     const activeTurn = Math.min(this.state.activeTurn == null ? lastTurn : this.state.activeTurn, lastTurn);
     const active = groups[activeTurn] || null;
+    // Questions are numbered in the order they were asked — 01, 02 — and the
+    // ones not on screen are listed in that order above the one that is.
     const earlier = groups
-      .map((g, i) => ({ key: i, question: g.question, onOpen: () => self.setState({ activeTurn: i }) }))
-      .filter((t) => t.key !== activeTurn)
-      .reverse();
+      .map((g, i) => ({
+        key: i,
+        num: String(i + 1).padStart(2, '0'),
+        question: g.question,
+        onOpen: () => self.setState({ activeTurn: i }),
+      }))
+      .filter((t) => t.key !== activeTurn);
 
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
@@ -959,6 +965,7 @@ class RiversidePracticeQA extends React.Component {
       messages,
       turn: active ? {
         key: activeTurn,
+        num: String(activeTurn + 1).padStart(2, '0'),
         question: active.question,
         images: active.images,
         hasImages: active.images.length > 0,
@@ -967,7 +974,6 @@ class RiversidePracticeQA extends React.Component {
       } : null,
       history: earlier,
       hasHistory: groups.length > 1,
-      historyLabel: earlier.length + (earlier.length === 1 ? ' earlier question' : ' earlier questions'),
       isViewingHistory: activeTurn !== lastTurn,
       onLatest: () => self.setState({ activeTurn: null }),
       cats: this.cats(),
@@ -1000,7 +1006,7 @@ class RiversidePracticeQA extends React.Component {
         <AppHeader v={v} />
 
         {v.notEmpty && !v.isKb && (
-          <div style={s('flex:none;background:#fff;border-bottom:1px solid #d8dde0;padding:10px 24px;display:flex;')}>
+          <div style={s('flex:none;padding:4px 24px 10px;display:flex;')}>
             <Hover tag="button" onClick={v.onNewChat} base="display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:8px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#005eb8;color:#fff;"><Svg w={18} sw={2.2}>{Icons.arrowLeft}</Svg>Back to all topics</Hover>
           </div>
         )}
