@@ -867,6 +867,27 @@ class RiversidePracticeQA extends React.Component {
             hasImages: images.length > 0,
           };
         });
+        // Everything this answer was written from, once each, in the order it
+        // was used — listed at the foot of the answer as well as marked
+        // against the sentence it backs, so "where does this come from?" is
+        // answered without hunting for a grey line of text.
+        const sources = [];
+        const seenSource = new Set();
+        const addSource = (c) => {
+          if (!c || !c.docTitle) return;
+          const key = c.docTitle + '|' + (c.location || '');
+          if (seenSource.has(key)) return;
+          seenSource.add(key);
+          sources.push({
+            key,
+            docTitle: c.docTitle,
+            location: c.location || '',
+            onOpen: () => self.openViewer(c),
+          });
+        };
+        for (const sec of self.answerSections(m)) addSource(sec.cite);
+        addSource(m.messageCite);
+
         // Pictures on the suggested-message citation (each source image is shown
         // once, against the first cite it belongs to — which can be the message).
         const messageImages = self.citeThumbs(m.messageCite);
@@ -947,6 +968,8 @@ class RiversidePracticeQA extends React.Component {
           onSave: () => self.prefillFromAi(m),
           contacts: m.contacts || [],
           hasContacts: !!(m.contacts && m.contacts.length),
+          sources,
+          hasSources: sources.length > 0,
         };
       }
       if (m.kind === 'answer') {
