@@ -1321,18 +1321,21 @@ class RiversidePracticeQA extends React.Component {
             so the opening screen stays clean. */}
         {v.canReset && (
           <div style={s('position:relative;z-index:1;flex:none;padding:0 24px 10px;')}>
-            <Hover tag="button" type="button" onClick={v.onReset}
-              base="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:4px 0;font:inherit;font-size:14.5px;font-weight:600;color:#4c6272;cursor:pointer;"
-              hover="color:#005eb8;">
-              <Svg w={16} sw={2.4}>{Icons.arrowLeft}</Svg>Back
+            <Hover tag="button" type="button" onClick={v.onReset} className="riva-lift"
+              base="display:inline-flex;align-items:center;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;color:#005eb8;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.06);"
+              hover="border-color:#005eb8;background:#f0f6fb;">
+              Back
             </Hover>
           </div>
         )}
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
-        <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade'}
-          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
+        {/* The conversation fades where it meets the header and the dock. The
+            map has neither over it — no dock at all — so it is shown whole,
+            with no mask and no room reserved at the foot. */}
+        <div id="riva-scroll" className={v.showMap ? '' : (v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade')}
+          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb || v.showMap ? '' : 'padding-bottom:184px;'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
           <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s(v.showMap ? '' : 'animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
