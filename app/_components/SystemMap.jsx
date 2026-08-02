@@ -245,40 +245,29 @@ const LEVELS = [
 // sit over the middle of the diagram they belong to.
 export default function SystemMap({ align = 'left' }) {
   const [level, setLevel] = React.useState(2);
-  const current = LEVELS.find((l) => l.key === level);
   const mid = align === 'center';
 
   return (
     <div style={s(mid ? 'text-align:center;' : '')}>
-      <h1 style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>System map</h1>
-      <p style={s(`font-size:16px;color:${MUTED};margin:0 auto 18px;max-width:70ch;${mid ? '' : 'margin-left:0;'}`)}>
-        One diagram of the whole system. Use the control to change how much detail is shown. Q&amp;A runs as an
-        <strong> agent</strong>: it chooses its own searches, reads whole pages when it needs the full process, and can
-        fall back to the web. The <strong>Notebook comes first</strong>, and every claim must quote a source it
-        actually retrieved or it is dropped before you see it.
-      </p>
-
-      {/* Detail control */}
-      <div style={s('display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;' + (mid ? 'justify-content:center;' : ''))}>
-        <span style={s(`font-size:13px;font-weight:700;color:${MUTED};`)}>Detail</span>
-        <div style={s('display:inline-flex;background:#e7edf0;border:1px solid #d3dde3;border-radius:10px;padding:3px;gap:3px;')}>
-          {LEVELS.map((l) => {
-            const on = l.key === level;
-            return (
-              <Hover key={l.key} tag="button" onClick={() => setLevel(l.key)}
-                base={`border:none;border-radius:7px;padding:7px 15px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;${on ? `background:#fff;color:${BLUE};box-shadow:0 1px 2px rgba(33,43,50,.14);` : 'background:none;color:#54697a;'}`}
-                hover={on ? '' : 'color:#212b32;'}>
-                <span style={s('opacity:.6;margin-right:6px;')}>{l.key}</span>{l.label}
-              </Hover>
-            );
-          })}
-        </div>
-        <span style={s(`font-size:13.5px;color:${MUTED};`)}>{current.caption}</span>
+      {/* Three buttons and the diagram. The paragraphs that used to stand
+          above it explained a picture to people who were already looking at
+          the picture. */}
+      <div style={s('display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;' + (mid ? 'justify-content:center;' : ''))}>
+        {LEVELS.map((l) => {
+          const on = l.key === level;
+          return (
+            <Hover key={l.key} tag="button" onClick={() => setLevel(l.key)} className="riva-lift"
+              base={`border:1px solid ${on ? BLUE : '#d5dee2'};border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;${on ? `background:${BLUE};color:#fff;` : 'background:#fff;color:#4c6272;'}`}
+              hover={on ? '' : `border-color:${BLUE};color:${BLUE};`}>
+              {l.label}
+            </Hover>
+          );
+        })}
       </div>
 
-      {/* Dot legend (only meaningful when routes/pages carry them) */}
+      {/* The key: without it the coloured dots on the diagram mean nothing. */}
       {level >= 2 && (
-        <div style={s('display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 12px;' + (mid ? 'justify-content:center;' : ''))}>
+        <div style={s('display:flex;gap:14px;flex-wrap:wrap;margin:0 0 12px;' + (mid ? 'justify-content:center;' : ''))}>
           {Object.entries(DEP).map(([k, d]) => (
             <span key={k} style={s(`display:inline-flex;align-items:center;gap:6px;font-size:12px;color:${MUTED};`)}>
               <span style={s(`width:15px;height:15px;border-radius:50%;background:${d.c};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;`)}>{k}</span>{d.t}
@@ -287,14 +276,9 @@ export default function SystemMap({ align = 'left' }) {
         </div>
       )}
 
-      {/* The one diagram */}
       <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(33,43,50,.05);')}>
         {level === 1 ? <FlowDiagram /> : <ArchDiagram full={level === 3} />}
       </div>
-
-      <p style={s(`font-size:12.5px;color:${MUTED};margin:14px auto 0;max-width:70ch;${mid ? '' : 'margin-left:0;'}`)}>
-        On a narrow screen, pick a lower detail level to keep it readable — the diagram always fits the width.
-      </p>
     </div>
   );
 }
