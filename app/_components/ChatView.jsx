@@ -22,7 +22,8 @@ export default function ChatView({ v }) {
     <div style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
 
       {v.isEmpty && (
-        <div style={s('text-align:center;padding:12vh 0 0;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
+        // Sits just above the dock, which is centred while nothing has been asked.
+        <div style={s('text-align:center;padding:23vh 0 0;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
           <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;')}>Ask a question</h1>
           <p style={s('font-size:17px;color:#4c6272;max-width:44ch;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
         </div>

@@ -98,6 +98,13 @@ class RiversidePracticeQA extends React.Component {
       // True for the moment after asking, while the bar above the dock
       // carries the question up out of the field.
       emitting: false,
+      // The practice's own telephone list, matched against what is being
+      // typed and offered above the dock. dirSel is -1 until someone moves
+      // into the list with the arrow keys, so Enter still asks the question.
+      directory: [],
+      dirSel: -1,
+      dirClosed: false,
+      copiedNumber: '',
       customGuides: [],
       showAdd: false,
       draft: this.blankDraft(),
@@ -125,6 +132,12 @@ class RiversidePracticeQA extends React.Component {
     // is practice questions typed at a shared reception machine, and it has
     // no business surviving the session.
     try { localStorage.removeItem('riva-chat-v1'); } catch (e) {}
+    // The telephone list is small and read-only, so it is fetched once and
+    // matched in the browser as someone types.
+    fetch('/api/directory')
+      .then((r) => r.json())
+      .then((d) => { if (d && Array.isArray(d.entries)) this.setState({ directory: d.entries }); })
+      .catch(() => {});
     // Load the document library up front so "Browse by area" can surface the
     // full knowledge base, not just the curated guides.
     this.loadKb();
@@ -132,6 +145,62 @@ class RiversidePracticeQA extends React.Component {
 
   componentWillUnmount() {
     clearTimeout(this.emitTimer);
+    clearTimeout(this.copyTimer);
+  }
+
+  /* --------------------------- Directory --------------------------- *
+   * Reception's most common question is "what's the number for…", and
+   * it should not need a second page. The practice's own list is
+   * matched against whatever is in the box and offered above the dock.
+   * Numbers are shown verbatim from the directory — nothing here is
+   * written by a model.
+   * ----------------------------------------------------------------- */
+
+  matchDirectory() {
+    const q = (this.state.input || '').trim().toLowerCase();
+    if (q.length < 2 || this.state.dirClosed) return [];
+    const digits = q.replace(/\D/g, '');
+    const scored = [];
+    for (const e of this.state.directory) {
+      const hay = [e.label, e.category, e.note, (e.aliases || []).join(' ')].join(' ').toLowerCase();
+      const tels = (e.phones || []).map((p) => p.tel || '').join(' ');
+      let score = 0;
+      if (hay.startsWith(q)) score = 3;
+      else if (hay.includes(q)) score = 2;
+      else if (digits.length >= 3 && tels.includes(digits)) score = 1;
+      if (score) scored.push({ e, score });
+    }
+    scored.sort((a, b) => b.score - a.score || String(a.e.label).localeCompare(String(b.e.label)));
+    return scored.slice(0, 5).map((x) => x.e);
+  }
+
+  copyContact(entry) {
+    const phone = (entry && entry.phones && entry.phones[0]) || null;
+    const shown = phone ? (phone.display || phone.tel) : '';
+    if (!shown) return;
+    try { navigator.clipboard.writeText(phone.tel || shown); } catch (e) {}
+    this.setState({ copiedNumber: shown, dirSel: -1 });
+    clearTimeout(this.copyTimer);
+    this.copyTimer = setTimeout(() => this.setState({ copiedNumber: '' }), 2400);
+  }
+
+  // Arrow keys move into the list; Enter only takes a number once someone
+  // has, so typing a question and pressing Enter still asks it.
+  onInputKey(e) {
+    const matches = this.matchDirectory();
+    if (!matches.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.setState((st) => ({ dirSel: (st.dirSel + 1) % matches.length }));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.setState((st) => ({ dirSel: (st.dirSel <= 0 ? matches.length : st.dirSel) - 1 }));
+    } else if (e.key === 'Escape') {
+      this.setState({ dirClosed: true, dirSel: -1 });
+    } else if (e.key === 'Enter' && this.state.dirSel >= 0) {
+      e.preventDefault();
+      this.copyContact(matches[Math.min(this.state.dirSel, matches.length - 1)]);
+    }
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -911,6 +980,8 @@ class RiversidePracticeQA extends React.Component {
       }))
       .filter((t) => t.key !== activeTurn);
 
+    const dirMatches = this.matchDirectory();
+
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
       onChange: (e) => self.setDraftStep(i, e.target.value),
@@ -969,8 +1040,22 @@ class RiversidePracticeQA extends React.Component {
       // out, so the wait is visible without a spinner in the reading area.
       emitting: this.state.emitting,
       ghost: this.state.input.trim(),
-      hasGhost: !!this.state.input.trim() && !this.state.emitting,
+      hasGhost: !!this.state.input.trim() && !this.state.emitting && !this.state.copiedNumber,
       isGenerating: this.state.messages.some((m) => m.status === 'loading'),
+      copiedNumber: this.state.copiedNumber,
+      hasCopied: !!this.state.copiedNumber,
+      // The practice directory, matched live against the box above the dock.
+      directory: dirMatches.map((e, i) => ({
+        key: e.id || e.label,
+        label: e.label,
+        detail: [e.category, e.note].filter(Boolean).join(' · '),
+        number: (e.phones && e.phones[0] && (e.phones[0].display || e.phones[0].tel)) || '',
+        isSelected: i === self.state.dirSel,
+        onPick: () => self.copyContact(e),
+      })).filter((r) => r.number),
+      hasDirectory: dirMatches.length > 0,
+      directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
+      onInputKey: (e) => self.onInputKey(e),
       messages,
       turn: active ? {
         key: activeTurn,
@@ -993,7 +1078,7 @@ class RiversidePracticeQA extends React.Component {
       viewerOpen: !!this.state.viewer,
       viewer: this.buildViewerVM(),
       onCloseViewer: () => self.closeViewer(),
-      onInput: (e) => self.setState({ input: e.target.value }),
+      onInput: (e) => self.setState({ input: e.target.value, dirSel: -1, dirClosed: false }),
       onSubmit: (e) => { e.preventDefault(); self.ask(self.state.input); },
       onOpenAdd: () => self.setState({ showAdd: true, draftError: false }),
       onCloseAdd: () => self.setState({ showAdd: false }),
@@ -1019,17 +1104,43 @@ class RiversidePracticeQA extends React.Component {
           {v.isKb ? <KbView v={v} /> : <ChatView v={v} />}
         </div>
 
+        {/* Nothing asked yet: the dock is the page, so it sits in the middle
+            of it and drops to the foot once there is an answer to read. */}
         {!v.isKb && (
-        <div className="riva-dock">
+        <div className={'riva-dock' + (v.isEmpty ? ' riva-dock-center' : '')}>
           <div className="riva-dock-inner">
+            {/* The practice's own telephone list, matched against the box.
+                Numbers are shown verbatim from the directory. */}
+            {v.hasDirectory && (
+              <div role="listbox" aria-label="Practice directory" style={s('background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.14);overflow:hidden;margin-bottom:10px;animation:rivaAnswerIn .2s ease both;')}>
+                <div style={s('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;background:#f0f4f5;border-bottom:1px solid #dde4e7;')}>
+                  <span style={s('font-size:13px;font-weight:700;color:#212b32;')}>Practice directory</span>
+                  <span style={s('font-size:12.5px;color:#4c6272;')}>{v.directoryCount} &middot; &uarr;&darr; to choose</span>
+                </div>
+                {v.directory.map((r) => (
+                  <Hover key={r.key} tag="button" type="button" role="option" aria-selected={r.isSelected} onClick={r.onPick}
+                    base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:none;border-top:1px solid #eef1f2;padding:12px 16px;font:inherit;cursor:pointer;' + (r.isSelected ? 'background:#e8f1f8;' : 'background:#fff;')}
+                    hover="background:#f0f6fb;">
+                    <span style={s('flex:1;min-width:0;')}>
+                      <span style={s('display:block;font-size:15.5px;font-weight:700;color:#212b32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{r.label}</span>
+                      {r.detail && <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{r.detail}</span>}
+                    </span>
+                    <span style={s('flex:none;font-size:16px;font-weight:700;color:#005eb8;')}>{r.number}</span>
+                  </Hover>
+                ))}
+              </div>
+            )}
+
             {/* What is being typed shows faintly above the field, and leaves
                 as a bar when it is asked — the question is going up to the
-                heading, and the strip says so. */}
-            <div className="riva-dock-strip" aria-hidden="true">
+                heading, and the strip says so. A copied number takes the
+                same line, so nothing else has to move. */}
+            <div className="riva-dock-strip" aria-live="polite">
               {v.emitting && <span className="riva-dock-emit" />}
+              {v.hasCopied && <span style={s('font-size:14px;font-weight:600;color:#007f3b;')}>Copied {v.copiedNumber}</span>}
               {v.hasGhost && <span className="riva-dock-ghost">{v.ghost}</span>}
             </div>
-            <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>
+            {v.isEmpty && <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>}
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
                 {v.pendingImages.map((im, i) => (
@@ -1049,7 +1160,7 @@ class RiversidePracticeQA extends React.Component {
                 is actually done, and the button was one more thing to read
                 past on every visit. */}
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" base="flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>

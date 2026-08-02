@@ -263,11 +263,8 @@ function ReferralRoute({ route }) {
 
 export default function AiAnswer({ v }) {
   return (
-    <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-      <div className="riva-bot-avatar" style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-        <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
-      </div>
-      <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
+    <div>
+      <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         {v.aiLoading && (v.hasSteps || v.statusText ? (
           // The agent is working: show each lookup as it happens rather than a
           // spinner that says nothing for twenty seconds. Quietly, though — the

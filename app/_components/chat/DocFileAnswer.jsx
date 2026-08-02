@@ -8,11 +8,8 @@ import { s, Hover, Svg, Icons } from '../ui';
 // so the reader can see at a glance whether anything needs acknowledging now.
 export default function DocFileAnswer({ v }) {
   return (
-    <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-      <div className="riva-bot-avatar" style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-        <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
-      </div>
-      <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
+    <div>
+      <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
           <span style={s('flex:none;')}><Svg w={16}>{Icons.file}</Svg></span>Document filing: check the title against the document before filing
         </div>

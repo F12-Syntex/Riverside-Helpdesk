@@ -5,11 +5,8 @@ import { s, Hover, Svg, Icons } from '../ui';
 export default function GuideCard({ v }) {
   const g = v.guide;
   return (
-    <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-      <div className="riva-bot-avatar" style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;')}>
-        <img src="/assets/logo.png" alt="" style={s('width:22px;height:22px;display:block;')} />
-      </div>
-      <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
+    <div>
+      <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('padding:18px 22px 0;')}>
           <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;')}>{g.categoryLabel}</div>
           <h3 style={s('font-size:23px;margin:6px 0 0;letter-spacing:-0.01em;')}>{g.title}</h3>
