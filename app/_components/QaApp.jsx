@@ -906,27 +906,6 @@ class RiversidePracticeQA extends React.Component {
             hasImages: images.length > 0,
           };
         });
-        // Everything this answer was written from, once each, in the order it
-        // was used — listed at the foot of the answer as well as marked
-        // against the sentence it backs, so "where does this come from?" is
-        // answered without hunting for a grey line of text.
-        const sources = [];
-        const seenSource = new Set();
-        const addSource = (c) => {
-          if (!c || !c.docTitle) return;
-          const key = c.docTitle + '|' + (c.location || '');
-          if (seenSource.has(key)) return;
-          seenSource.add(key);
-          sources.push({
-            key,
-            docTitle: c.docTitle,
-            location: c.location || '',
-            onOpen: () => self.openViewer(c),
-          });
-        };
-        for (const sec of self.answerSections(m)) addSource(sec.cite);
-        addSource(m.messageCite);
-
         // Pictures on the suggested-message citation (each source image is shown
         // once, against the first cite it belongs to — which can be the message).
         const messageImages = self.citeThumbs(m.messageCite);
@@ -1007,8 +986,6 @@ class RiversidePracticeQA extends React.Component {
           onSave: () => self.prefillFromAi(m),
           contacts: m.contacts || [],
           hasContacts: !!(m.contacts && m.contacts.length),
-          sources,
-          hasSources: sources.length > 0,
         };
       }
       if (m.kind === 'answer') {
@@ -1213,7 +1190,7 @@ class RiversidePracticeQA extends React.Component {
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
-        <div id="riva-scroll" className={v.isKb ? '' : 'riva-scroll-fade'}
+        <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade'}
           style={s('flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}

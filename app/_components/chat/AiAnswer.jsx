@@ -361,29 +361,6 @@ export default function AiAnswer({ v }) {
               </div>
             )}
 
-            {/* Everything the answer was written from, gathered at the foot
-                of it. The per-sentence marks stay where they are — this is
-                for the reader who wants the documents themselves. */}
-            {v.hasSources && (
-              <div style={s('margin:22px 0 4px;border-top:1px solid #dde4e7;padding-top:14px;')}>
-                <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;margin-bottom:10px;')}>Sources</div>
-                <div style={s('display:flex;flex-direction:column;gap:6px;')}>
-                  {v.sources.map((sc) => (
-                    <Hover key={sc.key} tag="button" type="button" onClick={sc.onOpen} title="Open the source"
-                      base="display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:11px 14px;font:inherit;cursor:pointer;transition:border-color .16s ease,background-color .16s ease;"
-                      hover="border-color:#005eb8;background:#f7fbff;">
-                      <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={17} sw={2}>{Icons.fileLines}</Svg></span>
-                      <span style={s('flex:1;min-width:0;')}>
-                        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;line-height:1.35;overflow-wrap:anywhere;')}>{sc.docTitle}</span>
-                        {sc.location && <span style={s('display:block;font-size:13.5px;color:#4c6272;margin-top:2px;')}>{sc.location}</span>}
-                      </span>
-                      <span style={s('flex:none;display:flex;color:#8a99a3;')}><Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg></span>
-                    </Hover>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div style={s('height:12px;')} />
             <ContactsCard v={v} />
             {v.hasContacts && <div style={s('height:12px;')} />}
