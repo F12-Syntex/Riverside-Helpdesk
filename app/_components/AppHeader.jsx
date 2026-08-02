@@ -27,7 +27,7 @@ export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null })
         {/* One button, not a pair of tabs: everything the assistant reads
             from is behind Sources, and the way back is the same button. */}
         {showTabs && (
-          <Hover tag="button" onClick={() => v.onSetView(v.isKb ? 'assistant' : 'kb')}
+          <Hover tag="button" className="riva-src-btn" onClick={() => v.onSetView(v.isKb ? 'assistant' : 'kb')}
             base={'display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;' : 'background:#fff;border:1px solid #d8dde0;color:#005eb8;')}
             hover={v.isKb ? 'background:#003087;border-color:#003087;' : 'border-color:#005eb8;background:#f0f6fb;'}>
             <Svg w={17} sw={2}>{v.isKb ? Icons.chat : Icons.book}</Svg>

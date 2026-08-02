@@ -427,10 +427,17 @@ body { overflow-x: hidden; }
   .riva-hero-block { padding-top: 15vh !important; }
   .riva-turn-q { font-size: 24px !important; }
   
-  /* The dock keeps a thumb-sized field but takes the phone's gutters, and
-     stands closer to the middle where a thumb reaches. */
+  /* The dock keeps a thumb-sized field but takes the phone's gutters. It
+     stays at the foot of the screen throughout: on a phone that is where
+     the keyboard opens under it and where a thumb already is, so it never
+     travels to the middle the way it does on a desktop. */
   .riva-dock-inner { padding-left: 16px !important; padding-right: 16px !important; }
-  .riva-dock-center > .riva-dock-inner { transform: translateY(-30vh); }
+  .riva-dock-center > .riva-dock-inner { transform: none; }
+
+  /* No navigation furniture beside the practice's name: the field is the
+     whole page on a phone. Sources and the menu are desktop only. */
+  .riva-src-btn { display: none !important; }
+  .riva-nav-btn { display: none !important; }
   .riva-dock-field {
     height: 60px !important; min-height: 60px !important;
     font-size: 17px !important; padding: 0 20px !important;
