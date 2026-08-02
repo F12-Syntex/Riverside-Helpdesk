@@ -259,10 +259,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #005eb8; background: #e8f1f8; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
 .riva-md blockquote p { margin: 0 0 4px; }
 .riva-md blockquote p:last-child { margin-bottom: 0; }
-.riva-md .riva-md-tablewrap { margin: 0 0 12px; overflow-x: auto; }
-.riva-md table { border-collapse: collapse; min-width: 50%; }
-.riva-md th, .riva-md td { border: 1px solid #d8dde0; padding: 7px 11px; font-size: 15px; line-height: 1.5; text-align: left; vertical-align: top; min-width: 48px; }
-.riva-md th { background: #eef1f2; font-weight: 700; }
+/* A table is a surface of its own, like every other block in an answer:
+   white, on a quiet border, scrolling inside itself when it is too wide
+   for the column rather than stretching the page. */
+.riva-md .riva-md-tablewrap {
+  margin: 0 0 14px; overflow-x: auto;
+  background: #fff; border: 1px solid #dde4e7; border-radius: 10px;
+}
+.riva-md table { border-collapse: collapse; min-width: 100%; background: #fff; }
+.riva-md th, .riva-md td { padding: 10px 14px; font-size: 15.5px; line-height: 1.5; text-align: left; vertical-align: top; min-width: 48px; border-bottom: 1px solid #eef1f2; }
+.riva-md th { background: #f0f4f5; font-weight: 700; color: #212b32; border-bottom: 1px solid #dde4e7; }
+.riva-md td + td, .riva-md th + th { border-left: 1px solid #eef1f2; }
+.riva-md tr:last-child td { border-bottom: none; }
 .riva-md hr { border: none; border-top: 1px solid #d8dde0; margin: 14px 0; }
 /* The highlighter. One phrase per answer carries it: the words that
    actually answer the question, so someone scanning finds them without
@@ -391,4 +399,64 @@ body { overflow-x: hidden; }
 
 @media (max-width: 600px) {
   .riva-lookup-all-sheet { height: 100vh !important; border-radius: 0 !important; }
+}
+
+/* ------------------------------------------------------------------ *
+ * The Q&A on a phone. Last in the file on purpose: these override the
+ * dock and answer rules above, which carry !important of their own.
+ * ------------------------------------------------------------------ */
+@media (max-width: 600px) {
+  /* ---------------------------------------------------------------- *
+   * The Q&A on a phone.
+   *
+   * A reception phone is held one-handed with a patient waiting, so the
+   * page gives its width to the text: tighter gutters, a smaller
+   * question, a dock that still takes a thumb comfortably, and contact
+   * numbers that stack under the name instead of being squeezed against
+   * the right-hand edge.
+   * ---------------------------------------------------------------- */
+  
+  .riva-column { padding-left: 16px !important; padding-right: 16px !important; }
+  
+  /* Sources becomes its icon beside the menu button: two words and a menu
+     do not both fit next to the practice's name on a 360px screen. */
+  .riva-src-label { display: none; }
+  
+  /* The opening screen: less air above the heading, since there is far
+     less screen to spend it on. */
+  .riva-hero-block { padding-top: 15vh !important; }
+  .riva-turn-q { font-size: 24px !important; }
+  
+  /* The dock keeps a thumb-sized field but takes the phone's gutters, and
+     stands closer to the middle where a thumb reaches. */
+  .riva-dock-inner { padding-left: 16px !important; padding-right: 16px !important; }
+  .riva-dock-center > .riva-dock-inner { transform: translateY(-30vh); }
+  .riva-dock-field {
+    height: 60px !important; min-height: 60px !important;
+    font-size: 17px !important; padding: 0 20px !important;
+  }
+  .riva-dock-field-icon { padding: 0 46px !important; }
+  .riva-dock-strip { height: 26px; }
+  /* The glow is a desktop pleasure; on a phone it eats the small margin
+     between the dock and the edge of the screen. */
+  .riva-dock-form::before { display: none; }
+  
+  /* Less to clear at the foot, so less of the answer is masked away. */
+  .riva-scroll-fade {
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 40px, #000 calc(100% - 130px), rgba(0,0,0,0) calc(100% - 30px));
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 40px, #000 calc(100% - 130px), rgba(0,0,0,0) calc(100% - 30px));
+  }
+  
+  /* An earlier question: the number and "Show answer" hold their place;
+     the question itself takes whatever is left. */
+  .riva-history-row { gap: 10px !important; }
+  
+  /* A contact reads down the row on a phone: name, then the number under
+     it at full size, rather than a number crushed against the edge. */
+  .riva-contact-row { align-items: flex-start !important; }
+  .riva-contact-nums { align-items: flex-start !important; width: 100%; }
+  
+  /* Answer text a touch smaller, so a line still holds enough words. */
+  .riva-md { font-size: 17px; }
+  .riva-md th, .riva-md td { padding: 9px 12px; font-size: 15px; }
 }

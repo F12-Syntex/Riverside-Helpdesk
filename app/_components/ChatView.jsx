@@ -19,11 +19,11 @@ import DocFileAnswer from './chat/DocFileAnswer';
 
 export default function ChatView({ v }) {
   return (
-    <div style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
+    <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
 
       {v.isEmpty && (
         // Sits just above the dock, which is centred while nothing has been asked.
-        <div style={s('text-align:center;padding:26vh 0 0;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
+        <div className="riva-hero-block" style={s('text-align:center;padding:26vh 0 0;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
           <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;')}>What do you need?</h1>
           <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
           {/* The warning is read here, before anything is typed, rather than
@@ -36,7 +36,7 @@ export default function ChatView({ v }) {
       {v.hasHistory && (
         <div style={s('display:flex;flex-direction:column;margin-bottom:14px;')}>
           {v.history.map((t) => (
-            <div key={t.key} style={s('display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid #dde4e7;')}>
+            <div key={t.key} className="riva-history-row" style={s('display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid #dde4e7;')}>
               <span style={s('flex:none;font-size:13px;font-weight:600;color:#8a99a3;font-variant-numeric:tabular-nums;')}>{t.num}</span>
               <span style={s('flex:1;min-width:0;font-size:15px;color:#4c6272;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{t.question}</span>
               <Hover tag="button" onClick={t.onOpen}
@@ -56,7 +56,7 @@ export default function ChatView({ v }) {
           <div>
             {/* The question lands from below as the bar leaves the dock, and
                 the rule under it wipes out from the left a beat later. */}
-            <h1 style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:8px 0 0;text-wrap:pretty;animation:rivaHeadIn .5s cubic-bezier(.2,.7,.3,1) both;')}>{v.turn.question}</h1>
+            <h1 className="riva-turn-q" style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:8px 0 0;text-wrap:pretty;animation:rivaHeadIn .5s cubic-bezier(.2,.7,.3,1) both;')}>{v.turn.question}</h1>
             <div style={s('width:68px;height:4px;border-radius:2px;background:#005eb8;margin:14px 0 0;transform-origin:left center;animation:rivaRuleIn .5s cubic-bezier(.2,.7,.3,1) .12s both;')} />
             {v.turn.imageNote && (
               <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>

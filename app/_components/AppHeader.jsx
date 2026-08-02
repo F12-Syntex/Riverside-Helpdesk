@@ -31,7 +31,7 @@ export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null })
             base={'display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;' : 'background:#fff;border:1px solid #d8dde0;color:#005eb8;')}
             hover={v.isKb ? 'background:#003087;border-color:#003087;' : 'border-color:#005eb8;background:#f0f6fb;'}>
             <Svg w={17} sw={2}>{v.isKb ? Icons.chat : Icons.book}</Svg>
-            <span>{v.isKb ? 'Back to questions' : 'Sources'}</span>
+            <span className="riva-src-label">{v.isKb ? 'Back to questions' : 'Sources'}</span>
           </Hover>
         )}
 

@@ -83,7 +83,7 @@ export default function SourcesView({ v }) {
   );
 
   return (
-    <div style={s('max-width:820px;margin:0 auto;padding:28px 24px 48px;display:flex;flex-direction:column;gap:14px;')}>
+    <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 48px;display:flex;flex-direction:column;gap:14px;')}>
       <div>
         <h1 className="riva-hero-h1" style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;margin:0;')}>Sources</h1>
         <p style={s('font-size:16px;color:#4c6272;margin:10px 0 0;max-width:58ch;text-wrap:pretty;')}>
