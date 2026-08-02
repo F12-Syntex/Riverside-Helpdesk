@@ -309,10 +309,34 @@ body { overflow-x: hidden; }
   font-size: 18.5px !important;
   padding: 0 24px !important;
   background: #fff !important;
-  border-color: #e3e9ec !important;
-  box-shadow: 0 10px 30px rgba(33,43,50,.12);
+  /* The dock is the one thing on the page to use, so it is allowed to sit
+     a little proud of it: a firmer edge and a deeper lift than a card. */
+  border-color: #cdd8dd !important;
+  box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
   transition: border-color .18s ease, box-shadow .22s ease, background-color .18s ease;
 }
+.riva-dock-field:hover { border-color: #aab8bf !important; }
+
+/* A soft NHS-blue light behind the field, so the dock reads as the live
+ * part of the page. Kept faint on purpose: this is a practice's working
+ * tool, not a consumer chat toy. It lifts a little on focus and while an
+ * answer is being worked out. */
+.riva-dock-form { position: relative; }
+.riva-dock-form::before {
+  content: '';
+  position: absolute; z-index: -1; pointer-events: none;
+  left: 4%; right: 4%; top: 6px; bottom: -10px;
+  border-radius: 999px;
+  background:
+    radial-gradient(58% 130% at 30% 50%, rgba(0,94,184,.22), rgba(0,94,184,0) 72%),
+    radial-gradient(58% 130% at 72% 50%, rgba(65,182,230,.20), rgba(65,182,230,0) 72%);
+  filter: blur(20px);
+  opacity: .75;
+  transition: opacity .3s ease, filter .3s ease;
+}
+.riva-dock-form:focus-within::before { opacity: 1; filter: blur(22px); }
+.riva-dock-form:has(.riva-dock-live)::before { opacity: 1; animation: rivaGlowPulse 2.4s ease-in-out infinite; }
+@keyframes rivaGlowPulse { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
 .riva-dock-btn {
   box-shadow: 0 10px 30px rgba(33,43,50,.12);
   transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .12s ease;

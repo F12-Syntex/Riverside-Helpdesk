@@ -1046,7 +1046,9 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      welcome: this.props.welcome != null ? this.props.welcome : 'Ask how the practice works. Answers come only from the practice’s own documents.',
+      // One line. Anything longer is not read.
+      welcome: this.props.welcome != null ? this.props.welcome
+        : 'Answered from the practice’s own documents.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -1183,13 +1185,11 @@ class RiversidePracticeQA extends React.Component {
                 the field it is being typed into. */}
             <DirectoryPanel v={v} />
 
-            {/* One field and one send button. There is no attach control:
-                an image can still be pasted into the box, which is how it
-                is actually done, and the button was one more thing to read
-                past on every visit. */}
-            <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-              <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" base="flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
+            {/* The field is the whole dock: no send button, no attach
+                control. Enter asks; an image can still be pasted into the
+                box, which is how it is actually done. */}
+            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('display:flex;')}>
+              <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Ask a question, or type a name for its number…" aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
             </form>
           </div>
         </div>
