@@ -49,9 +49,11 @@ export default function ChatView({ v }) {
           remounts the block and it arrives the same way a new one does. */}
       {v.turn && (
         <div key={v.turn.key} style={s('display:flex;flex-direction:column;gap:20px;')}>
-          <div style={s('animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
-            <h1 style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:8px 0 0;text-wrap:pretty;')}>{v.turn.question}</h1>
-            <div style={s('width:68px;height:4px;border-radius:2px;background:#005eb8;margin:14px 0 0;')} />
+          <div>
+            {/* The question lands from below as the bar leaves the dock, and
+                the rule under it wipes out from the left a beat later. */}
+            <h1 style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:8px 0 0;text-wrap:pretty;animation:rivaHeadIn .5s cubic-bezier(.2,.7,.3,1) both;')}>{v.turn.question}</h1>
+            <div style={s('width:68px;height:4px;border-radius:2px;background:#005eb8;margin:14px 0 0;transform-origin:left center;animation:rivaRuleIn .5s cubic-bezier(.2,.7,.3,1) .12s both;')} />
             {v.turn.imageNote && (
               <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>
             )}
@@ -65,7 +67,7 @@ export default function ChatView({ v }) {
           </div>
 
           {v.turn.items.map((m, i) => (
-            <div key={i} style={s('animation:rivaAnswerIn .45s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + (0.06 + i * 0.05).toFixed(2) + 's;')}>
+            <div key={i} style={s('animation:rivaAnswerIn .45s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + (0.12 + i * 0.09).toFixed(2) + 's;')}>
               {m.isAnswer && <GuideCard v={m} />}
               {m.isSuggest && <SuggestBubble v={m} />}
               {m.isAi && <AiAnswer v={m} />}

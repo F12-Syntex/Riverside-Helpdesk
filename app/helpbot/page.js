@@ -95,6 +95,9 @@ class RiversidePracticeQA extends React.Component {
       // Which question is on screen. null means the latest one; a number
       // means an earlier question was opened from the minimised history.
       activeTurn: null,
+      // True for the moment after asking, while the bar above the dock
+      // carries the question up out of the field.
+      emitting: false,
       customGuides: [],
       showAdd: false,
       draft: this.blankDraft(),
@@ -115,12 +118,20 @@ class RiversidePracticeQA extends React.Component {
   componentDidMount() {
     try {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
-      const m = JSON.parse(localStorage.getItem('riva-chat-v1') || '[]');
-      this.setState({ customGuides: Array.isArray(g) ? g : [], messages: Array.isArray(m) ? m : [] });
+      this.setState({ customGuides: Array.isArray(g) ? g : [] });
     } catch (e) {}
+    // A reload starts a fresh page: questions are not carried over, and any
+    // transcript an earlier version of this page stored is cleared out — it
+    // is practice questions typed at a shared reception machine, and it has
+    // no business surviving the session.
+    try { localStorage.removeItem('riva-chat-v1'); } catch (e) {}
     // Load the document library up front so "Browse by area" can surface the
     // full knowledge base, not just the curated guides.
     this.loadKb();
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.emitTimer);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -137,20 +148,9 @@ class RiversidePracticeQA extends React.Component {
     }
   }
 
+  // Only the guides someone wrote are kept. The conversation itself lives for
+  // as long as the page is open and no longer.
   save() {
-    // Image data URLs can blow the localStorage quota; if the full transcript
-    // won't fit, persist it again with the image data dropped (keeping a count
-    // so the bubble can still say images were attached).
-    try {
-      localStorage.setItem('riva-chat-v1', JSON.stringify(this.state.messages));
-    } catch (e) {
-      try {
-        const slim = this.state.messages.map((m) => (m.images && m.images.length)
-          ? Object.assign({}, m, { images: [], imageCount: m.images.length })
-          : m);
-        localStorage.setItem('riva-chat-v1', JSON.stringify(slim));
-      } catch (e2) {}
-    }
     try {
       localStorage.setItem('riva-guides-v1', JSON.stringify(this.state.customGuides));
     } catch (e) {}
@@ -246,7 +246,10 @@ class RiversidePracticeQA extends React.Component {
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
     // they were reading an earlier one when they asked it.
-    this.setState({ messages, input: '', pendingImages: [], activeTurn: null }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    this.setState({ messages, input: '', pendingImages: [], activeTurn: null, emitting: true }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    // The emit plays once, then the strip above the dock goes quiet again.
+    clearTimeout(this.emitTimer);
+    this.emitTimer = setTimeout(() => this.setState({ emitting: false }), 640);
   }
 
   // `refresh` is set by Reload on a cached answer: research the question again
@@ -515,7 +518,6 @@ class RiversidePracticeQA extends React.Component {
     this.flagCopied(idx);
   }
 
-  newChat() { this.setState({ messages: [], view: 'assistant', activeTurn: null }, () => this.save()); }
 
   setView(view) {
     this.setState({ view });
@@ -962,6 +964,13 @@ class RiversidePracticeQA extends React.Component {
       })),
       hasPendingImages: this.state.pendingImages.length > 0,
       onPaste: (e) => self.onPaste(e),
+      // The strip above the dock: what is being typed, then the bar that
+      // carries it away; and the dock's own light while an answer is worked
+      // out, so the wait is visible without a spinner in the reading area.
+      emitting: this.state.emitting,
+      ghost: this.state.input.trim(),
+      hasGhost: !!this.state.input.trim() && !this.state.emitting,
+      isGenerating: this.state.messages.some((m) => m.status === 'loading'),
       messages,
       turn: active ? {
         key: activeTurn,
@@ -986,7 +995,6 @@ class RiversidePracticeQA extends React.Component {
       onCloseViewer: () => self.closeViewer(),
       onInput: (e) => self.setState({ input: e.target.value }),
       onSubmit: (e) => { e.preventDefault(); self.ask(self.state.input); },
-      onNewChat: () => self.newChat(),
       onOpenAdd: () => self.setState({ showAdd: true, draftError: false }),
       onCloseAdd: () => self.setState({ showAdd: false }),
       onDraftQuestion: (e) => self.setDraftField('question', e.target.value),
@@ -1005,21 +1013,22 @@ class RiversidePracticeQA extends React.Component {
 
         <AppHeader v={v} />
 
-        {v.notEmpty && !v.isKb && (
-          <div style={s('flex:none;padding:4px 24px 10px;display:flex;')}>
-            <Hover tag="button" onClick={v.onNewChat} base="display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px solid #005eb8;border-radius:999px;padding:8px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;" hover="background:#005eb8;color:#fff;"><Svg w={18} sw={2.2}>{Icons.arrowLeft}</Svg>Back to all topics</Hover>
-          </div>
-        )}
-
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
-        <div id="riva-scroll" style={s('flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:148px;'))}>
+        <div id="riva-scroll" style={s('flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
           {v.isKb ? <KbView v={v} /> : <ChatView v={v} />}
         </div>
 
         {!v.isKb && (
         <div className="riva-dock">
           <div className="riva-dock-inner">
+            {/* What is being typed shows faintly above the field, and leaves
+                as a bar when it is asked — the question is going up to the
+                heading, and the strip says so. */}
+            <div className="riva-dock-strip" aria-hidden="true">
+              {v.emitting && <span className="riva-dock-emit" />}
+              {v.hasGhost && <span className="riva-dock-ghost">{v.ghost}</span>}
+            </div>
             <p className="riva-dock-note">Don&rsquo;t type patient related data.</p>
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
@@ -1040,7 +1049,7 @@ class RiversidePracticeQA extends React.Component {
                 is actually done, and the button was one more thing to read
                 past on every visit. */}
             <form onSubmit={v.onSubmit} style={s('display:flex;gap:10px;align-items:center;')}>
-              <input className="riva-input riva-dock-field" value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onPaste={v.onPaste} placeholder="Type your question…" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-btn" aria-label="Send" base="flex:none;width:62px;height:62px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;"><Svg w={26} stroke="#fff" sw={2.2}>{Icons.up}</Svg></Hover>
             </form>
           </div>

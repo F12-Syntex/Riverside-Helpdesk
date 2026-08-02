@@ -17,7 +17,23 @@ body {
 /* A question and its answer arrive rather than appear: the heading settles
    first and the body follows a beat behind it (the delay is set per block,
    inline, so a long answer staggers instead of landing all at once). */
-@keyframes rivaAnswerIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes rivaAnswerIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+/* The question itself travels further than its answer does, and the rule
+   under it wipes out from the left a beat later. */
+@keyframes rivaHeadIn { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: none; } }
+@keyframes rivaRuleIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* Asking sends something out of the dock: a bar that expands out of the
+   field and travels up towards where the question is landing. */
+@keyframes rivaEmit {
+  0%   { opacity: 0; transform: translateY(10px) scaleX(.3); }
+  22%  { opacity: 1; transform: translateY(0) scaleX(1); }
+  100% { opacity: 0; transform: translateY(-56px) scaleX(1); }
+}
+/* While an answer is being worked out the dock stays lit. */
+@keyframes rivaDockGlow {
+  0%, 100% { box-shadow: 0 10px 30px rgba(33,43,50,.12); }
+  50%      { box-shadow: 0 10px 30px rgba(33,43,50,.12), 0 0 0 4px rgba(0,94,184,.16); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   /* Honour the setting the reader has already made: the timeline still shows
@@ -250,6 +266,22 @@ body { overflow-x: hidden; }
 /* A dock field with an icon sitting inside it (the lookup search) needs
  * the gutters back. Declared after .riva-dock-field so it wins. */
 .riva-dock-field-icon { padding: 0 52px !important; }
+
+/* The strip directly above the dock. It holds a faint copy of what is
+ * being typed, and — for the moment after asking — the bar that carries
+ * the question up out of the field. Its height is reserved so the dock
+ * never moves as either comes and goes. */
+.riva-dock-strip { height: 32px; display: flex; align-items: center; overflow: hidden; }
+.riva-dock-ghost {
+  font-size: 15px; line-height: 1.3; color: #4c6272; opacity: .38;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.riva-dock-emit {
+  width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;
+  transform-origin: left center;
+  animation: rivaEmit .64s cubic-bezier(.2,.7,.3,1) both;
+}
+.riva-dock-live { animation: rivaDockGlow 1.6s ease-in-out infinite; }
 
 /* A short standing note above the dock (e.g. the patient-name warning). */
 .riva-dock-note { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: #c0392b; text-align: center; }
