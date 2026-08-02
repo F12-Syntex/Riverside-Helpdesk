@@ -1,0 +1,35 @@
+/* Riverside Helpdesk — type scale.
+ *
+ * Sizes are the ones the app actually sets. The scale is fractional on purpose
+ * (14.5px, 16.5px, 17.5px): those are the values in the running product, not
+ * roundings of a nominal scale.
+ */
+
+:root {
+  --riva-font: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
+  --riva-font-mono: Consolas, Menlo, monospace;
+
+  /* ---- Sizes ---- */
+  --riva-text-hero: 27px;          /* page hero heading (mobile-capped) */
+  --riva-text-h2: 20px;
+  --riva-text-title: 18px;         /* header wordmark */
+  --riva-text-h3: 17.5px;
+  --riva-text-prose: 16.5px;       /* assistant answers (.riva-md) */
+  --riva-text-h4: 16px;
+  --riva-text-body: 15.5px;
+  --riva-text-table: 15px;
+  --riva-text-control: 14.5px;     /* buttons, tabs, toasts */
+  --riva-text-caption: 13px;       /* header subtitle */
+
+  /* ---- Weights ---- */
+  --riva-weight-regular: 400;
+  --riva-weight-medium: 500;
+  --riva-weight-semibold: 600;     /* control labels */
+  --riva-weight-bold: 700;         /* headings, wordmark */
+  --riva-weight-heavy: 800;
+
+  /* ---- Line heights ---- */
+  --riva-leading-tight: 1.15;      /* stacked header lines */
+  --riva-leading-snug: 1.45;
+  --riva-leading-body: 1.6;        /* prose */
+}

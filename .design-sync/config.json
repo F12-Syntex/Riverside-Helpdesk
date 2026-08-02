@@ -1,0 +1,19 @@
+{
+  "projectId": "36027c35-1e7f-4a07-8835-31053c568335",
+  "shape": "package",
+  "pkg": "riverside-emis-helper",
+  "globalName": "RiversideHelpdeskUI",
+  "buildCmd": "node .design-sync/build-entry.mjs",
+  "srcDir": "app/_components",
+  "componentSrcMap": {
+    "Hover": "app/_components/ui.js",
+    "Svg": "app/_components/ui.js"
+  },
+  "dtsPropsFor": {
+    "Hover": "tag?: React.ElementType; base?: string; hover?: string; active?: string; className?: string; children?: React.ReactNode; [prop: string]: unknown;",
+    "Svg": "w?: number; h?: number; stroke?: string; sw?: number; fill?: string; style?: React.CSSProperties; children?: React.ReactNode;"
+  },
+  "cssEntry": "app/globals.css",
+  "tokensGlob": ".design-sync/tokens/*.css",
+  "docsDir": ".design-sync/docs"
+}

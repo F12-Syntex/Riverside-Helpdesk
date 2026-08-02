@@ -1,0 +1,54 @@
+/* Riverside Helpdesk — colour palette.
+ *
+ * Every value below is a colour the app actually paints with, collected from
+ * the literal hex in app/_components/ and app/globals.css. The app writes the
+ * hex directly (its styling idiom is inline style strings, which predate any
+ * token layer), so these custom properties document the palette and make it
+ * available to designs built with this system. The hex is the source of truth;
+ * if a value here and the app ever disagree, the app wins.
+ *
+ * The palette is the NHS design system's, which is where the practice's
+ * branding comes from.
+ */
+
+:root {
+  /* ---- Primary: NHS Blue ---- */
+  --riva-blue: #005eb8;            /* primary actions, links, active tabs */
+  --riva-dark-blue: #003087;       /* pressed / heavy emphasis */
+  --riva-light-blue: #41b6e6;      /* ::selection */
+  --riva-blue-tint: #e8f1f8;       /* tinted panel behind blue content */
+  --riva-blue-tint-weak: #f0f6fb;
+  --riva-blue-tint-faint: #f7fbff;
+  --riva-blue-border: #cfe1f0;
+
+  /* ---- Text and neutrals ---- */
+  --riva-black: #212b32;           /* body text */
+  --riva-dark-grey: #4c6272;       /* secondary text, inactive tab labels */
+  --riva-mid-grey: #768692;        /* tertiary text, icon buttons at rest */
+  --riva-grey: #8a99a3;
+  --riva-pale-grey: #aeb7bd;
+
+  /* ---- Surfaces and lines ---- */
+  --riva-surface: #ffffff;         /* cards, header, sheets */
+  --riva-page: #f0f4f5;            /* page background, inset controls */
+  --riva-border: #d8dde0;          /* the default 1px border everywhere */
+  --riva-border-soft: #eef1f2;     /* hairline under headings */
+  --riva-surface-alt: #f7fafb;
+
+  /* ---- Status ---- */
+  --riva-green: #007f3b;
+  --riva-green-tint: #e6f3ec;
+
+  --riva-red: #d5281b;
+  --riva-red-tint: #fbeae8;
+  --riva-red-text: #8a1509;
+
+  --riva-amber: #946800;
+  --riva-amber-tint: #fff6cc;
+  --riva-amber-text: #8a6100;
+
+  /* ---- Accents ---- */
+  --riva-focus: #ffeb3b;           /* focus-visible highlight (globals.css) */
+  --riva-warm-yellow: #ffb81c;
+  --riva-highlight: #fff6cc;       /* <mark> in answer prose */
+}

@@ -1,0 +1,37 @@
+/* Riverside Helpdesk — spacing, radii, elevation.
+ *
+ * Collected from the inline style strings in app/_components/. Spacing is not
+ * a strict 4px grid in this product; the values below are the ones that recur.
+ */
+
+:root {
+  /* ---- Spacing ---- */
+  --riva-space-2xs: 3px;           /* segmented-control inner gap */
+  --riva-space-xs: 7px;            /* icon-to-label gap */
+  --riva-space-sm: 11px;           /* toast icon-to-text gap */
+  --riva-space-md: 14px;           /* header gap, mobile page gutter */
+  --riva-space-lg: 18px;
+  --riva-space-xl: 24px;           /* desktop page gutter, overlay padding */
+
+  /* ---- Radii ---- */
+  --riva-radius-sm: 7px;           /* tab pill */
+  --riva-radius-md: 10px;          /* icon button, segmented control */
+  --riva-radius-lg: 12px;          /* toast */
+  --riva-radius-xl: 16px;          /* dialog panel */
+  --riva-radius-sheet: 18px;       /* mobile bottom sheet (top corners) */
+  --riva-radius-pill: 999px;
+
+  /* ---- Sizes ---- */
+  --riva-header-height: 72px;
+  --riva-control-height: 42px;     /* icon button / minimum tap target */
+
+  /* ---- Elevation ---- */
+  --riva-shadow-tab: 0 1px 2px rgba(33, 43, 50, 0.14);
+  --riva-shadow-toast: 0 6px 24px rgba(33, 43, 50, 0.14);
+  --riva-shadow-sheet: 0 8px 32px rgba(33, 43, 50, 0.2);
+  --riva-scrim: rgba(33, 43, 50, 0.45);
+
+  /* ---- Breakpoint ---- */
+  /* globals.css switches to the mobile layout below this width. */
+  --riva-breakpoint-mobile: 600px;
+}

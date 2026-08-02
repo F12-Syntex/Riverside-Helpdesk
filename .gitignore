@@ -5,3 +5,12 @@
 .env*.local
 *.log
 .DS_Store
+
+# design-sync: staged converter, its build output, and machine-local state.
+# Everything else under .design-sync/ is committed — it is the sync's input.
+/.ds-sync
+/ds-bundle
+/.design-sync/dist
+/.design-sync/.cache
+/.design-sync/learnings
+/.design-sync/node_modules

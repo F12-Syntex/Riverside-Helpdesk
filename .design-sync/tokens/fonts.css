@@ -1,0 +1,6 @@
+/* Hanken Grotesk is the product's brand face. The app loads it from Google
+ * Fonts in app/layout.js (a <link> in <head>), so there is no @font-face in
+ * the repo to ship — this @import is the design system's equivalent of that
+ * link, and the families load at runtime the same way they do in the app. */
+
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');
