@@ -62,14 +62,21 @@ export default function DirectoryPanel({ v, place = 'above' }) {
         + (leaving
           ? 'animation:rivaPanelOut .18s ease both;pointer-events:none;'
           : 'animation:rivaPanelIn .22s cubic-bezier(.2,.7,.3,1) both;'))}>
-      <div ref={inner} role="listbox" aria-label="Practice directory">
-        <div style={s('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;background:#f0f4f5;border-bottom:1px solid #dde4e7;')}>
-          <span style={s('font-size:13px;font-weight:700;color:#212b32;')}>Practice directory</span>
+      <div ref={inner} role="listbox" aria-label="Contacts">
+        <div style={s('display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:8px 16px;background:#f0f4f5;border-bottom:1px solid #dde4e7;')}>
           <span style={s('font-size:12.5px;color:#4c6272;')}>{count} &middot; &uarr;&darr; to choose</span>
         </div>
         {rows.map((r, i) => (
-          <Hover key={r.key} tag="button" type="button" role="option" aria-selected={r.isSelected} onClick={r.onPick}
-            base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:none;border-top:1px solid #eef1f2;padding:12px 16px;font:inherit;cursor:pointer;transition:background .16s ease,color .16s ease;animation:rivaAnswerIn .26s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + (i * 0.035).toFixed(3) + 's;'
+          <React.Fragment key={r.key}>
+            {/* A heading wherever the list changes hands: the practice's own
+                numbers, then the register of every service in England. */}
+            {r.group && r.group !== (rows[i - 1] || {}).group && (
+              <div style={s('padding:8px 16px 6px;background:#fbfcfd;border-top:1px solid #eef1f2;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a99a3;')}>{r.group}</div>
+            )}
+          <Hover tag="button" type="button" role="option" aria-selected={r.isSelected} onClick={r.onPick}
+            base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:none;'
+              + (r.group && r.group !== (rows[i - 1] || {}).group ? '' : 'border-top:1px solid #eef1f2;')
+              + 'padding:12px 16px;font:inherit;cursor:pointer;transition:background .16s ease,color .16s ease;animation:rivaAnswerIn .26s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + (i * 0.035).toFixed(3) + 's;'
               + (r.isSelected ? 'background:#e8f1f8;' : 'background:#fff;')}
             hover="background:#f0f6fb;">
             <span style={s('flex:1;min-width:0;')}>
@@ -78,6 +85,7 @@ export default function DirectoryPanel({ v, place = 'above' }) {
             </span>
             <span style={s('flex:none;font-size:16px;font-weight:700;color:#005eb8;')}>{r.number}</span>
           </Hover>
+          </React.Fragment>
         ))}
       </div>
     </div>

@@ -143,6 +143,11 @@ class RiversidePracticeQA extends React.Component {
       // it is only updated once typing pauses, so the panel does not flicker
       // in and out on the way through a sentence.
       dirQuery: '',
+      // The CQC register — every service registered in England — searched on
+      // the server for the same settled query. Far too large to hold here, so
+      // the browser asks for the top matches and shows them under the
+      // practice's own numbers.
+      cqc: [],
       dirSel: -1,
       dirClosed: false,
       copiedNumber: '',
@@ -245,7 +250,40 @@ class RiversidePracticeQA extends React.Component {
   onInput(value) {
     this.setState({ input: value, dirSel: -1, dirClosed: false });
     clearTimeout(this.dirTimer);
-    this.dirTimer = setTimeout(() => this.setState({ dirQuery: value }), 260);
+    this.dirTimer = setTimeout(() => {
+      this.setState({ dirQuery: value });
+      this.searchCqc(value);
+    }, 260);
+  }
+
+  // The register is ~57k services, so it is searched on the server. Replies
+  // are stamped with the query they answer: a slow one for an earlier query
+  // can arrive after a fast one for the current query, and must not replace it.
+  searchCqc(value) {
+    const q = String(value || '').trim();
+    if (!this.looksLikeLookup(q)) { this.setState({ cqc: [] }); return; }
+    this.cqcToken = q;
+    fetch('/api/cqc?q=' + encodeURIComponent(q), { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (this.cqcToken !== q) return;
+        this.setState({ cqc: Array.isArray(d.entries) ? d.entries.slice(0, 4) : [] });
+      })
+      .catch(() => { if (this.cqcToken === q) this.setState({ cqc: [] }); });
+  }
+
+  // The practice's own list first — it is what the practice actually uses —
+  // and the register beneath it, marked as what it is. A service already in
+  // the practice's list is not repeated from the register. Built here rather
+  // than in the view model so the keyboard and the panel walk the same rows.
+  directoryRows() {
+    const practice = this.matchDirectory();
+    const seen = new Set(practice.map((e) => phoneDigits(e)).filter(Boolean));
+    const register = (this.state.dirClosed || !this.looksLikeLookup(this.state.dirQuery) ? [] : this.state.cqc)
+      .filter((e) => phoneParts(e).length && !seen.has(phoneDigits(e)));
+    return practice.slice(0, 4)
+      .map((e) => ({ entry: e, group: 'Practice directory' }))
+      .concat(register.map((e) => ({ entry: e, group: 'CQC register' })));
   }
 
   copyContact(entry) {
@@ -261,7 +299,7 @@ class RiversidePracticeQA extends React.Component {
   // Arrow keys move into the list; Enter only takes a number once someone
   // has, so typing a question and pressing Enter still asks it.
   onInputKey(e) {
-    const matches = this.matchDirectory();
+    const matches = this.directoryRows();
     if (!matches.length) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -273,7 +311,7 @@ class RiversidePracticeQA extends React.Component {
       this.setState({ dirClosed: true, dirSel: -1 });
     } else if (e.key === 'Enter' && this.state.dirSel >= 0) {
       e.preventDefault();
-      this.copyContact(matches[Math.min(this.state.dirSel, matches.length - 1)]);
+      this.copyContact(matches[Math.min(this.state.dirSel, matches.length - 1)].entry);
     }
   }
 
@@ -1112,7 +1150,7 @@ class RiversidePracticeQA extends React.Component {
       }))
       .filter((t) => t.key !== activeTurn);
 
-    const dirMatches = this.matchDirectory();
+    const dirMatches = this.directoryRows();
 
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
@@ -1177,13 +1215,18 @@ class RiversidePracticeQA extends React.Component {
       copiedNumber: this.state.copiedNumber,
       hasCopied: !!this.state.copiedNumber,
       // The practice directory, matched live against the box above the dock.
-      directory: dirMatches.map((e, i) => ({
-        key: e.id || e.label,
-        label: e.label,
-        detail: [e.category, e.note].filter(Boolean).join(' · '),
-        number: (phoneParts(e)[0] || {}).display || '',
+      directory: dirMatches.map((row, i) => ({
+        key: (row.entry.id || row.entry.label) + ':' + i,
+        group: row.group,
+        // The register's rows carry an address, which is what tells one branch
+        // from another; the practice's own carry the area they sit under.
+        label: row.entry.label,
+        detail: row.group === 'CQC register'
+          ? (row.entry.note || '')
+          : [row.entry.category, row.entry.note].filter(Boolean).join(' · '),
+        number: (phoneParts(row.entry)[0] || {}).display || '',
         isSelected: i === self.state.dirSel,
-        onPick: () => self.copyContact(e),
+        onPick: () => self.copyContact(row.entry),
       })).filter((r) => r.number),
       hasDirectory: dirMatches.length > 0,
       directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
