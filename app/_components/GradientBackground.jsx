@@ -41,16 +41,18 @@ const TONES = {
     ],
     grain: 0.28,
   },
-  // The same shape in the practice's palette, kept light enough to read over.
+  // The same shape in the practice's palette, kept light enough to read
+  // over: a pale wash rather than colour — mint at the top right, NHS
+  // blue low on the left, a lilac cast between them, all under white.
   nhs: {
-    backgroundColor: '#f0f4f5',
+    backgroundColor: '#eef3f6',
     layers: [
-      'radial-gradient(circle at 66.94% 46.43%, rgba(240, 244, 245, 1) 0%, rgba(240, 244, 245, 0.844) 19.02%, rgba(240, 244, 245, 0.5) 38.05%, rgba(240, 244, 245, 0.156) 57.07%, rgba(240, 244, 245, 0) 76.1%)',
-      'radial-gradient(circle at 34.69% 66.31%, rgba(0, 94, 184, 0.26) 0%, rgba(0, 94, 184, 0.19) 12.73%, rgba(0, 94, 184, 0.11) 25.45%, rgba(0, 94, 184, 0.035) 38.18%, rgba(0, 94, 184, 0) 50.9%)',
-      'radial-gradient(circle at 48.93% 19.32%, rgba(65, 182, 230, 0.24) 0%, rgba(65, 182, 230, 0.18) 16.75%, rgba(65, 182, 230, 0.1) 33.5%, rgba(65, 182, 230, 0.03) 50.25%, rgba(65, 182, 230, 0) 67%)',
-      'radial-gradient(circle at 80.23% 87.54%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.844) 10.28%, rgba(255, 255, 255, 0.5) 20.55%, rgba(255, 255, 255, 0.156) 30.83%, rgba(255, 255, 255, 0) 41.1%)',
+      'radial-gradient(circle at 78% 12%, rgba(196, 232, 226, 0.85) 0%, rgba(196, 232, 226, 0.45) 28%, rgba(196, 232, 226, 0.14) 52%, rgba(196, 232, 226, 0) 70%)',
+      'radial-gradient(circle at 14% 84%, rgba(179, 202, 232, 0.8) 0%, rgba(179, 202, 232, 0.42) 26%, rgba(179, 202, 232, 0.13) 50%, rgba(179, 202, 232, 0) 68%)',
+      'radial-gradient(circle at 88% 78%, rgba(206, 205, 236, 0.6) 0%, rgba(206, 205, 236, 0.3) 24%, rgba(206, 205, 236, 0.08) 46%, rgba(206, 205, 236, 0) 64%)',
+      'radial-gradient(circle at 46% 40%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 22%, rgba(255, 255, 255, 0.35) 42%, rgba(255, 255, 255, 0) 66%)',
     ],
-    grain: 0.16,
+    grain: 0.1,
   },
 };
 

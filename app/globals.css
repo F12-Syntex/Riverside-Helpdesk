@@ -416,6 +416,12 @@ body { overflow-x: hidden; }
  * the gutters back. Declared after .riva-dock-field so it wins. */
 .riva-dock-field-icon { padding: 0 54px !important; }
 
+/* The Q&A field carries a search icon on the left and its ask button on the
+ * right, both inside the pill, so its gutters are cut to fit around them. */
+.riva-dock-field-search { padding: 0 70px 0 56px !important; }
+.riva-dock-send { transition: background-color .18s ease, box-shadow .18s ease; }
+.riva-dock-send:hover { box-shadow: 0 4px 14px rgba(0,94,184,.38); }
+
 /* The strip directly above the dock: the bar that carries a question up
  * out of the field on its way to the heading, and the line confirming a
  * copied number. Its height is reserved so the dock never moves as they
@@ -481,6 +487,8 @@ body { overflow-x: hidden; }
     font-size: 17px !important; padding: 0 20px !important;
   }
   .riva-dock-field-icon { padding: 0 46px !important; }
+  .riva-dock-field-search { padding: 0 62px 0 48px !important; }
+  .riva-dock-send { width: 44px !important; height: 44px !important; right: 8px !important; }
   .riva-dock-strip { height: 26px; }
   /* The glow is a desktop pleasure; on a phone it eats the small margin
      between the dock and the edge of the screen. */

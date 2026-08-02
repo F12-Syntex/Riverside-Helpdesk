@@ -22,6 +22,15 @@ import { mdPlain } from './chat/Md';
 // JPEG on a white background; small files are sent as-is.
 const MAX_IMAGES = 4;
 
+// The opening screen offers three questions rather than a blank field: the
+// ones asked at the desk every day. Short labels, because they are read at a
+// glance; the question asked is the full sentence.
+const QUICK_ASKS = [
+  { label: 'Duty doctor today', question: 'Who is the duty doctor today?' },
+  { label: 'Referral process', question: 'How do I do a referral?' },
+  { label: 'Report a significant event', question: 'How do I report a significant event?' },
+];
+
 // How long ago a cached answer was written, in the words someone would use.
 // The reader is deciding whether to trust it or press Reload, and "3 hours ago"
 // answers that in a way a timestamp does not.
@@ -1088,7 +1097,7 @@ class RiversidePracticeQA extends React.Component {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
       // One line. Anything longer is not read.
       welcome: this.props.welcome != null ? this.props.welcome
-        : 'Answered from the practice’s own documents.',
+        : 'Ask anything about rotas, policies, or contacts.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -1128,6 +1137,8 @@ class RiversidePracticeQA extends React.Component {
       hasDirectory: dirMatches.length > 0,
       directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
       onInputKey: (e) => self.onInputKey(e),
+      // The three questions the desk actually asks, offered as one tap each.
+      quickAsks: QUICK_ASKS.map((q, i) => ({ key: i, label: q.label, onAsk: () => self.ask(q.question) })),
       // Sources: the same material, listed rather than searched.
       sourceNotes: this.state.notes,
       sourceContacts: this.state.directory
@@ -1243,9 +1254,35 @@ class RiversidePracticeQA extends React.Component {
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
-            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('display:flex;')}>
-              <input className={'riva-input riva-dock-field' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Ask a question, or type a name for its number…" aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
+              <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
+                <Svg w={20} sw={2.2}>{Icons.search}</Svg>
+              </span>
+              <input className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Ask a question, or type a name for its number…" aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
+                <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
+              </Hover>
             </form>
+
+            {/* Three things people ask at the desk every day, one tap each.
+                Only on the opening screen — once there is an answer the page
+                belongs to it. */}
+            {v.isEmpty && (
+              <div style={s('display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:14px 0 0;')}>
+                {v.quickAsks.map((q) => (
+                  <Hover key={q.key} tag="button" type="button" className="riva-lift" onClick={q.onAsk}
+                    base="background:#fff;border:1px solid #e0e7ea;border-radius:999px;padding:9px 18px;font:inherit;font-size:14.5px;font-weight:500;color:#4c6272;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.05);"
+                    hover="border-color:#005eb8;color:#005eb8;">
+                    {q.label}
+                  </Hover>
+                ))}
+              </div>
+            )}
+
+            {/* Under the field, where it is read on the way to typing. */}
+            {v.isEmpty && (
+              <p style={s('margin:16px 0 0;font-size:13px;font-weight:600;color:#c0392b;text-align:center;')}>Don&rsquo;t type patient related data.</p>
+            )}
           </div>
         </div>
         )}

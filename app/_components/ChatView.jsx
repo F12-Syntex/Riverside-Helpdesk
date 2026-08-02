@@ -26,9 +26,6 @@ export default function ChatView({ v }) {
         <div className="riva-hero-block" style={s('text-align:center;padding:26vh 0 0;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
           <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;')}>What do you need?</h1>
           <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
-          {/* The warning is read here, before anything is typed, rather than
-              under the field where it stood after every answer. */}
-          <p style={s('font-size:13.5px;font-weight:600;color:#c0392b;margin:14px auto 0;')}>Don&rsquo;t type patient related data.</p>
         </div>
       )}
 
