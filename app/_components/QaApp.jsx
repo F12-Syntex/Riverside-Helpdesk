@@ -12,6 +12,7 @@ import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import DirectoryPanel from './DirectoryPanel';
 import GradientBackground from './GradientBackground';
+import SystemMap from './SystemMap';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import { plainText } from './chat/Rich';
@@ -28,15 +29,11 @@ const MAX_IMAGES = 4;
 // otherwise reachable only by typing their address now the header carries no
 // navigation. A `question` entry asks it here; an `href` entry goes there.
 // Labels are short because they are read at a glance.
+// Two shortcuts, no more. The system map opens here, in the Q&A itself,
+// rather than sending anyone to another page; the notebook is a place to go.
 const QUICK_ASKS = [
-  { label: 'Duty doctor today', question: 'Who is the duty doctor today?' },
-  { label: 'Referral process', question: 'How do I do a referral?' },
-  { label: 'Significant event', question: 'How do I report a significant event?' },
-  { label: 'Find a number', href: '/lookup', icon: Icons.search },
+  { label: 'System map', map: true, icon: Icons.sitemap },
   { label: 'Notebook', href: '/notebook', icon: Icons.edit },
-  { label: 'Rota', href: '/rota', icon: Icons.calendar },
-  { label: 'System map', href: '/diagram', icon: Icons.sitemap },
-  { label: 'All tools', href: '/tools', icon: Icons.home },
 ];
 
 // A directory entry's numbers, whatever shape they arrive in. The bundled
@@ -159,6 +156,7 @@ class RiversidePracticeQA extends React.Component {
       kbQuery: '',         // knowledge-base search text
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
+      showMap: false,      // the system map, opened from the opening screen
     };
     // Timers belonging to the stored "test" answer, cleared on unmount.
     this.mockTimers = [];
@@ -1197,8 +1195,13 @@ class RiversidePracticeQA extends React.Component {
         href: q.href || '',
         icon: q.icon || null,
         isLink: !!q.href,
-        onAsk: q.href ? undefined : (() => self.ask(q.question)),
+        onAsk: q.href ? undefined : (() => (q.map ? self.setState({ showMap: true }) : self.ask(q.question))),
       })),
+      showMap: this.state.showMap,
+      // Anything on screen other than the opening question can be left, and
+      // this is how: back to an empty page with nothing asked.
+      canReset: this.state.showMap || this.state.messages.length > 0,
+      onReset: () => self.setState({ showMap: false, messages: [], activeTurn: null, view: 'assistant' }, () => self.save()),
       // Sources: the same material, listed rather than searched.
       sourceNotes: this.state.notes,
       sourceContacts: this.state.directory
@@ -1270,20 +1273,34 @@ class RiversidePracticeQA extends React.Component {
           <AppHeader v={v} />
         </div>
 
+        {/* The way back to an empty page. Shown only when there is something
+            to leave, so the opening screen stays clean. */}
+        {v.canReset && (
+          <div style={s('position:relative;z-index:1;flex:none;max-width:820px;width:100%;margin:0 auto;padding:0 24px;')}>
+            <Hover tag="button" type="button" onClick={v.onReset}
+              base="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:4px 0 10px;font:inherit;font-size:14.5px;font-weight:600;color:#4c6272;cursor:pointer;"
+              hover="color:#005eb8;">
+              <Svg w={16} sw={2.4}>{Icons.arrowLeft}</Svg>Start again
+            </Hover>
+          </div>
+        )}
+
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
         <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade'}
           style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:184px;'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
-          <div key={v.isKb ? 'sources' : 'chat'} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
-            {v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />}
+          <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
+            {v.showMap
+              ? <div className="riva-column" style={s('max-width:1440px;margin:0 auto;padding:8px 24px 48px;')}><SystemMap /></div>
+              : (v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />)}
           </div>
         </div>
 
         {/* Nothing asked yet: the dock is the page, so it sits in the middle
             of it and drops to the foot once there is an answer to read. */}
-        {!v.isKb && (
+        {!v.isKb && !v.showMap && (
         <div className={'riva-dock' + (v.isEmpty ? ' riva-dock-center' : '')}>
           <div className="riva-dock-inner">
             {/* The question leaves the field as a bar travelling up to where
@@ -1307,9 +1324,10 @@ class RiversidePracticeQA extends React.Component {
                 ))}
               </div>
             )}
-            {/* The practice's own telephone list, sitting directly on top of
-                the field it is being typed into. */}
-            <DirectoryPanel v={v} />
+            {/* The telephone list sits against the field: over it once the
+                page has an answer on it, under it on the opening screen,
+                where anything above the field would cover the heading. */}
+            {!v.isEmpty && <DirectoryPanel v={v} />}
 
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
@@ -1323,6 +1341,8 @@ class RiversidePracticeQA extends React.Component {
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>
             </form>
+
+            {v.isEmpty && <DirectoryPanel v={v} place="below" />}
 
             {/* Three things people ask at the desk every day, one tap each.
                 Only on the opening screen — once there is an answer the page

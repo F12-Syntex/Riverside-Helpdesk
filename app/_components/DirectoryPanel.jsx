@@ -16,7 +16,7 @@ import { s, Hover } from './ui';
 
 const EXIT_MS = 180;
 
-export default function DirectoryPanel({ v }) {
+export default function DirectoryPanel({ v, place = 'above' }) {
   const [mounted, setMounted] = React.useState(v.hasDirectory);
   const [rows, setRows] = React.useState(v.directory);
   const [count, setCount] = React.useState(v.directoryCount);
@@ -53,7 +53,8 @@ export default function DirectoryPanel({ v }) {
 
   return (
     <div
-      style={s('background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.14);overflow:hidden;margin-bottom:8px;transform-origin:bottom center;transition:height .24s cubic-bezier(.2,.7,.3,1);'
+      style={s('background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.14);overflow:hidden;transition:height .24s cubic-bezier(.2,.7,.3,1);'
+        + (place === 'below' ? 'margin-top:10px;transform-origin:top center;' : 'margin-bottom:8px;transform-origin:bottom center;')
         + (height == null ? '' : 'height:' + height + 'px;')
         + (leaving
           ? 'animation:rivaPanelOut .18s ease both;pointer-events:none;'
