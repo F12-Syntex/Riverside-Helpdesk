@@ -336,7 +336,10 @@ body { overflow-x: hidden; }
   box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
   transition: border-color .18s ease, box-shadow .22s ease, background-color .18s ease;
 }
-.riva-dock-field:hover { border-color: #aab8bf !important; }
+/* :not(:focus) matters. Without it this rule sits after .riva-input:focus at
+   the same weight, so hovering a focused field repainted its blue edge grey
+   and the field read as though it had lost focus under the cursor. */
+.riva-dock-field:hover:not(:focus) { border-color: #aab8bf !important; }
 
 /* A soft NHS-blue light behind the field, so the dock reads as the live
  * part of the page. Kept faint on purpose: this is a practice's working
@@ -356,10 +359,14 @@ body { overflow-x: hidden; }
   transition: opacity .3s ease, filter .3s ease;
 }
 .riva-dock-form:focus-within::before { opacity: 1; filter: blur(22px); }
-/* Focus is said with weight, not just colour: the field lifts further off
-   the page the moment it is being typed into. */
+/* Focus is said with weight, not just colour: the field lifts clear off the
+   page the moment it is being typed into, and takes a soft blue ring with
+   it so the state is unmistakable. */
 .riva-dock-form:focus-within .riva-dock-field {
-  box-shadow: 0 3px 6px rgba(33,43,50,.08), 0 22px 56px rgba(33,43,50,.26);
+  box-shadow:
+    0 0 0 4px rgba(0,94,184,.10),
+    0 6px 12px rgba(33,43,50,.10),
+    0 30px 72px rgba(33,43,50,.34);
 }
 .riva-dock-form:has(.riva-dock-live)::before { opacity: 1; animation: rivaGlowPulse 2.4s ease-in-out infinite; }
 @keyframes rivaGlowPulse { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
@@ -418,10 +425,6 @@ body { overflow-x: hidden; }
   
   .riva-column { padding-left: 16px !important; padding-right: 16px !important; }
   
-  /* Sources becomes its icon beside the menu button: two words and a menu
-     do not both fit next to the practice's name on a 360px screen. */
-  .riva-src-label { display: none; }
-  
   /* The opening screen: less air above the heading, since there is far
      less screen to spend it on. */
   .riva-hero-block { padding-top: 15vh !important; }
@@ -435,8 +438,7 @@ body { overflow-x: hidden; }
   .riva-dock-center > .riva-dock-inner { transform: none; }
 
   /* No navigation furniture beside the practice's name: the field is the
-     whole page on a phone. Sources and the menu are desktop only. */
-  .riva-src-btn { display: none !important; }
+     whole page on a phone. */
   .riva-nav-btn { display: none !important; }
   .riva-dock-field {
     height: 60px !important; min-height: 60px !important;
