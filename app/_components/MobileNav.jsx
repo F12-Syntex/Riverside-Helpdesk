@@ -13,8 +13,9 @@ import { s, Hover, Svg, Icons } from './ui';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
+  { href: '/', label: 'Practice Q&A' },
   { href: '/lookup', label: 'Instant lookup' },
-  { href: '/helpbot', label: 'Practice Q&A' },
+  { href: '/tools', label: 'All tools' },
   // Hidden for now — keep in step with TOOLS in app/page.js. The routes still
   // work directly (/diagram is the full system map).
   // { href: '/diagram', label: 'System map' },
@@ -29,9 +30,10 @@ const TOOLS = [
   { href: '/index', label: 'Full index' },
 ];
 
+// One entry, matching the single button in the header: everything the
+// assistant reads from is behind Sources.
 const VIEWS = [
-  { key: 'assistant', label: 'Assistant' },
-  { key: 'kb', label: 'Knowledge base' },
+  { key: 'kb', label: 'Sources' },
 ];
 
 const GROUP_LABEL = 'font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.05em;margin:0 0 14px;';

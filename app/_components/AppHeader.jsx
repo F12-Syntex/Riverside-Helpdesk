@@ -5,10 +5,6 @@ import Link from 'next/link';
 import { s, Hover, Svg, Icons } from './ui';
 import MobileNav from './MobileNav';
 
-const TABS = [
-  { key: 'assistant', label: 'Assistant', icon: Icons.chat },
-  { key: 'kb', label: 'Knowledge base', icon: Icons.book },
-];
 
 export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null }) {
   const showTabs = !!(v && v.onSetView);
@@ -28,20 +24,15 @@ export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null })
       </div>
 
       <div style={s('margin-left:auto;display:flex;gap:12px;align-items:center;flex:none;')}>
-        {/* Desktop: tab pills for the bot views. Hidden on mobile. */}
+        {/* One button, not a pair of tabs: everything the assistant reads
+            from is behind Sources, and the way back is the same button. */}
         {showTabs && (
-          <div className="riva-tabs-desktop" style={s('display:inline-flex;align-items:center;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:3px;')}>
-            {TABS.map((t) => {
-              const active = v.view === t.key;
-              return (
-                <Hover key={t.key} tag="button" onClick={() => v.onSetView(t.key)} className="riva-tab"
-                  base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:7px;padding:7px 15px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
-                  hover={active ? '' : 'color:#212b32;'}>
-                  <Svg w={16} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
-                </Hover>
-              );
-            })}
-          </div>
+          <Hover tag="button" onClick={() => v.onSetView(v.isKb ? 'assistant' : 'kb')}
+            base={'display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;' + (v.isKb ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;' : 'background:#fff;border:1px solid #d8dde0;color:#005eb8;')}
+            hover={v.isKb ? 'background:#003087;border-color:#003087;' : 'border-color:#005eb8;background:#f0f6fb;'}>
+            <Svg w={17} sw={2}>{v.isKb ? Icons.chat : Icons.book}</Svg>
+            <span>{v.isKb ? 'Back to questions' : 'Sources'}</span>
+          </Hover>
         )}
 
         {/* Page tabs (e.g. Rota / Staff) — segmented control, shown all sizes. */}
