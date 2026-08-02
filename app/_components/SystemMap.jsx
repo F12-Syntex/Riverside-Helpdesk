@@ -239,14 +239,19 @@ const LEVELS = [
   { key: 3, label: 'Full detail', caption: 'Adds each page’s API routes, the libraries and the RAG pipeline.' },
 ];
 
-export default function SystemMap() {
+// `align` decides how the map introduces itself. On its own page it reads as
+// a document, left-aligned like one. Inside the Q&A it is the thing on screen
+// rather than a page being read, so its heading, its sentence and its control
+// sit over the middle of the diagram they belong to.
+export default function SystemMap({ align = 'left' }) {
   const [level, setLevel] = React.useState(2);
   const current = LEVELS.find((l) => l.key === level);
+  const mid = align === 'center';
 
   return (
-    <div>
+    <div style={s(mid ? 'text-align:center;' : '')}>
       <h1 style={s('font-size:30px;margin:0 0 4px;letter-spacing:-0.02em;')}>System map</h1>
-      <p style={s(`font-size:16px;color:${MUTED};margin:0 0 18px;max-width:70ch;`)}>
+      <p style={s(`font-size:16px;color:${MUTED};margin:0 auto 18px;max-width:70ch;${mid ? '' : 'margin-left:0;'}`)}>
         One diagram of the whole system. Use the control to change how much detail is shown. Q&amp;A runs as an
         <strong> agent</strong>: it chooses its own searches, reads whole pages when it needs the full process, and can
         fall back to the web. The <strong>Notebook comes first</strong>, and every claim must quote a source it
@@ -254,7 +259,7 @@ export default function SystemMap() {
       </p>
 
       {/* Detail control */}
-      <div style={s('display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;')}>
+      <div style={s('display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;' + (mid ? 'justify-content:center;' : ''))}>
         <span style={s(`font-size:13px;font-weight:700;color:${MUTED};`)}>Detail</span>
         <div style={s('display:inline-flex;background:#e7edf0;border:1px solid #d3dde3;border-radius:10px;padding:3px;gap:3px;')}>
           {LEVELS.map((l) => {
@@ -273,7 +278,7 @@ export default function SystemMap() {
 
       {/* Dot legend (only meaningful when routes/pages carry them) */}
       {level >= 2 && (
-        <div style={s('display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 12px;')}>
+        <div style={s('display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 12px;' + (mid ? 'justify-content:center;' : ''))}>
           {Object.entries(DEP).map(([k, d]) => (
             <span key={k} style={s(`display:inline-flex;align-items:center;gap:6px;font-size:12px;color:${MUTED};`)}>
               <span style={s(`width:15px;height:15px;border-radius:50%;background:${d.c};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;`)}>{k}</span>{d.t}
@@ -287,7 +292,7 @@ export default function SystemMap() {
         {level === 1 ? <FlowDiagram /> : <ArchDiagram full={level === 3} />}
       </div>
 
-      <p style={s(`font-size:12.5px;color:${MUTED};margin:14px 0 0;`)}>
+      <p style={s(`font-size:12.5px;color:${MUTED};margin:14px auto 0;max-width:70ch;${mid ? '' : 'margin-left:0;'}`)}>
         On a narrow screen, pick a lower detail level to keep it readable — the diagram always fits the width.
       </p>
     </div>

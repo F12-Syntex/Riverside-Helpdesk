@@ -1293,7 +1293,7 @@ class RiversidePracticeQA extends React.Component {
               swapping it under the reader. */}
           <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
             {v.showMap
-              ? <div className="riva-column" style={s('max-width:1440px;margin:0 auto;padding:8px 24px 48px;')}><SystemMap /></div>
+              ? <div className="riva-column" style={s('max-width:1280px;margin:0 auto;padding:8px 24px 48px;')}><SystemMap align="center" /></div>
               : (v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />)}
           </div>
         </div>
