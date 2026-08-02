@@ -294,7 +294,7 @@ body { overflow-x: hidden; }
 
 /* Before anything has been asked the dock is the page, so it stands in
  * the middle of it; the first question lets it fall back to the foot. */
-.riva-dock-center > .riva-dock-inner { transform: translateY(-50vh); }
+.riva-dock-center > .riva-dock-inner { transform: translateY(-40vh); }
 
 /* With no bar behind them, each control carries its own white surface
  * and a soft lift so it reads against whatever it is floating over.
