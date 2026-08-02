@@ -4,7 +4,7 @@ import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
 import JudgementChip from './JudgementChip';
 import ContactsCard from './ContactsCard';
-import ToolTimeline from './ToolTimeline';
+import WorkingState from './WorkingState';
 import Rich from './Rich';
 import Md from './Md';
 
@@ -265,25 +265,9 @@ export default function AiAnswer({ v }) {
   return (
     <div>
       <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
-        {v.aiLoading && (v.hasSteps || v.statusText ? (
-          // The agent is working: show each lookup as it happens rather than a
-          // spinner that says nothing for twenty seconds. Quietly, though — the
-          // working state must not be louder than the answer that replaces it.
-          <div style={s('padding:14px 18px;')}>
-            <ToolTimeline steps={v.steps} statusText={v.statusText} live />
-          </div>
-        ) : (
-          // The same line, same size, same place as the first lookup that will
-          // replace it — so the bubble does not lurch when the agent starts.
-          <div style={s('padding:14px 18px;display:flex;align-items:center;gap:9px;')}>
-            <span style={s('flex:none;width:20px;height:20px;border-radius:50%;background:#e8f1f8;display:inline-flex;gap:2px;align-items:center;justify-content:center;')}>
-              <span style={s('width:3px;height:3px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite;')} />
-              <span style={s('width:3px;height:3px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .2s;')} />
-              <span style={s('width:3px;height:3px;border-radius:50%;background:#005eb8;animation:rivaBlink 1.2s infinite .4s;')} />
-            </span>
-            <span style={s('font-size:13.5px;font-weight:600;color:#212b32;')}>Checking the documents&hellip;</span>
-          </div>
-        ))}
+        {/* The agent is working: one readable line saying what it is doing
+            now, rather than a grid of every lookup in unreadable type. */}
+        {v.aiLoading && <WorkingState steps={v.steps} statusText={v.statusText} />}
 
         {v.aiError && (
           <div style={s('padding:18px 22px;font-size:17px;line-height:1.5;color:#212b32;')}>
@@ -318,12 +302,6 @@ export default function AiAnswer({ v }) {
             {v.hasReferralRoute && <ReferralRoute route={v.referralRoute} />}
 
             {v.hasKeyPoints && <KeyPoints points={v.keyPoints} />}
-
-            {v.hasSteps && (
-              <div style={s('padding:14px 24px 0;')}>
-                <ToolTimeline steps={v.steps} />
-              </div>
-            )}
 
             {v.hasSections && (
               <div style={s('padding:16px 24px 6px;display:flex;flex-direction:column;gap:16px;')}>
