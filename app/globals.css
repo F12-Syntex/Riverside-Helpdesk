@@ -264,7 +264,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-md th, .riva-md td { border: 1px solid #d8dde0; padding: 7px 11px; font-size: 15px; line-height: 1.5; text-align: left; vertical-align: top; min-width: 48px; }
 .riva-md th { background: #eef1f2; font-weight: 700; }
 .riva-md hr { border: none; border-top: 1px solid #d8dde0; margin: 14px 0; }
-.riva-md mark { background: #fff6cc; border-radius: 3px; padding: 0 2px; }
+/* The highlighter. One phrase per answer carries it: the words that
+   actually answer the question, so someone scanning finds them without
+   reading the rest. Safety-critical rules are marked the same way. */
+.riva-md mark { background: #fff2ac; border-radius: 3px; padding: 1px 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .riva-md kbd { font-family: Consolas, Menlo, monospace; font-size: .85em; background: #f0f4f5; border: 1px solid #d8dde0; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
 
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
@@ -291,7 +294,7 @@ body { overflow-x: hidden; }
 
 /* Before anything has been asked the dock is the page, so it stands in
  * the middle of it; the first question lets it fall back to the foot. */
-.riva-dock-center > .riva-dock-inner { transform: translateY(-38vh); }
+.riva-dock-center > .riva-dock-inner { transform: translateY(-50vh); }
 
 /* With no bar behind them, each control carries its own white surface
  * and a soft lift so it reads against whatever it is floating over.
@@ -300,11 +303,11 @@ body { overflow-x: hidden; }
 .riva-dock-field {
   /* A fixed height, not a minimum: the field is the same size before the
      first question and after every one of them. */
-  height: 62px !important;
-  min-height: 62px !important;
+  height: 68px !important;
+  min-height: 68px !important;
   flex-shrink: 0;
-  font-size: 18.5px !important;
-  padding: 0 24px !important;
+  font-size: 19.5px !important;
+  padding: 0 26px !important;
   background: #fff !important;
   /* The dock is the one thing on the page to use, so it is allowed to sit
      a little proud of it: a firmer edge and a deeper lift than a card. */
@@ -347,7 +350,7 @@ body { overflow-x: hidden; }
 
 /* A dock field with an icon sitting inside it (the lookup search) needs
  * the gutters back. Declared after .riva-dock-field so it wins. */
-.riva-dock-field-icon { padding: 0 52px !important; }
+.riva-dock-field-icon { padding: 0 54px !important; }
 
 /* The strip directly above the dock: the bar that carries a question up
  * out of the field on its way to the heading, and the line confirming a

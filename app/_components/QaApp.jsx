@@ -382,7 +382,13 @@ class RiversidePracticeQA extends React.Component {
       }));
     }
 
-    at(clock + 700, () => this.updateAi(idx, Object.assign({ status: 'done', answerKind: 'answer', statusText: '' }, TEST_ANSWER)));
+    // `kind` stays 'ai' — it decides which card renders this message, and the
+    // fixture must not be able to change it.
+    at(clock + 700, () => {
+      const patch = Object.assign({ status: 'done', answerKind: 'answer', statusText: '' }, TEST_ANSWER);
+      delete patch.kind;
+      this.updateAi(idx, patch);
+    });
   }
 
   // `refresh` is set by Reload on a cached answer: research the question again

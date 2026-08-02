@@ -59,7 +59,9 @@ test('a path is matched whatever is hung off the end of it', () => {
   assert.equal(normalisePath('/lookup/?q=dentist'), '/lookup');
   assert.equal(normalisePath('/lookup/'), '/lookup');
   assert.equal(normalisePath('/'), '/');
-  assert.equal(routeTitle('/helpbot'), 'Practice Q&A');
+  // The Q&A answers at "/" now; /helpbot is kept as its old address.
+  assert.equal(routeTitle('/'), 'Practice Q&A');
+  assert.equal(routeTitle('/helpbot'), 'Practice Q&A (old address)');
   assert.equal(routeTitle('/api/ask'), 'Ask a question');
 });
 
@@ -99,6 +101,7 @@ test('the audit log is registered but stays off the landing page', () => {
   assert.ok(stats, '/stats should be in the registry so the log can name it');
   assert.equal(stats.hidden, true);
   assert.notEqual(stats.landing, true);
-  // The landing page shows exactly the two everyday tools, plus itself.
-  assert.deepEqual(PAGES.filter((p) => p.landing).map((p) => p.path), ['/', '/helpbot', '/lookup']);
+  // The everyday tools: the Q&A, which is now the front door itself, and the
+  // lookup. /helpbot is the Q&A's old address and is not counted again.
+  assert.deepEqual(PAGES.filter((p) => p.landing).map((p) => p.path), ['/', '/lookup']);
 });

@@ -72,7 +72,7 @@ function CacheBar({ v }) {
 // not another grey bullet.
 function KeyPoints({ points }) {
   return (
-    <div style={s('margin:14px 0 0;border:1px solid #d8dde0;border-radius:12px;background:#f7fafb;padding:12px 15px 13px;')}>
+    <div style={s('margin:14px 0 0;border:1px solid #dde4e7;border-radius:12px;background:#fff;padding:13px 16px 14px;')}>
       <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;margin-bottom:9px;')}>In brief</div>
       <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
         {points.map((p) => (
@@ -324,7 +324,7 @@ export default function AiAnswer({ v }) {
             {v.hasGaps && (
               // What the practice's own material does not cover, said plainly
               // rather than filled in from the model's general knowledge.
-              <div style={s('margin:12px 0 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #d8dde0;background:#f7fafb;border-radius:10px;padding:12px 14px;')}>
+              <div style={s('margin:12px 0 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #dde4e7;background:#fff;border-radius:10px;padding:12px 14px;')}>
                 <span style={s('flex:none;color:#4c6272;display:flex;margin-top:2px;')}><Svg w={16} sw={2.2}>{Icons.infoCircle}</Svg></span>
                 <div style={s('font-size:14.5px;line-height:1.5;color:#4c6272;')}>
                   <strong style={s('color:#212b32;')}>Not in the practice&rsquo;s own material:</strong> <Rich text={v.gaps} />
@@ -335,7 +335,7 @@ export default function AiAnswer({ v }) {
             {v.hasMessage && (
               <div style={s('margin:10px 0 4px;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Suggested message</div>
-                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
+                <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
                 {v.hasMessageImages && <SourceImages images={v.messageImages} />}
                 {v.hasMessageCite ? <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} /> : <JudgementChip label="AI-drafted wording: check before sending" />}
               </div>
@@ -352,7 +352,7 @@ export default function AiAnswer({ v }) {
                 <div style={s('display:flex;flex-direction:column;gap:8px;')}>
                   {v.followUps.map((f) => (
                     <Hover key={f.key} onClick={f.onClick}
-                      base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:11px 14px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;"
+                      base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:12px 15px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;transition:border-color .16s ease,background-color .16s ease;"
                       hover="border-color:#005eb8;background:#f7fbff;">
                       <span style={s('flex:none;display:flex;')}><Svg w={17}>{Icons.arrow}</Svg></span><span>{f.question}</span>
                     </Hover>
