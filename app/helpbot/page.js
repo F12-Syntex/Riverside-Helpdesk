@@ -92,6 +92,9 @@ class RiversidePracticeQA extends React.Component {
       input: '',
       pendingImages: [],   // images attached to the next message: [{ name, dataUrl }]
       messages: [],
+      // Which question is on screen. null means the latest one; a number
+      // means an earlier question was opened from the minimised history.
+      activeTurn: null,
       customGuides: [],
       showAdd: false,
       draft: this.blankDraft(),
@@ -121,9 +124,16 @@ class RiversidePracticeQA extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (prevState && prevState.messages !== this.state.messages) {
+    if (!prevState) return;
+    // A question owns the page, so opening one puts the reader at the top of
+    // it rather than chasing the foot of a transcript. Answers arriving into
+    // the question already on screen don't move it.
+    const asked = (ms) => ms.filter((m) => m.role === 'user').length;
+    const changed = prevState.activeTurn !== this.state.activeTurn
+      || asked(this.state.messages) !== asked(prevState.messages);
+    if (changed) {
       const el = document.getElementById('riva-scroll');
-      if (el) el.scrollTop = el.scrollHeight;
+      if (el) el.scrollTop = 0;
     }
   }
 
@@ -234,7 +244,9 @@ class RiversidePracticeQA extends React.Component {
     const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
-    this.setState({ messages, input: '', pendingImages: [] }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    // Asking always brings the reader back to the newest question, even if
+    // they were reading an earlier one when they asked it.
+    this.setState({ messages, input: '', pendingImages: [], activeTurn: null }, () => { this.save(); this.fetchAI(question, aiIdx); });
   }
 
   // `refresh` is set by Reload on a cached answer: research the question again
@@ -503,7 +515,7 @@ class RiversidePracticeQA extends React.Component {
     this.flagCopied(idx);
   }
 
-  newChat() { this.setState({ messages: [], view: 'assistant' }, () => this.save()); }
+  newChat() { this.setState({ messages: [], view: 'assistant', activeTurn: null }, () => this.save()); }
 
   setView(view) {
     this.setState({ view });
@@ -859,6 +871,38 @@ class RiversidePracticeQA extends React.Component {
       };
     });
 
+    /* --------------------------- Turns ---------------------------- *
+     * The transcript is grouped into turns — a question and everything
+     * the assistant said in reply to it. One turn is on screen at a
+     * time; the rest are minimised into the history line above it.
+     * -------------------------------------------------------------- */
+    const groups = [];
+    this.state.messages.forEach((m, i) => {
+      if (m.role === 'user') {
+        const imgs = m.images || [];
+        groups.push({
+          question: m.text || 'About the attached image',
+          images: imgs,
+          // Image data was stripped to fit localStorage — say so instead.
+          imageNote: (!imgs.length && m.imageCount)
+            ? m.imageCount + ' image' + (m.imageCount === 1 ? '' : 's') + ' attached'
+            : '',
+          idxs: [],
+        });
+      } else {
+        // A reply with no question before it (an older saved chat, say).
+        if (!groups.length) groups.push({ question: '', images: [], imageNote: '', idxs: [] });
+        groups[groups.length - 1].idxs.push(i);
+      }
+    });
+    const lastTurn = groups.length - 1;
+    const activeTurn = Math.min(this.state.activeTurn == null ? lastTurn : this.state.activeTurn, lastTurn);
+    const active = groups[activeTurn] || null;
+    const earlier = groups
+      .map((g, i) => ({ key: i, question: g.question, onOpen: () => self.setState({ activeTurn: i }) }))
+      .filter((t) => t.key !== activeTurn)
+      .reverse();
+
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
       onChange: (e) => self.setDraftStep(i, e.target.value),
@@ -913,6 +957,19 @@ class RiversidePracticeQA extends React.Component {
       hasPendingImages: this.state.pendingImages.length > 0,
       onPaste: (e) => self.onPaste(e),
       messages,
+      turn: active ? {
+        key: activeTurn,
+        question: active.question,
+        images: active.images,
+        hasImages: active.images.length > 0,
+        imageNote: active.imageNote,
+        items: active.idxs.map((i) => messages[i]),
+      } : null,
+      history: earlier,
+      hasHistory: groups.length > 1,
+      historyLabel: earlier.length + (earlier.length === 1 ? ' earlier question' : ' earlier questions'),
+      isViewingHistory: activeTurn !== lastTurn,
+      onLatest: () => self.setState({ activeTurn: null }),
       cats: this.cats(),
       showAdd: this.state.showAdd,
       draft: this.state.draft,

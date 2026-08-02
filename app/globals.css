@@ -14,6 +14,10 @@ body {
 /* Steps of the agent's timeline arrive one at a time; each is dealt in rather
    than appearing, and holds its start state until its turn (fill-mode both). */
 @keyframes rivaStepIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+/* A question and its answer arrive rather than appear: the heading settles
+   first and the body follows a beat behind it (the delay is set per block,
+   inline, so a long answer staggers instead of landing all at once). */
+@keyframes rivaAnswerIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   /* Honour the setting the reader has already made: the timeline still shows
