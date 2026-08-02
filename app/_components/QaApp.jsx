@@ -3,6 +3,7 @@
 import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
+import { isTestQuery, TEST_STEPS, TEST_STATUS, TEST_ANSWER } from '../../lib/test-answer';
 
 import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
@@ -122,6 +123,8 @@ class RiversidePracticeQA extends React.Component {
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
     };
+    // Timers belonging to the stored "test" answer, cleared on unmount.
+    this.mockTimers = [];
   }
 
   blankDraft() {
@@ -159,6 +162,7 @@ class RiversidePracticeQA extends React.Component {
     clearTimeout(this.emitTimer);
     clearTimeout(this.copyTimer);
     clearTimeout(this.dirTimer);
+    this.mockTimers.forEach(clearTimeout);
   }
 
   /* --------------------------- Directory --------------------------- *
@@ -353,9 +357,38 @@ class RiversidePracticeQA extends React.Component {
     this.emitTimer = setTimeout(() => this.setState({ emitting: false }), 640);
   }
 
+  /* --------------------------- Test answer -------------------------- *
+   * "test" plays a stored answer instead of calling the model: the same
+   * stream of tool steps, then one answer using every part of the
+   * layout. The interface can be worked on all day without a single
+   * token being spent. See lib/test-answer.js.
+   * ------------------------------------------------------------------ */
+  mockAI(idx) {
+    const at = (ms, fn) => { this.mockTimers.push(setTimeout(fn, ms)); };
+    let clock = 0;
+
+    for (const st of TEST_STATUS) {
+      at(st.at, () => this.onAgentEvent(idx, { type: 'status', text: st.text }));
+    }
+
+    for (const step of TEST_STEPS) {
+      const startedAt = clock;
+      at(startedAt, () => this.onAgentEvent(idx, {
+        type: 'tool-start', id: step.id, tool: step.tool, label: step.label, detail: step.detail,
+      }));
+      clock += step.after;
+      at(clock, () => this.onAgentEvent(idx, {
+        type: 'tool-result', id: step.id, ok: true, summary: step.summary, items: [],
+      }));
+    }
+
+    at(clock + 700, () => this.updateAi(idx, Object.assign({ status: 'done', answerKind: 'answer', statusText: '' }, TEST_ANSWER)));
+  }
+
   // `refresh` is set by Reload on a cached answer: research the question again
   // rather than serving what the server already has stored for it.
   async fetchAI(question, idx, { refresh = false } = {}) {
+    if (isTestQuery(question)) { this.mockAI(idx); return; }
     // History is the conversation BEFORE this question (idx-1 = the user message
     // we're answering). On the first question this is empty, so the server skips
     // the follow-up query-condensing step — no point enriching a standalone query.
