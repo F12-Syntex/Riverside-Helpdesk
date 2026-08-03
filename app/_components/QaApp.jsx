@@ -1298,7 +1298,7 @@ class RiversidePracticeQA extends React.Component {
   render() {
     const v = this.renderVals();
     return (
-      <div style={s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
+      <div className="riva-app-shell" style={s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
 
         {/* The opening screen is mostly empty by design, so it is the one
             place a background earns its keep. It goes the moment there is
@@ -1335,7 +1335,7 @@ class RiversidePracticeQA extends React.Component {
             map has neither over it — no dock at all — so it is shown whole,
             with no mask and no room reserved at the foot. */}
         <div id="riva-scroll" className={v.showMap ? '' : (v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade')}
-          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb || v.showMap ? '' : 'padding-bottom:184px;'))}>
+          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb || v.showMap ? '' : 'padding-bottom:calc(var(--riva-dock-h) + 50px);'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
           <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s(v.showMap ? '' : 'animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>

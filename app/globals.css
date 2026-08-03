@@ -1,5 +1,67 @@
 html, body { margin: 0; height: 100%; }
 html { scrollbar-gutter: stable; }
+
+/* ------------------------------------------------------------------ *
+ * The dock's geometry, in one place.
+ *
+ * The dock, the room the page leaves for it, the fade where the page
+ * meets it and the hero text above it were each written against a
+ * screen someone happened to have, in a mixture of pixels and viewport
+ * fractions. On a shorter screen they closed up; on a taller one they
+ * drifted apart. They are all measured from these instead, so the
+ * opening screen reads the same on a laptop, a large monitor and a
+ * phone. The phone's values are set once, in the media query at the
+ * foot of this file.
+ * ------------------------------------------------------------------ */
+:root {
+  --riva-header-h: 72px;          /* AppHeader's fixed height */
+  --riva-column-pad-t: 28px;      /* .riva-column's top padding */
+  --riva-dock-field-h: 68px;
+  --riva-dock-strip-h: 32px;
+  --riva-dock-pad-t: 12px;
+  --riva-dock-pad-b: calc(22px + env(safe-area-inset-bottom));
+  /* The dock as it sits at the foot of the page, from the bottom edge of
+     the screen to the top of the strip above the field. */
+  --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-pad-b));
+  /* What the opening screen hangs under the field — the shortcut row and
+     the line about patient data — and which the hero above has to clear. */
+  --riva-dock-extras: 84px;
+  /* The margin the hero text keeps above the field. This is the one number
+     that decides how the opening screen reads, at every size. */
+  --riva-hero-gap: 48px;
+  /* The heading and the line under it, at the two lines they usually run
+     to. Only used to work the lift out — the text itself is never held to
+     it, and a third line simply pushes the block up by that much. */
+  --riva-hero-text-h: 110px;
+  /* The opening screen as one object: heading, the margin under it, the
+     field, and the shortcuts and warning hanging below it. */
+  --riva-dock-group-h: calc(
+    var(--riva-hero-text-h) + var(--riva-hero-gap) + var(--riva-dock-field-h) + var(--riva-dock-extras)
+  );
+  /* How far the dock rises while nothing has been asked. Not a plain
+     fraction of the screen: a fraction lifts the dock by the same
+     proportion of a short laptop as of a tall monitor, which left the
+     opening screen pinned near the top of the one and stranded low on the
+     other. The lift is worked out from the group's own height instead, so
+     its middle lands a little above the middle of the screen — where a
+     single field belongs — whatever the screen is. Zero on a phone, where
+     the dock stays at the foot throughout. */
+  --riva-dock-lift: max(0px, calc(53vh - var(--riva-dock-pad-b) - var(--riva-dock-group-h) / 2));
+  /* Everything between the foot of the hero text and the bottom edge of
+     the screen, on the opening screen. */
+  --riva-hero-clear: calc(
+    var(--riva-dock-lift) + var(--riva-dock-pad-b) + var(--riva-dock-extras)
+    + var(--riva-dock-field-h) + var(--riva-hero-gap)
+  );
+  --riva-fade-top: 52px;          /* where the page fades in under the header */
+}
+
+/* A phone's 100vh is the tall viewport, which runs on under the browser's
+   own toolbar, while the dock — fixed to the bottom — sits above it. Both
+   ends have to be measured against the same edge, or the foot of the page
+   is laid out against one nobody can see. The inline 100vh stays as the
+   fallback for browsers without dvh. */
+.riva-app-shell { height: 100dvh !important; min-height: 100dvh !important; }
 body {
   background: #f0f4f5;
   font-family: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
@@ -300,7 +362,7 @@ body { overflow-x: hidden; }
 .riva-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; pointer-events: none; }
 .riva-dock-inner {
   max-width: 820px; margin: 0 auto;
-  padding: 12px 24px calc(22px + env(safe-area-inset-bottom));
+  padding: var(--riva-dock-pad-t) 24px var(--riva-dock-pad-b);
   pointer-events: auto;
   /* The dock is always the same dock: it only ever moves. Travelling on a
      transform means nothing is laid out again, so the field cannot change
@@ -324,6 +386,22 @@ body { overflow-x: hidden; }
 .riva-lift:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(33,43,50,.10); }
 .riva-lift:active { transform: translateY(0); box-shadow: none; }
 
+/* The opening screen's heading is placed against the dock rather than
+ * against the top of the page: it takes all the room down to a fixed
+ * margin above the field and sits at the bottom of it. Measured that way
+ * the gap between the text and the field is the same on every screen,
+ * instead of closing up on a short laptop and stranding the text halfway
+ * up a large monitor. On a screen too short to hold both, the block keeps
+ * its natural height and the margin gives way gradually rather than the
+ * text landing on the field. */
+.riva-hero-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: max(0px, calc(100vh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear)));
+  min-height: max(0px, calc(100dvh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear)));
+}
+
 /* The opening screen arrives a line at a time rather than as one block. */
 .riva-hero-block > * { animation: rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both; }
 .riva-hero-block > :nth-child(1) { animation-delay: .04s; }
@@ -340,18 +418,21 @@ body { overflow-x: hidden; }
  * it, so a line of an answer is either legible or gone, never half
  * hidden under the field. The masked band matches the dock's height. */
 .riva-scroll-fade {
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 52px, #000 calc(100% - 160px), rgba(0,0,0,0) calc(100% - 40px));
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 52px, #000 calc(100% - 160px), rgba(0,0,0,0) calc(100% - 40px));
+  --riva-fade-foot: calc(var(--riva-dock-h) + 26px);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 var(--riva-fade-top), #000 calc(100% - var(--riva-fade-foot)), rgba(0,0,0,0) calc(100% - 36px));
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 var(--riva-fade-top), #000 calc(100% - var(--riva-fade-foot)), rgba(0,0,0,0) calc(100% - 36px));
 }
 /* Sources has no dock to clear, so it only fades where it meets the header. */
 .riva-scroll-fade-top {
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 52px);
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 52px);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 var(--riva-fade-top));
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 var(--riva-fade-top));
 }
 
 /* Before anything has been asked the dock is the page, so it stands in
- * the middle of it; the first question lets it fall back to the foot. */
-.riva-dock-center > .riva-dock-inner { transform: translateY(-40vh); }
+ * the middle of it; the first question lets it fall back to the foot.
+ * The hero above it is placed from the same lift, so the two move
+ * together. */
+.riva-dock-center > .riva-dock-inner { transform: translateY(calc(-1 * var(--riva-dock-lift))); }
 
 /* With no bar behind them, each control carries its own white surface
  * and a soft lift so it reads against whatever it is floating over.
@@ -359,9 +440,10 @@ body { overflow-x: hidden; }
  * everybody comes to use. */
 .riva-dock-field {
   /* A fixed height, not a minimum: the field is the same size before the
-     first question and after every one of them. */
-  height: 68px !important;
-  min-height: 68px !important;
+     first question and after every one of them. The height is the same one
+     the page above reserves room against. */
+  height: var(--riva-dock-field-h) !important;
+  min-height: var(--riva-dock-field-h) !important;
   flex-shrink: 0;
   font-size: 19.5px !important;
   padding: 0 26px !important;
@@ -426,7 +508,7 @@ body { overflow-x: hidden; }
  * out of the field on its way to the heading, and the line confirming a
  * copied number. Its height is reserved so the dock never moves as they
  * come and go. */
-.riva-dock-strip { height: 32px; display: flex; align-items: center; overflow: hidden; }
+.riva-dock-strip { height: var(--riva-dock-strip-h); display: flex; align-items: center; overflow: hidden; }
 .riva-dock-emit {
   width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;
   transform-origin: left center;
@@ -465,40 +547,42 @@ body { overflow-x: hidden; }
    * the right-hand edge.
    * ---------------------------------------------------------------- */
   
+  /* The phone's version of the numbers at the head of this file. Everything
+     measured from them — the dock, the room reserved for it, the fade at the
+     foot of the page and the margin the hero keeps above the field — follows
+     from these five lines, so the opening screen holds its proportions on a
+     phone the same way it does on a desktop.
+
+     The lift is zero: on a phone the dock stays at the foot of the screen
+     throughout, because that is where the keyboard opens under it and where
+     a thumb already is, so it never travels to the middle. The hero is still
+     placed against it, so the heading sits the same margin above the field
+     as it does on a desktop — there is simply more room above the text. */
+  :root {
+    --riva-dock-field-h: 60px;
+    --riva-dock-strip-h: 26px;
+    --riva-dock-lift: 0px;
+    --riva-hero-gap: 34px;
+    --riva-fade-top: 40px;
+  }
+
   .riva-column { padding-left: 16px !important; padding-right: 16px !important; }
-  
-  /* The opening screen: less air above the heading, since there is far
-     less screen to spend it on. */
-  .riva-hero-block { padding-top: 15vh !important; }
+
   .riva-turn-q { font-size: 24px !important; }
-  
-  /* The dock keeps a thumb-sized field but takes the phone's gutters. It
-     stays at the foot of the screen throughout: on a phone that is where
-     the keyboard opens under it and where a thumb already is, so it never
-     travels to the middle the way it does on a desktop. */
+
+  /* The dock keeps a thumb-sized field but takes the phone's gutters. */
   .riva-dock-inner { padding-left: 16px !important; padding-right: 16px !important; }
-  .riva-dock-center > .riva-dock-inner { transform: none; }
 
   /* No navigation furniture beside the practice's name: the field is the
      whole page on a phone. */
   .riva-nav-btn { display: none !important; }
-  .riva-dock-field {
-    height: 60px !important; min-height: 60px !important;
-    font-size: 17px !important; padding: 0 20px !important;
-  }
+  .riva-dock-field { font-size: 17px !important; padding: 0 20px !important; }
   .riva-dock-field-icon { padding: 0 46px !important; }
   .riva-dock-field-search { padding: 0 62px 0 48px !important; }
   .riva-dock-send { width: 44px !important; height: 44px !important; right: 8px !important; }
-  .riva-dock-strip { height: 26px; }
   /* The glow is a desktop pleasure; on a phone it eats the small margin
      between the dock and the edge of the screen. */
   .riva-dock-form::before { display: none; }
-  
-  /* Less to clear at the foot, so less of the answer is masked away. */
-  .riva-scroll-fade {
-    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 40px, #000 calc(100% - 130px), rgba(0,0,0,0) calc(100% - 30px));
-    mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 40px, #000 calc(100% - 130px), rgba(0,0,0,0) calc(100% - 30px));
-  }
   
   /* An earlier question: the number and "Show answer" hold their place;
      the question itself takes whatever is left. */

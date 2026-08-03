@@ -22,8 +22,11 @@ export default function ChatView({ v }) {
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
 
       {v.isEmpty && (
-        // Sits just above the dock, which is centred while nothing has been asked.
-        <div className="riva-hero-block" style={s('text-align:center;padding:26vh 0 0;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
+        // Sits a fixed margin above the dock, which is centred while nothing
+        // has been asked. Where that is on the page is worked out from the
+        // dock's own geometry in globals.css (.riva-hero-block), so the gap
+        // between this text and the field holds on every screen size.
+        <div className="riva-hero-block" style={s('text-align:center;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
           <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;')}>What do you need?</h1>
           <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
         </div>
