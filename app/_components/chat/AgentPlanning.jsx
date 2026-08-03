@@ -36,9 +36,12 @@ const STATUS = {
 const TOOL_ICON = {
   search_practice: Icons.search,
   list_practice_sources: Icons.book,
-  open_practice_source: Icons.fileLines,
+  outline_practice_sources: Icons.menu,
+  open_practice_sources: Icons.fileLines,
   search_web: Icons.globe,
+  read_web_page: Icons.file,
   find_contact: Icons.phone,
+  check_rota: Icons.calendar,
   hand_off: Icons.sitemap,
   suggest_ers_referral_route: Icons.sitemap,
 };

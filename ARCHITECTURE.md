@@ -373,7 +373,7 @@ sequenceDiagram
   else
     A->>PG: load EVERY non-empty Notebook page in full
     A->>OR: RESEARCH loop — reasoning model, max 6 steps, tools
-    Note over A,OR: search_practice, list_practice_sources,<br/>open_practice_source, search_web,<br/>find_contact, suggest_ers_referral_route, hand_off
+    Note over A,OR: search_practice, list_practice_sources,<br/>outline_practice_sources, open_practice_sources,<br/>search_web, read_web_page, find_contact,<br/>check_rota, suggest_ers_referral_route, hand_off
     A->>OR: COMPOSE — reasoning model, structured answer
     A->>A: VALIDATE — every claim needs a verbatim quote<br/>that really appears in what a tool returned
     A->>OR: one repair attempt; still-unverified claims are dropped

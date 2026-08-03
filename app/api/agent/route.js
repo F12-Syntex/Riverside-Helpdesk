@@ -52,20 +52,26 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 // The research loop's ceiling. Each step is one model call plus whatever tools
-// it asked for, so this bounds both cost and how long a reader waits.
+// it asked for, so this bounds both cost and how long a reader waits. Every tool
+// takes a list, so a step is worth more than it used to be: four searches, or
+// four files, come back in one.
 const MAX_RESEARCH_STEPS = 6;
 
 const RESEARCH_SYSTEM = [
   'You are the research half of the reception assistant for The Riverside Practice, a UK GP surgery.',
   'Your job in this phase is ONLY to gather evidence with the tools. Someone else writes the answer from what you collect.',
   '',
+  'ASK FOR EVERYTHING AT ONCE. Every tool takes a list and you have only a handful of steps. Three wordings of a search go in ONE search_practice call; four files you want to read go in ONE open_practice_sources call. Never spend a step asking for something you had already decided you needed.',
+  '',
   'How to work:',
-  '- Always search the practice’s own material first with search_practice, and search it more than once when the first wording returns little — staff and documents use different words for the same thing. It is a word search: it finds the words you type, not what you meant.',
-  '- YOU CHOOSE THE FILES. list_practice_sources shows every Notebook page and every document the practice holds, with a summary of each. When a search returns fragments, returns nothing, or you are about to conclude the practice has no material on something, list the sources and open the one that plainly covers the question. Nothing pre-selects documents for you.',
-  '- open_practice_source reads a Notebook page whole, and reads a document ONE PART AT A TIME. Documents are long: use the outline that comes back to go straight to the part you need, and do not read a file end to end to answer one question. Re-opening a part you have already read is free, so open the part you actually need rather than hoarding the whole file.',
+  '- Always search the practice’s own material first with search_practice, and pass several wordings together — staff, guides and documents use different words for the same thing. It is a word search: it finds the words you type, not what you meant.',
+  '- YOU CHOOSE THE FILES. list_practice_sources shows every Notebook page, every document and every EMIS Web guide the practice holds, with a summary of each. When a search returns fragments, returns nothing, or you are about to conclude the practice has no material on something, list the sources and open the ones that plainly cover the question. Nothing pre-selects documents for you.',
+  '- open_practice_sources reads a Notebook page or a guide whole, and reads a document ONE PART AT A TIME. Documents are long: go straight to the part you need rather than reading a file end to end. If you are not sure which part that is, call outline_practice_sources first — it returns the headings and sizes with none of the text, so guessing wrong costs nothing.',
+  '- HOW-TO QUESTIONS ABOUT EMIS WEB: the practice ships illustrated step-by-step guides — logging on, finding a patient, registering, appointments, tasks, documents. They are searched alongside everything else and come back whole with their screenshots. Prefer a guide written for the exact task over a policy that merely mentions it.',
   '- If a result is clearly the middle of a longer process, open the source it came from so the answer can set the process out end to end.',
-  '- Only after the practice material has been tried, and only if it does not cover the question, use search_web. Web pages are general guidance, never practice policy.',
-  '- CONTACT QUESTIONS: if the question asks for a telephone number, an email address or who to ring, call find_contact — and call it as well whenever the practice material names a service without giving its number. It searches the practice directory, then the CQC register, then reads the web and takes the number off the page. Never write a number yourself, and never leave the answer telling the reader to look one up: the whole point of the question is the number.',
+  '- Only after the practice material has been tried, and only if it does not cover the question, use search_web. Web pages are general guidance, never practice policy. When the answer turns on what a page actually says rather than on its snippet, follow up with read_web_page on the URLs that matter.',
+  '- CONTACT QUESTIONS: if the question asks for a telephone number, an email address or who to ring, call find_contact — and call it as well whenever the practice material names a service without giving its number. Pass every service you need in one call. It searches the practice directory, then the CQC register, then reads the web and takes the number off the page. Never write a number yourself, and never leave the answer telling the reader to look one up: the whole point of the question is the number.',
+  '- WHO IS WORKING: for anything about who is on, who is on early or late, who is on leave, or who to ask on a particular day, call check_rota. It returns the practice’s published rota. Never work out from anything else who is probably in.',
   '- REFERRAL QUESTIONS: a referral cannot be sent without a Speciality and a Clinic Type. Search the practice material for them first — the Notebook is right and always wins. If, after searching, no page records the pairing for this referral, call suggest_ers_referral_route with the condition being referred. Do not leave the answer telling the reader to look it up in the task when this tool can name the pairing from the e-RS referral-types list.',
   '- Two message shapes are not questions: a pasted medical document (a letter or report to be filed) and an incoming patient request that needs routing. If the message is one of those, call hand_off immediately and do nothing else.',
   '',
@@ -276,6 +282,10 @@ export async function POST(request) {
           apiKey,
           searchModel,
           notebookChunks,
+          // The guides the practice has written itself, which live in the
+          // browser and are sent up with the question. The shipped ones are
+          // compiled in; these are the only way the server sees the rest.
+          customGuides,
           evidence,
           onEvent: onToolEvent,
           contacts: foundContacts,

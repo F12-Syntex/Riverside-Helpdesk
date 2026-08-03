@@ -14,18 +14,25 @@ clickable sources they can open in-browser.
   fragment is not enough, and can search the web when the practice's own
   material genuinely does not cover the question. The API key and server-side
   knowledge never reach the browser.
-- The tools it has: `search_practice` (documents + Notebook),
-  `list_practice_sources`, `open_practice_source`, `search_web` and
-  `find_contact`. The practice's own material always gets first refusal — a web
-  search with no practice lookup behind it triggers one automatically.
+- The tools it has: `search_practice` (documents + Notebook + EMIS guides),
+  `list_practice_sources`, `outline_practice_sources`, `open_practice_sources`,
+  `search_web`, `read_web_page`, `find_contact`, `check_rota` and
+  `suggest_ers_referral_route`. The practice's own material always gets first
+  refusal — a web search with no practice lookup behind it triggers one
+  automatically.
+- **Every tool takes a list.** Three wordings of a search, or four files to
+  read, go in one call: the loop is capped at six steps, and a step spent
+  asking for something already decided on is a step not spent reading.
 - **A contact question is answered with a contact.** `find_contact` tries the
   practice directory, then the CQC register, then reads the actual web pages and
   lifts the number off them. What it finds is shown in the contacts card as
   structured data, with a line saying where it came from — never retyped through
   the model's prose, where an unverified number is stripped out.
 - **The model chooses the files.** Nothing is pre-selected for it by embedding
-  similarity: `list_practice_sources` shows every Notebook page and every
-  document with a summary, and `open_practice_source` reads the one it picks.
+  similarity: `list_practice_sources` shows every Notebook page, document and
+  guide with a summary, `outline_practice_sources` shows a document's headings
+  without its text so the wrong part is never paid for, and
+  `open_practice_sources` reads the ones it picks — several at a time.
   Notebook pages come back whole; documents come back a part at a time with an
   outline of the rest, and the parsed file is cached between calls, so reading
   a long policy costs the parts that were needed rather than the whole file.
@@ -77,7 +84,7 @@ clickable sources they can open in-browser.
   `localStorage`.
 - **`app/api/agent/route.js`** — the assistant's brain: the research tool loop,
   the compose + validate phases, and the NDJSON event stream the chat reads.
-- **`lib/agent/`** — `tools.mjs` (the four tools), `evidence.mjs` (what the tools
+- **`lib/agent/`** — `tools.mjs` (the tools, every one of them list-taking), `evidence.mjs` (what the tools
   actually returned, and quote verification against it), `compose.mjs` (the
   structured answer + the validate-and-repair loop), `web-search.mjs`
   (OpenRouter's web-search server tool).
@@ -182,12 +189,12 @@ The assistant keeps each source type predictable:
 
 - **Documents:** chosen by the agent, not by a vector. PostgreSQL full-text
   (`GIN`) search points it at a title; the catalogue lists every document with a
-  summary; `open_practice_source` serves one ~6k-character part at a time with
+  summary; `open_practice_sources` serves one ~6k-character part at a time with
   an outline of the rest, from a cache keyed on the document's revision.
 - **Notebook:** every non-empty page is loaded fresh from the live Notebook
   tables on every request and is never chunked or shortened. The agent searches
   those whole pages lexically and can pull any of them into the answer in full
-  via `open_practice_source`, so a long process is never truncated to a snippet.
+  via `open_practice_sources`, so a long process is never truncated to a snippet.
 - **Contacts:** the one remaining embedded corpus, because a caller asks for
   "the district nurses" rather than a title. A full-text + semantic search
   retrieves matching
