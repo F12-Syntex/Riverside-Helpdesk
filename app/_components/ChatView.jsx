@@ -61,6 +61,19 @@ export default function ChatView({ v }) {
             {v.turn.imageNote && (
               <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>
             )}
+            {/* The documents this question was asked about. Named, because an
+                answer about "the letter" has to say which letter — and because
+                nothing here is stored, so this is the only record of it. */}
+            {v.turn.hasDocs && (
+              <div style={s('display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;')}>
+                {v.turn.docNames.map((name, j) => (
+                  <span key={j} style={s('display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#fff;border:1px solid #dde4e7;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#4c6272;')}>
+                    <Svg w={14} sw={2} style={s('flex:none;color:#005eb8;')}>{Icons.file}</Svg>
+                    <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{name}</span>
+                  </span>
+                ))}
+              </div>
+            )}
             {v.turn.hasImages && (
               <div style={s('display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;')}>
                 {v.turn.images.map((src, j) => (

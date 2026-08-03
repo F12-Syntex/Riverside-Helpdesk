@@ -27,6 +27,12 @@
 // file, and an incoming patient request to route — and those keep their existing
 // dedicated cards: the agent recognises them, calls hand_off, and the request is
 // delegated to the previous endpoint unchanged.
+//
+// A third is not a question either: "format this email", "shorten this message",
+// "turn these notes into a paragraph". There is nothing to research — the work
+// is the answer — so the agent calls general_request and the turn is carried out
+// directly by lib/agent/general.mjs, marked in the card as the assistant's own
+// work rather than as anything the practice's documents say.
 import { NextResponse } from 'next/server';
 import { streamText, stepCountIs, tool } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
@@ -39,6 +45,8 @@ import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts
 import { createEvidence } from '@/lib/agent/evidence.mjs';
 import { createTools } from '@/lib/agent/tools.mjs';
 import { composeVerifiedAnswer } from '@/lib/agent/compose.mjs';
+import { composeGeneralAnswer } from '@/lib/agent/general.mjs';
+import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
 import { getModelRoles } from '@/lib/settings';
@@ -74,6 +82,8 @@ const RESEARCH_SYSTEM = [
   '- WHO IS WORKING: for anything about who is on, who is on early or late, who is on leave, or who to ask on a particular day, call check_rota. It returns the practice’s published rota. Never work out from anything else who is probably in.',
   '- REFERRAL QUESTIONS: a referral cannot be sent without a Speciality and a Clinic Type. Search the practice material for them first — the Notebook is right and always wins. If, after searching, no page records the pairing for this referral, call suggest_ers_referral_route with the condition being referred. Do not leave the answer telling the reader to look it up in the task when this tool can name the pairing from the e-RS referral-types list.',
   '- Two message shapes are not questions: a pasted medical document (a letter or report to be filed) and an incoming patient request that needs routing. If the message is one of those, call hand_off immediately and do nothing else.',
+  '- A THIRD IS NOT A QUESTION EITHER: a request to DO something with words rather than to look something up — format this email, shorten this, rewrite it politely, turn these notes into a paragraph, tidy this list, translate it, summarise what was pasted, spell out an abbreviation, work out a date. There is nothing in the practice’s material to find, because nobody is asking about the practice. Call general_request immediately and do nothing else. Do NOT search first: a word search on a pasted email finds documents that happen to share its words, and an answer built from those is worse than no answer.',
+  '- The line between them is what the answer depends on. "Draft a message telling this patient how to book a blood test" DOES depend on the practice’s material — search it. "Make this message shorter" does not — carry it out. When the request is a task but part of it turns on how the practice works, research that part normally and do not call general_request.',
   '',
   'Stop as soon as you have what is needed. When you are done, reply with a one-line note of what you found — nothing more.',
 ].join('\n');
@@ -82,10 +92,15 @@ const RESEARCH_SYSTEM = [
 // number appearing in a source a tool actually returned. Anything else the
 // model writes is redacted rather than shown to a receptionist who might dial it.
 const NUMBER_RUN = /\d[-\d.()/ \t ]{7,}\d/g;
-function verifiedNumbers(evidence, contacts = []) {
+function verifiedNumbers(evidence, contacts = [], texts = []) {
   const verified = new Set(contactTelSet());
-  for (const chunk of evidence.practiceList()) {
-    for (const run of String(chunk.text || '').match(NUMBER_RUN) || []) {
+  // `texts` is for the general-request path, where the message IS the source:
+  // an email being reformatted carries the numbers it arrived with, and
+  // stripping the reader's own text as though the model had invented it would
+  // quietly corrupt the thing they are about to paste. A number that appears in
+  // neither the sources nor the message is still redacted.
+  for (const text of evidence.practiceList().map((chunk) => chunk.text).concat(texts)) {
+    for (const run of String(text || '').match(NUMBER_RUN) || []) {
       const d = digitsOf(run);
       if (d.length >= 9) verified.add(d);
     }
@@ -165,6 +180,11 @@ export async function POST(request) {
   const images = Array.isArray(body?.images)
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)
     : [];
+  // Documents dropped onto the question and already read into text by
+  // /api/attach. The reader's own material, not the practice's: it is given to
+  // the model as context, it is never citable as a source, and it is not stored.
+  const attachments = sanitiseAttachments(body?.attachments);
+  const attached = attachmentsBlock(attachments);
   // "Answer this one properly" — the reader pressed Reload on a cached answer,
   // so the stored one is ignored and overwritten with whatever comes back.
   const refresh = body?.refresh === true;
@@ -174,7 +194,11 @@ export async function POST(request) {
   // given to this question is served straight from the cache — before the
   // Notebook is even loaded, so a hit costs one or two queries rather than
   // twenty seconds — and the card says plainly that it came from the cache.
-  const cacheable = isCacheableRequest({ question, history, images });
+  // A question with a document on the end of it is about THAT document, so it
+  // is never served from the cache and never written to it — the next person to
+  // ask something similarly worded must not be handed an answer about somebody
+  // else's letter.
+  const cacheable = !attachments.length && isCacheableRequest({ question, history, images });
   let fingerprint = '';
   let cacheEmbedding = null;
   if (cacheable) {
@@ -266,6 +290,9 @@ export async function POST(request) {
         // A pasted document or an incoming patient request keeps its existing
         // card. The agent flags it and the previous endpoint produces the shape.
         let handOff = '';
+        // A request to carry out rather than a question to research — set when
+        // the loop calls general_request, and answered without any sources.
+        let generalTask = '';
         // Numbers and addresses find_contact turned up during the turn. They
         // reach the reader as structured data in the contacts card, never
         // through the model's prose.
@@ -308,6 +335,23 @@ export async function POST(request) {
             return { acknowledged: true, note: 'Stop now. Another part of the system handles this.' };
           },
         });
+        tools.general_request = tool({
+          description: 'Declare that this message asks you to DO something with words rather than to look something up: format, rewrite, shorten, tidy, translate or summarise text, draft wording that does not depend on practice policy, explain a general term, work something out. Call this and stop — there is nothing to research. Do NOT call it when the answer turns on how this practice works, on a telephone number, or on who is on duty.',
+          inputSchema: z.object({
+            task: z.string().describe('One line naming what is being asked for, for example "reformat a pasted email".'),
+          }),
+          execute: async ({ task }) => {
+            generalTask = String(task || '').trim() || 'general request';
+            send({
+              type: 'tool-start',
+              id: 'general',
+              tool: 'general_request',
+              label: 'Doing this directly',
+              detail: generalTask,
+            });
+            return { acknowledged: true, note: 'Stop now. Nothing needs looking up; the answer is written straight from the message.' };
+          },
+        });
 
         const userContent = images.length
           ? [{ type: 'text', text: question }].concat(images.map((url) => ({ type: 'image', image: url })))
@@ -334,6 +378,11 @@ export async function POST(request) {
             system: RESEARCH_SYSTEM,
             messages: [
               ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
+              // The dropped document goes in BEFORE the question, as context the
+              // question is asked against. It is the reader's own file, so it is
+              // labelled as such and never searched for or quoted as practice
+              // material — see attachmentsBlock.
+              ...(attached ? [{ role: 'user', content: attached }] : []),
               { role: 'user', content: userContent },
             ],
             tools,
@@ -372,7 +421,7 @@ export async function POST(request) {
         // a question its Notebook covers in full. That is worth a second pass on
         // the reasoning model; a loop that searched and found nothing is not.
         const escalation = shouldEscalateResearch({
-          error: researchError, toolCalls, handOff, model: researchModel, reasoning: model,
+          error: researchError, toolCalls, handOff, generalTask, model: researchModel, reasoning: model,
         });
         if (escalation.escalate) {
           console.warn(`[agent] ${escalation.reason} — researching again on ${model}`);
@@ -386,12 +435,99 @@ export async function POST(request) {
           const delegated = await askPOST(new Request('http://internal/api/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, history, customGuides, images }),
+            // The older endpoint knows nothing about attachments: it reads the
+            // document out of the message, exactly as it does when one is
+            // pasted in. So a dropped letter is handed over as pasted text —
+            // which is what "file this letter" means to it.
+            body: JSON.stringify({
+              question: attached ? `${question}\n\n${attached}` : question,
+              history,
+              customGuides,
+              images,
+            }),
           }));
           const data = await delegated.json();
           send({ type: 'answer', payload: data });
           controller.close();
           return;
+        }
+
+        // A request to carry out rather than a question to look up. Answered
+        // from the message itself, with no sources and nothing quoted, and
+        // marked in the card as the assistant's own work.
+        //
+        // Tried in two places. The first is when the research loop recognised it
+        // and called general_request, which is the cheap path: no searching, one
+        // model call. The second is below, when the loop searched and came back
+        // with nothing at all — a fast model that did not recognise the request
+        // should not turn "shorten this message" into "the practice's material
+        // does not cover this", which is a true sentence and not an answer.
+        //
+        // The composer itself decides whether it is entitled to answer. Handing
+        // it a practice question gets `handled: false` back, and the honest
+        // "nothing found" reply below is given instead — a question about how
+        // this practice works is never answered from a model's memory.
+        let general = null;
+        const runGeneral = () => composeGeneralAnswer({
+          // The reasoning model. This answer has no sources behind it, so the
+          // whole of it is the model's own writing — the last place to save a
+          // few tokens by using a weaker one.
+          model: chat,
+          question,
+          history,
+          images,
+          // The document the request is about: the email being shortened, the
+          // letter being summarised. Without it the request is meaningless.
+          attachments,
+          onStatus: (text) => send({ type: 'status', text }),
+          onUsage: (phase, usage) => recordUsage({ turnId, role: 'reasoning', phase, model, usage }),
+        });
+
+        if (generalTask) general = await runGeneral();
+        if (!general && !evidence.practiceCount && !evidence.webCount && !foundContacts.length) {
+          general = await runGeneral();
+        }
+        if (general && general.handled) {
+          // The same rule as everywhere else: a telephone number nothing
+          // vouches for does not reach a receptionist who might dial it. Here
+          // the message the reader sent counts as vouching for its own numbers.
+          const ownNumbers = verifiedNumbers(evidence, foundContacts, [question, history]);
+          const keep = (t) => redactUnverifiedNumbers(t, ownNumbers);
+          send({
+            type: 'answer',
+            payload: {
+              kind: 'answer',
+              answerable: true,
+              // What the card reads from to say, once and at the top, that none
+              // of this came from the practice's material.
+              general: true,
+              intro: keep(general.intro),
+              keyPoints: [],
+              sections: general.sections.map((sec) => ({ ...sec, markdown: keep(sec.markdown) })),
+              message: keep(general.message),
+              messageCite: null,
+              messageWeb: null,
+              tip: keep(general.tip),
+              gaps: '',
+              followUps: general.followUps,
+              clarify: null,
+              referralRoute: null,
+              citations: [],
+              // A number the loop happened to look up before the request was
+              // recognised is still worth showing; it is structured data from a
+              // directory, not something the model wrote.
+              contacts: foundContacts,
+              validation: { attempts: 1, checked: general.sections.length, verified: general.sections.length, dropped: 0, problems: [] },
+            },
+          });
+          // Deliberately not cached. "Format this email" is an answer about the
+          // text that came with it, and serving it to the next person who asks
+          // something similarly worded would hand them someone else's email.
+          controller.close();
+          return;
+        }
+        if (general && general.reason) {
+          console.log(`[agent] general request declined: ${general.reason}`);
         }
 
         // Nothing to write an answer FROM. A contact lookup legitimately lands
@@ -476,6 +612,9 @@ export async function POST(request) {
           history,
           evidence,
           ersSuggestion,
+          // Shown to the writer as context, never as a source: an answer may
+          // describe or use what was dropped, but may not cite it as policy.
+          attachments,
           selectedRefs: selection.refs,
           onStatus: (text) => send({ type: 'status', text }),
           onUsage: (phase, usage) => recordUsage({ turnId, role: 'reasoning', phase, model, usage }),

@@ -66,6 +66,23 @@ function CacheBar({ v }) {
   );
 }
 
+// A request the assistant carried out itself — format this email, shorten this
+// message, tidy these notes. Nothing in it comes from the practice's documents,
+// and that is said once, before the work is read, rather than as an amber block
+// against every paragraph: the whole answer has the same provenance, so marking
+// each part separately would only make it harder to read the part that matters.
+function GeneralBar() {
+  return (
+    <div style={s('display:flex;gap:9px;align-items:flex-start;margin:14px 0 0;border:1px dashed #ecd39a;background:#fffdf5;border-radius:10px;padding:11px 14px;')}>
+      <span style={s('flex:none;display:flex;margin-top:1px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.sparkle}</Svg></span>
+      <span style={s('font-size:13.5px;line-height:1.5;color:#8a6100;')}>
+        <strong>Done by the assistant.</strong> This is not from the practice&rsquo;s documents &mdash;
+        check anything that has to match how the practice does things.
+      </span>
+    </div>
+  );
+}
+
 // The answer in brief, at the top of the card. Someone with a patient at the
 // desk reads this and nothing else, so it carries the whole answer in two to
 // four lines — and a point that risks safety, a breach or a deadline is red,
@@ -302,6 +319,8 @@ export default function AiAnswer({ v }) {
               {v.hasIntro && <p style={s('margin:8px 0 0;font-size:18px;line-height:1.6;color:#4c6272;')}><Rich text={v.intro} /></p>}
             </div>
 
+            {v.isGeneral && <GeneralBar />}
+
             {/* The question as asked has more than one answer in the practice's
                 own material, so the assistant asks which was meant rather than
                 choosing one and hoping. Tapping an answer asks it properly. */}
@@ -355,7 +374,19 @@ export default function AiAnswer({ v }) {
 
             {v.hasMessage && (
               <div style={s('margin:10px 0 4px;')}>
-                <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Suggested message</div>
+                {/* The wording is written to be pasted somewhere else, so it
+                    carries its own Copy — taking it out of the answer by hand
+                    is the one thing the reader should not have to do. */}
+                <div style={s('display:flex;align-items:center;gap:12px;margin-bottom:6px;')}>
+                  <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;')}>
+                    {v.isGeneral ? 'Ready to paste' : 'Suggested message'}
+                  </div>
+                  <Hover tag="button" type="button" onClick={v.onCopyMessage} className="riva-lift"
+                    base="flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;color:#005eb8;cursor:pointer;"
+                    hover="border-color:#005eb8;background:#f7fbff;">
+                    <Svg w={13} sw={2.2}>{Icons.copy}</Svg>{v.copyMessageLabel}
+                  </Hover>
+                </div>
                 <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
                 {v.hasMessageImages && <SourceImages images={v.messageImages} />}
                 {v.hasMessageCite ? <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} /> : <JudgementChip label="AI-drafted wording: check before sending" />}
@@ -388,6 +419,7 @@ export default function AiAnswer({ v }) {
 
             {v.hasProvenanceNote && (
               <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;display:flex;flex-direction:column;gap:3px;')}>
+                {v.isGeneral && <span style={s('font-size:12.5px;color:#768692;')}>Written by the assistant for this request; no practice document was used</span>}
                 {v.usedJudgement && <span style={s('font-size:12.5px;color:#768692;')}>Amber blocks are AI judgement, not the practice&rsquo;s documents</span>}
                 {v.usedWeb && <span style={s('font-size:12.5px;color:#768692;')}>Sections marked &ldquo;from the web&rdquo; are general guidance found online, not practice policy</span>}
                 {v.hasDropped && <span style={s('font-size:12.5px;color:#768692;')}>{v.droppedNote}</span>}

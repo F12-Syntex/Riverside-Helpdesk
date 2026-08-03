@@ -23,9 +23,18 @@ html { scrollbar-gutter: stable; }
   /* The dock as it sits at the foot of the page, from the bottom edge of
      the screen to the top of the strip above the field. */
   --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-pad-b));
-  /* What the opening screen hangs under the field — the shortcut row and
-     the line about patient data — and which the hero above has to clear. */
-  --riva-dock-extras: 84px;
+  /* What the opening screen hangs under the field — the shortcut row, the line
+     about dropping a document and the line about patient data — and which the
+     hero above has to clear. Measured, not guessed: it is what
+     .riva-dock-inner's bottom edge sits below the foot of the field. */
+  --riva-dock-extras: 102px;
+  /* What the dock grows UPWARDS by when something is attached to the next
+     question — a row per dropped document, a strip for the images. The dock is
+     pinned to the bottom of the screen, so those rows push its top up into
+     whatever is above it, and the field itself does not move at all.
+     The component sets this in pixels on the app shell, because it is the only
+     part of the system that knows how many rows there are. */
+  --riva-dock-attached: 0px;
   /* The margin the hero text keeps above the field. This is the one number
      that decides how the opening screen reads, at every size. */
   --riva-hero-gap: 48px;
@@ -398,8 +407,8 @@ body { overflow-x: hidden; }
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: max(0px, calc(100vh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear)));
-  min-height: max(0px, calc(100dvh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear)));
+  min-height: max(0px, calc(100vh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear) - var(--riva-dock-attached)));
+  min-height: max(0px, calc(100dvh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear) - var(--riva-dock-attached)));
 }
 
 /* The opening screen arrives a line at a time rather than as one block. */

@@ -4,7 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
-import { isTestQuery, TEST_STEPS, TEST_STATUS, TEST_ANSWER } from '../../lib/test-answer';
+import {
+  isTestQuery, isGeneralTestQuery,
+  TEST_STEPS, TEST_STATUS, TEST_ANSWER,
+  TEST_GENERAL_STEPS, TEST_GENERAL_STATUS, TEST_GENERAL_ANSWER,
+} from '../../lib/test-answer';
 
 import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
@@ -23,6 +27,26 @@ import { mdPlain } from './chat/Md';
 // holds only a few MB. Anything over MAX_DIM px is resized and re-encoded as
 // JPEG on a white background; small files are sent as-is.
 const MAX_IMAGES = 4;
+
+// Documents dropped onto one question. Reception attaches a letter, sometimes a
+// letter and the form that came with it; more than this is a knowledge-base job.
+const MAX_DOCUMENTS = 4;
+
+// Whether what is being dragged is a file at all. Dragging selected text or a
+// link over the page must not put the whole window into "drop a document here".
+function hasFiles(e) {
+  const dt = e && e.dataTransfer;
+  if (!dt) return false;
+  if (dt.types && typeof dt.types.includes === 'function') return dt.types.includes('Files');
+  return Array.from(dt.types || []).indexOf('Files') !== -1;
+}
+
+// A file size in the words a person uses, for the row in the dock.
+function docSize(chars) {
+  if (!chars) return '';
+  if (chars < 1000) return chars + ' characters';
+  return Math.round(chars / 1000) + 'k characters';
+}
 
 // The opening screen offers a row of shortcuts rather than a blank field:
 // the questions asked at the desk every day, and the other tools, which are
@@ -127,6 +151,10 @@ class RiversidePracticeQA extends React.Component {
     this.state = {
       input: '',
       pendingImages: [],   // images attached to the next message: [{ name, dataUrl }]
+      // Documents dropped onto the page and read into text, waiting to go up
+      // with the next question: [{ key, name, status, text, chars, truncated }]
+      pendingDocs: [],
+      dragging: false,     // a file is being dragged over the window
       messages: [],
       // Which question is on screen. null means the latest one; a number
       // means an earlier question was opened from the minimised history.
@@ -165,6 +193,9 @@ class RiversidePracticeQA extends React.Component {
     };
     // Timers belonging to the stored "test" answer, cleared on unmount.
     this.mockTimers = [];
+    // How many nested elements the dragged file is currently over (see
+    // onDragLeave): a counter, because enter/leave fire per element.
+    this.dragDepth = 0;
   }
 
   blankDraft() {
@@ -372,6 +403,102 @@ class RiversidePracticeQA extends React.Component {
     if (files.length) { e.preventDefault(); this.addImages(files); }
   }
 
+  /* ----------------------- Document attachments ----------------------- *
+   * A letter, a referral form, an email saved out of Outlook: dropped
+   * onto the page and read into text by /api/attach, then sent up with
+   * the question it was dropped with.
+   *
+   * There is no attach button on purpose. The dock is one field and
+   * nothing else, and a button beside it would be pressed once a week;
+   * dropping a file on the page is what people already try first. A
+   * picture dropped the same way takes the image path instead, since the
+   * model can simply look at those.
+   *
+   * Nothing dropped here is stored. It lives in this component until the
+   * question is answered, and goes no further than that one turn.
+   * -------------------------------------------------------------------- */
+
+  async addDocuments(files) {
+    const room = MAX_DOCUMENTS - this.state.pendingDocs.length;
+    const queue = Array.from(files || []).slice(0, Math.max(0, room));
+    if (!queue.length) return;
+
+    // Each file gets its row in the dock immediately, reading, so a slow PDF
+    // shows as work in progress rather than as nothing having happened.
+    const pending = queue.map((f) => ({
+      key: 'doc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      name: f.name || 'Document',
+      status: 'reading',
+      text: '',
+      chars: 0,
+      truncated: false,
+      error: '',
+    }));
+    this.setState((state) => ({ pendingDocs: state.pendingDocs.concat(pending).slice(0, MAX_DOCUMENTS) }));
+
+    await Promise.all(queue.map(async (file, i) => {
+      const key = pending[i].key;
+      // Always a functional update: several files land at once, and each
+      // finishes whenever its own parse finishes.
+      const settle = (patch) => this.setState((state) => ({
+        pendingDocs: state.pendingDocs.map((d) => (d.key === key ? { ...d, ...patch } : d)),
+      }));
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch('/api/attach', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data && data.error ? data.error : 'That file could not be read.');
+        settle({ status: 'ready', text: data.text || '', chars: data.chars || 0, truncated: data.truncated === true, name: data.name || pending[i].name });
+      } catch (e) {
+        settle({ status: 'error', error: String(e.message || e).slice(0, 200) });
+      }
+    }));
+  }
+
+  removePendingDoc(key) {
+    this.setState((state) => ({ pendingDocs: state.pendingDocs.filter((d) => d.key !== key) }));
+  }
+
+  // A drop anywhere on the page counts. Dragging a file over a page whose drop
+  // target is one small strip is how people conclude a feature does not exist.
+  onDragEnter(e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    this.dragDepth += 1;
+    if (!this.state.dragging) this.setState({ dragging: true });
+  }
+
+  onDragOver(e) {
+    if (!hasFiles(e)) return;
+    // Without this the browser opens the file instead, which loses the page.
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = 'copy'; } catch (err) { /* not all browsers allow setting it */ }
+  }
+
+  // Dragging over a child element fires leave on the parent, so the count is
+  // what decides — a plain boolean flickers the overlay on every border crossed.
+  onDragLeave(e) {
+    if (!this.state.dragging) return;
+    this.dragDepth = Math.max(0, this.dragDepth - 1);
+    if (!this.dragDepth) this.setState({ dragging: false });
+  }
+
+  onDrop(e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    this.dragDepth = 0;
+    this.setState({ dragging: false });
+    const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+    if (!files.length) return;
+    // A picture is something the model can look at; everything else has to be
+    // read into text first. Both arrive by the same drop.
+    const images = files.filter((f) => /^image\//.test(f.type || ''));
+    const docs = files.filter((f) => !/^image\//.test(f.type || ''));
+    if (images.length) this.addImages(images);
+    if (docs.length) this.addDocuments(docs);
+  }
+
   cats() { return CATEGORIES; }
   seed() { return SEED_GUIDES; }
   allGuides() { return this.seed().concat(this.state.customGuides || []); }
@@ -414,20 +541,29 @@ class RiversidePracticeQA extends React.Component {
   ask(text) {
     const t = (text || '').trim();
     const images = this.state.pendingImages.map((im) => im.dataUrl);
-    if (!t && !images.length) return;
-    const question = t || 'Please look at the attached image.';
-    const userMsg = { role: 'user', text: t, images };
+    // Only documents that finished reading go up. One still being read, or one
+    // that could not be read, keeps its row in the dock and is not sent.
+    const attachments = this.state.pendingDocs
+      .filter((d) => d.status === 'ready' && d.text)
+      .map((d) => ({ name: d.name, text: d.text, truncated: d.truncated }));
+    if (!t && !images.length && !attachments.length) return;
+    const question = t || (attachments.length
+      ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
+      : 'Please look at the attached image.');
+    const userMsg = { role: 'user', text: t, images, docNames: attachments.map((a) => a.name) };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
+    // The attached documents ride along for the same reason: a retry has to send
+    // the letter the question was asked about, or it asks a different question.
     // `steps` and `statusText` are filled in live from the agent's stream: each
     // search it runs appears in the card while it is still working.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
     // they were reading an earlier one when they asked it.
-    this.setState({ messages, input: '', pendingImages: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1 }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1 }, () => { this.save(); this.fetchAI(question, aiIdx); });
     // The emit plays once, then the strip above the dock goes quiet again.
     clearTimeout(this.emitTimer);
     this.emitTimer = setTimeout(() => this.setState({ emitting: false }), 640);
@@ -439,15 +575,20 @@ class RiversidePracticeQA extends React.Component {
    * layout. The interface can be worked on all day without a single
    * token being spent. See lib/test-answer.js.
    * ------------------------------------------------------------------ */
-  mockAI(idx) {
+  mockAI(idx, general = false) {
     const at = (ms, fn) => { this.mockTimers.push(setTimeout(fn, ms)); };
     let clock = 0;
+    // "test general" plays the other kind of turn: a request carried out
+    // directly, with nothing looked up and nothing cited.
+    const status = general ? TEST_GENERAL_STATUS : TEST_STATUS;
+    const steps = general ? TEST_GENERAL_STEPS : TEST_STEPS;
+    const answer = general ? TEST_GENERAL_ANSWER : TEST_ANSWER;
 
-    for (const st of TEST_STATUS) {
+    for (const st of status) {
       at(st.at, () => this.onAgentEvent(idx, { type: 'status', text: st.text }));
     }
 
-    for (const step of TEST_STEPS) {
+    for (const step of steps) {
       const startedAt = clock;
       at(startedAt, () => this.onAgentEvent(idx, {
         type: 'tool-start', id: step.id, tool: step.tool, label: step.label, detail: step.detail,
@@ -461,7 +602,7 @@ class RiversidePracticeQA extends React.Component {
     // `kind` stays 'ai' — it decides which card renders this message, and the
     // fixture must not be able to change it.
     at(clock + 700, () => {
-      const patch = Object.assign({ status: 'done', answerKind: 'answer', statusText: '' }, TEST_ANSWER);
+      const patch = Object.assign({ status: 'done', answerKind: 'answer', statusText: '' }, answer);
       delete patch.kind;
       this.updateAi(idx, patch);
     });
@@ -470,16 +611,17 @@ class RiversidePracticeQA extends React.Component {
   // `refresh` is set by Reload on a cached answer: research the question again
   // rather than serving what the server already has stored for it.
   async fetchAI(question, idx, { refresh = false } = {}) {
-    if (isTestQuery(question)) { this.mockAI(idx); return; }
+    if (isTestQuery(question)) { this.mockAI(idx, isGeneralTestQuery(question)); return; }
     // History is the conversation BEFORE this question (idx-1 = the user message
     // we're answering). On the first question this is empty, so the server skips
     // the follow-up query-condensing step — no point enriching a standalone query.
     const history = this.buildHistory(idx - 1);
     const m = this.state.messages[idx];
     const images = (m && m.images) || [];
+    const attachments = (m && m.attachments) || [];
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images, refresh },
+        { question, history, customGuides: this.state.customGuides, images, attachments, refresh },
         (ev) => this.onAgentEvent(idx, ev),
       );
       if (data.kind === 'docfile') {
@@ -529,7 +671,7 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', cache: data.cache || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', cache: data.cache || null, general: data.general === true, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -694,8 +836,18 @@ class RiversidePracticeQA extends React.Component {
     }
     if (m.tip) lines.push('Tip: ' + plainText(m.tip));
     lines.push(...this.contactLines(m));
-    lines.push('', 'From the practice’s documents; AI judgement marked where used.');
+    lines.push('', m.general
+      ? 'Written by the assistant for this request; no practice document was used.'
+      : 'From the practice’s documents; AI judgement marked where used.');
     try { navigator.clipboard.writeText(lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()); } catch (e) {}
+    this.flagCopied(idx);
+  }
+
+  // Just the drafted wording, exactly as it stands. A reformatted email or a
+  // message to a patient is written to be pasted somewhere else, and pasting it
+  // with the rest of the answer wrapped around it is not what anyone wants.
+  copyMessage(m, idx) {
+    try { navigator.clipboard.writeText(m.message || ''); } catch (e) {}
     this.flagCopied(idx);
   }
 
@@ -1010,6 +1162,11 @@ class RiversidePracticeQA extends React.Component {
         const cache = m.cache && m.cache.hit ? m.cache : null;
         return {
           isAi: true,
+          // A request the assistant carried out itself — formatting, rewriting,
+          // drafting — rather than an answer researched from the practice's
+          // material. Said once, at the top of the card, because not one line of
+          // it is backed by a document.
+          isGeneral: !!m.general,
           isCached: !!cache,
           cachedLabel: cache ? 'Answered from cache — saved ' + timeAgo(cache.cachedAt) : '',
           // Only worth saying when the wording differed: the reader is entitled
@@ -1059,9 +1216,11 @@ class RiversidePracticeQA extends React.Component {
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
             : '',
-          hasProvenanceNote: usedJudgement || usedWeb || dropped > 0,
+          hasProvenanceNote: usedJudgement || usedWeb || dropped > 0 || !!m.general,
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
+          onCopyMessage: () => self.copyMessage(m, idx),
+          copyMessageLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy',
           hasMessageCite: !!m.messageCite,
           messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ', ' + m.messageCite.location) : '',
           onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
@@ -1121,18 +1280,22 @@ class RiversidePracticeQA extends React.Component {
     this.state.messages.forEach((m, i) => {
       if (m.role === 'user') {
         const imgs = m.images || [];
+        const docs = m.docNames || [];
         groups.push({
-          question: m.text || 'About the attached image',
+          question: m.text || (docs.length ? 'About the attached ' + (docs.length === 1 ? 'document' : 'documents') : 'About the attached image'),
           images: imgs,
           // Image data was stripped to fit localStorage — say so instead.
           imageNote: (!imgs.length && m.imageCount)
             ? m.imageCount + ' image' + (m.imageCount === 1 ? '' : 's') + ' attached'
             : '',
+          // The documents this question was asked about, named under it: an
+          // answer about a letter has to say which letter.
+          docNames: docs,
           idxs: [],
         });
       } else {
         // A reply with no question before it (an older saved chat, say).
-        if (!groups.length) groups.push({ question: '', images: [], imageNote: '', idxs: [] });
+        if (!groups.length) groups.push({ question: '', images: [], imageNote: '', docNames: [], idxs: [] });
         groups[groups.length - 1].idxs.push(i);
       }
     });
@@ -1186,7 +1349,7 @@ class RiversidePracticeQA extends React.Component {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
       // One line. Anything longer is not read.
       welcome: this.props.welcome != null ? this.props.welcome
-        : 'Ask anything about rotas, policies, or contacts.',
+        : 'Ask anything about rotas, policies or contacts — or ask me to write, shorten or tidy something up.',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -1206,6 +1369,28 @@ class RiversidePracticeQA extends React.Component {
         onRemove: () => self.removePendingImage(i),
       })),
       hasPendingImages: this.state.pendingImages.length > 0,
+      // Documents dropped onto the page, listed above the field until the
+      // question they belong to is asked.
+      pendingDocs: this.state.pendingDocs.map((d) => ({
+        key: d.key,
+        name: d.name,
+        isReading: d.status === 'reading',
+        isReady: d.status === 'ready',
+        isError: d.status === 'error',
+        // "Read, 4k characters" — enough to see it worked, and that a long one
+        // was cut short before it was sent.
+        note: d.status === 'reading' ? 'Reading…'
+          : d.status === 'error' ? d.error
+            : docSize(d.chars) + (d.truncated ? ' — only the first part will be used' : ''),
+        onRemove: () => self.removePendingDoc(d.key),
+      })),
+      hasPendingDocs: this.state.pendingDocs.length > 0,
+      // How far the dock has grown upward for what is attached, in pixels: a
+      // document row is a fixed 62px (its two lines never wrap — see the note's
+      // white-space), the image thumbnails are one 74px strip however many
+      // there are. The page above the dock uses this to keep out of their way.
+      dockAttached: (this.state.pendingDocs.length * 62 + (this.state.pendingImages.length ? 74 : 0)) + 'px',
+      isDragging: this.state.dragging,
       onPaste: (e) => self.onPaste(e),
       // The strip above the dock: what is being typed, then the bar that
       // carries it away; and the dock's own light while an answer is worked
@@ -1268,6 +1453,8 @@ class RiversidePracticeQA extends React.Component {
         images: active.images,
         hasImages: active.images.length > 0,
         imageNote: active.imageNote,
+        docNames: active.docNames || [],
+        hasDocs: !!(active.docNames && active.docNames.length),
         items: active.idxs.map((i) => messages[i]),
       } : null,
       history: earlier,
@@ -1298,7 +1485,21 @@ class RiversidePracticeQA extends React.Component {
   render() {
     const v = this.renderVals();
     return (
-      <div className="riva-app-shell" style={s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
+      // A document is attached by dropping it anywhere on this page. There is
+      // no attach button: the dock is one field, and a control beside it would
+      // be used once a week. Dropping is what people try first anyway.
+      <div className="riva-app-shell"
+        onDragEnter={(e) => this.onDragEnter(e)}
+        onDragOver={(e) => this.onDragOver(e)}
+        onDragLeave={(e) => this.onDragLeave(e)}
+        onDrop={(e) => this.onDrop(e)}
+        // How far the dock has grown upwards for what is attached to the next
+        // question. The dock is fixed to the foot of the screen, so nothing
+        // above it can see those rows; this is how the opening screen's
+        // heading and the foot of a long answer keep out from under them.
+        // Set through the style object rather than s(), which would camel-case
+        // the custom property out of existence.
+        style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;'), '--riva-dock-attached': v.dockAttached }}>
 
         {/* The opening screen is mostly empty by design, so it is the one
             place a background earns its keep. It goes the moment there is
@@ -1335,7 +1536,7 @@ class RiversidePracticeQA extends React.Component {
             map has neither over it — no dock at all — so it is shown whole,
             with no mask and no room reserved at the foot. */}
         <div id="riva-scroll" className={v.showMap ? '' : (v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade')}
-          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb || v.showMap ? '' : 'padding-bottom:calc(var(--riva-dock-h) + 50px);'))}>
+          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb || v.showMap ? '' : 'padding-bottom:calc(var(--riva-dock-h) + 50px + var(--riva-dock-attached));'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
           <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s(v.showMap ? '' : 'animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
@@ -1371,6 +1572,35 @@ class RiversidePracticeQA extends React.Component {
                 ))}
               </div>
             )}
+            {/* Documents dropped onto the page, waiting for the question they
+                belong to. A row rather than a thumbnail: the name is the only
+                part of a letter anybody recognises at a glance, and the note
+                beside it says whether it has been read yet. */}
+            {v.hasPendingDocs && (
+              <div style={s('display:flex;flex-direction:column;gap:8px;margin-bottom:10px;')}>
+                {v.pendingDocs.map((d) => (
+                  <div key={d.key} style={s('display:flex;align-items:center;gap:11px;background:#fff;border:1px solid ' + (d.isError ? '#f0c2bd' : '#d8dde0') + ';border-radius:12px;padding:10px 12px;box-shadow:0 2px 8px rgba(33,43,50,.08);animation:rivaUp .18s ease;')}>
+                    <span style={s('flex:none;display:flex;color:' + (d.isError ? '#d5281b' : '#005eb8') + ';')}>
+                      <Svg w={18} sw={2}>{d.isError ? Icons.alertCircle : Icons.file}</Svg>
+                    </span>
+                    <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
+                      <span style={s('font-size:14.5px;font-weight:600;color:#212b32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.name}</span>
+                      {/* One line, always: the row's height is reserved above
+                          the dock in pixels, so a note that wrapped would put
+                          the dock through whatever is above it. */}
+                      <span style={s('font-size:12.5px;color:' + (d.isError ? '#d5281b' : '#4c6272') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.note}</span>
+                    </span>
+                    {d.isReading && <span style={s('flex:none;width:15px;height:15px;border:2px solid #d8dde0;border-top-color:#005eb8;border-radius:50%;animation:rivaSpin .7s linear infinite;')} />}
+                    <Hover tag="button" type="button" onClick={d.onRemove} aria-label={'Remove ' + d.name}
+                      base="flex:none;width:26px;height:26px;border-radius:50%;background:#f0f4f5;color:#4c6272;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"
+                      hover="background:#d5281b;color:#fff;">
+                      <Svg w={11} sw={2.6}>{Icons.close}</Svg>
+                    </Hover>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
@@ -1412,12 +1642,33 @@ class RiversidePracticeQA extends React.Component {
               </div>
             )}
 
-            {/* Under the field, where it is read on the way to typing. */}
+            {/* Under the field, where it is read on the way to typing. The
+                second line is the only place drag-and-drop is advertised —
+                there is no attach button to notice. */}
             {v.isEmpty && (
-              <p style={s('margin:16px 0 0;font-size:13px;font-weight:600;color:#c0392b;text-align:center;')}>Don&rsquo;t type patient related data.</p>
+              <>
+                <p style={s('margin:14px 0 0;font-size:13px;color:#4c6272;text-align:center;')}>
+                  Drop a document anywhere to attach it.
+                </p>
+                <p style={s('margin:8px 0 0;font-size:13px;font-weight:600;color:#c0392b;text-align:center;')}>Don&rsquo;t type patient related data.</p>
+              </>
             )}
           </div>
         </div>
+        )}
+
+        {/* Something is being dragged over the window. The whole page says so,
+            because the whole page is the target. */}
+        {v.isDragging && (
+          <div style={s('position:fixed;inset:0;z-index:70;pointer-events:none;background:rgba(240,244,245,.82);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;animation:rivaHeaderIn .12s ease both;')}>
+            <div style={s('display:flex;flex-direction:column;align-items:center;gap:14px;border:2px dashed #005eb8;border-radius:20px;background:#fff;padding:34px 46px;box-shadow:0 18px 50px rgba(33,43,50,.18);text-align:center;')}>
+              <span style={s('display:flex;color:#005eb8;')}><Svg w={34} sw={1.8}>{Icons.paperclip}</Svg></span>
+              <span style={s('font-size:21px;font-weight:700;letter-spacing:-0.01em;')}>Drop to attach</span>
+              <span style={s('font-size:14.5px;color:#4c6272;max-width:34ch;')}>
+                PDF, Word, text or a picture. It is read for this question only and is not saved anywhere.
+              </span>
+            </div>
+          </div>
         )}
 
         {v.viewerOpen && <DocumentViewer v={v} />}
