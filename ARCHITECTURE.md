@@ -512,14 +512,27 @@ writing off it.
 
 ### Provider routing and retention
 
+**`lib/ai/openrouter.mjs` owns the shape of every OpenRouter request.** Nothing
+else builds one: `chatRequest` / `chatBody` stamp the two required settings last,
+after whatever the caller passed, so a call site cannot override them by
+accident. `test/no-reasoning.test.mjs` walks `app/`, `lib/` and `rag/` and fails
+the build if any file writes the completions URL, a `data_collection` key or a
+`reasoning` object of its own.
+
 - Every chat completion sets `provider: { data_collection: 'deny' }`, which
   restricts OpenRouter to providers contractually set not to retain or train on
   prompt data.
 - Embeddings additionally pin `provider: { order: ['azure'],
   allow_fallbacks: false, data_collection: 'deny' }` — a single zero-retention
-  provider with no fallback.
-- Extended reasoning is disabled on the agent (`reasoning: { enabled: false,
-  exclude: true }`).
+  provider with no fallback. (Embeddings are the one endpoint that does not go
+  through `chatBody`; there is nothing to reason about.)
+- **Extended reasoning is disabled everywhere** (`reasoning: { enabled: false,
+  exclude: true }`), not only on the agent. Nothing this app asks a model to do
+  is a puzzle: the thinking has already been done by the staff who wrote the
+  Notebook, by the prompts, and by the code that checks each claim against its
+  source afterwards. On a model that deliberates first, that wait is most of what
+  a receptionist experiences, paid on every request. Models that always reason
+  ignore the flag; the rest answer straight away.
 - What is **not** constrained anywhere in the code: the geographic location of
   the provider that ends up serving a request. Written assurance from OpenRouter,
   and the residency question, are open items in the DPIA (steps 3 and 4).

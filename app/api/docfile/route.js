@@ -16,13 +16,12 @@ import { parseAiJson } from '@/lib/ai/prompt';
 import { notebookSectionContext } from '@/lib/notebook';
 import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
 import { getAiModel } from '@/lib/settings';
+import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Same bounds as /api/ask for attached images.
 const MAX_IMAGES = 4;
@@ -106,17 +105,10 @@ export async function POST(request) {
     : prompt;
 
   try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://riverside-practice.local',
-        'X-Title': 'Riverside Practice Q&A',
-      },
-      // provider: only route to providers that do not retain prompt data.
-      body: JSON.stringify({ model, temperature: 0.1, provider: NO_RETENTION, messages: [{ role: 'user', content }] }),
-    });
+    // No-retention routing and no extended reasoning, both from lib/ai/openrouter.
+    const res = await fetch(...chatRequest(apiKey, {
+      model, temperature: 0.1, messages: [{ role: 'user', content }],
+    }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
       return NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 });

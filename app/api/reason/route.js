@@ -7,6 +7,7 @@
 // diagnoses or adds management.
 import { NextResponse } from 'next/server';
 import { getAiModel } from '@/lib/settings';
+import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
 // Parse the model's JSON reply: strip any markdown fences, then fall back to
 // the first-{…last-} slice for replies with prose around the object.
@@ -25,8 +26,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function buildPrompt(text) {
   return `You are a clinical summarising assistant for a UK GP practice (The Riverside Practice). Reception pastes the text of a patient's AccurX online consultation (patient-identifiable details removed). Write the clinical REASON FOR THE APPOINTMENT for the clinician who will see or process this request.
@@ -70,20 +69,10 @@ export async function POST(request) {
   if (text.length > 20_000) return NextResponse.json({ error: 'Consultation text is too long.' }, { status: 400 });
 
   try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://riverside-practice.local',
-        'X-Title': 'Riverside Practice Q&A',
-      },
-      // provider: only route to providers that do not retain prompt data.
-      body: JSON.stringify({
-        model, temperature: 0.1, provider: NO_RETENTION,
-        messages: [{ role: 'user', content: buildPrompt(text) }],
-      }),
-    });
+    // No-retention routing and no extended reasoning, both from lib/ai/openrouter.
+    const res = await fetch(...chatRequest(apiKey, {
+      model, temperature: 0.1, messages: [{ role: 'user', content: buildPrompt(text) }],
+    }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
       return NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 });

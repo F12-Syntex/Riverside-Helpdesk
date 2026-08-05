@@ -5,18 +5,11 @@
 // this is cheap and fast; the client falls back to a local parser if it fails.
 import { NextResponse } from 'next/server';
 import { getModelRoles } from '@/lib/settings';
+import { OPENROUTER_URL, openRouterHeaders, chatBody } from '@/lib/ai/openrouter.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_HEADERS = (apiKey) => ({
-  Authorization: `Bearer ${apiKey}`,
-  'Content-Type': 'application/json',
-  'HTTP-Referer': 'https://riverside-practice.local',
-  'X-Title': 'Riverside Practice Medication List Extract',
-});
 
 const TIMEOUT_MS = 20000;
 const MAX_TEXT = 4000;     // bound the prompt size / cost
@@ -82,16 +75,17 @@ export async function POST(request) {
   try {
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
+      headers: openRouterHeaders(apiKey, 'Riverside Practice Medication List Extract'),
       signal: ctrl.signal,
-      body: JSON.stringify({
+      // chatBody stamps the no-retention routing and turns extended reasoning
+      // off — see lib/ai/openrouter.mjs.
+      body: JSON.stringify(chatBody({
         model,
         temperature: 0,
         max_tokens: 500,
         messages: [{ role: 'user', content: PROMPT(text) }],
         response_format: { type: 'json_object' },
-        provider: NO_RETENTION,
-      }),
+      })),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');

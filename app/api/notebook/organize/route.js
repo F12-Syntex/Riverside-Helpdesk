@@ -12,19 +12,12 @@
 import { NextResponse } from 'next/server';
 import { listNotes, applyOrganizePlan } from '@/lib/notebook';
 import { getAiModel } from '@/lib/settings';
+import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_HEADERS = (apiKey) => ({
-  Authorization: `Bearer ${apiKey}`,
-  'Content-Type': 'application/json',
-  'HTTP-Referer': 'https://riverside-practice.local',
-  'X-Title': 'Riverside Practice Q&A',
-});
 
 const MAX_TOTAL_CHARS = 120000; // all source pages together
 const isSectionRow = (r) => !r.parentId || r.isSection;
@@ -162,12 +155,10 @@ export async function POST(request) {
   const prompt = buildPrompt({ sectionTitle, outline: outlineFor(rows, sectionId), notes });
 
   try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
-      // Only providers that do not retain prompt data (same policy as /api/ask).
-      body: JSON.stringify({ model, temperature: 0, messages: [{ role: 'user', content: prompt }], provider: NO_RETENTION }),
-    });
+    // No-retention routing and no extended reasoning, both from lib/ai/openrouter.
+    const res = await fetch(...chatRequest(apiKey, {
+      model, temperature: 0, messages: [{ role: 'user', content: prompt }],
+    }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
       return NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 });

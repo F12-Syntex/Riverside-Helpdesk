@@ -22,6 +22,7 @@
 import { NextResponse } from 'next/server';
 import { getSql, ensureMedicationSchema } from '@/lib/db';
 import { getAiModel } from '@/lib/settings';
+import { OPENROUTER_URL, openRouterHeaders, chatBody } from '@/lib/ai/openrouter.mjs';
 import {
   buildMedicationPrompt,
   parseMedicationJson,
@@ -36,14 +37,6 @@ export const dynamic = 'force-dynamic';
 // Route only to providers that do not retain prompt data (consistent with the
 // other AI routes). The query carries no patient data — just a medicine name and
 // a general question — but we keep the same privacy posture.
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_HEADERS = (apiKey) => ({
-  Authorization: `Bearer ${apiKey}`,
-  'Content-Type': 'application/json',
-  'HTTP-Referer': 'https://riverside-practice.local',
-  'X-Title': 'Riverside Practice Medication Check',
-});
 
 const MODEL_TIMEOUT_MS = 60000; // web search makes the first lookup slower
 const IMAGE_TIMEOUT_MS = 4500;  // image is best-effort — never hold the answer up
@@ -193,9 +186,11 @@ async function fetchFromModel({ apiKey, model, name, query, needsBase }) {
   try {
     const res = await fetch(OPENROUTER_URL, {
       method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
+      headers: openRouterHeaders(apiKey, 'Riverside Practice Medication Check'),
       signal: ctrl.signal,
-      body: JSON.stringify({
+      // chatBody stamps the no-retention routing and turns extended reasoning
+      // off — see lib/ai/openrouter.mjs.
+      body: JSON.stringify(chatBody({
         model,
         temperature: 0.2,
         max_tokens: 3000,
@@ -215,8 +210,7 @@ async function fetchFromModel({ apiKey, model, name, query, needsBase }) {
             },
           },
         ],
-        provider: NO_RETENTION,
-      }),
+      })),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');

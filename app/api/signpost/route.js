@@ -12,6 +12,7 @@
 import { NextResponse } from 'next/server';
 import { notebookSectionContext } from '@/lib/notebook';
 import { getAiModel } from '@/lib/settings';
+import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
 // Parse the model's JSON reply: strip any markdown fences, then fall back to
 // the first-{…last-} slice for replies with prose around the object. (The
@@ -32,8 +33,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // The practice team the model may route to. Kept as data so the roster is easy
 // to amend in one place when the team changes.
@@ -115,20 +114,10 @@ export async function POST(request) {
   const guidance = await notebookSectionContext(TRIAGE_SECTION).catch(() => '');
 
   try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://riverside-practice.local',
-        'X-Title': 'Riverside Practice Q&A',
-      },
-      // provider: only route to providers that do not retain prompt data.
-      body: JSON.stringify({
-        model, temperature: 0.1, provider: NO_RETENTION,
-        messages: [{ role: 'user', content: buildPrompt(text, guidance) }],
-      }),
-    });
+    // No-retention routing and no extended reasoning, both from lib/ai/openrouter.
+    const res = await fetch(...chatRequest(apiKey, {
+      model, temperature: 0.1, messages: [{ role: 'user', content: buildPrompt(text, guidance) }],
+    }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
       return NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 });

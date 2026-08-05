@@ -4,9 +4,10 @@
 // when it chooses a file — so the two are read by the same model. Best effort —
 // if it fails, the document still ingests with an empty summary.
 import { config, readingModel } from './config.mjs';
+import { chatBody } from '../../lib/ai/openrouter.mjs';
 
 export async function summariseDoc(title, sampleText) {
-  const { apiKey, noRetentionProvider, base, referer, title: appTitle } = config();
+  const { apiKey, base, referer, title: appTitle } = config();
   const analysisModel = await readingModel();
   if (!apiKey || !analysisModel) return { summary: '', tags: [] };
 
@@ -25,9 +26,9 @@ export async function summariseDoc(title, sampleText) {
         'HTTP-Referer': referer,
         'X-Title': appTitle,
       },
-      // gpt-oss is a reasoning model — keep reasoning effort low for this simple
-      // cataloguing task so it returns the JSON without burning tokens.
-      body: JSON.stringify({ model: analysisModel, temperature: 0.2, reasoning: { effort: 'low' }, messages: [{ role: 'user', content: prompt }], provider: noRetentionProvider }),
+      // Saying what a document covers is not a puzzle: chatBody turns reasoning
+      // off outright rather than asking for a little of it.
+      body: JSON.stringify(chatBody({ model: analysisModel, temperature: 0.2, messages: [{ role: 'user', content: prompt }] })),
     });
     if (!res.ok) return { summary: '', tags: [] };
     const data = await res.json();

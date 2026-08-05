@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config, imageReaderModels } from './config.mjs';
+import { chatBody } from '../../lib/ai/openrouter.mjs';
 
 const MIME = {
   '.png': 'image/png',
@@ -36,7 +37,7 @@ async function readWith(model, dataUrl, hint) {
       'HTTP-Referer': referer,
       'X-Title': title,
     },
-    body: JSON.stringify({
+    body: JSON.stringify(chatBody({
       model,
       temperature: 0.1,
       messages: [{
@@ -46,7 +47,7 @@ async function readWith(model, dataUrl, hint) {
           { type: 'image_url', image_url: { url: dataUrl } },
         ],
       }],
-    }),
+    })),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');

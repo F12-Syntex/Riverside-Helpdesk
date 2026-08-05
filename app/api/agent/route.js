@@ -50,6 +50,7 @@ import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract
 import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
 import { isReferralRequest } from '@/lib/referrals/scope.mjs';
+import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { pickResearchModel, shouldEscalateResearch } from '@/lib/agent/research-model.mjs';
 import { selectSources } from '@/lib/agent/select.mjs';
@@ -261,21 +262,12 @@ export async function POST(request) {
       })),
   );
 
-  const openrouter = createOpenRouter({
-    apiKey,
-    // Only providers that do not retain prompt data, so the question and the
-    // practice's own text are never stored by the model provider.
-    extraBody: {
-      provider: { data_collection: 'deny' },
-      // No extended reasoning. None of the three phases is a puzzle: the
-      // research phase picks which source to open, and the writing phase turns
-      // sources it has been handed into steps. On a model that thinks first,
-      // that deliberation is most of the wait — paid on every question, for
-      // work already pinned down by the prompt and checked in code afterwards.
-      // Models that always reason ignore this; the rest answer straight away.
-      reasoning: { enabled: false, exclude: true },
-    },
-  });
+  // No-retention routing, and no extended reasoning on any of the three phases.
+  // None of them is a puzzle: research picks which source to open, and writing
+  // turns sources it has been handed into steps. Both settings come from
+  // lib/ai/openrouter, which is the one place they are defined for the whole
+  // app — see the note there for why thinking is off everywhere.
+  const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
   // THE ANSWER IS ALWAYS WRITTEN BY THE REASONING MODEL.
   //
   // Not a default to be tuned. Writing the answer is the one job that needs the

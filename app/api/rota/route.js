@@ -15,6 +15,7 @@
 import { NextResponse } from 'next/server';
 import { getSql, ensureSchema } from '@/lib/db';
 import { getAiModel } from '@/lib/settings';
+import { chatRequest } from '@/lib/ai/openrouter.mjs';
 import { generateGrid, tallyHistory, sanitiseGrid, rebalance, changedKeys, DEFAULT_TIMES, currentMonday, isoOf } from '@/lib/rota/logic';
 import { buildRotaChatPrompt, parseGridResponse } from '@/lib/ai/rota';
 
@@ -22,14 +23,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const NO_RETENTION = { data_collection: 'deny' };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_HEADERS = (apiKey) => ({
-  Authorization: `Bearer ${apiKey}`,
-  'Content-Type': 'application/json',
-  'HTTP-Referer': 'https://riverside-practice.local',
-  'X-Title': 'Riverside Practice Rota',
-});
 
 function cleanRules(raw) {
   if (!Array.isArray(raw)) return [];
@@ -115,7 +108,7 @@ export async function POST(request) {
         : 'Apply ALL of these rules to the rota together (if two conflict, the later one wins):\n' + rules.map((r, i) => `${i + 1}. ${r}`).join('\n');
       const prompt = buildRotaChatPrompt({ staff, weekStarting: week, grid, times, message });
       try {
-        const res = await fetch(OPENROUTER_URL, { method: 'POST', headers: OPENROUTER_HEADERS(apiKey), body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content: prompt }], provider: NO_RETENTION }) });
+        const res = await fetch(...chatRequest(apiKey, { model, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }));
         if (res.ok) {
           const data = await res.json();
           const parsed = parseGridResponse(data?.choices?.[0]?.message?.content || '');

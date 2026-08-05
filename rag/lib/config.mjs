@@ -2,6 +2,7 @@
 // the offline ingestion scripts (run via `node`) and the live Next.js API route.
 import fs from 'node:fs';
 import path from 'node:path';
+import { NO_RETENTION } from '../../lib/ai/openrouter.mjs';
 
 export const ROOT = process.cwd();
 export const RAG_DIR = path.join(ROOT, 'rag');
@@ -85,8 +86,9 @@ export function config() {
     // Embeddings: pin to Azure, which OpenRouter marks "Private" — it does not
     // train on prompts and does not retain prompt data. No fallback to other
     // providers, so embedding content never leaves a zero-retention path.
-    embedProvider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' },
-    // For other calls: only route to providers that do not retain prompt data.
-    noRetentionProvider: { data_collection: 'deny' },
+    // Every other call is a chat completion and builds its body with chatBody
+    // (lib/ai/openrouter.mjs), which applies the same no-retention routing and
+    // turns extended reasoning off — so there is no second provider key here.
+    embedProvider: { order: ['azure'], allow_fallbacks: false, ...NO_RETENTION },
   };
 }

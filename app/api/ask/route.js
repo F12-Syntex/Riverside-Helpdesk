@@ -24,6 +24,7 @@ import { fullNotebookContext } from '@/lib/notebook';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
 import { getAiModel } from '@/lib/settings';
+import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,17 +61,6 @@ const REFERENCE_PHRASES = [
   /\bas\s+(?:per|with)\s+(?:the\s+)?(?:standard|usual|normal)\b/i,
   /\bfollows?\s+(?:the\s+)?(?:standard|usual|normal)\s+(?:process|procedure|protocol)\b/i,
 ];
-// provider routing: only providers that do not retain prompt data, so the
-// question and document extracts are never stored by the model provider.
-const NO_RETENTION = { data_collection: 'deny' };
-const NO_REASONING = { enabled: false, exclude: true };
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_HEADERS = (apiKey) => ({
-  Authorization: `Bearer ${apiKey}`,
-  'Content-Type': 'application/json',
-  'HTTP-Referer': 'https://riverside-practice.local',
-  'X-Title': 'Riverside Practice Q&A',
-});
 
 // Scan the retrieved chunks for a reference-to-elsewhere phrase and return a
 // short snippet of surrounding text (keeps nearby keywords, e.g. the named
@@ -210,17 +200,13 @@ function sanitizeImages(raw) {
 // handling.
 async function callModel(apiKey, model, content) {
   try {
-    const res = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: OPENROUTER_HEADERS(apiKey),
-      // provider: only route to providers that do not retain prompt data, so the
-      // request and document extracts are never stored by the model provider.
-      // reasoning: off. This endpoint builds a filing title or routes a patient
-      // request from material it has already been given — deliberation before
-      // answering is time the reader waits for nothing. Models that always
-      // reason ignore it.
-      body: JSON.stringify({ model, temperature: 0.2, messages: [{ role: 'user', content }], provider: NO_RETENTION, reasoning: NO_REASONING }),
-    });
+    // No-retention routing and no extended reasoning, both from
+    // lib/ai/openrouter. This endpoint builds a filing title or routes a patient
+    // request from material it has already been given; deliberation before
+    // answering is time the reader waits for nothing.
+    const res = await fetch(...chatRequest(apiKey, {
+      model, temperature: 0.2, messages: [{ role: 'user', content }],
+    }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
       return { error: NextResponse.json({ error: `OpenRouter error (${res.status}).`, detail: detail.slice(0, 500) }, { status: 502 }) };
