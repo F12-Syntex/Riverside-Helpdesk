@@ -68,3 +68,27 @@ test('a question with no usable words keeps sources rather than dropping them al
   const { kept } = selectSources(sources, 'the and for');
   assert.deepEqual(kept, ['P1']);
 });
+
+test('a page sharing not one word with the question is held back', () => {
+  // The research loop fans out several wordings, so pages come back that matched
+  // a different one. Putting those in front of the writer is how "the material
+  // does not cover this" becomes confident steps for the nearest thing it does.
+  const sources = [
+    source('P1', 'Sharps disposal', 'Put used sharps in the yellow bin and seal it when three quarters full.'),
+    source('P2', 'Referrals', 'Send the referral through e-RS with a speciality.'),
+    source('P3', 'Referral priorities', 'A cancer referral is a two week wait referral.'),
+    source('P4', 'Referral letters', 'The referral letter is completed by the doctor.'),
+  ];
+  const { kept, dropped } = selectSources(sources, 'how do I do a referral');
+  assert.deepEqual(kept.sort(), ['P2', 'P3', 'P4']);
+  assert.deepEqual(dropped.map((d) => d.ref), ['P1']);
+});
+
+test('an off-topic page still fills a gap when there is little else', () => {
+  const sources = [
+    source('P1', 'Sharps disposal', 'Put used sharps in the yellow bin.'),
+    source('P2', 'Referrals', 'Send the referral through e-RS.'),
+  ];
+  const { kept } = selectSources(sources, 'how do I do a referral');
+  assert.deepEqual(kept.sort(), ['P1', 'P2']);
+});
