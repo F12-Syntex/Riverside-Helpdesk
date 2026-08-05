@@ -348,12 +348,28 @@ export default function AiAnswer({ v }) {
 
             {v.hasSections && (
               <div style={s('padding:16px 0 6px;display:flex;flex-direction:column;gap:16px;')}>
-                {v.sections.map((sec) => sec.isJudgement ? (
+                {v.sections.map((sec) => (sec.isJudgement || sec.isReasoned) ? (
                   <div key={sec.key} style={s('border:1px dashed #ecd39a;background:#fffdf5;border-radius:12px;padding:12px 16px 13px;')}>
                     <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
-                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.sparkle}</Svg>AI judgement
+                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.sparkle}</Svg>
+                      {sec.isReasoned ? 'Worked out from the practice’s material' : 'AI judgement'}
                     </div>
                     <Md text={sec.markdown} />
+                    {/* What the working was built on. The reader can open each
+                        one and disagree with the step that was taken — which is
+                        the whole difference between reasoning and being told. */}
+                    {sec.isReasoned && sec.premises.length > 0 && (
+                      <div style={s('margin-top:10px;padding-top:9px;border-top:1px solid #f0e2c0;display:flex;flex-wrap:wrap;align-items:center;gap:6px;')}>
+                        <span style={s('font-size:12.5px;color:#8a6100;font-weight:600;')}>Based on</span>
+                        {sec.premises.map((p) => (
+                          <Hover key={p.key} tag="button" type="button" onClick={p.onOpen}
+                            base="background:#fff;border:1px solid #e6d3a8;border-radius:999px;padding:3px 10px;font:inherit;font-size:12.5px;color:#7a5600;cursor:pointer;"
+                            hover="background:#fdf6e4;border-color:#d8bd7d;">
+                            {p.label}
+                          </Hover>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <Section key={sec.key} sec={sec} />
@@ -420,7 +436,7 @@ export default function AiAnswer({ v }) {
             {v.hasProvenanceNote && (
               <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;display:flex;flex-direction:column;gap:3px;')}>
                 {v.isGeneral && <span style={s('font-size:12.5px;color:#768692;')}>Written by the assistant for this request; no practice document was used</span>}
-                {v.usedJudgement && <span style={s('font-size:12.5px;color:#768692;')}>Amber blocks are AI judgement, not the practice&rsquo;s documents</span>}
+                {(v.usedJudgement || v.usedReasoning) && <span style={s('font-size:12.5px;color:#768692;')}>{v.usedReasoning ? 'Amber blocks are the assistant\u2019s own working from the sources named in them, not the practice\u2019s own words' : 'Amber blocks are AI judgement, not the practice\u2019s documents'}</span>}
                 {v.usedWeb && <span style={s('font-size:12.5px;color:#768692;')}>Sections marked &ldquo;from the web&rdquo; are general guidance found online, not practice policy</span>}
                 {v.hasDropped && <span style={s('font-size:12.5px;color:#768692;')}>{v.droppedNote}</span>}
               </div>

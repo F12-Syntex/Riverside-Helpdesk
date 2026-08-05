@@ -1133,8 +1133,18 @@ class RiversidePracticeQA extends React.Component {
             // Safety-critical, breach-risk or deadline sections are shown as a
             // red callout instead of ordinary body text, so they cannot be
             // skimmed past.
-            isCritical: !!sec.critical && sec.basis !== 'judgement',
+            isCritical: !!sec.critical && sec.basis !== 'judgement' && sec.basis !== 'reasoned',
             isJudgement: sec.basis === 'judgement',
+            // The assistant's own working: the practice's material settles this
+            // but does not say it outright, so the answer applies what it does
+            // say. Shown as reasoning, with the sources it was built on, and
+            // never as something the practice wrote down.
+            isReasoned: sec.basis === 'reasoned',
+            premises: (sec.premises || []).map((p, n) => ({
+              key: n,
+              label: p.docTitle + (p.location ? ', ' + p.location : ''),
+              onOpen: () => self.openViewer(p),
+            })),
             // Written from a web page, not the practice's own material — shown
             // with its own marker and a link out, never as practice policy.
             isWeb: !!web,
@@ -1154,7 +1164,11 @@ class RiversidePracticeQA extends React.Component {
         const validation = m.validation || null;
         const dropped = validation ? validation.dropped : 0;
         const usedWeb = sections.some((sec) => sec.isWeb);
+        // Both kinds share the amber block, so the provenance note at the foot
+        // of the card covers both: the reader is told once that amber is not
+        // the practice's own words.
         const usedJudgement = sections.some((sec) => sec.isJudgement);
+        const usedReasoning = sections.some((sec) => sec.isReasoned);
         // This answer was not researched just now — it was given earlier, to
         // this question or to one worded differently, and served from the
         // practice's own cache. Said on the card rather than left to be
@@ -1197,6 +1211,7 @@ class RiversidePracticeQA extends React.Component {
           hasSteps: steps.length > 0,
           statusText: m.statusText || '',
           usedJudgement,
+          usedReasoning,
           usedWeb,
           // What the practice's material does not cover, and anything the model
           // wrote that could not be verified against a source and was dropped.
@@ -1216,7 +1231,7 @@ class RiversidePracticeQA extends React.Component {
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
             : '',
-          hasProvenanceNote: usedJudgement || usedWeb || dropped > 0 || !!m.general,
+          hasProvenanceNote: usedJudgement || usedReasoning || usedWeb || dropped > 0 || !!m.general,
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
           onCopyMessage: () => self.copyMessage(m, idx),
