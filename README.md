@@ -63,7 +63,11 @@ clickable sources they can open in-browser.
   (via SNOMED), filled into the e-RS card, and shown with what they were
   determined from — the concept, the list, the closeness of the match and the
   other close pairings — under a heading saying they are not recorded in the
-  practice's notes and must be checked against the doctor's task.
+  practice's notes and must be checked against the doctor's task. **Only for a
+  referral somebody is actually sending on e-RS**: a referral arriving from a
+  hospital, one already sent and being chased, a waiting time or a policy that
+  merely uses the word gets no e-RS card and no referral steps
+  (`lib/referrals/scope.mjs`).
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching
@@ -142,6 +146,12 @@ clickable sources they can open in-browser.
   onto it — the SNOMED concept, the e-RS referral-types list, how close the match
   was and what else was close. A determined pairing the writer labelled as the
   practice's own is relabelled, so it can never reach the reader unmarked.
+  `scope.mjs` decides whether any of this applies: it tells a referral being
+  *made* from one arriving, one being chased, or the word simply appearing in a
+  policy question, and it reads the written answer for whether the referral goes
+  on e-RS at all. Every stage is gated on it — the lookup, the research tool, the
+  card the writer produced and the card filled in afterwards — so four e-RS
+  fields never appear above an answer with no e-RS form behind it.
 - **`lib/answer-cache/`** — answers already given, so the same question is not
   researched twice. `match.mjs` holds the free half (the canonical form of a
   question, hashed to a key, and the rules for what may be cached at all);

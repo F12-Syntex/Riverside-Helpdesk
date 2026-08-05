@@ -49,6 +49,7 @@ import { composeGeneralAnswer } from '@/lib/agent/general.mjs';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { explainLookup, lookupErsMapping } from '@/lib/referrals/ers-lookup';
 import { determineReferralRoute } from '@/lib/referrals/route-determination.mjs';
+import { isReferralRequest } from '@/lib/referrals/scope.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { pickResearchModel, shouldEscalateResearch } from '@/lib/agent/research-model.mjs';
 import { selectSources } from '@/lib/agent/select.mjs';
@@ -81,6 +82,7 @@ const RESEARCH_SYSTEM = [
   '- CONTACT QUESTIONS: if the question asks for a telephone number, an email address or who to ring, call find_contact — and call it as well whenever the practice material names a service without giving its number. Pass every service you need in one call. It searches the practice directory, then the CQC register, then reads the web and takes the number off the page. Never write a number yourself, and never leave the answer telling the reader to look one up: the whole point of the question is the number.',
   '- WHO IS WORKING: for anything about who is on, who is on early or late, who is on leave, or who to ask on a particular day, call check_rota. It returns the practice’s published rota. Never work out from anything else who is probably in.',
   '- REFERRAL QUESTIONS: a referral cannot be sent without a Speciality and a Clinic Type. Search the practice material for them first — the Notebook is right and always wins. If, after searching, no page records the pairing for this referral, call suggest_ers_referral_route with the condition being referred. Do not leave the answer telling the reader to look it up in the task when this tool can name the pairing from the e-RS referral-types list.',
+  '- THAT IS FOR SOMEBODY SENDING A REFERRAL, not for every question with the word in it. A referral arriving from a hospital or from 111, one already sent that is being chased or cancelled, a waiting time, a policy that merely uses the word — none of those is an e-RS form being filled in. Research what was actually asked and do not call suggest_ers_referral_route for them.',
   '- Two message shapes are not questions: a pasted medical document (a letter or report to be filed) and an incoming patient request that needs routing. If the message is one of those, call hand_off immediately and do nothing else.',
   '- A THIRD IS NOT A QUESTION EITHER: a request to DO something with words rather than to look something up — format this email, shorten this, rewrite it politely, turn these notes into a paragraph, tidy this list, translate it, summarise what was pasted, spell out an abbreviation, work out a date. There is nothing in the practice’s material to find, because nobody is asking about the practice. Call general_request immediately and do nothing else. Do NOT search first: a word search on a pasted email finds documents that happen to share its words, and an answer built from those is worse than no answer.',
   '- The line between them is what the answer depends on. "Draft a message telling this patient how to book a blood test" DOES depend on the practice’s material — search it. "Make this message shorter" does not — carry it out. When the request is a task but part of it turns on how the practice works, research that part normally and do not call general_request.',
@@ -362,7 +364,13 @@ export async function POST(request) {
         // — so it has no reason to wait its turn behind six model calls. It runs
         // against Postgres while the loop is still choosing what to open, and is
         // collected further down, by which time it has long finished.
-        const ersPending = /\brefer(?:ral|rals|red|ring|s)?\b/i.test(question)
+        //
+        // Run only for someone actually making a referral. It used to run on the
+        // word "refer" appearing anywhere, which meant a question about a
+        // referral arriving from a hospital, or about chasing one already sent,
+        // handed the writer a speciality and a clinic type to put on an answer
+        // that had no e-RS form behind it at all.
+        const ersPending = isReferralRequest(question)
           ? lookupErsMapping(question).catch((e) => {
             console.warn('[agent] e-RS lookup unavailable:', String(e).slice(0, 160));
             return null;
@@ -626,10 +634,21 @@ export async function POST(request) {
         // determined one carries its provenance to the card — the writer leaving
         // the pairing out, or labelling a matched one as the practice's own, is
         // exactly how it would otherwise reach the reader unmarked.
+        //
+        // The question and the written answer go in with it, because filling a
+        // pairing in is only right for a referral being MADE, ON e-RS. Without
+        // them this step would put a card back on every answer the composer had
+        // just decided should not carry one.
+        const answerText = (answer.sections || [])
+          .map((sec) => `${sec.heading || ''}\n${sec.markdown || ''}`)
+          .concat((answer.keyPoints || []).map((point) => point.text || ''))
+          .join('\n');
         const { route: referralRoute, determination } = determineReferralRoute({
           route: answer.referralRoute,
           suggestion: ersSuggestion,
           sourceTexts: evidence.practiceList().map((chunk) => chunk.text),
+          question,
+          answerText,
         });
 
         // Redact any number the model wrote that no source vouches for.

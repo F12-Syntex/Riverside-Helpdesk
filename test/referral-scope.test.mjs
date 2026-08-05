@@ -310,3 +310,57 @@ test('questions that are not about referrals are left alone', () => {
   const { problems } = validateDraft(draft, evidenceStub(), 'How do I book a routine appointment?');
   assert.deepEqual(problems, []);
 });
+
+// The word "referral" in a question is not a referral being made. These are the
+// shapes that were pulling an e-RS card, and a repair round's worth of e-RS
+// demands, onto answers with no e-RS form behind them at all.
+
+test('a referral arriving from a hospital gets no card and no referral demands', () => {
+  const draft = {
+    sections: [section('File the incoming referral', '1. Open the patient’s record.\n2. Attach the letter to the **Consultation**.')],
+    keyPoints: POINTS,
+    referralRoute: ERS_SUGGESTION,
+  };
+  const { problems, referralRoute } = validateDraft(
+    draft, evidenceStub(), 'What do I do with a referral sent to us by the hospital?',
+  );
+  assert.equal(referralRoute, null);
+  assert.deepEqual(problems, []);
+});
+
+test('chasing a referral already sent gets no card and no referral demands', () => {
+  const draft = {
+    sections: [section('Chase the referral', '1. Open the referral **on e-RS**.\n2. Check the status and tell the patient.')],
+    keyPoints: POINTS,
+    referralRoute: ERS_SUGGESTION,
+  };
+  const { problems, referralRoute } = validateDraft(
+    draft, evidenceStub(), 'How do I chase a referral the patient has not heard about?',
+  );
+  assert.equal(referralRoute, null);
+  assert.deepEqual(problems, []);
+});
+
+test('a matched pairing needs steps that actually open e-RS', () => {
+  // Nothing says e-RS and nothing says otherwise. A pairing the practice never
+  // wrote down is a value for a form, so silence is not enough to show it.
+  const draft = {
+    sections: [section('Send the referral', '1. Find the doctor’s document in the **Consultation**.\n2. Send it.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: ERS_SUGGESTION,
+  };
+  const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
+  assert.equal(referralRoute, null);
+});
+
+test('the same pairing survives once the steps put it on e-RS', () => {
+  const draft = {
+    sections: [section('Send the referral', '1. Find the doctor’s document in the **Consultation**.\n2. Send it **on e-RS**.')],
+    keyPoints: POINTS,
+    followUps: LETTER_FOLLOW_UP,
+    referralRoute: ERS_SUGGESTION,
+  };
+  const { referralRoute } = validateDraft(draft, evidenceStub(), 'How do I refer a patient to dermatology?');
+  assert.equal(referralRoute?.specialty, 'Diagnostic Physiological Measurement');
+});

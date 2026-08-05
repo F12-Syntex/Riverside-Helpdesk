@@ -437,6 +437,19 @@ returns is labelled a suggestion to check against the doctor's task
 (`route-determination.mjs` relabels a determined pairing that the writer wrongly
 claimed as the practice's own).
 
+**The card is narrow on purpose.** `scope.mjs` decides whether there is an e-RS
+form behind the question at all, and the same rule gates every stage: whether the
+lookup runs, whether the research model may call `suggest_ers_referral_route`,
+whether the composer shows the writer's card, and whether a pairing is filled in
+after the answer is written. A question is only a referral request when somebody
+is *making* one — not a referral arriving from a hospital or from 111, not one
+already sent that is being chased or cancelled, not a waiting time, and not a
+policy that merely uses the word. On top of that, a pairing the practice never
+wrote down needs positive evidence in the answer's own steps that the referral
+goes on e-RS, plus a match confident enough to act on; without both, no card. A
+pairing the practice *did* record is shown unless the answer routes the reader
+somewhere else (email, Accurx).
+
 ---
 
 ## 9. The other data flows
