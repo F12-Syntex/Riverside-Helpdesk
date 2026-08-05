@@ -201,6 +201,25 @@ export async function POST(request) {
   // ask something similarly worded must not be handed an answer about somebody
   // else's letter.
   const cacheable = !attachments.length && isCacheableRequest({ question, history, images });
+
+  // Everything the turn needs, started at once.
+  //
+  // These were four round trips in a row before the first model call: the
+  // Notebook fingerprint, then the cache lookup (which embeds the question, so
+  // it is a network call and not a quick one), then the Notebook, then the
+  // supplementary context. Each one waited for the one before it although not
+  // one of them depends on it — only the cache lookup needs the fingerprint.
+  //
+  // So the Notebook loads while the cache is being consulted. On a hit the loads
+  // are abandoned mid-flight, which costs a query nobody reads; on a miss — the
+  // case that takes twenty seconds and the one worth optimising — the Notebook
+  // is already in hand by the time the cache has finished saying no.
+  const notebookPending = fullNotebookContext().then(
+    (chunks) => ({ ok: true, chunks }),
+    (error) => ({ ok: false, error }),
+  );
+  const supplementaryPending = getSupplementaryEntries().catch(() => []);
+
   let fingerprint = '';
   let cacheEmbedding = null;
   if (cacheable) {
@@ -221,16 +240,16 @@ export async function POST(request) {
 
   // Notebook guidance is authoritative and the agent's main source. Never answer
   // silently without it.
-  let notebookChunks = [];
-  try {
-    notebookChunks = await fullNotebookContext();
-  } catch (e) {
+  const notebook = await notebookPending;
+  if (!notebook.ok) {
     return NextResponse.json({ error: 'The practice Notebook is temporarily unavailable, so no answer was generated.' }, { status: 503 });
   }
-  try {
-    const extra = await getSupplementaryEntries();
-    notebookChunks = notebookChunks.concat(
-      extra.filter((item) => item && String(item.text || '').trim()).map((item, i) => ({
+  let notebookChunks = notebook.chunks;
+  // Optional extra context, and long since finished by now.
+  notebookChunks = notebookChunks.concat(
+    (await supplementaryPending)
+      .filter((item) => item && String(item.text || '').trim())
+      .map((item, i) => ({
         id: `supplementary:${i}:full`,
         docId: `supplementary:${item.origin}:${item.name}`,
         docTitle: `Practice context: ${item.name}`,
@@ -240,8 +259,7 @@ export async function POST(request) {
         images: [],
         kind: 'notebook',
       })),
-    );
-  } catch (e) { /* optional extra context */ }
+  );
 
   const openrouter = createOpenRouter({
     apiKey,

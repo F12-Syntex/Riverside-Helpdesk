@@ -35,6 +35,16 @@ test('the tools parameter is omitted for a native searcher and present otherwise
   assert.equal(tooled.tools[0].type, 'openrouter:web_search');
 });
 
+test('no request asks the model to think first', () => {
+  // Searching and listing what came back is not a puzzle. On a model that
+  // reasons before answering, that deliberation is most of the wait — paid on
+  // every web search and every contact lookup, for nothing a reader sees.
+  for (const withTool of [true, false]) {
+    const body = buildRequestBody({ model: 'perplexity/sonar', query: 'x', withTool });
+    assert.deepEqual(body.reasoning, { enabled: false, exclude: true });
+  }
+});
+
 // A small fetch double: records the bodies it was called with, replies from a
 // queue of canned responses.
 function stubFetch(responses) {

@@ -368,11 +368,12 @@ sequenceDiagram
     A->>OR: embed the question (Azure-pinned)
     A->>PG: nearest stored question by cosine distance
   end
+  Note over A,PG: the Notebook load runs ALONGSIDE the cache lookup,<br/>not after it — nothing above depends on it
   alt cache hit — same model, same Notebook fingerprint, still fresh
     A-->>B: stored answer, marked "Answered from cache"
   else
     A->>PG: load EVERY non-empty Notebook page in full
-    A->>OR: RESEARCH loop — reasoning model, max 6 steps, tools
+    A->>OR: RESEARCH loop — fast role, max 6 steps, tools
     Note over A,OR: search_practice, list_practice_sources,<br/>outline_practice_sources, open_practice_sources,<br/>search_web, read_web_page, find_contact,<br/>check_rota, suggest_ers_referral_route, hand_off
     A->>OR: COMPOSE — reasoning model, structured answer
     A->>A: VALIDATE — every claim needs a verbatim quote<br/>that really appears in what a tool returned
@@ -393,12 +394,26 @@ sequenceDiagram
    page from the live tables, in full, on every uncached request. Nothing is
    chunked, truncated or selected by similarity. If the Notebook cannot be read
    the request fails with 503 rather than answering without it.
-3. **Research** — a Vercel AI SDK tool loop, capped at `MAX_RESEARCH_STEPS = 6`,
-   `temperature: 0.2`, extended reasoning explicitly disabled
-   (`reasoning: { enabled: false, exclude: true }`). The model chooses which
-   sources to open; nothing is pre-selected by embedding similarity. The
-   practice's own material always gets first refusal — `search_web` triggers a
-   practice lookup automatically if none has run.
+3. **Research** — a Vercel AI SDK tool loop on the **fast role**, capped at
+   `MAX_RESEARCH_STEPS = 6`, `temperature: 0.2`, extended reasoning explicitly
+   disabled (`reasoning: { enabled: false, exclude: true }` — as it is on every
+   path in the app, including the web role). The model chooses which sources to
+   open; nothing is pre-selected by embedding similarity. The practice's own
+   material always gets first refusal — `search_web` triggers a practice lookup
+   automatically if none has run, alongside the web searches rather than in
+   front of them.
+
+   The loop is optimised for round trips, not for cleverness. Every tool takes a
+   list and runs it concurrently, so four searches, four outlines or four
+   sources opened together cost one wait rather than four; a document's parsed
+   parts are cached as an in-flight *promise*, so two sources wanting the same
+   file share one read. What comes back is deliberately thin: a search result
+   shows `SEARCH_EXCERPT = 600` characters, enough to decide what to open and no
+   more, because **the research model never quotes** — the writer is handed each
+   source's full text from the evidence registry, which stores what the tool was
+   given rather than what it returned. Every character above that would be paid
+   for again on each remaining step, since the loop re-sends the whole
+   conversation every time.
 4. **Selection** — `lib/agent/select.mjs` ranks what the loop found and holds the
    weakest sources back from the writer, because the loop reads sources for the
    price of a database query while the writer pays the reasoning model's input
