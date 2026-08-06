@@ -3,8 +3,12 @@
 // filing title "(dd-Mmm-yyyy) SOURCE DEPARTMENT actions-or-note" used to code
 // the document into the clinical system. Dedicated, lightweight version of the
 // docfile branch in /api/ask: no retrieval — the pasted document is the only
-// evidence for the title — with the same server-side date and action
+// evidence for the title — with the same server-side date and active-item
 // sanitisation so nothing unevidenced reaches the title.
+//
+// The title's tail is the document's ACTIVE items: what the practice has to do,
+// what changed on the prescription, and what plan is already running. The
+// narrative — history, examination, findings — never reaches the title.
 //
 // The one piece of context it does read is the practice's own coding guidance:
 // the "Document coding" section of the in-app Notebook is loaded live and folded
@@ -14,7 +18,7 @@
 import { NextResponse } from 'next/server';
 import { parseAiJson } from '@/lib/ai/prompt';
 import { notebookSectionContext } from '@/lib/notebook';
-import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
+import { resolveDocfileDate, docfileActiveItems, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
 import { getAiModel } from '@/lib/settings';
 import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
@@ -60,16 +64,22 @@ function buildPrompt(text, imageCount, guidance) {
     + '. Produce the parts of its one-line filing title.\n\n'
     + guidanceBlock
     + 'Reply with ONLY this JSON (no markdown fences):\n'
-    + '{"kind":"docfile","date":"dd-Mmm-yyyy","dateEvidence":"exact date as printed","dateType":"discharge|attendance|clinic|report|letter","source":"Ipswich Hospital","department":"Cardiology","actions":[{"text":"arrange U&E in 2 weeks","evidence":"exact words explicitly assigning that task to the GP or practice"}],"note":"","noteEvidence":""}\n'
+    + '{"kind":"docfile","date":"dd-Mmm-yyyy","dateEvidence":"exact date as printed","dateType":"discharge|attendance|clinic|report|letter","source":"Ipswich Hospital","department":"Cardiology","actions":[{"text":"repeat U&E 2/52","evidence":"exact words from the document that this item comes from"}],"note":"","noteEvidence":""}\n'
     + 'The reader files the document under the one-line title "(date) source department actions-or-note", so every field must be as short as possible:\n'
     + '- Use ONLY the pasted document and attached image(s). Today’s date is not evidence. Never add professional judgement.\n'
     + '- "date": copy the clinical event date. Priority is discharge date, attendance/clinic/consultation date, then report/procedure date; use the letter date only when no event date exists. NEVER use date of birth, a historical diagnosis/medication date, referral date, or a received/scanned/printed date. Always dd-Mmm-yyyy with a three-letter English month, for example 07-Aug-2026. Empty string if uncertain.\n'
     + '- "dateEvidence": copy the chosen date EXACTLY as printed, for example "7/8/26". "date" must be the same date normalised to dd-Mmm-yyyy. If you cannot quote the chosen date, leave both fields empty.\n'
     + '- "source": the shortest recognisable name of the hospital, trust site or service that produced the document (for example "Ipswich Hospital" or a common local abbreviation the document itself uses such as "HUH" or "MEH", not the trust’s full legal name).\n'
     + '- "department": the department, specialty or clinic (for example "Cardiology", "ED", "Dermatology"); empty string if none is identifiable.\n'
-    + '- "actions": the DEFAULT is an EMPTY array. Include an item ONLY when the document explicitly assigns the GP, primary care or the practice a concrete task such as prescribe, arrange, repeat, monitor, refer or chase. Each item MUST carry an "evidence" quote copied exactly from that instruction. A hospital plan, clinic follow-up, clinical finding, medication list or recommendation is not automatically a practice action.\n'
-    + '- NEVER infer that a GP must review a document. Drop "GP to review", "GP r/v", "review letter/result/document", "for GP information", "note diagnosis", "update record" and similar comments unless the document explicitly says the GP/practice must urgently review a named patient issue or perform a named task. No evidence quote means no action.\n'
-    + '- 0 to 4 actions; each a terse imperative fragment. Do not summarise findings, history, examinations, hospital-side plans or tasks assigned to the hospital, community team, clinic, patient or another service.\n'
+    + '- "actions": the LIVE items only — what a busy GP has to know NOW, in three kinds:\n'
+    + '  (a) TASK — anything the document asks the GP, primary care or the practice to do: prescribe, issue, arrange, request, repeat, monitor, refer, chase, book, act on a result.\n'
+    + '  (b) MEDICATION — any prescription change: a drug started, stopped, switched, dose increased or reduced, a discharge/TTO supply to continue, or a course to complete. Give the drug, the dose and how long, for example "start apixaban 5mg BD 3/12".\n'
+    + '  (c) PLAN — what is still to happen: follow-up or clinic appointment, referral made, tests booked, results awaited, monitoring due, care handed back to the GP. For example "cardiology f/u 3/12" or "awaiting MRI head".\n'
+    + '  Each item MUST carry an "evidence" quote copied exactly from the document. No evidence quote means no item. An empty array is right when the document holds none of these.\n'
+    + '- NEVER include the story: presenting complaint, past history, examination, observations, findings, results commentary, unchanged repeat medication, social background, reassurance, or anything already done and finished. A finding earns a place only when it comes with a task, a prescription change or a plan.\n'
+    + '- NEVER infer that a GP must review a document. Drop "GP to review", "GP r/v", "review letter/result/document", "for GP information", "note diagnosis", "update record" and similar comments unless the document explicitly says the GP/practice must urgently review a named patient issue or perform a named task.\n'
+    + '- Do not include a task assigned to the hospital, community team, clinic or patient UNLESS it is the plan the GP needs to know is running.\n'
+    + '- 0 to 6 items, tasks first, then medication, then plan. Each one a terse fragment of a few words in practice shorthand — never a sentence, never more than about 10 words.\n'
     + '- "note": normally empty. Do not add "FYI", "no action", reassurance or commentary. Use a very short status only when the document explicitly states a filing-relevant outcome such as discharge or DNA, and copy those exact words into "noteEvidence". No evidence means an empty note.\n'
     + '- NEVER include the patient’s name, NHS number, date of birth, address or any other patient identifier in any field, even if the pasted document still contains one.\n\n'
     + 'Document text:\n"""\n' + String(text || '').replace(/"{3,}/g, '""') + '\n"""';
@@ -129,7 +139,10 @@ export async function POST(request) {
       date: parsed.date, dateEvidence: parsed.dateEvidence,
       documentText: text, hasImages: images.length > 0,
     }) || 'dd-Mmm-yyyy';
-    const actions = sanitizeDocfileActions(parsed.actions, { documentText: text, hasImages: images.length > 0 });
+    // The live items, each tagged task / medication / plan so the page can group
+    // them; the title itself keeps them in that same order, tasks first.
+    const items = docfileActiveItems(parsed.actions, { documentText: text, hasImages: images.length > 0 });
+    const actions = items.map((item) => item.text);
     const note = sanitizeDocfileNote({
       note: parsed.note, noteEvidence: parsed.noteEvidence,
       documentText: text, hasImages: images.length > 0,
@@ -137,7 +150,7 @@ export async function POST(request) {
     const tail = actions.length ? actions.join('; ') : note;
     const title = ['(' + date + ')', parsed.source, parsed.department, tail].filter(Boolean).join(' ');
 
-    return NextResponse.json({ title, date, source: parsed.source, department: parsed.department, actions, note });
+    return NextResponse.json({ title, date, source: parsed.source, department: parsed.department, actions, items, note });
   } catch (e) {
     return NextResponse.json({ error: 'Could not reach OpenRouter.', detail: String(e).slice(0, 300) }, { status: 502 });
   }

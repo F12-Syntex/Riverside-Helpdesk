@@ -22,7 +22,7 @@ import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, confl
 import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 import { fullNotebookContext } from '@/lib/notebook';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
-import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
+import { resolveDocfileDate, docfileActiveItems, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
 import { getAiModel } from '@/lib/settings';
 import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
@@ -431,7 +431,10 @@ export async function POST(request) {
         date: parsed.date, dateEvidence: parsed.dateEvidence,
         documentText: question, hasImages: images.length > 0,
       }) || 'dd-Mmm-yyyy';
-      const actions = sanitizeDocfileActions(parsed.actions, { documentText: question, hasImages: images.length > 0 });
+      // Live items only — a task for us, a prescription change, or the plan —
+      // each tagged with its kind for the card; see lib/ai/docfile.mjs.
+      const items = docfileActiveItems(parsed.actions, { documentText: question, hasImages: images.length > 0 });
+      const actions = items.map((entry) => entry.text);
       const note = sanitizeDocfileNote({
         note: parsed.note, noteEvidence: parsed.noteEvidence,
         documentText: question, hasImages: images.length > 0,
@@ -446,6 +449,7 @@ export async function POST(request) {
         source: parsed.source,
         department: parsed.department,
         actions,
+        items,
         note,
       });
     }

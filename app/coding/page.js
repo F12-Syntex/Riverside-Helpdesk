@@ -8,11 +8,33 @@ import AppHeader from '../_components/AppHeader';
  * Code a document — paste the text of a medical document (or a
  * screenshot of it), with the patient's identifying details removed,
  * and get the one-line filing title back:
- *   (dd-Mmm-yyyy) SOURCE DEPARTMENT action items / short plan
- * with a copy button, ready to paste into the clinical system.
+ *   (dd-Mmm-yyyy) SOURCE DEPARTMENT active items
+ * with a copy button, ready to paste into the clinical system. The active
+ * items are what the GP has to act on now — tasks for us, prescription
+ * changes, and the plan that is running — never the story of the admission.
  * ------------------------------------------------------------------ */
 
 const MAX_IMAGES = 4;
+
+// The live items, grouped the way a GP reads them: what we have to do, what
+// changed on the prescription, what is already running. The server tags each
+// item with its kind; an older reply without kinds falls back to one list.
+const ITEM_KINDS = [
+  { kind: 'task', label: 'For the practice to do' },
+  { kind: 'medication', label: 'Medication' },
+  { kind: 'plan', label: 'Current plan' },
+];
+
+function itemGroups(result) {
+  const items = Array.isArray(result.items) && result.items.length ? result.items : null;
+  if (!items) {
+    const actions = Array.isArray(result.actions) ? result.actions : [];
+    return actions.length ? [{ kind: 'task', label: 'Active items', items: actions }] : [];
+  }
+  return ITEM_KINDS
+    .map(({ kind, label }) => ({ kind, label, items: items.filter((it) => it.kind === kind).map((it) => it.text) }))
+    .filter((group) => group.items.length);
+}
 
 export default function Page() {
   const [text, setText] = React.useState('');
@@ -153,15 +175,16 @@ export default function Page() {
               <div><span style={s('color:#4c6272;font-weight:600;')}>Date: </span>{result.date}</div>
               {result.source && <div><span style={s('color:#4c6272;font-weight:600;')}>Source: </span>{result.source}</div>}
               {result.department && <div><span style={s('color:#4c6272;font-weight:600;')}>Department: </span>{result.department}</div>}
-              {result.actions.length > 0 && (
-                <div>
-                  <span style={s('color:#4c6272;font-weight:600;')}>Actions for the practice:</span>
+              {itemGroups(result).map((group) => (
+                <div key={group.kind}>
+                  <span style={s('color:#4c6272;font-weight:600;')}>{group.label}:</span>
                   <ul style={s('margin:4px 0 0;padding:0 0 0 20px;')}>
-                    {result.actions.map((a, i) => <li key={i}>{a}</li>)}
+                    {group.items.map((a, i) => <li key={i}>{a}</li>)}
                   </ul>
                 </div>
-              )}
+              ))}
               {!result.actions.length && result.note && <div><span style={s('color:#4c6272;font-weight:600;')}>Note: </span>{result.note}</div>}
+              {!result.actions.length && !result.note && <div style={s('color:#4c6272;')}>No active items — nothing outstanding for the practice in this document.</div>}
               <p style={s('margin:6px 0 0;font-size:13.5px;color:#4c6272;border-top:1px solid #e8eef1;padding-top:10px;')}>
                 Check the title against the document before filing — especially the date{result.date === 'dd-Mmm-yyyy' ? ' (none could be verified, fill it in)' : ''}.
               </p>
