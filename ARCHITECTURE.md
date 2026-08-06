@@ -16,7 +16,7 @@ guessed.
 - Application name: Riverside Helpdesk (package `riverside-emis-helper`)
 - Controller: The Riverside Practice (a UK NHS GP surgery)
 - Users: practice staff only (reception, admin, clinical staff)
-- Document status: current as of commit `38c5052`
+- Document status: current as of commit `21a2c40`
 
 ---
 
@@ -31,7 +31,7 @@ It provides:
 
 | Tool | Route | What it does |
 | --- | --- | --- |
-| Practice Q&A | `/helpbot` | Answers "how do we do X here?" from the practice's own documents and Notebook, with a verbatim quote behind every claim. |
+| Practice Q&A | `/` (also `/helpbot`) | Answers "how do we do X here?" from the practice's own documents and Notebook, with a verbatim quote behind every claim. The front door of the app. |
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
 | Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. |
@@ -43,11 +43,13 @@ It provides:
 | Activity audit log | `/stats` | What was done in the app, grouped by machine. Not linked from the menu. |
 | Knowledge admin | `/knowledge` | Canonical-knowledge editor. Localhost-only; 404 everywhere else. |
 | DPIA | `/dpia` | The practice's data protection impact assessment, rendered from `lib/dpia.js`. |
-| System map / index | `/diagram`, `/index` | Documentation pages. |
+| Tools index | `/tools` | The short list of tools staff reach for. Lists the Q&A and Instant lookup only. |
+| System map / index | `/diagram`, `/index` | Documentation pages. The system map is drawn in `app/_components/SystemMap.jsx`. |
 
-The DPIA currently records the rota and medication tools as **withdrawn from the
-tool index**. Their code, routes and stored data still exist (see §7) — the
-withdrawal is presentational.
+Only the Q&A and Instant lookup appear on the tool index at `/tools`. Everything
+else — the Notebook, the reception helpers, the medication check, the rota, the
+system map and the audit log — is served and reachable by address, and is listed
+at `/index`. `lib/dpia.js` records them all as live processing on that basis.
 
 ---
 
@@ -682,26 +684,29 @@ should record explicitly:
    geographic location of the providers `data_collection: 'deny'` routes to.
    Already recorded as outstanding in DPIA steps 3 and 4.
 5. **No authentication.** Every route — the audit log, the Notebook, the staff
-   records, the model settings — is open to anyone who can reach the URL. This is
-   not currently listed as a risk in `lib/dpia.js` and should be.
+   records, the model settings — is open to anyone who can reach the URL. Now
+   recorded as the first risk in `lib/dpia.js`, rated High, with authentication
+   as the measure. Still outstanding in the code.
 6. **Practice documents are served publicly** from `public/assets/rag/`, and
-   Notebook attachments are stored in Vercel Blob with `access: 'public'`. Also
-   not currently listed.
+   Notebook attachments are stored in Vercel Blob with `access: 'public'`. Both
+   are now risks in the DPIA; neither is fixed.
 7. **Vercel Analytics and Google Fonts** are third-party recipients of staff
-   device data (including IP) on every page load. Neither appears in the current
-   DPIA. Google Fonts is removable by self-hosting the font.
+   device data (including IP) on every page load. Now named in the DPIA and in
+   its data-flow diagram. Google Fonts is removable by self-hosting the font;
+   whether the analytics are needed at all is an open decision.
 8. **The audit log has no retention policy** and stores staff question text
-   verbatim for the unguarded routes.
+   verbatim for the unguarded routes. Now a DPIA risk with a retention decision
+   as its measure; no purge job exists yet.
 9. **The answer cache stores question text verbatim** in `answer_cache.question`,
    plus its embedding, and is invalidated but not otherwise time-limited beyond
-   `MAX_AGE_DAYS`.
+   `MAX_AGE_DAYS`. Recorded in DPIA steps 2 and 4.
 10. **Exa** receives model-composed web-search queries via OpenRouter's
-    `web_search` server tool. Not currently named in the DPIA.
+    `web_search` server tool. Now named in the DPIA and drawn in its diagram.
 11. **Withdrawn tools still hold data.** `staff`, `rotas` and `medications` remain
-    populated. DPIA risk #6 already flags this; the decision (return the tool or
-    delete the data) is outstanding.
+    populated. The DPIA now treats these tools as live-but-unlisted rather than
+    withdrawn, and keeps the retention decision as an open measure.
 12. **No automatic screening for patient data** in questions or notes. This is the
-    single control that would move DPIA risks #1 and #2 off "High", and it is
+    single control that would move the patient-data risks off "High", and it is
     listed as "to do".
 13. **No CI and no schema migrations.** Schema is created lazily with
     `IF NOT EXISTS`; there is no migration history and no automated test gate

@@ -6,6 +6,7 @@
 // answer) and the step 5–7 tables. Content comes from lib/dpia.js.
 
 import { s, Hover, Svg, Icons } from './ui';
+import DpiaFlow from './DpiaFlow';
 import { DPIA } from '../../lib/dpia';
 
 const STATUS = {
@@ -95,6 +96,19 @@ export default function DpiaView() {
               <div style={s(answerBox)}>
                 {st.body.map((p, i) => <p key={i} style={s(answer)}>{p}</p>)}
               </div>
+            )}
+
+            {/* Step 2 — the data-flow diagram the written description maps onto */}
+            {st.n === 2 && (
+              <figure style={s('margin:16px 0 0;')}>
+                <div style={s('border:1px solid #d8dde0;border-radius:3px;padding:14px 16px;background:#fcfdfe;overflow-x:auto;')}>
+                  <DpiaFlow />
+                </div>
+                <figcaption style={s('font-size:12.5px;color:#768692;line-height:1.5;margin-top:8px;text-wrap:pretty;')}>
+                  Figure 1 — the data flow described above: what staff put in, what the server does with it,
+                  what is stored, and every recipient outside the practice.
+                </figcaption>
+              </figure>
             )}
 
             {/* Step 5 — risk register */}
