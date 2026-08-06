@@ -16,9 +16,9 @@ import { s, Hover, Svg, Icons } from './ui';
  *   2 · Architecture — Staff → every page → engine → data services
  *   3 · Full detail  — adds each page's API routes, the libraries and RAG
  *
- * Hidden from the tools index; reachable directly at /diagram. Reflects
- * the current Notebook-only Q&A (document search + contacts off for
- * answering, but still drawn in the map).
+ * Hidden from the tools index; reachable directly at /diagram. Every
+ * page, route and library drawn here is the set the app actually serves
+ * — keep it in step with lib/routes.js, which is the list itself.
  * ------------------------------------------------------------------ */
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
@@ -41,6 +41,7 @@ const L1_NODES = [
   { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
   { x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
   { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'FIRST SOURCE' },
+  { x: 110, y: 230, w: 230, h: 84, icon: Icons.refresh, title: 'Answer cache', sub: 'asked before, answered again', fill: '#fffdf5', border: '#e3d3a8', ink: '#6b4d00', subInk: '#8a6100', ic: '#8a6100' },
 ];
 const L1_EDGES = [
   { d: 'M230 110 L320 110', label: '1 · asks', lx: 275, ly: 100 },
@@ -49,10 +50,13 @@ const L1_EDGES = [
   // different words. That is what changed from one shot to an agent. Drawn above
   // the node, in clear space: edges are painted before nodes, so a label placed
   // across one is covered by it.
-  { d: 'M872 60 C 872 26, 968 26, 968 58', label: 'searches · reads · repeats', lx: 920, ly: 18, anchor: 'middle', dim: true },
+  { d: 'M872 60 C 872 26, 968 26, 968 58', label: 'searches · reads · web · repeats', lx: 920, ly: 18, anchor: 'middle', dim: true },
+  // The cheapest answer of all: the same question, already answered, still
+  // current. Checked before any of the work to the right of it happens.
+  { d: 'M420 160 L332 226', label: 'asked before?', lx: 430, ly: 200, anchor: 'start', dim: true },
   { d: 'M920 160 L920 430', label: '3 · draft', lx: 932, ly: 300, anchor: 'start' },
   { d: 'M820 480 L520 480', label: 'checked', lx: 670, ly: 470 },
-  { d: 'M320 480 L150 480 L150 160', label: '4 · reply + source', lx: 162, ly: 320, anchor: 'start' },
+  { d: 'M320 480 L70 480 L70 160', label: '4 · reply + source', lx: 82, ly: 400, anchor: 'start' },
   { d: 'M670 280 L820 175', label: 'tools read it', lx: 700, ly: 245, anchor: 'start', dim: true },
 ];
 function L1Node(n, i) {
@@ -85,28 +89,38 @@ function FlowDiagram() {
 /* =============================================================== *
  * Levels 2 & 3 — the architecture, drawn at two detail levels.
  * =============================================================== */
-const COL_X0 = 40, COL_STEP = 143, COL_W = 128;
+const COL_X0 = 40, COL_STEP = 134, COL_W = 120;
 const colX = (i) => COL_X0 + COL_STEP * i;
 
+// Every page the app serves, in the order lib/routes.js groups them: the two
+// on the tool index first, then the reception helpers, practice management,
+// documentation and administration. A page that is not on the index is still
+// served, so it is still drawn.
 const FEATURES = [
-  { p: '/', name: 'Tools index', routes: ['landing page'], deps: [] },
-  { p: '/helpbot', name: 'Practice Q&A', routes: ['/api/agent', '+ tool loop · compose', '/api/ask', '/api/kb'], deps: ['A', 'D'], hero: true },
-  { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory', '/api/cqc'], deps: ['D'] },
+  { p: '/', name: 'Practice Q&A', routes: ['/api/agent', '+ tools · compose', '/api/ask', '/api/kb'], deps: ['A', 'D'], hero: true },
+  { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory', '/api/cqc', '/api/lookup-web'], deps: ['D', 'A'] },
+  { p: '/tools', name: 'Tools index', routes: ['the index list'], deps: [] },
+  { p: '/signpost', name: 'Signpost', routes: ['/api/signpost'], deps: ['A', 'D'] },
+  { p: '/reason', name: 'Reason', routes: ['/api/reason'], deps: ['A', 'D'] },
+  { p: '/coding', name: 'Code a doc', routes: ['/api/docfile'], deps: ['A', 'D'] },
   { p: '/notebook', name: 'Notebook', routes: ['/api/notebook', '+ format · organize', '+ attachments', '+ import · export'], deps: ['A', 'D', 'B'] },
-  { p: '/signpost', name: 'Signpost', routes: ['/api/signpost'], deps: ['A'] },
-  { p: '/reason', name: 'Reason', routes: ['/api/reason'], deps: ['A'] },
-  { p: '/coding', name: 'Code a doc', routes: ['/api/docfile'], deps: ['A'] },
-  { p: '/medications', name: 'Medication', routes: ['/api/medication', '+ extract'], deps: ['A'] },
+  { p: '/medications', name: 'Medication', routes: ['/api/medication', '+ extract'], deps: ['A', 'D'] },
   { p: '/rota', name: 'Staff rota', routes: ['/api/rota', '/api/staff'], deps: ['A', 'D'] },
+  { p: '/settings', name: 'Settings', routes: ['/api/settings', '+ models'], deps: ['A', 'D'] },
+  { p: '/stats', name: 'Audit log', routes: ['/api/audit'], deps: ['D'] },
+  { p: '/index', name: 'Full index', routes: ['lib/routes'], deps: [] },
   { p: '/dpia', name: 'DPIA', routes: ['lib/dpia'], deps: [] },
   { p: '/diagram', name: 'System map', routes: ['this page'], deps: [] },
   { p: '/knowledge', name: 'Knowledge admin', routes: ['/api/knowledge', '+ analyse · conflicts', '+ status · sync'], deps: ['L', 'D', 'A'] },
 ];
-const ENGINE_CHIPS = ['agent/tools', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'ai/prompt', 'ai/quote-match', 'ai/client', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'db', 'dpia', 'text-chunk'];
+const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/client', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'answer-cache', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
+// The four services the engine talks to. Everything that leaves the practice
+// leaves through one of the three on the right; see /dpia for what each holds.
 const DATA_NODES = [
-  { cx: 300, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · staff · knowledge · contacts · embeddings · snomed · e-RS types', icon: Icons.book, dep: 'D' },
-  { cx: 872, w: 380, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis', icon: Icons.sparkle, dep: 'A' },
-  { cx: 1440, w: 360, label: 'Vercel Blob', sub: 'Notebook attachments', icon: Icons.paperclip, dep: 'B' },
+  { cx: 260, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · knowledge · staff · answer cache · audit log · settings', icon: Icons.book, dep: 'D', hot: true },
+  { cx: 778, w: 420, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis · web search tool', icon: Icons.sparkle, dep: 'A', hot: true },
+  { cx: 1296, w: 420, label: 'Exa · web hosts', sub: 'search query text, then the pages read for a number', icon: Icons.globe, dep: 'A' },
+  { cx: 1814, w: 420, label: 'Vercel Blob', sub: 'Notebook attachments, at public URLs', icon: Icons.paperclip, dep: 'B' },
 ];
 const RAG_NODES = ['rag/sources', 'parsers', 'chunk', 'embed (AI)', 'rag/processed'];
 
@@ -138,14 +152,16 @@ function ArchDiagram({ full }) {
   const maxRH = showRoutes ? Math.max(...FEATURES.map(routeH)) : 0;
   const afterCols = showRoutes ? ROUTE_Y + maxRH : PAGE_Y + PAGE_H;
   const ENGINE_Y = afterCols + 60;
-  const ENGINE_H = showLibs ? 92 : 52;
+  // The band grows with the library list rather than the list being trimmed to
+  // fit the band — a library that exists belongs on the map.
+  const chips = showLibs ? layoutChips(ENGINE_CHIPS, 70, ENGINE_Y + 38, ARCH_W - 90, 26) : [];
+  const ENGINE_H = showLibs ? (chips.at(-1).y - ENGINE_Y) + 26 : 52;
   const DATA_Y = ENGINE_Y + ENGINE_H + 46;
   const DATA_H = 92;
   const RAG_Y = DATA_Y + DATA_H + 50;
   const RAG_H = 58;
   const H = RAG_Y + RAG_H + 22;
   const BUS_Y = 96, STAFF_CX = (colX(0) + colX(FEATURES.length - 1) + COL_W) / 2;
-  const chips = showLibs ? layoutChips(ENGINE_CHIPS, 70, ENGINE_Y + 38, ARCH_W - 40, 26) : [];
 
   return (
     <svg viewBox={`0 0 ${ARCH_W} ${H}`} width="100%" style={s('display:block;height:auto;font-family:' + FONT)} role="img"
@@ -203,7 +219,7 @@ function ArchDiagram({ full }) {
 
       {/* Engine → data services */}
       {DATA_NODES.map((d, i) => (
-        <path key={i} d={`M${d.cx} ${ENGINE_Y + ENGINE_H} L${d.cx} ${DATA_Y}`} stroke={i < 2 ? BLUE : EDGE} strokeWidth="2" markerEnd={i < 2 ? 'url(#a2b)' : 'url(#a2)'} />
+        <path key={i} d={`M${d.cx} ${ENGINE_Y + ENGINE_H} L${d.cx} ${DATA_Y}`} stroke={d.hot ? BLUE : EDGE} strokeWidth="2" markerEnd={d.hot ? 'url(#a2b)' : 'url(#a2)'} />
       ))}
       {DATA_NODES.map((d, i) => (
         <g key={i}>
@@ -226,8 +242,8 @@ function ArchDiagram({ full }) {
           </g>
         );
       })}
-      <path d={`M${70 + 4 * 184 + 75} ${RAG_Y} L${70 + 4 * 184 + 75} ${RAG_Y - 22} L${DATA_NODES[0].cx + 120} ${RAG_Y - 22} L${DATA_NODES[0].cx + 120} ${DATA_Y + DATA_H}`} fill="none" stroke={DEP.D.c} strokeWidth="2" strokeDasharray="5 4" markerEnd="url(#a2)" />
-      <text x={DATA_NODES[0].cx + 130} y={RAG_Y - 26} fontFamily={FONT} fontSize="11" fill={DEP.D.c}>indexed into Postgres</text>
+      <path d={`M${70 + 4 * 184 + 75} ${RAG_Y} L${70 + 4 * 184 + 75} ${RAG_Y - 34} L${DATA_NODES[0].cx + 120} ${RAG_Y - 34} L${DATA_NODES[0].cx + 120} ${DATA_Y + DATA_H}`} fill="none" stroke={DEP.D.c} strokeWidth="2" strokeDasharray="5 4" markerEnd="url(#a2)" />
+      <text x={DATA_NODES[0].cx + 130} y={RAG_Y - 38} fontFamily={FONT} fontSize="11" fill={DEP.D.c}>indexed into Postgres</text>
     </svg>
   );
 }
