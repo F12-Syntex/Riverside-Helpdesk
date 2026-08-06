@@ -109,7 +109,27 @@ clickable sources they can open in-browser.
   context (direct URLs, or committed files in `rag/context/`), reconciled into
   the same store. See `rag/context/README.md`.
 - **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
-  telephone directory (exact numbers shown verbatim, never authored by the AI).
+  contacts directory (exact numbers and email addresses shown verbatim, never
+  authored by the AI). A contact is either, not only a number: a large part of
+  the practice's list is an nhs.net address with no telephone line at all, and
+  those entries appear in the panel above the dock, the contacts card and the
+  Sources list like any other.
+- **`lib/triage/urgency.js`** — what to ask before a patient request is treated
+  as urgent. Marking a request urgent interrupts the duty doctor and commits
+  the practice to a call back inside 2 hours (Duty Doctor Protocol 2025), while
+  appointments here are same day anyway, so the bar has to be higher than
+  "needs seeing today". The module holds a fixed bank of yes/no questions per
+  presentation (waterworks, chest, abdominal, headache, back, child, mental
+  health, scrotal, eye, pregnancy, fever), each one labelled with what a yes
+  costs — 999, duty doctor, seen today, or a change of referral pathway — and
+  each cited to the practice's own protocols and to national guidance (NICE
+  NG12/NG51/NG109/NG128/NG143/NG225/NG240, CKS, the GIRFT cauda equina
+  pathway). It also reads how long the patient says it has been going on: a
+  week or more, not worsening and with nothing answered yes, is a booking
+  rather than an interrupt. Matched by keyword on the server with no model
+  involved, so a wrongly banded request cannot invent or drop a clinical
+  question, and it never downgrades anything on its own — the last word on the
+  card is the practice's own rule that any doubt goes to the duty doctor.
 - **`lib/lookup/`** + **`/lookup`** — Instant Lookup, a search of the **CQC
   register**: every service registered in England, ~57k rows in
   `cqc.data.json.gz`. Far too large for a phone, so `cqc.js` searches it on the

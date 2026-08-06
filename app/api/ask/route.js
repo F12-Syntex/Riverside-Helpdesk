@@ -23,6 +23,7 @@ import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 import { fullNotebookContext } from '@/lib/notebook';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { resolveDocfileDate, sanitizeDocfileActions, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
+import { urgencyCheck } from '@/lib/triage/urgency';
 import { getAiModel } from '@/lib/settings';
 import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
@@ -473,6 +474,16 @@ export async function POST(request) {
         actions.map((a) => a.cite).concat(redFlags.map((r) => r.cite)).concat([patientMessageCite]),
       );
 
+      // What to ask before the duty doctor is pulled off everything else.
+      // Deliberately computed here from the patient's own words rather than
+      // asked of the model: the questions, the thresholds and the guidance
+      // behind them are fixed in lib/triage/urgency.js, so a model that
+      // bands a request wrongly still cannot invent a clinical question or
+      // quietly drop the one that matters. It never downgrades anything —
+      // it says what to ask and what each answer costs, and the standing
+      // rule that doubt goes to the duty doctor rides along with it.
+      const check = urgencyCheck({ text: question, urgency: parsed.urgency });
+
       return NextResponse.json({
         kind: 'triage',
         urgency: parsed.urgency,
@@ -485,6 +496,7 @@ export async function POST(request) {
         patientMessageCite,
         citations,
         contacts,
+        urgencyCheck: check,
       });
     }
 

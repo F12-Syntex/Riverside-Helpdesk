@@ -4,6 +4,7 @@ import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
 import JudgementChip from './JudgementChip';
 import ContactsCard from './ContactsCard';
+import UrgencyChecks from './UrgencyChecks';
 import Rich from './Rich';
 
 // How each urgency band is shown. Colours follow the NHS palette already used
@@ -60,6 +61,12 @@ export default function TriageAnswer({ v }) {
                 <p style={s('margin:0;font-size:17px;line-height:1.5;color:#4c6272;')}><Rich text={v.summary} /></p>
               </div>
             )}
+
+            {/* What to ask before this costs the practice a duty doctor.
+                Sits above the suggested actions because it comes first in
+                time: the actions assume a band, and these questions are
+                what decides whether the band is right. */}
+            <UrgencyChecks check={v.urgencyCheck} />
 
             {v.hasActions && (
               <div style={s('padding:16px 22px 4px;')}>

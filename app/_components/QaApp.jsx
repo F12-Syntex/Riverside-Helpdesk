@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import {
-  isTestQuery, isGeneralTestQuery,
+  isTestQuery, isGeneralTestQuery, isTriageTestQuery,
   TEST_STEPS, TEST_STATUS, TEST_ANSWER,
   TEST_GENERAL_STEPS, TEST_GENERAL_STATUS, TEST_GENERAL_ANSWER,
+  TEST_TRIAGE_STEPS, TEST_TRIAGE_STATUS, TEST_TRIAGE_ANSWER,
 } from '../../lib/test-answer';
 
 import { s, Hover, Svg, Icons, assetSrc } from './ui';
@@ -77,6 +78,17 @@ function phoneParts(entry) {
 // against a directory that formats its own however it likes.
 function phoneDigits(entry) {
   return phoneParts(entry).map((p) => String(p.tel || p.display)).join(' ').replace(/\D/g, '');
+}
+
+// A directory entry's email addresses. A large part of the practice's own
+// list has no number at all — medical records, transport, the physiotherapy
+// advocate line and the rest are an nhs.net address and nothing else — so an
+// entry is a contact when it has either, and the panel shows whichever it has.
+function emailParts(entry) {
+  return ((entry && entry.emails) || [])
+    .map((e) => (typeof e === 'string' ? e : (e && (e.address || e.email || e.value)) || ''))
+    .map((e) => String(e).trim())
+    .filter(Boolean);
 }
 
 // How long ago a cached answer was written, in the words someone would use.
@@ -261,7 +273,9 @@ class RiversidePracticeQA extends React.Component {
     const digits = q.replace(/\D/g, '');
     const scored = [];
     for (const e of this.state.directory) {
-      const hay = [e.label, e.category, e.note, (e.aliases || []).join(' ')].join(' ').toLowerCase();
+      // Addresses are part of the haystack too: "medicalrecords" and
+      // "locomotor" are how some of these entries are actually known.
+      const hay = [e.label, e.category, e.note, (e.aliases || []).join(' '), emailParts(e).join(' ')].join(' ').toLowerCase();
       // Digits only, from whatever the entry calls its number. Searching
       // against the formatted text would fail the moment someone typed a
       // number without the spaces the directory happens to have used.
@@ -311,17 +325,21 @@ class RiversidePracticeQA extends React.Component {
     const practice = this.matchDirectory();
     const seen = new Set(practice.map((e) => phoneDigits(e)).filter(Boolean));
     const register = (this.state.dirClosed || !this.looksLikeLookup(this.state.dirQuery) ? [] : this.state.cqc)
-      .filter((e) => phoneParts(e).length && !seen.has(phoneDigits(e)));
+      .filter((e) => (phoneParts(e).length || emailParts(e).length) && !seen.has(phoneDigits(e)));
     return practice.slice(0, 8)
       .map((e) => ({ entry: e, group: 'Practice directory' }))
       .concat(register.map((e) => ({ entry: e, group: 'CQC register' })));
   }
 
+  // Picking a contact copies the thing you would have written down. The
+  // number when there is one, and the address when there is not — an
+  // email-only entry used to return here having copied nothing at all.
   copyContact(entry) {
     const phone = phoneParts(entry)[0] || null;
-    const shown = phone ? (phone.display || phone.tel) : '';
+    const email = emailParts(entry)[0] || '';
+    const shown = phone ? (phone.display || phone.tel) : email;
     if (!shown) return;
-    try { navigator.clipboard.writeText(phone.tel || shown); } catch (e) {}
+    try { navigator.clipboard.writeText(phone ? (phone.tel || shown) : email); } catch (e) {}
     this.setState({ copiedNumber: shown, dirSel: -1 });
     clearTimeout(this.copyTimer);
     this.copyTimer = setTimeout(() => this.setState({ copiedNumber: '' }), 2400);
@@ -575,14 +593,20 @@ class RiversidePracticeQA extends React.Component {
    * layout. The interface can be worked on all day without a single
    * token being spent. See lib/test-answer.js.
    * ------------------------------------------------------------------ */
-  mockAI(idx, general = false) {
+  // `which` is 'answer', 'general' or 'triage': the three cards this app
+  // renders, each playable without spending a token on it.
+  mockAI(idx, which = 'answer') {
     const at = (ms, fn) => { this.mockTimers.push(setTimeout(fn, ms)); };
     let clock = 0;
     // "test general" plays the other kind of turn: a request carried out
-    // directly, with nothing looked up and nothing cited.
-    const status = general ? TEST_GENERAL_STATUS : TEST_STATUS;
-    const steps = general ? TEST_GENERAL_STEPS : TEST_STEPS;
-    const answer = general ? TEST_GENERAL_ANSWER : TEST_ANSWER;
+    // directly, with nothing looked up and nothing cited. "test triage"
+    // plays an incoming patient request being routed.
+    const fixture = {
+      general: { status: TEST_GENERAL_STATUS, steps: TEST_GENERAL_STEPS, answer: TEST_GENERAL_ANSWER },
+      triage: { status: TEST_TRIAGE_STATUS, steps: TEST_TRIAGE_STEPS, answer: TEST_TRIAGE_ANSWER },
+      answer: { status: TEST_STATUS, steps: TEST_STEPS, answer: TEST_ANSWER },
+    }[which] || { status: TEST_STATUS, steps: TEST_STEPS, answer: TEST_ANSWER };
+    const { status, steps, answer } = fixture;
 
     for (const st of status) {
       at(st.at, () => this.onAgentEvent(idx, { type: 'status', text: st.text }));
@@ -600,7 +624,8 @@ class RiversidePracticeQA extends React.Component {
     }
 
     // `kind` stays 'ai' — it decides which card renders this message, and the
-    // fixture must not be able to change it.
+    // fixture must not be able to change it. `answerKind` it may set, since
+    // that is which of the three cards is being looked at.
     at(clock + 700, () => {
       const patch = Object.assign({ status: 'done', answerKind: 'answer', statusText: '' }, answer);
       delete patch.kind;
@@ -611,7 +636,10 @@ class RiversidePracticeQA extends React.Component {
   // `refresh` is set by Reload on a cached answer: research the question again
   // rather than serving what the server already has stored for it.
   async fetchAI(question, idx, { refresh = false } = {}) {
-    if (isTestQuery(question)) { this.mockAI(idx, isGeneralTestQuery(question)); return; }
+    if (isTestQuery(question)) {
+      this.mockAI(idx, isGeneralTestQuery(question) ? 'general' : isTriageTestQuery(question) ? 'triage' : 'answer');
+      return;
+    }
     // History is the conversation BEFORE this question (idx-1 = the user message
     // we're answering). On the first question this is empty, so the server skips
     // the follow-up query-condensing step — no point enriching a standalone query.
@@ -651,6 +679,9 @@ class RiversidePracticeQA extends React.Component {
           patientMessageCite: data.patientMessageCite,
           citations: data.citations,
           contacts: data.contacts || [],
+          // The questions that verify the band, matched on the server from
+          // the patient's own words. Null when there is nothing to verify.
+          urgencyCheck: data.urgencyCheck || null,
         });
         return;
       }
@@ -742,6 +773,32 @@ class RiversidePracticeQA extends React.Component {
     return lines;
   }
 
+  // The urgency questions, flattened for the clipboard. Each line carries
+  // what a yes would cost, so the note reads the same on paper as on the
+  // card, and the sources are listed once at the end rather than after
+  // every question.
+  urgencyCheckLines(m) {
+    const c = m.urgencyCheck;
+    if (!c) return [];
+    if (c.level === 'emergency') {
+      return ['', 'EMERGENCY CALL LIST — do not work through questions, dial 999 and tell the duty doctor:']
+        .concat((c.emergencyHits || []).map((h) => '- ' + h.label));
+    }
+    const lines = ['', 'Before treating as urgent, ask:'];
+    if (c.settledNote) lines.push('(' + c.settledNote + ')');
+    for (const q of c.always || []) lines.push('- ' + q.ask);
+    for (const set of c.sets || []) {
+      lines.push('  ' + set.label + ':');
+      for (const q of set.questions) lines.push('  - ' + q.ask + '  [yes → ' + q.levelLabel + ']');
+    }
+    lines.push('', 'Then:');
+    for (const d of c.decision || []) lines.push('- ' + d.when + ' → ' + d.then);
+    if (c.floor) lines.push('', c.floor.text);
+    const named = (c.evidence || []).map((e) => e.org + ' ' + e.label + (e.url ? ' (' + e.url + ')' : ''));
+    if (named.length) lines.push('', 'Based on: ' + named.join('; '));
+    return lines;
+  }
+
   copyTriage(m, idx) {
     const label = { emergency: 'EMERGENCY', urgent: 'Urgent: duty doctor', routine: 'Routine', 'self-care': 'Self-care / signpost', unclear: 'Unclear: escalate' }[m.urgency] || 'Unclear';
     const lines = ['Triage notes', 'Urgency: ' + label + (m.urgencyReason ? ' (' + plainText(m.urgencyReason) + ')' : '')];
@@ -755,6 +812,11 @@ class RiversidePracticeQA extends React.Component {
       });
     }
     if (m.route) lines.push('', 'Route to: ' + m.route);
+    // The verification questions go into the copied notes as well as onto
+    // the screen. Reception pastes these into EMIS, and "we asked and the
+    // answer was no" is the part of an urgency decision worth having on
+    // the record when someone reads it back later.
+    lines.push(...this.urgencyCheckLines(m));
     if (m.redFlags && m.redFlags.length) {
       lines.push('', 'Escalate if:');
       m.redFlags.forEach((r) => {
@@ -1116,6 +1178,10 @@ class RiversidePracticeQA extends React.Component {
             copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy notes',
             contacts: m.contacts || [],
             hasContacts: !!(m.contacts && m.contacts.length),
+            // Passed straight through: every question, threshold and
+            // citation on it was written server-side and none of it is
+            // the model's, so there is nothing here to reshape.
+            urgencyCheck: m.urgencyCheck || null,
           };
         }
         const sections = this.answerSections(m).map((sec, i) => {
@@ -1425,9 +1491,12 @@ class RiversidePracticeQA extends React.Component {
           ? (row.entry.note || '')
           : [row.entry.category, row.entry.note].filter(Boolean).join(' · '),
         number: (phoneParts(row.entry)[0] || {}).display || '',
+        // Two at most. Some entries carry a whole department's worth, and
+        // the panel is a shortlist to pick from, not the record itself.
+        emails: emailParts(row.entry).slice(0, 2),
         isSelected: i === self.state.dirSel,
         onPick: () => self.copyContact(row.entry),
-      })).filter((r) => r.number),
+      })).filter((r) => r.number || r.emails.length),
       hasDirectory: dirMatches.length > 0,
       directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
       onInputKey: (e) => self.onInputKey(e),
@@ -1448,11 +1517,16 @@ class RiversidePracticeQA extends React.Component {
       // Sources: the same material, listed rather than searched.
       sourceNotes: this.state.notes,
       sourceContacts: this.state.directory
-        .filter((e) => phoneParts(e).length)
+        .filter((e) => phoneParts(e).length || emailParts(e).length)
         .map((e) => ({
           key: e.id || e.label,
           label: e.label,
           number: (phoneParts(e)[0] || {}).display || '',
+          email: emailParts(e)[0] || '',
+          // The list is one line per contact, so it shows the number when
+          // there is one and falls back to the address when there is not.
+          meta: (phoneParts(e)[0] || {}).display || emailParts(e)[0] || '',
+          isEmail: !phoneParts(e).length,
           onPick: () => self.copyContact(e),
         })),
       sourceGuides: this.allGuides().map((g) => ({
