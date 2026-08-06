@@ -117,6 +117,9 @@ export const Icons = {
   folder: (<path d="M4 4h5l2 3h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />),
   stethoscope: (<><path d="M4 3v6a5 5 0 0 0 10 0V3" /><path d="M5 3H3M13 3h2" /><path d="M9 14v2a5 5 0 0 0 10 0v-2" /><circle cx="19" cy="10" r="2" /></>),
   sitemap: (<><rect x="9" y="2" width="6" height="5" rx="1" /><rect x="3" y="17" width="6" height="5" rx="1" /><rect x="15" y="17" width="6" height="5" rx="1" /><path d="M12 7v4M6 17v-3h12v3" /></>),
+  mail: (<><rect x="2" y="4" width="20" height="16" rx="2" /><polyline points="2.5 6.5 12 13 21.5 6.5" /></>),
+  clock: (<><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></>),
+  helpCircle: (<><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4" /><line x1="12" y1="17.5" x2="12.01" y2="17.5" /></>),
   // A three-quarter ring: spun with `animation:rivaSpin ...` for work in progress.
   spinner: (<><path d="M21 12a9 9 0 1 1-6.22-8.56" /></>),
 };

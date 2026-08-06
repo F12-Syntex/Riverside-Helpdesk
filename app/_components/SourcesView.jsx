@@ -120,9 +120,12 @@ export default function SourcesView({ v }) {
           : <div style={s('font-size:14px;color:#8a99a3;padding:8px 12px 8px 32px;')}>No notes written yet.</div>
       ))}
 
-      {section('contacts', 'Telephone directory', (v.sourceContacts || []).length || '', (
+      {/* Not only telephone numbers: the practice's list carries plenty of
+          contacts that are an nhs.net address and nothing else, and they
+          belong in the directory as much as the numbers do. */}
+      {section('contacts', 'Contacts directory', (v.sourceContacts || []).length || '', (
         (v.sourceContacts || []).map((c) => (
-          <Row key={c.key} depth={1} icon={Icons.phone} label={c.label} meta={c.number} onClick={c.onPick} />
+          <Row key={c.key} depth={1} icon={c.isEmail ? Icons.mail : Icons.phone} label={c.label} meta={c.meta || c.number} onClick={c.onPick} />
         ))
       ))}
 

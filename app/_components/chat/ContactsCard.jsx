@@ -12,6 +12,12 @@ import { s, Svg, Icons } from '../ui';
  * One row per contact: who they are on the left, the number on the
  * right at the size it is read off and dialled, matching the directory
  * panel above the dock and the rest of the answer's furniture.
+ *
+ * Numbers and email addresses are both first-class here. Plenty of the
+ * places reception has to reach are an nhs.net address and nothing else
+ * (medical records, transport, radiology secretaries), so a row with no
+ * number is not an incomplete row, and the address is given the same
+ * tap-to-use treatment the number gets.
  * ------------------------------------------------------------------ */
 
 export default function ContactsCard({ v }) {
@@ -36,17 +42,23 @@ export default function ContactsCard({ v }) {
               ) : null}
             </span>
 
-            <span className="riva-contact-nums" style={s('flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px;')}>
-              {c.phones.map((p, j) => (
+            <span className="riva-contact-nums" style={s('flex:none;min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:flex-end;gap:5px;')}>
+              {(c.phones || []).map((p, j) => (
                 <a key={'p' + j} href={'tel:' + p.tel}
                   style={s('display:inline-flex;align-items:center;gap:7px;font-size:17px;font-weight:700;color:#005eb8;text-decoration:none;font-variant-numeric:tabular-nums;')}>
                   <Svg w={14} sw={2.2} style={s('flex:none;opacity:.75;')}>{Icons.phone}</Svg>{p.display}
                 </a>
               ))}
-              {c.emails.map((e, j) => (
+              {/* An address is a link to write to, not a caption. It reads
+                  a size down from the number when the contact has both,
+                  and at the number's own weight when it is all there is. */}
+              {(c.emails || []).map((e, j) => (
                 <a key={'e' + j} href={'mailto:' + e}
-                  style={s('font-size:13.5px;font-weight:600;color:#4c6272;text-decoration:none;border-bottom:1px solid #dde4e7;word-break:break-all;')}>
-                  {e}
+                  style={s('display:inline-flex;align-items:center;gap:7px;max-width:100%;font-weight:600;color:'
+                    + ((c.phones || []).length ? '#4c6272;font-size:13.5px;' : '#005eb8;font-size:15.5px;')
+                    + 'text-decoration:none;')}>
+                  <Svg w={13} sw={2.2} style={s('flex:none;opacity:.75;')}>{Icons.mail}</Svg>
+                  <span style={s('min-width:0;overflow-wrap:anywhere;border-bottom:1px solid #dde4e7;')}>{e}</span>
                 </a>
               ))}
             </span>

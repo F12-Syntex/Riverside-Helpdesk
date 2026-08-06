@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { s, Hover } from './ui';
+import { s, Hover, Svg, Icons } from './ui';
 
 /* ------------------------------------------------------------------ *
  * The practice directory, offered against the field as someone types.
@@ -14,7 +14,15 @@ import { s, Hover } from './ui';
  * into it, holding the rows it was showing while it leaves; when the
  * matches change underneath it, the panel grows or shrinks to its new
  * height rather than jumping, and each new row fades in behind the one
- * before it. Numbers are shown verbatim from the directory.
+ * before it. Numbers and addresses are shown verbatim from the
+ * directory.
+ *
+ * A contact is whatever the directory holds for it, not just a phone
+ * number: a good third of the practice's own list is an nhs.net address
+ * with no number at all (medical records, transport, the physiotherapy
+ * advocate line), and those entries used to be dropped from this panel
+ * entirely because it only knew how to draw a number. Now the row shows
+ * both, and an entry with only an address is a row like any other.
  * ------------------------------------------------------------------ */
 
 const EXIT_MS = 180;
@@ -98,7 +106,21 @@ export default function DirectoryPanel({ v, place = 'above' }) {
               <span style={s('display:block;font-size:15.5px;font-weight:700;color:#212b32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{r.label}</span>
               {r.detail && <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{r.detail}</span>}
             </span>
-            <span style={s('flex:none;font-size:16px;font-weight:700;color:#005eb8;')}>{r.number}</span>
+            {/* The number stays where it has always been, at the size it
+                is read off and dialled. An address sits under it, quieter
+                and smaller: it is longer, it is rarely the thing being
+                looked for, and it must not push the number off the row.
+                When there is no number it takes the number's place, so an
+                email-only contact still has something to take away. */}
+            <span style={s('flex:none;min-width:0;max-width:58%;display:flex;flex-direction:column;align-items:flex-end;gap:2px;')}>
+              {r.number ? <span style={s('font-size:16px;font-weight:700;color:#005eb8;font-variant-numeric:tabular-nums;')}>{r.number}</span> : null}
+              {(r.emails || []).map((e, j) => (
+                <span key={j} style={s('display:flex;align-items:center;gap:5px;max-width:100%;font-size:' + (r.number ? '12.5px' : '14px') + ';font-weight:600;color:#4c6272;')}>
+                  <Svg w={12} sw={2.2} style={s('flex:none;opacity:.7;')}>{Icons.mail}</Svg>
+                  <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{e}</span>
+                </span>
+              ))}
+            </span>
           </Hover>
           </React.Fragment>
         ))}
