@@ -84,6 +84,37 @@ function GeneralBar() {
   );
 }
 
+// Was this any good? Five buttons, one press, no typing.
+//
+// It sits under every answer, quietly: the reader came for the answer, not to
+// review it, so this must not compete with the content above. But it is always
+// there, because feedback that has to be sought out is feedback that never
+// arrives. Pressing one replaces the row with a thank-you — there is nothing
+// further to do and no second chance to get wrong.
+function Feedback({ v }) {
+  if (v.feedbackSent) {
+    return (
+      <div style={s('display:flex;align-items:center;gap:8px;padding:12px 0 4px;font-size:13.5px;color:#4c6272;')}>
+        <Svg w={15} sw={2.4} style={s('flex:none;color:#007f3b;')}>{Icons.check}</Svg>
+        Thanks — logged as &ldquo;{v.feedbackLabel}&rdquo;.
+      </div>
+    );
+  }
+  return (
+    <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 0 4px;')}>
+      <span style={s('font-size:13px;color:#768692;margin-right:2px;')}>Was this right?</span>
+      {v.feedback.map((fb) => (
+        <Hover key={fb.id} tag="button" type="button" onClick={fb.onClick}
+          base={'border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5dee2;color:'
+            + (fb.good ? '#007f3b;' : '#4c6272;')}
+          hover={fb.good ? 'border-color:#007f3b;background:#f2f9f4;' : 'border-color:#d5281b;background:#fdf4f3;color:#a51b0f;'}>
+          {fb.label}
+        </Hover>
+      ))}
+    </div>
+  );
+}
+
 // The answer in brief, at the top of the card. Someone with a patient at the
 // desk reads this and nothing else, so it carries the whole answer in two to
 // four lines — and a point that risks safety, a breach or a deadline is red,
@@ -440,6 +471,8 @@ export default function AiAnswer({ v }) {
                 </div>
               </div>
             )}
+
+            <Feedback v={v} />
 
             <div style={s('height:12px;')} />
             <ContactsCard v={v} />

@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
+import { VERDICTS } from '../../lib/feedback.mjs';
+import { machineId } from '../../lib/audit/client';
 import {
   isTestQuery, isGeneralTestQuery,
   TEST_STEPS, TEST_STATUS, TEST_ANSWER,
@@ -53,11 +55,13 @@ function docSize(chars) {
 // otherwise reachable only by typing their address now the header carries no
 // navigation. A `question` entry asks it here; an `href` entry goes there.
 // Labels are short because they are read at a glance.
-// Two shortcuts, no more. The system map opens here, in the Q&A itself,
-// rather than sending anyone to another page; the notebook is a place to go.
+// Two shortcuts, no more. The system map opens here, in the Q&A itself; the
+// question index is a place to go. The notebook used to sit here and does not
+// belong on a page whose readers are asking questions, not writing them — what
+// they need to know is what can be asked, which is what the index answers.
 const QUICK_ASKS = [
   { label: 'System map', map: true, icon: Icons.sitemap },
-  { label: 'Notebook', href: '/notebook', icon: Icons.edit },
+  { label: 'Question index', href: '/questions', icon: Icons.book },
 ];
 
 // A directory entry's numbers, whatever shape they arrive in. The bundled
@@ -206,6 +210,17 @@ class RiversidePracticeQA extends React.Component {
     try {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [] });
+    } catch (e) {}
+    // Arrived from the question index with a question already chosen. It is
+    // asked here, through the ordinary path, so the index is a way in rather
+    // than a page about the assistant. The parameter is dropped from the URL
+    // afterwards, so a refresh does not ask it again.
+    try {
+      const ask = new URLSearchParams(window.location.search).get('ask');
+      if (ask && ask.trim()) {
+        window.history.replaceState({}, '', window.location.pathname);
+        setTimeout(() => this.ask(ask.trim()), 0);
+      }
     } catch (e) {}
     // A reload starts a fresh page: questions are not carried over, and any
     // transcript an earlier version of this page stored is cleared out — it
@@ -716,6 +731,29 @@ class RiversidePracticeQA extends React.Component {
     }
   }
 
+  // One button press, sent and forgotten. The row is replaced by a thank-you
+  // immediately rather than waiting for the request: the reader has told us
+  // what they think and should not be made to watch a spinner for it, and a
+  // failed write costs one row (see /api/feedback).
+  sendFeedback(idx, verdict) {
+    const m = this.state.messages[idx];
+    if (!m || m.feedbackSent) return;
+    this.updateAi(idx, { feedbackSent: verdict });
+    try {
+      fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verdict,
+          question: m.question || '',
+          machineId: machineId(),
+          template: m.template ? m.template.title : '',
+          answerKind: m.template ? 'template' : 'prose',
+        }),
+      }).catch(() => {});
+    } catch (e) { /* feedback is never worth an error in front of the reader */ }
+  }
+
   retryAi(idx) {
     const m = this.state.messages[idx];
     if (!m || m.kind !== 'ai') return;
@@ -1185,6 +1223,12 @@ class RiversidePracticeQA extends React.Component {
           // material. Said once, at the top of the card, because not one line of
           // it is backed by a document.
           isGeneral: !!m.general,
+          // Five one-click verdicts under every answer. No typing: someone with
+          // a patient at the desk will press a button and will not write a
+          // sentence, so the sentence is not asked for.
+          feedback: VERDICTS.map((fb) => ({ ...fb, onClick: () => self.sendFeedback(idx, fb.id) })),
+          feedbackSent: m.feedbackSent || '',
+          feedbackLabel: (VERDICTS.find((fb) => fb.id === m.feedbackSent) || {}).label || '',
           // A templated answer: built from the practice's recorded material by
           // a template rather than written by the model, so the card renders
           // the blocks it produced instead of markdown sections.
