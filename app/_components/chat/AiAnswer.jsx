@@ -314,10 +314,14 @@ export default function AiAnswer({ v }) {
           <>
             {v.isCached && <CacheBar v={v} />}
 
-            <div style={s('padding:20px 0 0;')}>
-              <h3 style={s('font-size:23px;margin:0;letter-spacing:-0.01em;')}>{v.question}</h3>
-              {v.hasIntro && <p style={s('margin:8px 0 0;font-size:18px;line-height:1.6;color:#4c6272;')}><Rich text={v.intro} /></p>}
-            </div>
+            {/* The question is already the heading of the page (ChatView renders
+                it as the h1 with the rule under it), so printing it again here
+                gave every answer two titles. Only the intro belongs in this
+                slot, and when there is no intro the block goes away entirely
+                rather than leaving a gap above the answer. */}
+            {v.hasIntro && (
+              <p style={s('margin:20px 0 0;font-size:18px;line-height:1.6;color:#4c6272;')}><Rich text={v.intro} /></p>
+            )}
 
             {v.isGeneral && <GeneralBar />}
 
