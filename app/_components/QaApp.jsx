@@ -667,11 +667,14 @@ class RiversidePracticeQA extends React.Component {
         });
         return;
       }
-      if (!data.answerable || (!data.sections.length && !data.message)) {
+      // A templated answer carries its content in `template`, not in sections
+      // or a message, so it must not be read as an empty one. Without this a
+      // perfectly good ECG referral card was declined as needing a clinician.
+      if (!data.answerable || (!data.template && !data.sections.length && !data.message)) {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', cache: data.cache || null, general: data.general === true, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -797,13 +800,14 @@ class RiversidePracticeQA extends React.Component {
 
   // Answers as sections (new) or steps (older saved chats), normalised for
   // copying and the save-to-guide prefill.
+  // The body of an answer. `m.steps` is NOT a fallback for it: this used to
+  // rebuild sections out of steps, from a payload shape the server stopped
+  // sending long ago, and `steps` now holds the agent's tool activity instead.
+  // So an answer with no sections — a templated one, whose content lives in
+  // `template` — rendered one section per tool that had run, each of them the
+  // string "[object Object]".
   answerSections(m) {
-    if (m.sections && m.sections.length) return m.sections;
-    return (m.steps || []).map((t, i) => ({
-      markdown: (i + 1) + '. ' + ((t && t.text != null) ? t.text : t),
-      basis: 'documents',
-      cite: (t && t.cite) ? t.cite : null,
-    }));
+    return m.sections || [];
   }
 
   copyAi(m, idx) {
