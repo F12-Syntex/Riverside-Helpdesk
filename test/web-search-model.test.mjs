@@ -41,7 +41,7 @@ test('no request asks the model to think first', () => {
   // every web search and every contact lookup, for nothing a reader sees.
   for (const withTool of [true, false]) {
     const body = buildRequestBody({ model: 'perplexity/sonar', query: 'x', withTool });
-    assert.deepEqual(body.reasoning, { enabled: false, exclude: true });
+    assert.deepEqual(body.reasoning, { effort: 'minimal', exclude: true });
   }
 });
 

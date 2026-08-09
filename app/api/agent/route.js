@@ -31,6 +31,7 @@ import { NextResponse } from 'next/server';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { SELECTION_SCHEMA, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
+import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
@@ -132,6 +133,29 @@ export async function POST(request) {
         send({ type: 'status', text: 'Working out what this is' });
         send({ type: 'tool-start', id: 'select', tool: 'pick_template', label: 'Choosing the answer', detail: question.slice(0, 120) });
 
+        // THE WHOLE NOTEBOOK GOES IN THE PROMPT.
+        //
+        // 96 pages is about 15,000 tokens, which fits comfortably and is the
+        // same text on every question. Selecting pages first would save most of
+        // those tokens and cost either a second round trip or a keyword match
+        // that misses paraphrase — and a missed page is a wrong answer, while a
+        // page the model did not need is merely paid for. At this size the
+        // trade is not close.
+        //
+        // Best-effort: a Notebook that cannot be read leaves the templates
+        // working rather than failing the turn. The prompt says so, and the
+        // model falls back to the shapes it can still fill.
+        let notebookPages = [];
+        try {
+          notebookPages = await fullNotebookContext();
+        } catch (e) {
+          console.warn('[agent] notebook unavailable:', String(e).slice(0, 160));
+        }
+        const notebookText = notebookPages
+          .map((page) => `### ${page.docTitle}\n${String(page.text || '').trim()}`)
+          .join('\n\n');
+        const knownPages = notebookPages.map((page) => page.docTitle);
+
         let templateAnswer = null;
         let picked = 'none';
         try {
@@ -139,11 +163,11 @@ export async function POST(request) {
             model: openrouter(model),
             schema: SELECTION_SCHEMA,
             temperature: 0,
-            prompt: selectionPrompt({ question, attached }),
+            prompt: selectionPrompt({ question, attached, notebook: notebookText }),
           });
           recordUsage({ turnId, role: 'fast', phase: 'select', model, usage: selection.usage });
           picked = selection.object.template;
-          templateAnswer = renderSelection(selection.object, question);
+          templateAnswer = renderSelection(selection.object, question, knownPages);
         } catch (e) {
           // A router that cannot answer is not a turn that cannot answer.
           console.warn('[agent] template selection failed:', String(e).slice(0, 160));

@@ -20,7 +20,11 @@ test('every request carries the no-retention routing and no reasoning', () => {
   const body = chatBody({ model: 'x/y', messages: [] });
   assert.deepEqual(body.provider, NO_RETENTION);
   assert.deepEqual(body.reasoning, NO_REASONING);
-  assert.deepEqual(NO_REASONING, { enabled: false, exclude: true });
+  // Minimal effort, NOT `enabled: false`. Endpoints that mandate reasoning
+  // reject an explicit disable outright — "Reasoning is mandatory for this
+  // endpoint and cannot be disabled" — and that failed every call rather than
+  // degrading it. This pins the shape that works everywhere.
+  assert.deepEqual(NO_REASONING, { effort: 'minimal', exclude: true });
 });
 
 test('a call site cannot switch thinking back on by accident', () => {
