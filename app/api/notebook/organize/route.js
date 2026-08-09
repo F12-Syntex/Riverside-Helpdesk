@@ -61,7 +61,7 @@ function subtree(rows, rootId) {
 
 function buildPrompt({ sectionTitle, outline, notes }) {
   const noteBlocks = notes.map((n) => `--- Note ${n.id}: "${n.title || 'Untitled'}"\n${n.body.trim()}`).join('\n\n');
-  return `You are reorganising a GP practice's internal notebook.
+  return `You are filing new content into a GP practice's internal notebook.
 
 The notebook is a tree of sections (name-only containers) holding pages (the content). Below is the current outline, then the full text of every page in the "${sectionTitle}" section — a holding area whose content must be redistributed to where it belongs. The pages themselves will be removed afterwards; only the content you allocate survives, so every fact must be placed.
 
@@ -72,16 +72,39 @@ PAGES TO REDISTRIBUTE:
 ${noteBlocks}
 
 Decide where each piece of content belongs and return ONLY this JSON — no code fences, no commentary:
-{"allocations":[{"noteId":12,"parts":[{"section":"Referrals","page":"Two-week-wait referrals","markdown":"…"}]}]}
+{"allocations":[{"noteId":12,"parts":[{"section":"Referrals / Referral pathways","page":"BCG referral (TB vaccine)","markdown":"…"}]}]}
+
+THE RULE THAT MATTERS MOST — ONE PAGE ANSWERS ONE QUESTION.
+The assistant searches this notebook by page title and page text, and hands the winning page to whoever asked. A page about six things matches every question and answers none of them precisely. So:
+- SPLIT AGGRESSIVELY. A note covering six referral pathways is SIX parts on six pages, not one page called "Referral types". A note holding a contact list and a sick-note policy is two parts. There is no cost to a page being small; there is a real cost to a page covering two topics.
+- One procedure, one page, whole. Never split a single procedure across pages, and never put a second procedure on the page.
+- If a piece of content does not fit the page you are about to name, that is the signal to make another page, not to widen the page.
+
+PAGE TITLES ARE THE SEARCH KEY. Write the title as the question a staff member would ask, in the words they would ask it.
+- Good: "BCG referral (TB vaccine)", "Rejecting a document that is not ours", "Booking a blood test", "Who to name as the referring clinician".
+- Useless: "Referral types and processes", "Document handling", "Rules and guidelines", "Miscellaneous", "General", "Other", "Notes", "Information", "Process".
+- Name the specific service, form, system or task in the title. If the title could sit above two different procedures, it is too vague.
 
 Rules:
-- Cover every note listed. A note's content must be fully reallocated across its parts — a note that belongs together gets exactly one part; split a note when different parts belong in different places (e.g. some content to Referrals, some to Protocols).
-- "section": the exact title of an existing section where the content fits; otherwise a sensible new section name. Never "${sectionTitle}". You may nest one level with " / " (e.g. "Clinical / Referrals") when a sub-section genuinely helps.
-- "page": the page inside that section to put the text on — an existing page's exact title to add to it, or a short new page name for the topic.
-- "markdown": the content itself, reformatted to read well on the target page: ## / ### headings, bullet and numbered lists, markdown tables for anything tabular, **bold** key facts, <mark>highlight</mark> for safety-critical warnings. Start each part with a ## heading naming its topic so it stands on its own inside the target page.
+- Cover every note listed. A note's content must be fully reallocated across its parts.
+- "section": the exact title of an existing section where the content fits; otherwise a sensible new section name. Never "${sectionTitle}". You may nest one level with " / " (e.g. "Referrals / Referral pathways") when a sub-section genuinely helps. Sections are broad; pages are narrow.
+- "page": use an existing page's EXACT title only when that page is already about precisely this topic — then the text is added to it. Otherwise give a new, specific page name. Do not append to a broad page just because it is loosely related, and never create a page whose topic an existing page already covers.
+- "markdown": the content itself, reformatted to read well as a page of its own: ## / ### headings, bullet and numbered lists, markdown tables for anything tabular, **bold** key facts, <mark>highlight</mark> for safety-critical warnings. Start each part with a ## heading naming its topic so it stands on its own inside the target page.
 - Keep EVERY fact. Never invent, drop or summarise away information; names, phone numbers, doses, dates and times must stay exactly as written. Fixing spelling and grammar is fine.
-- A note may contain inline images, written as ![alt](url) on their own line. Keep every image, character-for-character (never alter the URL), inside the part whose content it illustrates, placed right after the text it belongs to.`;
+- A note may contain inline images, written as ![alt](url) on their own line. Keep every image, character-for-character (never alter the URL), inside the part whose content it illustrates, placed right after the text it belongs to.
+- Credentials (usernames, passwords, access codes) go on their own page, never mixed into a directory or a procedure.`;
 }
+
+// Titles that name a container rather than answer a question. "Document
+// handling" is the exact failure this organiser exists to stop: it attracts
+// every document question, answers none of them, and grows for ever because
+// its name never stops being true. Flagged for the review screen rather than
+// rejected — the plan is shown to a person before anything is written.
+const VAGUE_TITLE = /^(?:general|other|misc\w*|notes?|info\w*|information|process(?:es)?|procedures?|rules?(?: and guidelines)?|guidelines?|stuff|things|admin|various|reference|overview|summary|details?|[\w& ]*handling|[\w& ]*types? and processes?)$/i;
+const isVagueTitle = (t) => {
+  const s = String(t || '').trim();
+  return !s || s.length < 4 || VAGUE_TITLE.test(s);
+};
 
 // The model's JSON, tolerantly parsed and reduced to the exact shape we apply.
 function parsePlan(text, sourceIds) {
@@ -180,6 +203,10 @@ export async function POST(request) {
         const leaf = segs[1] && root ? containers.find((c) => c.parentId === root.id && norm(c.title) === norm(segs[1])) : root;
         p.isNewSection = !root || (segs.length > 1 && !leaf);
         p.isNewPage = !leaf || !rows.some((r) => r.parentId === leaf.id && !isSectionRow(r) && norm(r.title) === norm(p.page || a.noteTitle));
+        // A page whose title names a container rather than a question. Shown
+        // on the review screen so it can be renamed before it is created,
+        // which is the only cheap moment to fix it.
+        p.isVagueTitle = isVagueTitle(p.page || a.noteTitle);
       }
     }
     return NextResponse.json({ plan: { sectionId, sectionTitle, allocations } });

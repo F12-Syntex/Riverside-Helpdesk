@@ -1087,6 +1087,15 @@ export default function NotebookPage() {
                                 <span style={s('color:' + C.dim + ';margin:0 5px;')}>›</span>
                                 {p.page || a.noteTitle || 'Untitled'}{p.isNewPage ? ' (new page)' : ''}
                               </div>
+                              {/* A title that names a container rather than a
+                                  question. Said here because renaming it now
+                                  costs nothing, and renaming it after the page
+                                  has grown for six months costs a morning. */}
+                              {p.isVagueTitle && (
+                                <div style={s('margin-top:3px;font-size:12px;font-weight:600;color:#8a6100;')}>
+                                  Vague title — rename it to the question staff would ask, or search will never pick it precisely
+                                </div>
+                              )}
                               <div style={s('margin-top:3px;font-size:12.5px;line-height:1.5;color:' + C.mut + ';overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;')}>
                                 {p.markdown.replace(/<[^>]+>/g, '').replace(/[#*>`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 240)}
                               </div>
