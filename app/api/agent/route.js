@@ -1,38 +1,36 @@
-// The agent endpoint: one model call, and nothing else.
+// The agent endpoint: pick a template, fill it, render it.
 //
-// The research loop, the evidence registry, source selection, the structured
-// writer and the quote validator have all been removed. What is left is the
-// smallest thing that can answer a question: the message goes to the FAST model,
-// and whatever it writes comes back as the answer.
+// Every message takes the same path. The model reads it, chooses the template
+// that fits and fills that template's variables — it does not write the answer.
+// The answer is the template, rendered in code from the values it returned.
 //
-// This is deliberately a starting point, not a finished pipeline. Tools go back
-// in one at a time from here, and the shapes that used to be handled by their
-// own endpoints — a pasted document to file, an incoming patient request to
-// route — become tools on this same path rather than separate systems.
+// That split is the whole point. Understanding a message is what a model is
+// good at, so it does that; the shape of what comes out is what a model is
+// unreliable at, so code does that. "How do I refer for an ECG" and "ecg
+// referral, how to do this?" reach the same card, because the wording was never
+// what decided it.
 //
-// WHAT IS STILL HERE, AND WHY
-//   • The ndjson stream. The browser reads one event shape (status / tool-start
-//     / tool-result / answer / error) and none of the chat had to change.
-//   • The answer payload shape, so the card renders exactly as before. The parts
-//     that need sources — citations, key points, the e-RS card — come back empty
-//     because there are no sources.
-//   • `general: true`. The card carries a line saying this was written by the
-//     assistant and is not from the practice's documents. Right now that is
-//     simply true of every answer.
-//   • Number redaction. With nothing grounding the answer, every number in it is
-//     the model's guess, so this matters more than it did before, not less.
+// Determinism where it earns its keep:
+//   - the referral service is an enum of what the practice records, so a
+//     pathway can be chosen or declined but never invented;
+//   - a filing title is assembled from its parts by codingTitle, so its format
+//     cannot drift however the model words things;
+//   - every card is laid out from the same blocks (lib/templates).
+//
+// When no template fits, the turn falls through to plain prose on the fast
+// model. That answer IS written by the model, has nothing behind it, and says
+// so on the card.
 //
 // WHAT IS DELIBERATELY UNWIRED, NOT DELETED
 //   • The Notebook (lib/notebook.js). It is where the practice's real data
-//     lives and it is untouched — this route simply does not read it yet.
+//     lives and it is untouched — this route does not read it yet. The template
+//     data was transcribed from it by hand.
 //   • The answer cache (lib/answer-cache/). Keyed on the Notebook fingerprint,
-//     which means nothing while the Notebook is not an input, and it would serve
-//     answers written by an older prompt while the prompt is still changing.
+//     which means nothing while the Notebook is not an input.
 import { NextResponse } from 'next/server';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { z } from 'zod';
-import { REFERRAL_SERVICE_NAMES, completeRoute, routeQuestion } from '@/lib/templates/route.mjs';
+import { SELECTION_SCHEMA, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
@@ -123,93 +121,70 @@ export async function POST(request) {
       };
 
       try {
-        // TEMPLATES FIRST, AND USUALLY LAST.
+        // ONE PIPELINE. The model reads the message, picks the template that
+        // fits and fills that template's variables — it never writes the
+        // answer. What comes back is rendered in code, so "how do I refer for
+        // an ECG" and "ecg referral, how to do this?" produce the same card,
+        // and the enum of recorded services means a pathway can be chosen or
+        // declined but never invented.
         //
-        // Most staff questions are a lookup the practice has already answered.
-        // "How do I refer for an ECG" resolves to a service on the emailed
-        // list, so the answer is the email template with the ECG entry in it —
-        // no model call, nothing to wait for, and the same answer every time.
-        //
-        // The model is only reached for the slot the router could not fill,
-        // and even then it chooses from the services the practice records
-        // rather than writing an answer. That is the whole design: the model
-        // fills variables, it does not compose.
-        const route = routeQuestion(question);
-        if (route) {
-          let templateAnswer = route.answer || null;
+        // Only when no template fits does the turn fall through to prose.
+        send({ type: 'status', text: 'Working out what this is' });
+        send({ type: 'tool-start', id: 'select', tool: 'pick_template', label: 'Choosing the answer', detail: question.slice(0, 120) });
 
-          if (!templateAnswer && route.needs === 'referralService') {
-            send({ type: 'status', text: 'Working out which referral this is' });
-            send({
-              type: 'tool-start',
-              id: 'route',
-              tool: 'match_referral',
-              label: 'Matching the referral',
-              detail: question.slice(0, 120),
-            });
-            let filled = null;
-            try {
-              const picked = await generateObject({
-                model: openrouter(model),
-                schema: z.object({
-                  service: z.enum(['none', ...REFERRAL_SERVICE_NAMES])
-                    .describe('The referral this question is about, or "none" when it is not one of these.'),
-                }),
-                temperature: 0,
-                prompt: [
-                  'Which of the practice’s recorded referrals is this question about?',
-                  'Answer "none" unless the question is clearly about one of them. A wrong match sends a referral to the wrong service, so "none" is the safe answer when you are unsure.',
-                  '',
-                  'QUESTION:',
-                  question,
-                ].join('\n'),
-              });
-              filled = picked.object;
-              recordUsage({ turnId, role: 'fast', phase: 'route', model, usage: picked.usage });
-            } catch (e) {
-              // A failed match is not a failed answer: the template still
-              // produces the honest "not recorded" card.
-              console.warn('[agent] referral match failed:', String(e).slice(0, 160));
-            }
-            send({
-              type: 'tool-result',
-              id: 'route',
-              tool: 'match_referral',
-              summary: filled && filled.service !== 'none' ? filled.service : 'No recorded referral matches',
-              items: [],
-            });
-            templateAnswer = completeRoute(route, filled);
-          }
+        let templateAnswer = null;
+        let picked = 'none';
+        try {
+          const selection = await generateObject({
+            model: openrouter(model),
+            schema: SELECTION_SCHEMA,
+            temperature: 0,
+            prompt: selectionPrompt({ question, attached }),
+          });
+          recordUsage({ turnId, role: 'fast', phase: 'select', model, usage: selection.usage });
+          picked = selection.object.template;
+          templateAnswer = renderSelection(selection.object, question);
+        } catch (e) {
+          // A router that cannot answer is not a turn that cannot answer.
+          console.warn('[agent] template selection failed:', String(e).slice(0, 160));
+        }
 
-          if (templateAnswer) {
-            send({
-              type: 'answer',
-              payload: {
-                kind: 'answer',
-                answerable: true,
-                // Built from the practice's own recorded material, so this is
-                // NOT flagged as the assistant's own work.
-                general: false,
-                template: templateAnswer,
-                intro: '',
-                keyPoints: [],
-                sections: [],
-                message: '',
-                messageCite: null,
-                messageWeb: null,
-                tip: '',
-                gaps: '',
-                followUps: [],
-                clarify: null,
-                referralRoute: null,
-                citations: [],
-                contacts: [],
-                validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
-              },
-            });
-            controller.close();
-            return;
-          }
+        send({
+          type: 'tool-result',
+          id: 'select',
+          tool: 'pick_template',
+          summary: templateAnswer ? picked : 'No template fits — answering directly',
+          items: [],
+        });
+
+        if (templateAnswer) {
+          send({
+            type: 'answer',
+            payload: {
+              kind: 'answer',
+              answerable: true,
+              // Built from what the practice recorded, so NOT flagged as the
+              // assistant's own work the way the prose fallback is.
+              general: false,
+              template: templateAnswer,
+              intro: '',
+              keyPoints: [],
+              sections: [],
+              message: '',
+              messageCite: null,
+              messageWeb: null,
+              tip: '',
+              gaps: '',
+              followUps: [],
+              clarify: null,
+              referralRoute: null,
+              citations: [],
+              contacts: [],
+              validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
+            },
+          });
+          controller.close();
+          return;
         }
 
         send({ type: 'status', text: 'Writing the answer' });
