@@ -91,6 +91,32 @@ function Expand({ label, hint, blocks }) {
   );
 }
 
+// Wording to be pasted somewhere else, so it carries its own Copy. Taking text
+// out of an answer by hand is the one thing the reader should never have to do.
+function Message({ label, text }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) { /* an unavailable clipboard is not worth an error */ }
+  };
+  return (
+    <div>
+      <div style={s('display:flex;align-items:center;gap:12px;margin-bottom:6px;')}>
+        <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4c6272;')}>{label}</div>
+        <Hover tag="button" type="button" onClick={copy}
+          base="flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;color:#005eb8;cursor:pointer;"
+          hover="border-color:#005eb8;background:#f7fbff;">
+          <Svg w={13} sw={2.2}>{Icons.copy}</Svg>{copied ? 'Copied' : 'Copy'}
+        </Hover>
+      </div>
+      <div style={s('padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
+    </div>
+  );
+}
+
 // The label is optional and usually absent: on a contact lookup the card is
 // already titled with the service, so repeating the name inside it said the
 // same thing twice. It is only rendered when a card carries several contacts
@@ -118,6 +144,7 @@ export function Blocks({ blocks }) {
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
         if (b.type === 'expand') return <Expand key={i} label={b.label} hint={b.hint} blocks={b.blocks} />;
         if (b.type === 'contacts') return <Contacts key={i} items={b.items} />;
+        if (b.type === 'message') return <Message key={i} label={b.label} text={b.text} />;
         if (b.type === 'steps') {
           return (
             <ol key={i} style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;')}>

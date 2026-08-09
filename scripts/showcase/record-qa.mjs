@@ -74,7 +74,7 @@ const LAYER = `
       border: 2px solid #005eb8; opacity: 0;
     }
     #sc-caption {
-      position: fixed; z-index: 2147483000; left: 50%; bottom: 46px;
+      position: fixed; z-index: 2147483000; left: 50%; bottom: 156px;
       pointer-events: none; display: flex; align-items: center; gap: 11px;
       padding: 13px 24px; border-radius: 999px;
       background: rgba(33,43,50,.92); color: #fff;
@@ -183,11 +183,22 @@ const LAYER = `
       const a = anim(card, [{ opacity: 1 }, { opacity: 0 }], ms, 'cubic-bezier(.165,.84,.44,1)');
       a.finished.then(() => { card.style.opacity = '0'; }).catch(() => {});
     },
+    scroller() {
+      return document.getElementById('riva-scroll') || document.scrollingElement || document.body;
+    },
+    /* How much of the answer is below the fold. A short answer has
+       nothing to scroll, and the film must not sit through a scroll
+       that goes nowhere. */
+    scrollMax() {
+      const sc = window.__sc.scroller();
+      return Math.max(0, sc.scrollHeight - sc.clientHeight);
+    },
     /* Scrolling is time, so it runs at a near-constant rate with only
        the ends softened. */
-    scrollBy(dy, ms = 1600) {
-      const sc = document.getElementById('riva-scroll') || document.scrollingElement || document.body;
+    scrollTo(to, ms = 1600) {
+      const sc = window.__sc.scroller();
       const from = sc.scrollTop;
+      const dy = to - from;
       const t0 = performance.now();
       const ease = (p) => (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
       return new Promise((done) => {
@@ -261,43 +272,60 @@ async function main() {
   await sc('captionOut');
   await wait(400);
 
-  // 2 — the question is typed into the real field.
-  const fieldBox = await at('input[aria-label="Ask a question"]');
-  await sc('cursorShow', 960, 1010);
-  await sc('cursorTo', fieldBox.x - 220, fieldBox.y, 700);
-  await wait(780);
-  await sc('press');
-  await field.click();
-  await wait(320);
-  await sc('cursorHide');
-  await field.type('How do I do a 2WW dermatology referral?', { delay: 55 });
-  await wait(700);
+  /* Typing into the real field: the cursor travels to it, presses, and
+     the question is typed a character at a time. What ends up in the
+     field is checked afterwards — a keystroke that lands before React
+     has the input is a dropped first letter, and that is not something
+     to leave in a film. */
+  const typeAsk = async (text, fromY) => {
+    const box = await at('input[aria-label="Ask a question"]');
+    await sc('cursorShow', box.x - 260, fromY);
+    await sc('cursorTo', box.x - 220, box.y, 680);
+    await wait(760);
+    await sc('press');
+    await field.click();
+    await wait(340);
+    await sc('cursorHide');
+    await field.type(text, { delay: 55 });
+    if ((await field.inputValue()) !== text) {
+      await field.fill('');
+      await field.type(text, { delay: 26 });
+    }
+    await wait(650);
+    await page.keyboard.press('Enter');
+  };
+  const answerLanded = () => page.getByText('Was this right?').first().waitFor({ timeout: 120000 });
+  /* Only scroll if there is something below the fold: an answer that
+     fits the screen must not sit through a scroll that goes nowhere. */
+  const readDown = async (ms) => {
+    const max = await page.evaluate(() => window.__sc.scrollMax());
+    if (max < 60) { await wait(ms); return false; }
+    await page.evaluate(([m, d]) => window.__sc.scrollTo(m, d), [max, ms]);
+    await wait(ms + 300);
+    return true;
+  };
 
-  // 3 — asking. The dock falls to the foot, the question lands, the
-  //     agent's lookups deal in, the answer arrives.
-  await page.keyboard.press('Enter');
-  await wait(1400);
+  // 2 — the referral question, asked for real. The dock falls to the
+  //     foot, the question lands, the lookups deal in, the answer comes.
+  await typeAsk('How do I do a 2WW referral for suspected skin cancer?', 1010);
+  await wait(1300);
   await sc('captionIn', 'Answered from the practice’s own documents — not from the model’s memory.');
-  await page.getByText('Was this right?').first().waitFor({ timeout: 120000 });
-  await wait(1700);
-  await sc('captionOut');
-  await wait(500);
-
-  // 4 — down through the answer: the referral's own fields, then its steps.
-  await sc('captionIn', 'The referral’s fields, filled in — speciality, clinic type, priority.');
-  await page.evaluate(() => window.__sc.scrollBy(420, 1800));
-  await wait(2500);
-  await sc('captionOut');
-  await wait(350);
-  await sc('captionIn', 'Then the steps, in the order someone at the desk does them.');
-  await page.evaluate(() => window.__sc.scrollBy(560, 2000));
-  await wait(2700);
+  await answerLanded();
+  await wait(1900);
   await sc('captionOut');
   await wait(400);
 
-  // 5 — the feedback row, pressed.
-  await page.evaluate(() => window.__sc.scrollBy(420, 1300));
-  await wait(1600);
+  // 3 — the template's own fields, then the steps under them.
+  await sc('captionIn', 'The e-RS fields filled in — and anything it cannot fill, flagged.');
+  await wait(2400);
+  await sc('captionOut');
+  await wait(300);
+  await sc('captionIn', 'Then the steps, in the order someone at the desk does them.');
+  await readDown(2200);
+  await sc('captionOut');
+  await wait(400);
+
+  // 4 — the feedback row, pressed.
   const helpful = await at('button', 'Helpful');
   if (helpful) {
     await sc('captionIn', 'Every answer can be marked in one press.');
@@ -311,6 +339,20 @@ async function main() {
     await sc('captionOut');
     await wait(500);
   }
+
+  // 5 — a second question, of an entirely different kind: not a
+  //     procedure to follow but a house format to apply.
+  await sc('captionIn', 'Same field, a different job: coding a document.');
+  await wait(1700);
+  await sc('captionOut');
+  await wait(300);
+  await typeAsk('How do I code a hospital discharge letter?', 980);
+  await answerLanded();
+  await wait(1800);
+  await sc('captionIn', 'The practice’s own format, with worked examples.');
+  await readDown(2600);
+  await sc('captionOut');
+  await wait(500);
 
   // 6 — the outro.
   await sc('cardIn', 'The Riverside Practice', 'Ask once. Get back to the patient.');
