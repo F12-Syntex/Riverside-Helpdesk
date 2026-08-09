@@ -14,3 +14,7 @@
 /.design-sync/.cache
 /.design-sync/learnings
 /.design-sync/node_modules
+
+# Notebook backups hold live practice content (and, until they are rotated,
+# shared credentials). Never commit one.
+scripts/notebook-backup.json
