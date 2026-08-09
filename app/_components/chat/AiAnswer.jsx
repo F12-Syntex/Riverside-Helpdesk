@@ -7,6 +7,7 @@ import ContactsCard from './ContactsCard';
 import WorkingState from './WorkingState';
 import Rich from './Rich';
 import Md from './Md';
+import TemplateView from '../templates/TemplateView';
 
 // A section written from a web page rather than the practice's own material.
 // Deliberately unlike a citation chip: it opens the internet, not a practice
@@ -324,6 +325,13 @@ export default function AiAnswer({ v }) {
             )}
 
             {v.isGeneral && <GeneralBar />}
+
+            {/* A templated answer. The template already decided the whole
+                shape, so it renders on its own — the markdown sections, key
+                points and citations below are all empty for these. */}
+            {v.hasTemplate && (
+              <div style={s('margin:16px 0 0;')}><TemplateView answer={v.template} /></div>
+            )}
 
             {/* The question as asked has more than one answer in the practice's
                 own material, so the assistant asks which was meant rather than

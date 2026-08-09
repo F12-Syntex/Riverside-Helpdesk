@@ -29,8 +29,10 @@
 //     which means nothing while the Notebook is not an input, and it would serve
 //     answers written by an older prompt while the prompt is still changing.
 import { NextResponse } from 'next/server';
-import { generateText } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { z } from 'zod';
+import { REFERRAL_SERVICE_NAMES, completeRoute, routeQuestion } from '@/lib/templates/route.mjs';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
@@ -121,6 +123,95 @@ export async function POST(request) {
       };
 
       try {
+        // TEMPLATES FIRST, AND USUALLY LAST.
+        //
+        // Most staff questions are a lookup the practice has already answered.
+        // "How do I refer for an ECG" resolves to a service on the emailed
+        // list, so the answer is the email template with the ECG entry in it —
+        // no model call, nothing to wait for, and the same answer every time.
+        //
+        // The model is only reached for the slot the router could not fill,
+        // and even then it chooses from the services the practice records
+        // rather than writing an answer. That is the whole design: the model
+        // fills variables, it does not compose.
+        const route = routeQuestion(question);
+        if (route) {
+          let templateAnswer = route.answer || null;
+
+          if (!templateAnswer && route.needs === 'referralService') {
+            send({ type: 'status', text: 'Working out which referral this is' });
+            send({
+              type: 'tool-start',
+              id: 'route',
+              tool: 'match_referral',
+              label: 'Matching the referral',
+              detail: question.slice(0, 120),
+            });
+            let filled = null;
+            try {
+              const picked = await generateObject({
+                model: openrouter(model),
+                schema: z.object({
+                  service: z.enum(['none', ...REFERRAL_SERVICE_NAMES])
+                    .describe('The referral this question is about, or "none" when it is not one of these.'),
+                }),
+                temperature: 0,
+                prompt: [
+                  'Which of the practice’s recorded referrals is this question about?',
+                  'Answer "none" unless the question is clearly about one of them. A wrong match sends a referral to the wrong service, so "none" is the safe answer when you are unsure.',
+                  '',
+                  'QUESTION:',
+                  question,
+                ].join('\n'),
+              });
+              filled = picked.object;
+              recordUsage({ turnId, role: 'fast', phase: 'route', model, usage: picked.usage });
+            } catch (e) {
+              // A failed match is not a failed answer: the template still
+              // produces the honest "not recorded" card.
+              console.warn('[agent] referral match failed:', String(e).slice(0, 160));
+            }
+            send({
+              type: 'tool-result',
+              id: 'route',
+              tool: 'match_referral',
+              summary: filled && filled.service !== 'none' ? filled.service : 'No recorded referral matches',
+              items: [],
+            });
+            templateAnswer = completeRoute(route, filled);
+          }
+
+          if (templateAnswer) {
+            send({
+              type: 'answer',
+              payload: {
+                kind: 'answer',
+                answerable: true,
+                // Built from the practice's own recorded material, so this is
+                // NOT flagged as the assistant's own work.
+                general: false,
+                template: templateAnswer,
+                intro: '',
+                keyPoints: [],
+                sections: [],
+                message: '',
+                messageCite: null,
+                messageWeb: null,
+                tip: '',
+                gaps: '',
+                followUps: [],
+                clarify: null,
+                referralRoute: null,
+                citations: [],
+                contacts: [],
+                validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
+              },
+            });
+            controller.close();
+            return;
+          }
+        }
+
         send({ type: 'status', text: 'Writing the answer' });
 
         const userContent = images.length

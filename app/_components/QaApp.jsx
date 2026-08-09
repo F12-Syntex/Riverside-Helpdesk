@@ -1181,6 +1181,11 @@ class RiversidePracticeQA extends React.Component {
           // material. Said once, at the top of the card, because not one line of
           // it is backed by a document.
           isGeneral: !!m.general,
+          // A templated answer: built from the practice's recorded material by
+          // a template rather than written by the model, so the card renders
+          // the blocks it produced instead of markdown sections.
+          template: m.template || null,
+          hasTemplate: !!m.template,
           isCached: !!cache,
           cachedLabel: cache ? 'Answered from cache — saved ' + timeAgo(cache.cachedAt) : '',
           // Only worth saying when the wording differed: the reader is entitled
