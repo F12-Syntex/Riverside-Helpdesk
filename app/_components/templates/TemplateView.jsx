@@ -133,6 +133,9 @@ export function Blocks({ blocks }) {
         if (b.type === 'bullets') {
           return (
             <ul key={i} style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
+              {b.title && (
+                <li style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4c6272;margin-bottom:1px;')}>{b.title}</li>
+              )}
               {b.items.map((it, n) => (
                 <li key={n} style={s('display:flex;gap:10px;align-items:flex-start;')}>
                   <span style={s('flex:none;width:5px;height:5px;border-radius:50%;background:#005eb8;margin-top:9px;')} />
