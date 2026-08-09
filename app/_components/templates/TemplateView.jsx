@@ -21,23 +21,33 @@ const TONE = {
   critical: { bar: '#d5281b', bg: '#fdf4f3', ink: '#a51b0f', icon: Icons.alertCircle },
 };
 
-// The values the reader came for. A `key` field is the headline — for a
-// referral that is the speciality and the clinic type, the only two things that
-// change from one referral to the next. A key field with no value says so
-// rather than showing a blank box: a blank reads as "nothing to set", and a
-// guess sends the referral to the wrong service.
-function Fields({ items }) {
+// The values the reader has to type, and nothing else.
+//
+// Every value is the same size on purpose. An earlier version set the important
+// ones larger, which read as two different kinds of thing sharing one table and
+// made the panel harder to scan rather than easier. What makes a value
+// important is that it is IN here — the panel is titled with where the values
+// go, and anything the reader does not type at that moment lives behind a
+// disclosure instead.
+//
+// A value the practice does not record says so rather than rendering blank: a
+// blank reads as "nothing to set", and a guess sends a referral to the wrong
+// service.
+function Fields({ title, items }) {
   return (
     <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
+      {title && (
+        <div style={s('padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
+          {title}
+        </div>
+      )}
       {items.map((f, i) => (
-        <div key={i} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:' + (f.key ? '12px 16px' : '9px 16px') + ';' + (i ? 'border-top:1px solid #eef1f2;' : '') + (f.key ? 'background:#f7fbff;' : ''))}>
-          <span style={s('flex:none;min-width:112px;font-size:13px;font-weight:600;color:#4c6272;')}>{f.label}</span>
+        <div key={i} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:11px 16px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
+          <span style={s('flex:none;min-width:104px;font-size:13.5px;color:#4c6272;')}>{f.label}</span>
           {f.value ? (
-            <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;color:#212b32;' + (f.key ? 'font-size:19px;font-weight:700;letter-spacing:-0.01em;' : 'font-size:15px;font-weight:600;'))}>
-              {f.value}
-            </span>
+            <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#212b32;')}>{f.value}</span>
           ) : (
-            <span style={s('flex:1 1 auto;display:flex;gap:7px;align-items:center;font-size:14.5px;font-weight:600;color:#8a6100;')}>
+            <span style={s('flex:1 1 auto;display:flex;gap:7px;align-items:center;font-size:15px;font-weight:600;color:#8a6100;')}>
               <Svg w={15} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
               {f.missing || 'Not recorded'}
             </span>
@@ -81,13 +91,17 @@ function Expand({ label, hint, blocks }) {
   );
 }
 
+// The label is optional and usually absent: on a contact lookup the card is
+// already titled with the service, so repeating the name inside it said the
+// same thing twice. It is only rendered when a card carries several contacts
+// and they need telling apart.
 function Contacts({ items }) {
   return (
     <div style={s('display:flex;flex-direction:column;gap:10px;')}>
       {items.map((c, i) => (
         <div key={i} style={s('border:1px solid #d8e1e5;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;background:#fff;padding:12px 16px;')}>
-          <div style={s('font-size:15px;font-weight:700;color:#212b32;')}>{c.label}</div>
-          {c.tel && <div style={s('margin-top:5px;font-size:21px;font-weight:700;letter-spacing:-0.01em;color:#005eb8;')}>{c.tel}</div>}
+          {c.label && <div style={s('font-size:15px;font-weight:700;color:#212b32;margin-bottom:5px;')}>{c.label}</div>}
+          {c.tel && <div style={s('font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#005eb8;')}>{c.tel}</div>}
           {c.email && <div style={s('margin-top:3px;font-size:14.5px;font-weight:600;color:#212b32;overflow-wrap:anywhere;')}>{c.email}</div>}
           {c.note && <div style={s('margin-top:5px;font-size:13.5px;color:#4c6272;')}>{c.note}</div>}
         </div>
@@ -100,7 +114,7 @@ export function Blocks({ blocks }) {
   return (
     <>
       {blocks.map((b, i) => {
-        if (b.type === 'fields') return <Fields key={i} items={b.items} />;
+        if (b.type === 'fields') return <Fields key={i} title={b.title} items={b.items} />;
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
         if (b.type === 'expand') return <Expand key={i} label={b.label} hint={b.hint} blocks={b.blocks} />;
         if (b.type === 'contacts') return <Contacts key={i} items={b.items} />;
