@@ -479,7 +479,7 @@ export default function AiAnswer({ v }) {
             {v.hasContacts && <div style={s('height:12px;')} />}
 
             {v.hasProvenanceNote && (
-              <div style={s('border-top:1px solid #eef1f2;padding:10px 22px 12px;display:flex;flex-direction:column;gap:3px;')}>
+              <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding:10px 0 12px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.5;')}>
                 {v.isGeneral && <span style={s('font-size:12.5px;color:#768692;')}>Written by the assistant for this request; no practice document was used</span>}
                 {(v.usedJudgement || v.usedReasoning) && <span style={s('font-size:12.5px;color:#768692;')}>{v.usedReasoning ? 'Amber blocks are the assistant\u2019s own working from the sources named in them, not the practice\u2019s own words' : 'Amber blocks are AI judgement, not the practice\u2019s documents'}</span>}
                 {v.usedWeb && <span style={s('font-size:12.5px;color:#768692;')}>Sections marked &ldquo;from the web&rdquo; are general guidance found online, not practice policy</span>}
