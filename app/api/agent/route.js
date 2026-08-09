@@ -21,16 +21,20 @@
 // model. That answer IS written by the model, has nothing behind it, and says
 // so on the card.
 //
+// THE NOTEBOOK IS A TEMPLATE TOO. It arrives as a list of page titles, and the
+// model returns a title — the page is then rendered from the database exactly
+// as the practice wrote it. So even the open-ended questions come back as a
+// variable filled in, not as prose the model composed: same answer every time,
+// about ten output tokens, and no way for a procedure to be paraphrased on its
+// way to somebody following it.
+//
 // WHAT IS DELIBERATELY UNWIRED, NOT DELETED
-//   • The Notebook (lib/notebook.js). It is where the practice's real data
-//     lives and it is untouched — this route does not read it yet. The template
-//     data was transcribed from it by hand.
-//   • The answer cache (lib/answer-cache/). Keyed on the Notebook fingerprint,
-//     which means nothing while the Notebook is not an input.
+//   • The answer cache (lib/answer-cache/). With the answer now assembled in
+//     code from a page and a template, there is very little left to cache.
 import { NextResponse } from 'next/server';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { SELECTION_SCHEMA, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
+import { SELECTION_SCHEMA, notebookCatalogue, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
@@ -133,14 +137,17 @@ export async function POST(request) {
         send({ type: 'status', text: 'Working out what this is' });
         send({ type: 'tool-start', id: 'select', tool: 'pick_template', label: 'Choosing the answer', detail: question.slice(0, 120) });
 
-        // THE WHOLE NOTEBOOK GOES IN THE PROMPT.
+        // THE NOTEBOOK GOES IN AS A LIST, NOT AS TEXT.
         //
-        // 96 pages is about 15,000 tokens, which fits comfortably and is the
-        // same text on every question. Selecting pages first would save most of
-        // those tokens and cost either a second round trip or a keyword match
-        // that misses paraphrase — and a missed page is a wrong answer, while a
-        // page the model did not need is merely paid for. At this size the
-        // trade is not close.
+        // The model's job is to name the page, not to read every page and write
+        // the answer again. So it gets one line per page — title, and the first
+        // real line so a modest title can still be recognised — and returns a
+        // title. The page itself is rendered from the database, exactly as the
+        // practice wrote it.
+        //
+        // That is roughly 3k tokens in and ten out, against 18k in and 600 out
+        // for composing an answer; it is byte-identical on every asking; and it
+        // cannot garble a procedure, because nothing rewrites one.
         //
         // Best-effort: a Notebook that cannot be read leaves the templates
         // working rather than failing the turn. The prompt says so, and the
@@ -151,10 +158,7 @@ export async function POST(request) {
         } catch (e) {
           console.warn('[agent] notebook unavailable:', String(e).slice(0, 160));
         }
-        const notebookText = notebookPages
-          .map((page) => `### ${page.docTitle}\n${String(page.text || '').trim()}`)
-          .join('\n\n');
-        const knownPages = notebookPages.map((page) => page.docTitle);
+        const notebookText = notebookPages.length ? notebookCatalogue(notebookPages) : '';
 
         let templateAnswer = null;
         let picked = 'none';
@@ -167,7 +171,7 @@ export async function POST(request) {
           });
           recordUsage({ turnId, role: 'fast', phase: 'select', model, usage: selection.usage });
           picked = selection.object.template;
-          templateAnswer = renderSelection(selection.object, question, knownPages);
+          templateAnswer = renderSelection(selection.object, question, notebookPages);
         } catch (e) {
           // A router that cannot answer is not a turn that cannot answer.
           console.warn('[agent] template selection failed:', String(e).slice(0, 160));
