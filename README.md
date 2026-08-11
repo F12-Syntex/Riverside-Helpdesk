@@ -50,6 +50,59 @@ clickable sources they can open in-browser.
   served while the Notebook they were written from and the model that wrote them
   are unchanged (see `lib/answer-cache/`), and follow-ups, messages with images,
   triage, filing titles and "I could not find anything" are never cached.
+- **A message that asks for five things gets five things acknowledged.** The
+  selection call returns exactly one template, which is why an eConsult listing
+  a knee, a hoarse voice, a repeat prescription, a fit note and a question about
+  somebody's wife came back as a single knee card with the other four gone
+  without trace. That is structural, not a quality problem, so the model is
+  asked for one extra thing on the same call — where each separate ask starts
+  and ends, copied out verbatim — and **everything after that is decided in
+  code** (`lib/safety/`):
+  - **Acuity is a table, never the model's opinion.** `emergency >
+    twoWeekWait > sameDay > routine > admin`, checked top down. The card that
+    renders is the most urgent item the band above it has not already answered
+    — not the first one, and not the longest one.
+  - **The safety scanners run message-wide on every turn**, whatever template
+    was chosen. The red-flag list used to run only inside triage, so a message
+    answered with a Notebook page was never scanned at all. Alongside it now:
+    NICE **NG12** suspected-cancer features (hoarseness over three weeks,
+    unintended weight loss, dysphagia, a neck lump, haemoptysis, rectal
+    bleeding, post-menopausal bleeding, a breast lump, visible haematuria),
+    each reported with the words that fired it and sent to the duty doctor
+    today. Naming what was seen is the whole claim — the referral decision is a
+    clinician's.
+  - **A request about somebody else's record is refused, in code.** A hard
+    pattern rule with no model anywhere in its path, so there is nothing for one
+    to be talked out of. It is a refusal, not a routing decision, and the rest
+    of the message is still answered.
+  - **Assertions are span-local and fail toward silence.** A card may only claim
+    something about the complaint it is about, and only from words inside that
+    complaint's own text. The knee card claimed "over-the-counter treatment has
+    already been tried and has not worked" because the pattern matched "hasn't
+    shifted" four paragraphs down, describing the patient's *voice*. Every
+    feature now carries the span that proved it; no span inside the complaint,
+    no sentence.
+  - **The unresolved items panel** lists every request beside whatever card is
+    showing, each marked routed, flagged, refused or unhandled, with an
+    unanswered one tappable to ask it on its own. It costs no tokens and it is
+    the backstop for every rule that misses. Closing an item is explicit and
+    recorded per item — and never blocks anything, because a panel that cannot
+    be closed is a panel that gets ignored.
+  - **Short questions are untouched.** The extra field is only requested when
+    the message is over ~300 characters or carries a joining phrase ("also",
+    "while I'm here"), so "how do I refer for an ECG" costs exactly what it did
+    before.
+  - **`/triage` is the one exception to one-call.** It may issue a small
+    structured call per decomposed request, in parallel, returning an enum and a
+    label — no prose. **Code holds the veto**: that classification may only
+    *raise* acuity above what the scanners found, never lower it, and a pass
+    that fails or times out leaves the deterministic answer standing. The regex
+    is the guarantee; the model is a recall booster.
+  - **The known limit, stated plainly:** patterns miss paraphrase. "My voice
+    sounds rough" will not match "hoarse". Build an eval set from the real
+    `question_log` rows at `/stats` and measure recall before trusting any of
+    it. The panel is what makes a miss visible rather than silent, which is why
+    it was built first.
 - Answers go through a **validation loop**: each section must carry a verbatim
   quote that really appears in the source it names, checked in code against what
   the tools actually returned. Failures go back to the model once with the
@@ -152,6 +205,14 @@ clickable sources they can open in-browser.
   on e-RS at all. Every stage is gated on it — the lookup, the research tool, the
   card the writer produced and the card filled in afterwards — so four e-RS
   fields never appear above an answer with no e-RS form behind it.
+- **`lib/safety/`** — the deterministic floor, and the only thing in the app
+  that runs on every single turn. `requests.mjs` (the multi-intent gate and the
+  decomposed spans), `spans.mjs` (locality — message-wide checks against
+  span-local assertions), `ng12.mjs`, `redflags.mjs`, `confidentiality.mjs`,
+  `acuity.mjs` (the rank table), `scan.mjs` (which request the card is about,
+  and what has to be said above it), `triage-pass.mjs` (the `/triage` second
+  pass and the veto that keeps it honest). No model is consulted anywhere in
+  the folder; `lib/templates/safety.mjs` renders what it finds.
 - **`lib/answer-cache/`** — answers already given, so the same question is not
   researched twice. `match.mjs` holds the free half (the canonical form of a
   question, hashed to a key, and the rules for what may be cached at all);

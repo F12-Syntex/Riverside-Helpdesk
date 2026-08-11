@@ -262,6 +262,12 @@ versioning. Tables, grouped by the feature that owns them:
 | `knowledge_sync_state` | `source_key → fingerprint`. | Lets a cold instance prove the bundle is current without reparsing. |
 | `knowledge_analysis_jobs` | Coalescing queue for claim analysis, with lease/lock columns. | — |
 
+**Question log** — `ensureQuestionLogSchema()`
+
+| Table | Columns | Personal data |
+| --- | --- | --- |
+| `question_log` | `turn_id, machine_id, question, outcome, template, source, answer, model, duration_ms, images, attachments, error, provenance (jsonb), dismissed (jsonb), at` | **Stores the staff question verbatim and the answer as text.** `provenance` additionally holds the message split into its separate requests — each with the acuity code gave it and, where a span was quoted, **the patient's own words** — plus every deterministic rule that fired with the text that matched it, and the revision of each Notebook page the card stood in for. `dismissed` records which panel items reception closed, when, and from which machine. Written by `/api/agent` as each answer goes out; `provenance` and `dismissed` are added by `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, so an existing install picks them up on the next schema check. |
+
 **Answer cache** — `ensureAnswerCacheSchema()`
 
 | Table | Columns | Personal data |
@@ -486,6 +492,7 @@ somewhere else (email, Accurx).
 | Rota | `/api/rota`, `/api/staff` | Staff names and constraints go to the model when a rota is generated from plain-English rules. | `staff`, `rotas`. |
 | Settings | `GET/PUT /api/settings`, `GET /api/settings/models` | A catalogue fetch to OpenRouter (no practice data). | `app_settings`. |
 | Audit | `POST/GET/PATCH /api/audit` | Nothing external. | `audit_machines`, `audit_events`. |
+| Close an unresolved item | `POST /api/questions/dismiss` | Nothing external. | Appends to `question_log.dismissed` on the turn the panel was shown for. Best-effort: nothing in the app waits on it. |
 | Knowledge admin | `/api/knowledge/**` | Passage text to the fast-role model for claim extraction. | The knowledge tables. Localhost-only. |
 
 ---
@@ -661,6 +668,29 @@ action" risk.
   advice. Clinical questions are refused and possible emergencies escalated (999
   / alert a clinician). `/api/medication` carries a deterministic emergency
   backstop that fires **before** any model call and cannot be filtered away.
+- **Nothing in a message is answered silently.** The selection call returns one
+  template, so a message carrying several requests is split into its separate
+  asks on the same call and every one of them is listed beside the answer,
+  marked routed, flagged, refused or unhandled. What is *not* answered is
+  visible rather than absent.
+- **The safety scanners are code, not prompt instructions, and run message-wide
+  on every turn** regardless of which template was chosen (`lib/safety/`): the
+  red-flag list, cauda equina, and NICE NG12 suspected-cancer features. Each
+  reports the words that fired it. Acuity is a fixed rank table
+  (`emergency > twoWeekWait > sameDay > routine > admin`); no model ranks it.
+- **A request about a third party's record is refused by a pattern rule** before
+  anything is routed, with no model in its path.
+- **A card may only assert what its own complaint's text supports.** Every
+  feature carries the span that proved it, and a sentence whose evidence lies in
+  another complaint is dropped rather than written — the failure mode that had a
+  knee card claiming self-care had failed on the strength of a sentence about
+  the patient's voice.
+- **The one second model pass** (`/triage` only) may raise acuity above what the
+  scanners found and may never lower it; if it fails or times out the
+  deterministic answer stands unchanged.
+- **Every turn records why**, not only what: the decomposed requests, the rule
+  ids with their matched spans, and the Notebook page revisions behind the card
+  (`question_log.provenance`, readable at `/stats`).
 - **Signposting is care navigation only** — it applies the practice's own triage,
   duty-doctor and signposting protocols and never diagnoses.
 - **Degradation is honest.** A failed web search says so rather than answering
@@ -708,6 +738,13 @@ should record explicitly:
 12. **No automatic screening for patient data** in questions or notes. This is the
     single control that would move the patient-data risks off "High", and it is
     listed as "to do".
-13. **No CI and no schema migrations.** Schema is created lazily with
+13. **The safety scanners are patterns, and patterns miss paraphrase.** "My
+    voice sounds rough" does not match "hoarse". Recall has not been measured;
+    the material for measuring it is now in `question_log` (real questions, the
+    answers given, and every rule that fired with its matched span), and
+    building an eval set from it is outstanding. The unresolved items panel is
+    the backstop that makes a miss visible rather than silent, and is not a
+    substitute for the measurement.
+14. **No CI and no schema migrations.** Schema is created lazily with
     `IF NOT EXISTS`; there is no migration history and no automated test gate
     before deploy **[to confirm]**.
