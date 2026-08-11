@@ -23,11 +23,11 @@ html { scrollbar-gutter: stable; }
   /* The dock as it sits at the foot of the page, from the bottom edge of
      the screen to the top of the strip above the field. */
   --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-pad-b));
-  /* What the opening screen hangs under the field — the shortcut row, the line
-     about dropping a document and the line about patient data — and which the
-     hero above has to clear. Measured, not guessed: it is what
-     .riva-dock-inner's bottom edge sits below the foot of the field. */
-  --riva-dock-extras: 102px;
+  /* What the opening screen hangs under the field, and which the hero above has
+     to clear. Nothing hangs there now — the shortcut row, the drag-and-drop line
+     and the patient-data line have all gone — so it is zero, and the heading
+     sits its own margin above the field rather than a phantom 102px higher. */
+  --riva-dock-extras: 0px;
   /* What the dock grows UPWARDS by when something is attached to the next
      question — a row per dropped document, a strip for the images. The dock is
      pinned to the bottom of the screen, so those rows push its top up into
@@ -38,12 +38,12 @@ html { scrollbar-gutter: stable; }
   /* The margin the hero text keeps above the field. This is the one number
      that decides how the opening screen reads, at every size. */
   --riva-hero-gap: 48px;
-  /* The heading and the line under it, at the two lines they usually run
-     to. Only used to work the lift out — the text itself is never held to
-     it, and a third line simply pushes the block up by that much. */
-  --riva-hero-text-h: 110px;
-  /* The opening screen as one object: heading, the margin under it, the
-     field, and the shortcuts and warning hanging below it. */
+  /* The heading, at the one line it runs to. Only used to work the lift out —
+     the text itself is never held to it, and a second line simply pushes the
+     block up by that much. */
+  --riva-hero-text-h: 46px;
+  /* The opening screen as one object: heading, the margin under it, and the
+     field. */
   --riva-dock-group-h: calc(
     var(--riva-hero-text-h) + var(--riva-hero-gap) + var(--riva-dock-field-h) + var(--riva-dock-extras)
   );
