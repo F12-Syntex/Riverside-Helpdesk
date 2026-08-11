@@ -41,7 +41,7 @@ import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { COMMAND_SCHEMAS, SELECTION_SCHEMA, commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
+import { COMMAND_SCHEMAS, SELECTION_SCHEMA, commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionClarify, selectionPrompt } from '@/lib/templates/route.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
@@ -224,6 +224,9 @@ export async function POST(request) {
                 section: chunk.section,
                 text: chunk.text,
                 url: chunk.view && chunk.view.url ? chunk.view.url : '',
+                // The rendered pages of the document this passage sits on, for
+                // the forms and posters whose point is what they look like.
+                images: (chunk.images || []).map((src) => '/' + String(src).replace(/^\//, '')),
               }));
             } catch (e) {
               // A search that cannot run says so, rather than answering the
@@ -320,6 +323,7 @@ export async function POST(request) {
         const notebookText = notebookPages.length ? notebookCatalogue(notebookPages) : '';
 
         let templateAnswer = null;
+        let clarify = null;
         let picked = 'none';
         try {
           const selection = await generateObject({
@@ -330,6 +334,10 @@ export async function POST(request) {
           });
           recordUsage({ turnId, role: 'fast', phase: 'select', model, usage: selection.usage });
           picked = selection.object.template;
+          // A question back, when the message could mean two different things
+          // and they have different answers. Null when the model asked without
+          // giving anything to choose between, and the turn answers as usual.
+          clarify = selectionClarify(selection.object);
           templateAnswer = renderSelection(selection.object, question, notebookPages);
         } catch (e) {
           // A router that cannot answer is not a turn that cannot answer.
@@ -340,9 +348,49 @@ export async function POST(request) {
           type: 'tool-result',
           id: 'select',
           tool: 'pick_template',
-          summary: templateAnswer ? picked : 'No template fits — answering directly',
+          summary: clarify ? 'Asking which was meant' : (templateAnswer ? picked : 'No template fits — answering directly'),
           items: [],
         });
+
+        // ASKING BACK IS AN ANSWER. The message reads two ways and the two ways
+        // go different places, so the turn ends in one question with the
+        // readings as options; tapping one asks the original question again with
+        // the ambiguity settled. Cheaper than a wrong answer and far cheaper
+        // than a wrong referral.
+        if (clarify) {
+          send({
+            type: 'answer',
+            payload: {
+              kind: 'answer',
+              answerable: true,
+              turnId,
+              general: false,
+              template: null,
+              intro: '',
+              keyPoints: [],
+              sections: [],
+              message: '',
+              messageCite: null,
+              messageWeb: null,
+              tip: '',
+              gaps: '',
+              followUps: [],
+              clarify,
+              referralRoute: null,
+              citations: [],
+              contacts: [],
+              validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
+            },
+          });
+          const writtenAsk = logTurn({
+            outcome: 'template',
+            template: 'ask',
+            answer: [clarify.question, ...clarify.options.map((o) => '- ' + o)].join('\n'),
+          });
+          controller.close();
+          await writtenAsk;
+          return;
+        }
 
         if (templateAnswer) {
           send({

@@ -188,6 +188,32 @@ export function Blocks({ blocks }) {
             </div>
           );
         }
+        if (b.type === 'images') {
+          if (!b.items || !b.items.length) return null;
+          // Shown at a size worth looking at rather than as thumbnails: these
+          // are screenshots of the screen being described, and a screenshot too
+          // small to read is decoration. Opening one gives the full picture.
+          return (
+            <div key={i} style={s('display:flex;flex-direction:column;gap:8px;')}>
+              {b.caption && (
+                <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4c6272;')}>{b.caption}</div>
+              )}
+              {/* Never stretched. Several of these are small icons cropped out
+                  of a screen, and blowing one up to fill a column turns a
+                  legible 70px icon into a blurred smear. Big screenshots are
+                  bounded instead, and opening one gives the full picture. */}
+              <div style={s('display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;')}>
+                {b.items.map((img, n) => (
+                  <a key={n} href={img.url} target="_blank" rel="noreferrer"
+                    style={s('display:inline-flex;max-width:100%;border:1px solid #d8e1e5;border-radius:10px;overflow:hidden;background:#fff;')}>
+                    <img src={img.url} alt={img.alt || 'Picture from the practice’s own page'} loading="lazy"
+                      style={s('display:block;max-width:100%;width:auto;height:auto;max-height:420px;background:#fff;')} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        }
         if (b.type === 'ask') {
           return (
             <div key={i} style={s('border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;background:#fff;padding:14px 16px;')}>
