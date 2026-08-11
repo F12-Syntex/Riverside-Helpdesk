@@ -145,6 +145,11 @@ test('merely mentioning a relative is not a third-party request', () => {
   assert.equal(scanConfidentiality('my wife booked this appointment for me').length, 0);
   assert.equal(scanConfidentiality('my son gave me a lift here this morning').length, 0);
   assert.equal(scanConfidentiality('my knee has been sore since March').length, 0);
+  // The writer claiming the thing for themselves, next to a relative they
+  // merely mentioned. Refusing this is how a receptionist learns to stop
+  // reading the warnings.
+  assert.equal(scanConfidentiality("I am my mother-in-law's carer and I have my own appointment to move").length, 0);
+  assert.equal(scanConfidentiality("my wife's sister dropped me off, I need my own repeat prescription").length, 0);
 });
 
 /* ---------------------------------------------------------- acuity */
