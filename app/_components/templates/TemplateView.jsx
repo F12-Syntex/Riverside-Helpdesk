@@ -15,6 +15,58 @@ import { s, Hover, Svg, Icons } from '../ui';
 import Rich from '../chat/Rich';
 import Md from '../chat/Md';
 
+// One copy button, used by every block that has something worth copying.
+//
+// Two ways of doing it, because one of them is not always available: the
+// clipboard API needs a secure context, and a practice reaching this over plain
+// HTTP on the local network would otherwise get a button that silently does
+// nothing — which is worse than no button, because the reader believes it
+// worked and pastes the last thing they copied onto a document.
+async function copyText(value) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch (e) { /* fall through to the old way */ }
+  try {
+    const box = document.createElement('textarea');
+    box.value = value;
+    box.setAttribute('readonly', '');
+    box.style.cssText = 'position:fixed;top:-1000px;opacity:0;';
+    document.body.appendChild(box);
+    box.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(box);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Says what happened, including when it did not work. "Press Ctrl+C" is a worse
+// outcome than a copy, and a far better one than a button that lies.
+function CopyButton({ value, label = 'Copy', small = false }) {
+  const [state, setState] = useState('');
+  const run = async () => {
+    const ok = await copyText(value);
+    setState(ok ? 'done' : 'failed');
+    setTimeout(() => setState(''), ok ? 2000 : 4000);
+  };
+  const text = state === 'done' ? 'Copied' : state === 'failed' ? 'Select and press Ctrl+C' : label;
+  return (
+    <Hover tag="button" type="button" onClick={run} title={'Copy: ' + value}
+      base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid '
+        + (state === 'done' ? '#007f3b' : '#d5dee2')
+        + ';border-radius:999px;padding:' + (small ? '4px 10px' : '5px 12px')
+        + ';font:inherit;font-size:' + (small ? '12.5px' : '13px')
+        + ';font-weight:600;color:' + (state === 'done' ? '#00632f' : '#005eb8') + ';cursor:pointer;'}
+      hover="border-color:#005eb8;background:#f7fbff;">
+      <Svg w={small ? 12 : 13} sw={2.2}>{state === 'done' ? Icons.check : Icons.copy}</Svg>{text}
+    </Hover>
+  );
+}
+
 const TONE = {
   info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: Icons.infoCircle },
   warn: { bar: '#ecd39a', bg: '#fffdf5', ink: '#8a6100', icon: Icons.alertCircle },
@@ -45,7 +97,13 @@ function Fields({ title, items }) {
         <div key={i} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:11px 16px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
           <span style={s('flex:none;min-width:104px;font-size:13.5px;color:#4c6272;')}>{f.label}</span>
           {f.value ? (
-            <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#212b32;')}>{f.value}</span>
+            <>
+              <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#212b32;')}>{f.value}</span>
+              {/* Only on the values that get typed somewhere else. A Copy on
+                  every row would be four buttons on a referral card and no
+                  signal about which one the reader actually needs. */}
+              {f.copy && <CopyButton value={f.value} small />}
+            </>
           ) : (
             <span style={s('flex:1 1 auto;display:flex;gap:7px;align-items:center;font-size:15px;font-weight:600;color:#8a6100;')}>
               <Svg w={15} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
@@ -94,23 +152,11 @@ function Expand({ label, hint, blocks }) {
 // Wording to be pasted somewhere else, so it carries its own Copy. Taking text
 // out of an answer by hand is the one thing the reader should never have to do.
 function Message({ label, text }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    try {
-      navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) { /* an unavailable clipboard is not worth an error */ }
-  };
   return (
     <div>
       <div style={s('display:flex;align-items:center;gap:12px;margin-bottom:6px;')}>
         <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4c6272;')}>{label}</div>
-        <Hover tag="button" type="button" onClick={copy}
-          base="flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;color:#005eb8;cursor:pointer;"
-          hover="border-color:#005eb8;background:#f7fbff;">
-          <Svg w={13} sw={2.2}>{Icons.copy}</Svg>{copied ? 'Copied' : 'Copy'}
-        </Hover>
+        <CopyButton value={text} />
       </div>
       <div style={s('padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
     </div>

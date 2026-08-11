@@ -202,3 +202,24 @@ test('/appt caps both lists rather than rendering whatever came back', () => {
   const lists = card.blocks.filter((b) => b.type === 'bullets');
   for (const list of lists) assert.ok(list.items.length <= 5, 'at most five');
 });
+
+/* --------------------------------------------- copying the filing title */
+
+test('the filing title carries a copy button, and nothing else does', () => {
+  // The whole output of this card is one string that gets typed onto a
+  // document. Selecting it by hand on a touchscreen at the front desk is worse
+  // than retyping it, which is the same argument the message block makes.
+  const card = renderCommand('documentCoding', {
+    document: { date: '07-Aug-2026', site: 'HUH', department: 'Ophthalmology', actions: ['d/c'] },
+  });
+  const title = card.blocks.find((b) => b.type === 'fields').items[0];
+  assert.equal(title.label, 'Title');
+  assert.equal(title.copy, true);
+
+  // A Copy on every row would be four buttons on a referral card and no signal
+  // about which one the reader actually needs, so it stays opt-in.
+  const referral = renderCommand('triage', { condition: 'sore throat' }, 'pt sore throat');
+  for (const block of referral.blocks.filter((b) => b.type === 'fields')) {
+    for (const item of block.items) assert.ok(!item.copy, item.label + ' must not carry one');
+  }
+});
