@@ -687,7 +687,9 @@ class RiversidePracticeQA extends React.Component {
         this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
         return;
       }
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      // turnId identifies this answer to the server, so a verdict pressed under
+      // it is stored against the answer it was actually about.
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -744,6 +746,7 @@ class RiversidePracticeQA extends React.Component {
         body: JSON.stringify({
           verdict,
           question: m.question || '',
+          turnId: m.turnId || '',
           machineId: machineId(),
           template: m.template ? m.template.title : '',
           answerKind: m.template ? 'template' : 'prose',

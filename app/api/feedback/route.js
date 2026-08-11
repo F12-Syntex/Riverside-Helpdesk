@@ -35,14 +35,19 @@ export async function POST(request) {
     verdict,
     template: String(body?.template || '').slice(0, 200),
     answerKind: String(body?.answerKind || '').slice(0, 40),
+    // Which turn this verdict is about. The answer carries the id, the button
+    // sends it back and the question log joins on it — so "wrong" lands on the
+    // answer it was pressed under rather than on the next identically worded
+    // question. Empty from an older page, which falls back to matching wording.
+    turnId: String(body?.turnId || '').slice(0, 40),
   };
 
   try {
     await ensureFeedbackSchema();
     const sql = getSql();
     await sql`
-      INSERT INTO answer_feedback (machine_id, question, verdict, template, answer_kind)
-      VALUES (${row.machineId}, ${row.question}, ${row.verdict}, ${row.template}, ${row.answerKind})
+      INSERT INTO answer_feedback (machine_id, question, verdict, template, answer_kind, turn_id)
+      VALUES (${row.machineId}, ${row.question}, ${row.verdict}, ${row.template}, ${row.answerKind}, ${row.turnId})
     `;
   } catch (e) {
     console.warn('[feedback] could not store:', String(e).slice(0, 200));
@@ -57,7 +62,7 @@ export async function GET(request) {
     const sql = getSql();
     const rows = await sql`
       SELECT id, machine_id AS "machineId", question, verdict, template,
-             answer_kind AS "answerKind", at
+             answer_kind AS "answerKind", turn_id AS "turnId", at
       FROM answer_feedback
       ORDER BY at DESC
       LIMIT ${limit}

@@ -31,7 +31,14 @@
 // WHAT IS DELIBERATELY UNWIRED, NOT DELETED
 //   • The answer cache (lib/answer-cache/). With the answer now assembled in
 //     code from a page and a template, there is very little left to cache.
+//
+// EVERY TURN IS WRITTEN DOWN. As the answer goes out, the question, the answer
+// as text, the template that built it and the model that ran are recorded in
+// question_log (lib/questions/log.js) and read back at /stats. That is how the
+// output is monitored: an answer is only reconstructable while the Notebook page
+// behind it is unchanged, so it is stored at the moment it is given.
 import { NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { SELECTION_SCHEMA, notebookCatalogue, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
@@ -41,6 +48,8 @@ import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
+import { recordQuestion } from '@/lib/questions/log';
+import { answerToText } from '@/lib/questions/flatten.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -80,6 +89,17 @@ function verifiedNumbers(texts = []) {
   return verified;
 }
 
+// The machine the question was typed at, for the question log. The tracker
+// mirrors its id into a year-long cookie (lib/audit/client.js), and that cookie
+// is the only thing on the request that says which desk this was: no IP address
+// is recorded here or anywhere else in the app.
+const MACHINE_COOKIE = /(?:^|;\s*)riva_machine=([^;]+)/;
+function machineFromCookie(request) {
+  const match = (request.headers.get('cookie') || '').match(MACHINE_COOKIE);
+  if (!match) return '';
+  try { return decodeURIComponent(match[1]); } catch (e) { return match[1]; }
+}
+
 const NDJSON_HEADERS = {
   'Content-Type': 'application/x-ndjson; charset=utf-8',
   'Cache-Control': 'no-store, no-transform',
@@ -117,12 +137,37 @@ export async function POST(request) {
 
   const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
   const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const startedAt = Date.now();
+  const machineId = machineFromCookie(request);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event) => {
         try { controller.enqueue(encoder.encode(JSON.stringify(event) + '\n')); } catch (e) { /* the reader went away */ }
+      };
+
+      // One row per turn, written as the answer goes out: what was asked, what
+      // was shown and what built it, so /stats can show the output rather than
+      // only the traffic. See lib/questions/log.js for why the audit log does
+      // not cover this. Never allowed to fail a turn — recordQuestion swallows
+      // its own errors — and on Vercel it is handed to waitUntil so the row is
+      // still written after the response has been closed.
+      const logTurn = (turn) => {
+        const writing = recordQuestion({
+          turnId,
+          machineId,
+          question,
+          model,
+          durationMs: Date.now() - startedAt,
+          images: images.length,
+          attachments: attachments.length,
+          ...turn,
+        });
+        if (process.env.VERCEL) {
+          try { waitUntil(writing); } catch (e) { /* awaited below instead */ }
+        }
+        return writing;
       };
 
       try {
@@ -191,6 +236,10 @@ export async function POST(request) {
             payload: {
               kind: 'answer',
               answerable: true,
+              // The turn this answer is, so a verdict left on it can be joined
+              // back to the answer it was actually about rather than to the
+              // next turn that happened to be worded the same way.
+              turnId,
               // Built from what the practice recorded, so NOT flagged as the
               // assistant's own work the way the prose fallback is.
               general: false,
@@ -211,7 +260,14 @@ export async function POST(request) {
               validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
             },
           });
+          const written = logTurn({
+            outcome: 'template',
+            template: picked,
+            source: (templateAnswer.source || []).join(' · '),
+            answer: answerToText(templateAnswer),
+          });
           controller.close();
+          await written;
           return;
         }
 
@@ -238,18 +294,22 @@ export async function POST(request) {
         const markdown = String(generated.text || '').trim();
         if (!markdown) {
           send({ type: 'error', error: 'The assistant did not return an answer.' });
+          const written = logTurn({ outcome: 'failed', error: 'The model returned an empty answer.' });
           controller.close();
+          await written;
           return;
         }
 
         const verified = verifiedNumbers([question, history, attached]);
         const redact = (t) => redactUnverifiedNumbers(t, verified);
+        const prose = redact(markdown);
 
         send({
           type: 'answer',
           payload: {
             kind: 'answer',
             answerable: true,
+            turnId,
             // Not one line of this came from a practice document, and the card
             // says so once at the top rather than leaving it to be assumed.
             general: true,
@@ -257,7 +317,7 @@ export async function POST(request) {
             keyPoints: [],
             sections: [{
               heading: '',
-              markdown: redact(markdown),
+              markdown: prose,
               basis: 'general',
               critical: false,
               cite: null,
@@ -276,11 +336,15 @@ export async function POST(request) {
             validation: { attempts: 1, checked: 1, verified: 1, dropped: 0, problems: [] },
           },
         });
+        const written = logTurn({ outcome: 'prose', answer: prose });
         controller.close();
+        await written;
       } catch (e) {
         console.error('[agent] turn failed:', e);
         send({ type: 'error', error: 'The assistant could not complete this answer.', detail: String(e).slice(0, 300) });
+        const written = logTurn({ outcome: 'failed', error: String(e).slice(0, 300) });
         controller.close();
+        await written;
       }
     },
   });
