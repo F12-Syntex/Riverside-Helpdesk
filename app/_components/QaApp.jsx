@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
+import { matchCommands, parseCommand } from '../../lib/commands.mjs';
 import { machineId } from '../../lib/audit/client';
 import {
   isTestQuery, isGeneralTestQuery,
@@ -18,7 +19,7 @@ import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import DirectoryPanel from './DirectoryPanel';
 import GradientBackground from './GradientBackground';
-import SystemMap from './SystemMap';
+import CommandMenu from './CommandMenu';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import { plainText } from './chat/Rich';
@@ -49,18 +50,6 @@ function docSize(chars) {
   if (chars < 1000) return chars + ' characters';
   return Math.round(chars / 1000) + 'k characters';
 }
-
-// The opening screen offers a row of shortcuts rather than a blank field:
-// the questions asked at the desk every day, and the other tools, which are
-// otherwise reachable only by typing their address now the header carries no
-// navigation. A `question` entry asks it here; an `href` entry goes there.
-// Labels are short because they are read at a glance.
-// One shortcut, no more: the system map, which opens here in the Q&A itself.
-// The notebook used to sit here and does not belong on a page whose readers
-// are asking questions, not writing them.
-const QUICK_ASKS = [
-  { label: 'System map', map: true, icon: Icons.sitemap },
-];
 
 // A directory entry's numbers, whatever shape they arrive in. The bundled
 // telephone list writes {display, tel}; rows stored in Postgres have been seen
@@ -180,6 +169,10 @@ class RiversidePracticeQA extends React.Component {
       cqc: [],
       dirSel: -1,
       dirClosed: false,
+      // The slash commands, offered while a command name is being typed. -1
+      // until the arrow keys move into the list, so Enter on "/triage some
+      // text" asks it rather than re-picking the command.
+      cmdSel: -1,
       copiedNumber: '',
       customGuides: [],
       showAdd: false,
@@ -191,8 +184,10 @@ class RiversidePracticeQA extends React.Component {
       kbQuery: '',         // knowledge-base search text
       kb: null,            // loaded knowledge-base groups
       kbStatus: 'idle',    // 'idle' | 'loading' | 'done' | 'error'
-      showMap: false,      // the system map, opened from the opening screen
     };
+    // The field itself, so choosing a command with the mouse can hand the
+    // cursor straight back to it.
+    this.inputRef = React.createRef();
     // Timers belonging to the stored "test" answer, cleared on unmount.
     this.mockTimers = [];
     // How many nested elements the dragged file is currently over (see
@@ -292,7 +287,7 @@ class RiversidePracticeQA extends React.Component {
   // Typing is answered immediately; the directory waits until the typing
   // stops, so the panel settles into place instead of blinking.
   onInput(value) {
-    this.setState({ input: value, dirSel: -1, dirClosed: false });
+    this.setState({ input: value, dirSel: -1, dirClosed: false, cmdSel: -1 });
     clearTimeout(this.dirTimer);
     this.dirTimer = setTimeout(() => {
       this.setState({ dirQuery: value });
@@ -340,9 +335,47 @@ class RiversidePracticeQA extends React.Component {
     this.copyTimer = setTimeout(() => this.setState({ copiedNumber: '' }), 2400);
   }
 
+  // Choosing a command puts it in the field with the space already typed, so
+  // the next keystroke is the message. Focus goes back to the field: the list
+  // is usually walked with the keyboard, and a click should not end there.
+  pickCommand(name) {
+    this.setState({ input: '/' + name + ' ', cmdSel: -1, dirQuery: '', dirSel: -1 }, () => {
+      const field = this.inputRef && this.inputRef.current;
+      if (field) field.focus();
+    });
+  }
+
   // Arrow keys move into the list; Enter only takes a number once someone
-  // has, so typing a question and pressing Enter still asks it.
+  // has, so typing a question and pressing Enter still asks it. The command
+  // list has the keys first while it is open — it is directly under the
+  // cursor, and nothing else can be meant by an arrow key at that moment.
   onInputKey(e) {
+    const commands = matchCommands(this.state.input);
+    if (commands.length) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.setState((st) => ({ cmdSel: (st.cmdSel + 1) % commands.length }));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.setState((st) => ({ cmdSel: (st.cmdSel <= 0 ? commands.length : st.cmdSel) - 1 }));
+        return;
+      }
+      // Tab takes the highlighted command, or the first one when nothing has
+      // been highlighted — "/tri" and Tab is the whole interaction.
+      if (e.key === 'Tab' || (e.key === 'Enter' && this.state.cmdSel >= 0)) {
+        e.preventDefault();
+        this.pickCommand(commands[Math.max(0, this.state.cmdSel)].name);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.setState({ input: '', cmdSel: -1 });
+        return;
+      }
+    }
+
     const matches = this.directoryRows();
     if (!matches.length) return;
     if (e.key === 'ArrowDown') {
@@ -552,7 +585,17 @@ class RiversidePracticeQA extends React.Component {
   }
 
   ask(text) {
-    const t = (text || '').trim();
+    const typed = (text || '').trim();
+    // A slash command says which card to render, so the message goes up without
+    // it and the template goes up beside it. "/triage" with nothing after it is
+    // a command still being written, not a question — the field keeps it.
+    const parsed = parseCommand(typed);
+    if (parsed && !parsed.rest) {
+      this.setState({ input: '/' + parsed.command.name + ' ', cmdSel: -1 });
+      return;
+    }
+    const command = parsed ? parsed.command : null;
+    const t = parsed ? parsed.rest : typed;
     const images = this.state.pendingImages.map((im) => im.dataUrl);
     // Only documents that finished reading go up. One still being read, or one
     // that could not be read, keeps its row in the dock and is not sent.
@@ -563,7 +606,9 @@ class RiversidePracticeQA extends React.Component {
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
-    const userMsg = { role: 'user', text: t, images, docNames: attachments.map((a) => a.name) };
+    // Shown as it was typed, command and all: the reader chose the command and
+    // the transcript should not quietly drop it.
+    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name) };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
@@ -571,12 +616,14 @@ class RiversidePracticeQA extends React.Component {
     // the letter the question was asked about, or it asks a different question.
     // `steps` and `statusText` are filled in live from the agent's stream: each
     // search it runs appears in the card while it is still working.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null };
+    // `commandTemplate` rides along so a retry asks the same way: retrying a
+    // /triage as an ordinary question would answer a different thing.
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
     // they were reading an earlier one when they asked it.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1 }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, () => { this.save(); this.fetchAI(question, aiIdx); });
     // The emit plays once, then the strip above the dock goes quiet again.
     clearTimeout(this.emitTimer);
     this.emitTimer = setTimeout(() => this.setState({ emitting: false }), 640);
@@ -634,7 +681,7 @@ class RiversidePracticeQA extends React.Component {
     const attachments = (m && m.attachments) || [];
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images, attachments, refresh },
+        { question, history, customGuides: this.state.customGuides, images, attachments, refresh, template: (m && m.commandTemplate) || '' },
         (ev) => this.onAgentEvent(idx, ev),
       );
       if (data.kind === 'docfile') {
@@ -1416,9 +1463,9 @@ class RiversidePracticeQA extends React.Component {
 
     return {
       botName: this.props.botName != null ? this.props.botName : 'The Riverside Practice Q&A',
-      // One line. Anything longer is not read.
-      welcome: this.props.welcome != null ? this.props.welcome
-        : 'Ask anything about rotas, policies or contacts — or ask me to write, shorten or tidy something up.',
+      // Nothing under the name by default. A line describing what can be asked
+      // is read once and then sits there for ever; the field says it better.
+      welcome: this.props.welcome != null ? this.props.welcome : '',
       view: this.state.view,
       isKb: this.state.view === 'kb',
       kbStatus: this.state.kbStatus,
@@ -1485,20 +1532,17 @@ class RiversidePracticeQA extends React.Component {
       hasDirectory: dirMatches.length > 0,
       directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
       onInputKey: (e) => self.onInputKey(e),
-      // The shortcuts on the opening screen, offered as one tap each.
-      quickAsks: QUICK_ASKS.map((q, i) => ({
-        key: i,
-        label: q.label,
-        href: q.href || '',
-        icon: q.icon || null,
-        isLink: !!q.href,
-        onAsk: q.href ? undefined : (() => (q.map ? self.setState({ showMap: true }) : self.ask(q.question))),
+      // The commands, while a command name is being typed and no longer.
+      commands: matchCommands(this.state.input).map((c, i) => ({
+        name: c.name,
+        summary: c.summary,
+        isSelected: i === self.state.cmdSel,
+        onPick: () => self.pickCommand(c.name),
       })),
-      showMap: this.state.showMap,
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
-      canReset: this.state.showMap || this.state.messages.length > 0,
-      onReset: () => self.setState({ showMap: false, messages: [], activeTurn: null, view: 'assistant' }, () => self.save()),
+      canReset: this.state.messages.length > 0,
+      onReset: () => self.setState({ messages: [], activeTurn: null, view: 'assistant' }, () => self.save()),
       // Sources: the same material, listed rather than searched.
       sourceNotes: this.state.notes,
       sourceContacts: this.state.directory
@@ -1601,23 +1645,19 @@ class RiversidePracticeQA extends React.Component {
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
-        {/* The conversation fades where it meets the header and the dock. The
-            map has neither over it — no dock at all — so it is shown whole,
-            with no mask and no room reserved at the foot. */}
-        <div id="riva-scroll" className={v.showMap ? '' : (v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade')}
-          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb || v.showMap ? '' : 'padding-bottom:calc(var(--riva-dock-h) + 50px + var(--riva-dock-attached));'))}>
+        {/* The conversation fades where it meets the header and the dock. */}
+        <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade'}
+          style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:calc(var(--riva-dock-h) + 50px + var(--riva-dock-attached));'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}
-          <div key={v.showMap ? 'map' : (v.isKb ? 'sources' : 'chat')} style={s(v.showMap ? '' : 'animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
-            {v.showMap
-              ? <div className="riva-column" style={s('max-width:1280px;margin:0 auto;padding:8px 24px 48px;')}><SystemMap align="center" /></div>
-              : (v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />)}
+          <div key={v.isKb ? 'sources' : 'chat'} style={s('animation:rivaViewIn .3s cubic-bezier(.2,.7,.3,1) both;')}>
+            {v.isKb ? <SourcesView v={v} /> : <ChatView v={v} />}
           </div>
         </div>
 
         {/* Nothing asked yet: the dock is the page, so it sits in the middle
             of it and drops to the foot once there is an answer to read. */}
-        {!v.isKb && !v.showMap && (
+        {!v.isKb && (
         <div className={'riva-dock' + (v.isEmpty ? ' riva-dock-center' : '')}>
           <div className="riva-dock-inner">
             {/* The question leaves the field as a bar travelling up to where
@@ -1681,47 +1721,19 @@ class RiversidePracticeQA extends React.Component {
                   and nothing on the page moves to make room. */}
               <DirectoryPanel v={v} place={v.isEmpty ? 'below' : 'above'} />
 
+              {/* The commands take the same place as the telephone list; only
+                  one of the two can be open, because "/" is not a name. */}
+              <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
+
               <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
                 <Svg w={20} sw={2.2}>{Icons.search}</Svg>
               </span>
-              <input className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Ask a question, or type a name for its number…" aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Ask a question, type a name for its number, or / for a command…" aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>
             </form>
 
-            {/* Three things people ask at the desk every day, one tap each.
-                Only on the opening screen — once there is an answer the page
-                belongs to it. */}
-            {v.isEmpty && (
-              <div style={s('display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:14px 0 0;')}>
-                {v.quickAsks.map((q) => (q.isLink ? (
-                  <Hover key={q.key} tag={Link} href={q.href} className="riva-lift"
-                    base="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #e0e7ea;border-radius:999px;padding:9px 16px;font:inherit;font-size:14.5px;font-weight:500;color:#4c6272;text-decoration:none;box-shadow:0 1px 2px rgba(33,43,50,.05);"
-                    hover="border-color:#005eb8;color:#005eb8;">
-                    <Svg w={15} sw={2}>{q.icon}</Svg>{q.label}
-                  </Hover>
-                ) : (
-                  <Hover key={q.key} tag="button" type="button" className="riva-lift" onClick={q.onAsk}
-                    base="background:#fff;border:1px solid #e0e7ea;border-radius:999px;padding:9px 18px;font:inherit;font-size:14.5px;font-weight:500;color:#4c6272;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.05);"
-                    hover="border-color:#005eb8;color:#005eb8;">
-                    {q.label}
-                  </Hover>
-                )))}
-              </div>
-            )}
-
-            {/* Under the field, where it is read on the way to typing. The
-                second line is the only place drag-and-drop is advertised —
-                there is no attach button to notice. */}
-            {v.isEmpty && (
-              <>
-                <p style={s('margin:14px 0 0;font-size:13px;color:#4c6272;text-align:center;')}>
-                  Drop a document anywhere to attach it.
-                </p>
-                <p style={s('margin:8px 0 0;font-size:13px;font-weight:600;color:#c0392b;text-align:center;')}>Don&rsquo;t type patient related data.</p>
-              </>
-            )}
           </div>
         </div>
         )}

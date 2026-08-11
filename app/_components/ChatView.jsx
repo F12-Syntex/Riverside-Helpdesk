@@ -27,8 +27,10 @@ export default function ChatView({ v }) {
         // dock's own geometry in globals.css (.riva-hero-block), so the gap
         // between this text and the field holds on every screen size.
         <div className="riva-hero-block" style={s('text-align:center;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
-          <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0 0 10px;')}>What do you need?</h1>
-          <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:0 auto;text-wrap:pretty;')}>{v.welcome}</p>
+          <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0;')}>What do you need?</h1>
+          {/* Only when the host page sets one. The default is nothing: a line
+              explaining what can be asked is read once and then sits there. */}
+          {v.welcome && <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:10px auto 0;text-wrap:pretty;')}>{v.welcome}</p>}
         </div>
       )}
 
