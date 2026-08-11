@@ -147,6 +147,83 @@ function AnswerText({ text }) {
   );
 }
 
+// WHY the reader saw what they saw — the half a significant event review needs
+// and the log could not previously answer.
+//
+// Shut by default, because most of the time the question and the answer are the
+// whole story. Open, it shows the message as it was split up, what code made of
+// each piece, and every deterministic rule that fired WITH THE WORDS THAT FIRED
+// IT — a rule id alone says a pattern matched, the span says whether it should
+// have. That is also the raw material for the recall eval this work still needs.
+function Provenance({ provenance, dismissed }) {
+  const [open, setOpen] = React.useState(false);
+  const p = provenance || {};
+  const requests = p.requests || [];
+  const rules = p.rules || [];
+  const notebook = p.notebook || [];
+  const closed = dismissed || [];
+  if (!requests.length && !rules.length && !notebook.length && !closed.length) return null;
+
+  const closedIds = new Set(closed.map((entry) => entry && entry.item));
+
+  return (
+    <div style={s('margin-top:10px;border-top:1px solid #eaeff1;padding-top:9px;')}>
+      <Hover tag="button" type="button" onClick={() => setOpen(!open)}
+        base="background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:600;color:#4c6272;text-decoration:underline;cursor:pointer;"
+        hover="color:#005eb8;">
+        {open ? 'Hide why' : `Why this answer (${requests.length ? requests.length + ' requests, ' : ''}${rules.length} rule${rules.length === 1 ? '' : 's'} fired)`}
+      </Hover>
+
+      {open && (
+        <div style={s('margin-top:9px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#4c6272;')}>
+          {requests.length > 0 && (
+            <div>
+              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>What the message asked for</div>
+              <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;')}>
+                {requests.map((r) => (
+                  <li key={r.id} style={s('display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;overflow-wrap:anywhere;')}>
+                    <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:#768692;')}>{r.id}</span>
+                    <strong style={s('color:#212b32;font-weight:600;')}>{r.gist || r.text}</strong>
+                    <span style={s('color:#768692;')}>
+                      {r.acuity} · {r.status}
+                      {r.raisedBy ? ' · raised by the second pass' : ''}
+                      {r.verbatim === false ? ' · span not found in the message' : ''}
+                      {closedIds.has(r.id) ? ' · dealt with' : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {rules.length > 0 && (
+            <div>
+              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>Rules that fired</div>
+              <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;')}>
+                {rules.map((rule, i) => (
+                  <li key={i} style={s('overflow-wrap:anywhere;')}>
+                    <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:#a51b0f;')}>{rule.id}</span>
+                    {rule.span && <span style={s('color:#4c6272;')}> — “{rule.span}”</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {notebook.length > 0 && (
+            <div>
+              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>Notebook pages, as they stood</div>
+              {notebook.map((page, i) => (
+                <div key={i} style={s('overflow-wrap:anywhere;')}>{page.title}{page.updatedAt ? ' — last edited ' + page.updatedAt.slice(0, 10) : ''}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * One question, and what came back.
  *
@@ -201,6 +278,8 @@ function QuestionCard({ row, machine, onSearch }) {
           )}
         </div>
       )}
+
+      <Provenance provenance={row.provenance} dismissed={row.dismissed} />
 
       {onSearch && (
         <Hover tag="button" type="button" onClick={() => onSearch(row.question)}
