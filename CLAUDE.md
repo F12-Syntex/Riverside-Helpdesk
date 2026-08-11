@@ -26,6 +26,31 @@ characters; add a body when the change needs explanation.
 
 If there are no changes to commit, skip the commit/push for that turn.
 
+## Versioning (every commit)
+
+`package.json`'s `version` is **bumped by hand in the same commit** as the
+change it describes. Never a separate "bump" commit — a version that arrives
+after the change it names is a version that was wrong for a while.
+
+The bump follows the commit type, so it is arithmetic rather than judgement:
+
+| Commit type | Moves |
+| --- | --- |
+| `feat` | the **minor** — `1.24.1` → `1.25.0` |
+| anything else (`fix`, `docs`, `refactor`, `style`, `test`, `perf`, `chore`) | the **patch** — `1.24.1` → `1.24.2` |
+| any type with `!` after it (`feat!:`), meaning a broken contract | the **major** — `1.24.1` → `2.0.0` |
+
+When a turn produces several commits, each one bumps in its own turn, in order.
+
+`VERSIONS.md` is the table of every commit and the version it produced. It is
+generated, never hand-edited: run `npm run versions` after committing, which
+rewrites it from the git history and checks `package.json` agrees with the tip.
+The newest commit is always missing its own row until the next run, because the
+file is written before the commit containing it exists.
+
+The version is shown to staff in the bottom right of every page
+(`lib/version.mjs`), with the commit hash beside it in the tooltip.
+
 Never commit secrets. `.env.local` is git-ignored and must stay that way; use
 `.env.local.example` for documenting required variables.
 

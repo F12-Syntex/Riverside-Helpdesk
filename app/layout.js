@@ -40,10 +40,17 @@ export default function RootLayout({ children }) {
             bottom: '6px',
             zIndex: 1,
             pointerEvents: 'none',
-            fontSize: '10.5px',
+            fontSize: '11.5px',
+            fontWeight: 600,
             fontVariantNumeric: 'tabular-nums',
-            letterSpacing: '.02em',
-            color: '#c3ccd1',
+            letterSpacing: '.01em',
+            // Legible on its own terms rather than by being loud: the app's
+            // muted ink, on a soft backdrop so it reads over a white card and
+            // over a coloured one without a border drawing a box round itself.
+            color: '#4c6272',
+            background: 'rgba(255,255,255,.82)',
+            padding: '2px 8px',
+            borderRadius: '999px',
             userSelect: 'none',
           }}
         >
