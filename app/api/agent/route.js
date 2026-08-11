@@ -43,6 +43,9 @@ import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { COMMAND_SCHEMAS, SELECTION_SCHEMA, commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
+import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
+import { searchKnowledge } from '@/lib/knowledge';
+import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
@@ -191,36 +194,70 @@ export async function POST(request) {
         // what the message is, so the model is asked for that one template's
         // values and nothing else: no Notebook catalogue to read, a schema with
         // one field in it, and no way for the turn to end up somewhere else.
-        send({ type: 'status', text: command ? 'Filling in the card' : 'Working out what this is' });
+        const searching = command === 'practiceSearch';
+        send({
+          type: 'status',
+          text: searching ? 'Searching the practice documents' : (command ? 'Filling in the card' : 'Working out what this is'),
+        });
         send({
           type: 'tool-start',
           id: 'select',
-          tool: 'pick_template',
-          label: command ? 'Told which answer to give' : 'Choosing the answer',
+          tool: searching ? 'search_documents' : 'pick_template',
+          label: searching ? 'Searching the practice documents' : (command ? 'Told which answer to give' : 'Choosing the answer'),
           detail: question.slice(0, 120),
         });
 
         if (command) {
           let commandAnswer = null;
-          try {
-            const filled = await generateObject({
-              model: openrouter(model),
-              schema: COMMAND_SCHEMAS[command],
-              temperature: 0,
-              prompt: commandPrompt({ template: command, question, attached }),
-            });
-            recordUsage({ turnId, role: 'fast', phase: 'command', model, usage: filled.usage });
-            commandAnswer = renderCommand(command, filled.object, question);
-          } catch (e) {
-            // The values could not be filled in, but the command still said what
-            // this is. The card is rendered from nothing rather than answered as
-            // something else: a triage of the message as written, or the rules
-            // for titling a document.
-            console.warn('[agent] command values failed:', String(e).slice(0, 160));
-            commandAnswer = renderCommand(command, {}, question);
+
+          if (command === 'practiceSearch') {
+            // NO MODEL AT ALL. The practice's documents are searched and the
+            // passages are shown as they are written — see
+            // lib/templates/practice.mjs for why a policy is quoted rather than
+            // summarised. Costs nothing and comes back at once.
+            let passages = [];
+            try {
+              const hits = await searchKnowledge(question, 12, { kind: 'document', semantic: true });
+              passages = hits.map(knowledgeHitToDocumentChunk).map((chunk) => ({
+                docTitle: chunk.docTitle,
+                docId: chunk.docId,
+                section: chunk.section,
+                text: chunk.text,
+                url: chunk.view && chunk.view.url ? chunk.view.url : '',
+              }));
+            } catch (e) {
+              // A search that cannot run says so, rather than answering the
+              // question some other way — /practice means these documents.
+              console.warn('[agent] practice search failed:', String(e).slice(0, 160));
+            }
+            commandAnswer = practiceSearchAnswer({ query: question, passages });
+          } else {
+            try {
+              const filled = await generateObject({
+                model: openrouter(model),
+                schema: COMMAND_SCHEMAS[command],
+                temperature: 0,
+                prompt: commandPrompt({ template: command, question, attached }),
+              });
+              recordUsage({ turnId, role: 'fast', phase: 'command', model, usage: filled.usage });
+              commandAnswer = renderCommand(command, filled.object, question);
+            } catch (e) {
+              // The values could not be filled in, but the command still said
+              // what this is. The card is rendered from nothing rather than
+              // answered as something else: a triage of the message as written,
+              // or the rules for titling a document.
+              console.warn('[agent] command values failed:', String(e).slice(0, 160));
+              commandAnswer = renderCommand(command, {}, question);
+            }
           }
 
-          send({ type: 'tool-result', id: 'select', tool: 'pick_template', summary: command, items: [] });
+          send({
+            type: 'tool-result',
+            id: 'select',
+            tool: searching ? 'search_documents' : 'pick_template',
+            summary: searching ? (commandAnswer.source || []).join(' · ') || 'Nothing matched' : command,
+            items: [],
+          });
 
           send({
             type: 'answer',
@@ -251,6 +288,8 @@ export async function POST(request) {
             template: command,
             source: (commandAnswer?.source || []).join(' · '),
             answer: answerToText(commandAnswer),
+            // A search runs no model, and the log should not name one.
+            model: searching ? '' : model,
           });
           controller.close();
           await writtenCommand;
