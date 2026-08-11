@@ -41,7 +41,8 @@ import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { SELECTION_SCHEMA, notebookCatalogue, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
+import { COMMAND_SCHEMAS, SELECTION_SCHEMA, commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionPrompt } from '@/lib/templates/route.mjs';
+import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
@@ -134,6 +135,10 @@ export async function POST(request) {
   // /api/attach. The reader's own material: context for the model, never stored.
   const attachments = sanitiseAttachments(body?.attachments);
   const attached = attachmentsBlock(attachments);
+  // A slash command names the template outright, so nothing is chosen here. Only
+  // a template a command claims is honoured (lib/commands.mjs); anything else
+  // sent in this field is ignored and the message is answered the ordinary way.
+  const command = forcedTemplate(body?.template);
 
   const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
   const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -157,7 +162,9 @@ export async function POST(request) {
         const writing = recordQuestion({
           turnId,
           machineId,
-          question,
+          // Logged as it was typed. A message sent with /triage was a different
+          // act from the same words typed plain, and the log should say so.
+          question: command ? '/' + (commandByTemplate(command)?.name || '') + ' ' + question : question,
           model,
           durationMs: Date.now() - startedAt,
           images: images.length,
@@ -179,8 +186,76 @@ export async function POST(request) {
         // declined but never invented.
         //
         // Only when no template fits does the turn fall through to prose.
-        send({ type: 'status', text: 'Working out what this is' });
-        send({ type: 'tool-start', id: 'select', tool: 'pick_template', label: 'Choosing the answer', detail: question.slice(0, 120) });
+        //
+        // A COMMAND SKIPS THE CHOOSING. /triage and /document have already said
+        // what the message is, so the model is asked for that one template's
+        // values and nothing else: no Notebook catalogue to read, a schema with
+        // one field in it, and no way for the turn to end up somewhere else.
+        send({ type: 'status', text: command ? 'Filling in the card' : 'Working out what this is' });
+        send({
+          type: 'tool-start',
+          id: 'select',
+          tool: 'pick_template',
+          label: command ? 'Told which answer to give' : 'Choosing the answer',
+          detail: question.slice(0, 120),
+        });
+
+        if (command) {
+          let commandAnswer = null;
+          try {
+            const filled = await generateObject({
+              model: openrouter(model),
+              schema: COMMAND_SCHEMAS[command],
+              temperature: 0,
+              prompt: commandPrompt({ template: command, question, attached }),
+            });
+            recordUsage({ turnId, role: 'fast', phase: 'command', model, usage: filled.usage });
+            commandAnswer = renderCommand(command, filled.object, question);
+          } catch (e) {
+            // The values could not be filled in, but the command still said what
+            // this is. The card is rendered from nothing rather than answered as
+            // something else: a triage of the message as written, or the rules
+            // for titling a document.
+            console.warn('[agent] command values failed:', String(e).slice(0, 160));
+            commandAnswer = renderCommand(command, {}, question);
+          }
+
+          send({ type: 'tool-result', id: 'select', tool: 'pick_template', summary: command, items: [] });
+
+          send({
+            type: 'answer',
+            payload: {
+              kind: 'answer',
+              answerable: true,
+              turnId,
+              general: false,
+              template: commandAnswer,
+              intro: '',
+              keyPoints: [],
+              sections: [],
+              message: '',
+              messageCite: null,
+              messageWeb: null,
+              tip: '',
+              gaps: '',
+              followUps: [],
+              clarify: null,
+              referralRoute: null,
+              citations: [],
+              contacts: [],
+              validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
+            },
+          });
+          const writtenCommand = logTurn({
+            outcome: 'template',
+            template: command,
+            source: (commandAnswer?.source || []).join(' · '),
+            answer: answerToText(commandAnswer),
+          });
+          controller.close();
+          await writtenCommand;
+          return;
+        }
 
         // THE NOTEBOOK GOES IN AS A LIST, NOT AS TEXT.
         //
