@@ -55,13 +55,11 @@ function docSize(chars) {
 // otherwise reachable only by typing their address now the header carries no
 // navigation. A `question` entry asks it here; an `href` entry goes there.
 // Labels are short because they are read at a glance.
-// Two shortcuts, no more. The system map opens here, in the Q&A itself; the
-// question index is a place to go. The notebook used to sit here and does not
-// belong on a page whose readers are asking questions, not writing them — what
-// they need to know is what can be asked, which is what the index answers.
+// One shortcut, no more: the system map, which opens here in the Q&A itself.
+// The notebook used to sit here and does not belong on a page whose readers
+// are asking questions, not writing them.
 const QUICK_ASKS = [
   { label: 'System map', map: true, icon: Icons.sitemap },
-  { label: 'Question index', href: '/questions', icon: Icons.book },
 ];
 
 // A directory entry's numbers, whatever shape they arrive in. The bundled
@@ -211,10 +209,10 @@ class RiversidePracticeQA extends React.Component {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [] });
     } catch (e) {}
-    // Arrived from the question index with a question already chosen. It is
-    // asked here, through the ordinary path, so the index is a way in rather
-    // than a page about the assistant. The parameter is dropped from the URL
-    // afterwards, so a refresh does not ask it again.
+    // Arrived with a question already chosen in ?ask=. It is asked here,
+    // through the ordinary path, so a link is a way in rather than a page
+    // about the assistant. The parameter is dropped from the URL afterwards,
+    // so a refresh does not ask it again.
     try {
       const ask = new URLSearchParams(window.location.search).get('ask');
       if (ask && ask.trim()) {
@@ -1484,7 +1482,7 @@ class RiversidePracticeQA extends React.Component {
       hasDirectory: dirMatches.length > 0,
       directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
       onInputKey: (e) => self.onInputKey(e),
-      // The three questions the desk actually asks, offered as one tap each.
+      // The shortcuts on the opening screen, offered as one tap each.
       quickAsks: QUICK_ASKS.map((q, i) => ({
         key: i,
         label: q.label,
