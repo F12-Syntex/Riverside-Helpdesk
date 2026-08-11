@@ -111,6 +111,21 @@ clickable sources they can open in-browser.
   anything from a web page is marked "from the web" with a link and never
   presented as practice policy; whatever the practice's material does not cover
   is stated plainly, with who to ask, rather than filled in from model knowledge.
+- **Which referrals go by email is read from the practice's own page, not from a
+  list in the code.** `lib/templates/referrals.mjs` carries a table of recorded
+  referrals with their e-RS pairings, addresses and forms — and that table is a
+  *copy* of the practice's list, which had already fallen behind it. "Dietitian"
+  was on the practice's emailed-referrals page and had never been typed into the
+  array, so "how do I do a dietitian referral" answered "not recorded in the
+  practice's notes" about a referral the practice had written down. Worse than a
+  gap, because a gap is visible. Now the model names what is being referred to
+  (`referralName` — extraction, which it is reliable at) and **code reads the
+  Notebook**: the page has to actually be a list of emailed referrals, and the
+  name has to actually appear on one of its list lines. A prose mention on an
+  unrelated page is not a listing and does not count. The card quotes the line it
+  found and cites the page. A referral the practice adds to its own page is
+  answerable the moment they save it. A recorded e-RS pairing still wins over
+  list membership, being the more specific fact.
 - **A referral the Notebook does not cover still gets a speciality and a clinic
   type.** They are determined from the practice's own e-RS referral-types export
   (via SNOMED), filled into the e-RS card, and shown with what they were
