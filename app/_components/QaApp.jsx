@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
@@ -316,6 +315,11 @@ class RiversidePracticeQA extends React.Component {
   // the practice's list is not repeated from the register. Built here rather
   // than in the view model so the keyboard and the panel walk the same rows.
   directoryRows() {
+    // A command line is not a name. Once the field starts with "/" the reader is
+    // choosing a command or writing its message, and telephone numbers matched
+    // against that text are noise — two panels over one field, and the arrow
+    // keys owned by whichever opened last.
+    if (/^\s*\//.test(this.state.input)) return [];
     const practice = this.matchDirectory();
     const seen = new Set(practice.map((e) => phoneDigits(e)).filter(Boolean));
     const register = (this.state.dirClosed || !this.looksLikeLookup(this.state.dirQuery) ? [] : this.state.cqc)
