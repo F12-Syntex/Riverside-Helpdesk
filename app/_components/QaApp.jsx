@@ -622,7 +622,7 @@ class RiversidePracticeQA extends React.Component {
     // search it runs appears in the card while it is still working.
     // `commandTemplate` rides along so a retry asks the same way: retrying a
     // /triage as an ordinary question would answer a different thing.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null, alerts: [], panel: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
@@ -728,6 +728,9 @@ class RiversidePracticeQA extends React.Component {
           followUps: [], referralRoute: null, validation: null,
           citations: data.citations || [], contacts: data.contacts || [],
           clarify: data.clarify,
+          // A red flag does not wait for the reader to say which of two
+          // things they meant, so the bands go out with the question back.
+          turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null,
         });
         return;
       }
@@ -735,12 +738,12 @@ class RiversidePracticeQA extends React.Component {
       // or a message, so it must not be read as an empty one. Without this a
       // perfectly good ECG referral card was declined as needing a clinician.
       if (!data.answerable || (!data.template && !data.sections.length && !data.message)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [] });
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
         return;
       }
       // turnId identifies this answer to the server, so a verdict pressed under
       // it is stored against the answer it was actually about.
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [] });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
     } catch (e) {
       this.updateAi(idx, { status: 'error', statusText: '' });
     }
@@ -804,6 +807,25 @@ class RiversidePracticeQA extends React.Component {
         }),
       }).catch(() => {});
     } catch (e) { /* feedback is never worth an error in front of the reader */ }
+  }
+
+  // Closing one item on the unresolved items panel.
+  //
+  // Sent and forgotten, exactly like a verdict, and for a stronger reason: this
+  // must not GATE anything. A receptionist who cannot close a panel learns to
+  // ignore panels, and an ignored panel is worse than no panel at all — so the
+  // row goes off, the item goes green immediately, and nothing waits for it.
+  // Recorded per item rather than per panel because the real action is "I have
+  // sorted the ramipril", not "I clicked once".
+  dismissItem(m, item) {
+    if (!m || !item || !m.turnId) return;
+    try {
+      fetch('/api/questions/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turnId: m.turnId, itemId: item.id, label: item.label || '' }),
+      }).catch(() => {});
+    } catch (e) { /* never worth an error in front of somebody at the desk */ }
   }
 
   retryAi(idx) {
@@ -1364,6 +1386,19 @@ class RiversidePracticeQA extends React.Component {
             onPick: () => self.ask(m.question + ' — ' + opt),
           })),
           hasClarify: !!(m.clarify && m.clarify.question && m.clarify.options.length),
+          // The deterministic bands, above the card. Cards in their own right,
+          // rendered by the same view — they are not decoration on the answer,
+          // they are statements the answer does not make.
+          alerts: (m.alerts || []).map((answer, i) => ({ key: i, answer })),
+          hasAlerts: !!(m.alerts && m.alerts.length),
+          // Every request the message contained. Tapping an unanswered one
+          // asks it on its own, through the same re-ask the clarify options
+          // use, so the transcript keeps both the message that asked for five
+          // things and the answer to the fifth.
+          panel: m.panel || null,
+          hasPanel: !!(m.panel && (m.panel.items || []).length > 1),
+          onAskItem: (item) => self.ask(item.text || item.label),
+          onDismissItem: (item) => self.dismissItem(m, item),
         };
       }
       if (m.kind === 'answer') {

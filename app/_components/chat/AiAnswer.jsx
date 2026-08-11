@@ -8,6 +8,7 @@ import WorkingState from './WorkingState';
 import Rich from './Rich';
 import Md from './Md';
 import TemplateView from '../templates/TemplateView';
+import UnresolvedPanel from './UnresolvedPanel';
 
 // A section written from a web page rather than the practice's own material.
 // Deliberately unlike a citation chip: it opens the internet, not a practice
@@ -357,11 +358,28 @@ export default function AiAnswer({ v }) {
 
             {v.isGeneral && <GeneralBar />}
 
+            {/* ABOVE THE CARD, ALWAYS. What the deterministic scanners found
+                anywhere in the message — including in the paragraphs nothing
+                routed and nothing answered. Not one word of these was written
+                by a model, which is exactly why they sit above the part that
+                was. They render before the card because a red flag found in
+                the fourth paragraph does not wait its turn. */}
+            {v.hasAlerts && v.alerts.map((alert) => (
+              <div key={alert.key} style={s('margin:16px 0 0;')}><TemplateView answer={alert.answer} /></div>
+            ))}
+
             {/* A templated answer. The template already decided the whole
                 shape, so it renders on its own — the markdown sections, key
                 points and citations below are all empty for these. */}
             {v.hasTemplate && (
               <div style={s('margin:16px 0 0;')}><TemplateView answer={v.template} /></div>
+            )}
+
+            {/* And beside it, everything the message asked for. The card can
+                end on "book the patient in" without that reading as the whole
+                job being done. */}
+            {v.hasPanel && (
+              <UnresolvedPanel panel={v.panel} onAsk={v.onAskItem} onDismiss={v.onDismissItem} />
             )}
 
             {/* The question as asked has more than one answer in the practice's

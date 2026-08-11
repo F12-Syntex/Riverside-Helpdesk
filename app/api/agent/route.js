@@ -41,7 +41,15 @@ import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { COMMAND_SCHEMAS, SELECTION_SCHEMA, commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionClarify, selectionPrompt } from '@/lib/templates/route.mjs';
+import {
+  CLINICAL_TEMPLATES, COMMAND_SCHEMAS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
+  commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionClarify, selectionPrompt,
+} from '@/lib/templates/route.mjs';
+import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
+import { looksMultiIntent } from '@/lib/safety/requests.mjs';
+import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
+import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
+import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
@@ -102,6 +110,114 @@ function machineFromCookie(request) {
   const match = (request.headers.get('cookie') || '').match(MACHINE_COOKIE);
   if (!match) return '';
   try { return decodeURIComponent(match[1]); } catch (e) { return match[1]; }
+}
+
+/* ------------------------------------------------------------------ *
+ * The deterministic floor, rendered.
+ *
+ * One card answers one request, and the message may have carried five.
+ * Two things go out alongside it, and neither costs a token:
+ *
+ *   ALERTS, above the card. What the scanners in lib/safety found
+ *   anywhere in the message — including in the paragraphs nothing
+ *   routed and nothing answered — and who it goes to.
+ *
+ *   THE PANEL, beside it. Every request the message contained, marked
+ *   routed, flagged, refused or unhandled. It is the backstop for
+ *   every rule that misses: a pattern cannot match a paraphrase, and
+ *   the panel still shows the sentence was written and that nothing
+ *   answered it.
+ *
+ * `cardScans` says whether the card about to render runs the triage
+ * net over its own text. When it does, a finding inside the routed
+ * complaint is already that card's business and saying it twice is
+ * noise. When it does not — a Notebook page, a referral, a filing
+ * title — nothing else in this turn will mention it.
+ * ------------------------------------------------------------------ */
+function safetyOutput(scan, { cardScans = false } = {}) {
+  const band = bandFindings(scan, { cardScans });
+  return {
+    // The emergency band before the refusal: one of them is measured in
+    // minutes and the other is not.
+    alerts: [
+      acuityBandAnswer(band.acuity, { age: scan.age }),
+      confidentialityAnswer(band.confidentiality),
+    ].filter(Boolean),
+    panel: unresolvedPanel(scan),
+  };
+}
+
+// Stage 2 must never be the reason a turn does not answer. Anything slower than
+// this is abandoned and the deterministic floor stands on its own.
+const CLASSIFY_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, ms) {
+  let timer = null;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timed out')), ms); }),
+  ]);
+}
+
+/**
+ * THE ONE SECOND PASS IN THE APP — /triage only.
+ *
+ * One small structured call per decomposed request, issued together so five of
+ * them cost one round trip rather than five. Each returns an enum and a label:
+ * no prose, nothing that could reach the reader as advice.
+ *
+ * The model may only RAISE acuity — the veto lives in applyClassification, not
+ * here — so a weak reading changes nothing and a good one catches the item the
+ * patterns could not phrase-match. Every failure path returns the scan exactly
+ * as the deterministic floor left it.
+ */
+async function deepenTriage({ openrouter, model, question, scan, turnId, send }) {
+  const { take, skipped } = toClassify((scan.items || []).filter((item) => !item.trivia));
+  if (!take.length) return scan;
+
+  send({ type: 'status', text: 'Reading each request' });
+  send({
+    type: 'tool-start',
+    id: 'classify',
+    tool: 'read_each_request',
+    label: 'Reading each request on its own',
+    detail: take.length + (take.length === 1 ? ' request' : ' requests'),
+  });
+
+  const verdicts = await Promise.all(take.map(async (item) => {
+    try {
+      const out = await withTimeout(generateObject({
+        model: openrouter(model),
+        schema: CLASSIFY_SCHEMA,
+        temperature: 0,
+        prompt: classifyPrompt(item.text, question),
+      }), CLASSIFY_TIMEOUT_MS);
+      recordUsage({ turnId, role: 'fast', phase: 'classify', model, usage: out.usage });
+      return out.object;
+    } catch (e) {
+      // One request unread is one request the scanners still ranked. Say so in
+      // the log and carry on with the other four.
+      console.warn('[agent] request classification failed:', String(e).slice(0, 160));
+      return null;
+    }
+  }));
+
+  const read = new Map(take.map((item, i) => [item.id, verdicts[i]]));
+  const raised = verdicts.filter(Boolean).length;
+
+  send({
+    type: 'tool-result',
+    id: 'classify',
+    tool: 'read_each_request',
+    summary: raised + ' of ' + take.length + ' read',
+    items: [],
+  });
+
+  return rescore({
+    ...scan,
+    items: (scan.items || []).map((item) => (read.has(item.id) ? applyClassification(item, read.get(item.id)) : item)),
+    unread: skipped,
+  });
 }
 
 const NDJSON_HEADERS = {
@@ -180,6 +296,50 @@ export async function POST(request) {
         return writing;
       };
 
+      // Every answer this endpoint sends has the same shape, and it was written
+      // out four times. Once, with the differences passed in: a field added to
+      // an answer should not be a field three other answers quietly lack.
+      const payload = (extra = {}) => ({
+        kind: 'answer',
+        answerable: true,
+        // The turn this answer is, so a verdict left on it — or an item closed
+        // on its panel — joins back to the answer it was actually about rather
+        // than to the next turn worded the same way.
+        turnId,
+        // Built from what the practice recorded, so NOT flagged as the
+        // assistant's own work the way the prose fallback is.
+        general: false,
+        template: null,
+        // The deterministic floor: what was found anywhere in the message, and
+        // everything the message asked for. Never model output.
+        alerts: [],
+        panel: null,
+        intro: '',
+        keyPoints: [],
+        sections: [],
+        message: '',
+        messageCite: null,
+        messageWeb: null,
+        tip: '',
+        gaps: '',
+        followUps: [],
+        clarify: null,
+        referralRoute: null,
+        citations: [],
+        contacts: [],
+        validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
+        ...extra,
+      });
+
+      // What the reader saw, as text, for the log: the bands above the card and
+      // the card itself. A band is part of the answer, not decoration around
+      // it, and a log that omitted it would not show what was on screen.
+      const shownText = (alerts, card) => [...(alerts || []), card]
+        .filter(Boolean)
+        .map((part) => answerToText(part))
+        .filter(Boolean)
+        .join('\n\n---\n\n');
+
       try {
         // ONE PIPELINE. The model reads the message, picks the template that
         // fits and fills that template's variables — it never writes the
@@ -206,6 +366,13 @@ export async function POST(request) {
           label: searching ? 'Searching the practice documents' : (command ? 'Told which answer to give' : 'Choosing the answer'),
           detail: question.slice(0, 120),
         });
+
+        // The whole message, scanned, whatever this turn turns out to be. It is
+        // reassigned once the model has had a chance to split the message up;
+        // until then it stands on the message as one piece, so a turn that
+        // fails before that point still carries its safety findings.
+        let scan = safetyScan({ message: question });
+        let stage2 = '';
 
         if (command) {
           let commandAnswer = null;
@@ -235,15 +402,32 @@ export async function POST(request) {
             }
             commandAnswer = practiceSearchAnswer({ query: question, passages });
           } else {
+            // A long /triage is decomposed on the same call, exactly as an
+            // ordinary message is. A short one is not, so "/triage pt has a
+            // sore throat since Friday" costs what it always cost.
+            const decompose = looksMultiIntent(question);
             try {
               const filled = await generateObject({
                 model: openrouter(model),
-                schema: COMMAND_SCHEMAS[command],
+                schema: (decompose && MULTI_COMMAND_SCHEMAS[command]) || COMMAND_SCHEMAS[command],
                 temperature: 0,
-                prompt: commandPrompt({ template: command, question, attached }),
+                prompt: commandPrompt({ template: command, question, attached, decompose }),
               });
               recordUsage({ turnId, role: 'fast', phase: 'command', model, usage: filled.usage });
-              commandAnswer = renderCommand(command, filled.object, question);
+              scan = safetyScan({ message: question, requests: filled.object.requests });
+
+              // THE ONE SECOND PASS. Only here, only when the message actually
+              // split into several requests, and only ever able to raise what
+              // the scanners already decided.
+              if (command === 'triage' && scan.decomposed) {
+                scan = await deepenTriage({ openrouter, model, question, scan, turnId, send });
+                stage2 = 'triage';
+              }
+
+              commandAnswer = renderCommand(command, filled.object, question, {
+                complaint: scan.complaint,
+                gist: (scan.routed && scan.routed.gist) || '',
+              });
             } catch (e) {
               // The values could not be filled in, but the command still said
               // what this is. The card is rendered from nothing rather than
@@ -262,37 +446,26 @@ export async function POST(request) {
             items: [],
           });
 
+          // /triage renders the triage card, which runs the deterministic net
+          // over its own text. Nothing else a command produces does.
+          const commandSafety = safetyOutput(scan, { cardScans: command === 'triage' });
+
           send({
             type: 'answer',
-            payload: {
-              kind: 'answer',
-              answerable: true,
-              turnId,
-              general: false,
+            payload: payload({
               template: commandAnswer,
-              intro: '',
-              keyPoints: [],
-              sections: [],
-              message: '',
-              messageCite: null,
-              messageWeb: null,
-              tip: '',
-              gaps: '',
-              followUps: [],
-              clarify: null,
-              referralRoute: null,
-              citations: [],
-              contacts: [],
-              validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
-            },
+              alerts: commandSafety.alerts,
+              panel: commandSafety.panel,
+            }),
           });
           const writtenCommand = logTurn({
             outcome: 'template',
             template: command,
             source: (commandAnswer?.source || []).join(' · '),
-            answer: answerToText(commandAnswer),
+            answer: shownText(commandSafety.alerts, commandAnswer),
             // A search runs no model, and the log should not name one.
             model: searching ? '' : model,
+            provenance: buildProvenance({ scan, card: commandAnswer, stage2 }),
           });
           controller.close();
           await writtenCommand;
@@ -325,24 +498,50 @@ export async function POST(request) {
         let templateAnswer = null;
         let clarify = null;
         let picked = 'none';
+        // ONE EXTRA FIELD, ON THE SAME CALL, AND ONLY WHEN IT IS WORTH IT.
+        //
+        // The schema returns exactly one template, so a message asking for five
+        // things came back as one card and the other four were never mentioned
+        // again. That is structural: no amount of model quality produces five
+        // answers from a contract with one slot in it. So the model is also
+        // asked where each separate ask starts and ends — extraction, which it
+        // does reliably — and code decides everything after that.
+        //
+        // "How do I refer for an ECG" is one ask. It is asked with exactly the
+        // schema and exactly the prompt it was asked with before any of this
+        // existed, and costs exactly what it used to.
+        const decompose = looksMultiIntent(question);
         try {
           const selection = await generateObject({
             model: openrouter(model),
-            schema: SELECTION_SCHEMA,
+            schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
             temperature: 0,
-            prompt: selectionPrompt({ question, attached, notebook: notebookText }),
+            prompt: selectionPrompt({ question, attached, notebook: notebookText, decompose }),
           });
           recordUsage({ turnId, role: 'fast', phase: 'select', model, usage: selection.usage });
           picked = selection.object.template;
+          scan = safetyScan({ message: question, requests: selection.object.requests });
           // A question back, when the message could mean two different things
           // and they have different answers. Null when the model asked without
           // giving anything to choose between, and the turn answers as usual.
           clarify = selectionClarify(selection.object);
-          templateAnswer = renderSelection(selection.object, question, notebookPages);
+          // The card is built from the ONE request it is about, not from the
+          // whole message — which is what stops a sentence describing a hoarse
+          // voice writing the wording on a knee card.
+          templateAnswer = renderSelection(selection.object, question, notebookPages, {
+            complaint: scan.complaint,
+            gist: (scan.routed && scan.routed.gist) || '',
+          });
         } catch (e) {
-          // A router that cannot answer is not a turn that cannot answer.
+          // A router that cannot answer is not a turn that cannot answer — and
+          // the scan already ran over the whole message, so a turn that ends in
+          // prose still carries every finding.
           console.warn('[agent] template selection failed:', String(e).slice(0, 160));
         }
+
+        const safety = safetyOutput(scan, {
+          cardScans: !!templateAnswer && CLINICAL_TEMPLATES.includes(picked),
+        });
 
         send({
           type: 'tool-result',
@@ -358,34 +557,18 @@ export async function POST(request) {
         // the ambiguity settled. Cheaper than a wrong answer and far cheaper
         // than a wrong referral.
         if (clarify) {
+          // The bands go out with the question back, not after it. A red flag
+          // does not wait for the reader to say which of two things they meant.
           send({
             type: 'answer',
-            payload: {
-              kind: 'answer',
-              answerable: true,
-              turnId,
-              general: false,
-              template: null,
-              intro: '',
-              keyPoints: [],
-              sections: [],
-              message: '',
-              messageCite: null,
-              messageWeb: null,
-              tip: '',
-              gaps: '',
-              followUps: [],
-              clarify,
-              referralRoute: null,
-              citations: [],
-              contacts: [],
-              validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
-            },
+            payload: payload({ clarify, alerts: safety.alerts, panel: safety.panel }),
           });
           const writtenAsk = logTurn({
             outcome: 'template',
             template: 'ask',
-            answer: [clarify.question, ...clarify.options.map((o) => '- ' + o)].join('\n'),
+            answer: shownText(safety.alerts, null) + '\n\n'
+              + [clarify.question, ...clarify.options.map((o) => '- ' + o)].join('\n'),
+            provenance: buildProvenance({ scan }),
           });
           controller.close();
           await writtenAsk;
@@ -395,38 +578,18 @@ export async function POST(request) {
         if (templateAnswer) {
           send({
             type: 'answer',
-            payload: {
-              kind: 'answer',
-              answerable: true,
-              // The turn this answer is, so a verdict left on it can be joined
-              // back to the answer it was actually about rather than to the
-              // next turn that happened to be worded the same way.
-              turnId,
-              // Built from what the practice recorded, so NOT flagged as the
-              // assistant's own work the way the prose fallback is.
-              general: false,
+            payload: payload({
               template: templateAnswer,
-              intro: '',
-              keyPoints: [],
-              sections: [],
-              message: '',
-              messageCite: null,
-              messageWeb: null,
-              tip: '',
-              gaps: '',
-              followUps: [],
-              clarify: null,
-              referralRoute: null,
-              citations: [],
-              contacts: [],
-              validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
-            },
+              alerts: safety.alerts,
+              panel: safety.panel,
+            }),
           });
           const written = logTurn({
             outcome: 'template',
             template: picked,
             source: (templateAnswer.source || []).join(' · '),
-            answer: answerToText(templateAnswer),
+            answer: shownText(safety.alerts, templateAnswer),
+            provenance: buildProvenance({ scan, card: templateAnswer, pages: notebookPages }),
           });
           controller.close();
           await written;
@@ -468,15 +631,14 @@ export async function POST(request) {
 
         send({
           type: 'answer',
-          payload: {
-            kind: 'answer',
-            answerable: true,
-            turnId,
+          payload: payload({
             // Not one line of this came from a practice document, and the card
-            // says so once at the top rather than leaving it to be assumed.
+            // says so once at the top rather than leaving it to be assumed. The
+            // bands above it are the exception and are not the model's work at
+            // all — which is precisely why they still apply here.
             general: true,
-            intro: '',
-            keyPoints: [],
+            alerts: safety.alerts,
+            panel: safety.panel,
             sections: [{
               heading: '',
               markdown: prose,
@@ -485,20 +647,14 @@ export async function POST(request) {
               cite: null,
               web: null,
             }],
-            message: '',
-            messageCite: null,
-            messageWeb: null,
-            tip: '',
-            gaps: '',
-            followUps: [],
-            clarify: null,
-            referralRoute: null,
-            citations: [],
-            contacts: [],
             validation: { attempts: 1, checked: 1, verified: 1, dropped: 0, problems: [] },
-          },
+          }),
         });
-        const written = logTurn({ outcome: 'prose', answer: prose });
+        const written = logTurn({
+          outcome: 'prose',
+          answer: shownText(safety.alerts, null) + (safety.alerts.length ? '\n\n---\n\n' : '') + prose,
+          provenance: buildProvenance({ scan }),
+        });
         controller.close();
         await written;
       } catch (e) {
