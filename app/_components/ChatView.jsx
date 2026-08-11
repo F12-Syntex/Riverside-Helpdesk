@@ -17,6 +17,72 @@ import DocFileAnswer from './chat/DocFileAnswer';
  * they were asked — with Show answer to bring one back.
  * ------------------------------------------------------------------ */
 
+/* ---------------------------------------------------------------- *
+ * A question, or a wall of pasted text.
+ *
+ * Both arrive the same way and they are not the same thing. "How do I
+ * refer for an ECG" is a heading and reads like one. A consultation
+ * pasted in for triage is six hundred words of somebody else's message,
+ * and setting THAT at heading size pushes the answer — the thing that
+ * was asked for — clean off the screen.
+ *
+ * So a long one is treated as what it is: a short line saying what was
+ * asked, and the message itself below it in reading type, folded to a
+ * few lines with the rest one press away. Nothing is thrown away; the
+ * whole text is on the page and can be opened, because it is the only
+ * record of what the answer was given about.
+ * ---------------------------------------------------------------- */
+
+// Roughly two lines at heading size. Past this, a heading is the wrong shape.
+const HEADING_LIMIT = 120;
+
+// The opening of a long message, cut at a sentence or a word rather than
+// mid-syllable.
+function opening(text, max = 96) {
+  const clean = String(text).replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max);
+  const sentence = cut.search(/[.!?](?=[^.!?]*$)/);
+  if (sentence > max * 0.5) return cut.slice(0, sentence + 1);
+  const space = cut.lastIndexOf(' ');
+  return (space > max * 0.5 ? cut.slice(0, space) : cut) + '…';
+}
+
+function TurnQuestion({ question }) {
+  const [open, setOpen] = React.useState(false);
+  const text = String(question || '');
+
+  if (text.length <= HEADING_LIMIT) {
+    return (
+      <h1 className="riva-turn-q" style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:8px 0 0;text-wrap:pretty;animation:rivaHeadIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
+        {text}
+      </h1>
+    );
+  }
+
+  return (
+    <div style={s('animation:rivaHeadIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
+      <h1 className="riva-turn-q" style={s('font-size:22px;font-weight:700;letter-spacing:-0.015em;line-height:1.3;margin:8px 0 0;text-wrap:pretty;')}>
+        {opening(text)}
+      </h1>
+      <div style={s('margin-top:10px;background:#fff;border:1px solid #dde4e7;border-radius:12px;padding:12px 14px;')}>
+        <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a99a3;margin-bottom:6px;')}>
+          What was pasted
+        </div>
+        <div style={s('font-size:14.5px;line-height:1.55;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;'
+          + (open ? '' : 'max-height:104px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent);'))}>
+          {text}
+        </div>
+        <Hover tag="button" type="button" onClick={() => setOpen(!open)}
+          base="margin-top:8px;background:none;border:none;padding:0;font:inherit;font-size:13.5px;font-weight:600;color:#005eb8;text-decoration:underline;cursor:pointer;"
+          hover="color:#003087;">
+          {open ? 'Show less' : 'Show the whole message'}
+        </Hover>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatView({ v }) {
   return (
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
@@ -57,8 +123,9 @@ export default function ChatView({ v }) {
         <div key={v.turn.key} style={s('display:flex;flex-direction:column;gap:20px;')}>
           <div>
             {/* The question lands from below as the bar leaves the dock, and
-                the rule under it wipes out from the left a beat later. */}
-            <h1 className="riva-turn-q" style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:8px 0 0;text-wrap:pretty;animation:rivaHeadIn .5s cubic-bezier(.2,.7,.3,1) both;')}>{v.turn.question}</h1>
+                the rule under it wipes out from the left a beat later. A
+                pasted consultation is not a heading — see TurnQuestion. */}
+            <TurnQuestion question={v.turn.question} />
             <div style={s('width:68px;height:4px;border-radius:2px;background:#005eb8;margin:14px 0 0;transform-origin:left center;animation:rivaRuleIn .5s cubic-bezier(.2,.7,.3,1) .12s both;')} />
             {v.turn.imageNote && (
               <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>
