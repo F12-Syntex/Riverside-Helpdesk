@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.24.2` | 2026-08-11 | chore | `2e079f8` | chore: track the version every commit produced |
 | `1.24.1` | 2026-08-11 | fix | `33c3b38` | fix: read an attachment by its bytes, not by what it is called |
 | `1.24.0` | 2026-08-11 | feat | `682d4a5` | feat: say which build this is, in the corner |
 | `1.23.1` | 2026-08-11 | fix | `0f0d7e1` | fix: read the emailed-referral list from the Notebook, not from the code |
