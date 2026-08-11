@@ -12,9 +12,10 @@ import { renderCommand } from '../lib/templates/route.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
 test('the list is offered while the name is being typed, and not after', () => {
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['triage', 'document', 'practice']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['triage', 'document', 'appt', 'practice']);
   assert.deepEqual(matchCommands('/t').map((c) => c.name), ['triage']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
+  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['appt']);
   assert.deepEqual(matchCommands('/triage').map((c) => c.name), ['triage']);
   // A space means the message has started; a list over it would be in the way.
   assert.deepEqual(matchCommands('/triage '), []);
@@ -153,4 +154,51 @@ test('a passage longer than a paragraph is cut at a sentence, and says it was', 
   const quoted = card.blocks.find((b) => b.type === 'text' && b.markdown.startsWith('>')).markdown;
   assert.ok(quoted.length < 760, 'the excerpt is bounded');
   assert.match(quoted, /\[…\]$/);
+});
+
+/* ----------------------------------------------------------------- /appt */
+
+test('/appt keeps the reason line and the booking notes apart', () => {
+  const card = renderCommand('appointmentBooking', {
+    reason: 'heartburn 3/52, worsening, gaviscon not helping; pt concerned re omeprazole/clopidogrel interaction',
+    details: [],
+    booking: ['telephone after 2pm', 'Turkish interpreter needed'],
+  }, 'pasted message');
+  const json = JSON.stringify(card);
+
+  assert.match(card.title, /Reason and booking notes/);
+  assert.match(json, /Copy into the appointment/);
+  assert.match(json, /heartburn 3\/52/);
+  assert.match(json, /Booking notes/);
+  assert.match(json, /telephone after 2pm/);
+  assert.match(json, /Turkish interpreter/);
+
+  // The two lists are read by two different people at two different moments,
+  // and the reason rules drop contact preferences on purpose. A booking note
+  // that leaked into the reason line would defeat both.
+  const reasonField = card.blocks.find((b) => b.type === 'fields').items[0].value;
+  assert.doesNotMatch(reasonField, /2pm|interpreter/i);
+});
+
+test('/appt says plainly that it has not decided urgency', () => {
+  // A card that summarises a patient's message looks exactly like a card that
+  // has assessed it. This one has not, and says so.
+  const json = JSON.stringify(renderCommand('appointmentBooking', { reason: 'sore throat 2/7' }));
+  assert.match(json, /does \*\*not\*\* decide how urgent/i);
+  assert.match(json, /shown \*\*above\*\* this card/i);
+});
+
+test('/appt falls back to the reason rules, never to prose', () => {
+  // Nothing to write a line from — the same shape as /document falling back to
+  // the coding rules. Still the practice's own material.
+  const bare = renderCommand('appointmentBooking', {}, 'anything');
+  assert.ok(bare && bare.title, 'the rules card answers instead');
+  assert.match(bare.title, /Writing the reason for appointment/);
+});
+
+test('/appt caps both lists rather than rendering whatever came back', () => {
+  const many = Array.from({ length: 9 }, (_, i) => 'note ' + i);
+  const card = renderCommand('appointmentBooking', { reason: 'knee pain 2/12', details: many, booking: many });
+  const lists = card.blocks.filter((b) => b.type === 'bullets');
+  for (const list of lists) assert.ok(list.items.length <= 5, 'at most five');
 });

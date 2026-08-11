@@ -121,6 +121,17 @@ clickable sources they can open in-browser.
   hospital, one already sent and being chased, a waiting time or a policy that
   merely uses the word gets no e-RS card and no referral steps
   (`lib/referrals/scope.mjs`).
+- **Slash commands say which card you want** rather than leaving it to be worked
+  out (`lib/commands.mjs`): `/triage` (where a patient goes), `/document` (a
+  filing title), `/appt` (the reason line and the booking notes), `/practice`
+  (search the documents, no model at all). `/appt` takes a pasted message and
+  writes two things kept deliberately apart — the one-line clinical shorthand
+  that goes into the appointment, under the same rules the reason template
+  already uses, and the practical notes reception needs to choose a slot. Those
+  rules *drop* "best to call after 2pm" and "I'll need an interpreter" from the
+  reason line on purpose; the booking notes are where they go instead of on the
+  floor. It writes wording and decides no urgency — the deterministic scanners
+  run over the same message on the same turn and render above the card.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching

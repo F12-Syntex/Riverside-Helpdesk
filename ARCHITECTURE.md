@@ -34,7 +34,7 @@ It provides:
 | Practice Q&A | `/` (also `/helpbot`) | Answers "how do we do X here?" from the practice's own documents and Notebook, with a verbatim quote behind every claim. The front door of the app. |
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
-| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. |
+| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/appt` command, which adds the booking notes reception needs alongside the reason line. |
 | Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |

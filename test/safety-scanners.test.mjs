@@ -231,3 +231,29 @@ test('classification is capped, the overflow is reported, and settled emergencie
   assert.ok(!take.some((item) => item.acuity === 'emergency'), 'nothing sits above emergency to raise it to');
   assert.equal(skipped, 2);
 });
+
+test('a timing preference is trivia however it is pluralised', () => {
+  // "mornings" did not match \bmorning\b, so a pure contact preference was
+  // being listed as an unresolved clinical item.
+  const s = safetyScan({
+    message: 'My knee is still sore. Could you ring me after 2pm, I am at work in the mornings.',
+    requests: [
+      { text: 'My knee is still sore', gist: 'knee' },
+      { text: 'Could you ring me after 2pm, I am at work in the mornings', gist: 'contact preference' },
+    ],
+  });
+  assert.equal(s.trivia, 1);
+  assert.equal(s.listed.length, 1);
+});
+
+test('an access need is never trivia — a card mentioning it is not it being booked', () => {
+  const s = safetyScan({
+    message: 'My knee is still sore. I will need a Turkish interpreter, mornings are difficult.',
+    requests: [
+      { text: 'My knee is still sore', gist: 'knee' },
+      { text: 'I will need a Turkish interpreter, mornings are difficult', gist: 'interpreter' },
+    ],
+  });
+  assert.equal(s.trivia, 0, 'somebody still has to arrange it');
+  assert.equal(s.items.find((i) => i.id === 'r2').status, 'unhandled');
+});
