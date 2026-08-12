@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.25.2` | 2026-08-12 | fix | `eb7fd6c` | fix: read an injury described in the words patients use |
+| `1.25.1` | 2026-08-12 | chore | `c5ecf2b` | chore: sync the lockfile version with package.json |
+| `1.25.0` | 2026-08-11 | feat | `a1f8599` | feat: copy the filing title straight off the card |
+| `1.24.4` | 2026-08-11 | docs | `8a73d8a` | docs: add the row for the commit that wrote the table |
 | `1.24.3` | 2026-08-11 | style | `a715609` | style: make the version in the corner legible |
 | `1.24.2` | 2026-08-11 | chore | `2e079f8` | chore: track the version every commit produced |
 | `1.24.1` | 2026-08-11 | fix | `33c3b38` | fix: read an attachment by its bytes, not by what it is called |

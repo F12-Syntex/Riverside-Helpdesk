@@ -19,6 +19,23 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+// WHERE 1.0.0 IS. Not the first commit in the repository — the first commit
+// that was versioned.
+//
+// This walk used to start at whatever `git log` happened to return first, which
+// is only the same commit twice if every clone has the same history. It does
+// not: the repository is routinely cloned shallow, and a shallow clone starts
+// wherever it was cut. So the table was computed from a truncated history that
+// happened to begin near here, and nobody noticed until a clone was deepened —
+// at which point the same commits recomputed to 1.192.2 against a package.json
+// reading 1.25.2, and the file that exists to check the version could not have
+// told you which of the two was wrong.
+//
+// Anchoring it makes the arithmetic depend on the history rather than on how
+// much of it was fetched. Everything before this commit is deliberately not
+// numbered: it predates the rule.
+const ANCHOR = 'a259b98';
+
 // feat is a new capability, so it moves the minor. Everything else — fix, docs,
 // refactor, style, test, perf, chore — moves the patch. A "!" after the type
 // means a broken contract and moves the major.
@@ -42,10 +59,25 @@ function history() {
   const raw = execSync('git log --reverse --pretty=format:%h%x00%ad%x00%s --date=short', {
     encoding: 'utf8', cwd: root,
   });
-  return raw.split('\n').filter(Boolean).map((line) => {
+  const all = raw.split('\n').filter(Boolean).map((line) => {
     const [sha, date, subject] = line.split('\0');
     return { sha, date, subject };
   });
+
+  // The anchor is sliced out of the full log rather than asked for as a range,
+  // because `ANCHOR~1..HEAD` needs the anchor's PARENT and a shallow clone cut
+  // at the anchor itself does not have one.
+  const at = all.findIndex((r) => r.sha.startsWith(ANCHOR) || ANCHOR.startsWith(r.sha));
+
+  // LOUDLY, rather than by quietly numbering from whatever is there. A wrong
+  // version that looks right is the entire failure this file exists to catch,
+  // so it must not be the thing this file does when it cannot see far enough.
+  if (at < 0) {
+    console.error(`[versions] the commit that produced 1.0.0 (${ANCHOR}) is not in this clone.`);
+    console.error('[versions] this is normally a shallow clone. Run: git fetch --unshallow');
+    process.exit(1);
+  }
+  return all.slice(at);
 }
 
 function table(rows) {
