@@ -203,23 +203,57 @@ test('/appt caps both lists rather than rendering whatever came back', () => {
   for (const list of lists) assert.ok(list.items.length <= 5, 'at most five');
 });
 
-/* --------------------------------------------- copying the filing title */
+/* ------------------------------------ copying the one value that leaves */
 
-test('the filing title carries a copy button, and nothing else does', () => {
-  // The whole output of this card is one string that gets typed onto a
-  // document. Selecting it by hand on a touchscreen at the front desk is worse
-  // than retyping it, which is the same argument the message block makes.
+// Every command card ends in one value the reader types somewhere else: a
+// filing title onto a document, a reason line into the appointment, a
+// destination into the task that passes the patient on. Selecting it by hand on
+// a touchscreen at the front desk is worse than retyping it, which is the same
+// argument the message block makes for itself.
+const copied = (card) => card.blocks
+  .filter((b) => b.type === 'fields')
+  .flatMap((b) => b.items)
+  .filter((item) => item.copy);
+
+test('/document offers the filing title', () => {
   const card = renderCommand('documentCoding', {
     document: { date: '07-Aug-2026', site: 'HUH', department: 'Ophthalmology', actions: ['d/c'] },
   });
-  const title = card.blocks.find((b) => b.type === 'fields').items[0];
-  assert.equal(title.label, 'Title');
-  assert.equal(title.copy, true);
+  assert.deepEqual(copied(card).map((f) => f.label), ['Title']);
+});
 
+test('/appt offers the reason line', () => {
+  const card = renderCommand('appointmentBooking', { reason: 'knee pain 2/12, req physio' });
+  const one = copied(card);
+  assert.deepEqual(one.map((f) => f.label), ['Reason']);
+  assert.equal(one[0].value, 'knee pain 2/12, req physio');
+});
+
+test('/triage offers where it goes', () => {
+  const card = renderCommand('triage', { condition: 'sore throat' }, 'pt sore throat');
+  const one = copied(card);
+  assert.deepEqual(one.map((f) => f.label), ['Send it to']);
+  assert.match(one[0].value, /Community pharmacy/);
+});
+
+test('exactly one value per card carries it', () => {
   // A Copy on every row would be four buttons on a referral card and no signal
   // about which one the reader actually needs, so it stays opt-in.
-  const referral = renderCommand('triage', { condition: 'sore throat' }, 'pt sore throat');
-  for (const block of referral.blocks.filter((b) => b.type === 'fields')) {
-    for (const item of block.items) assert.ok(!item.copy, item.label + ' must not carry one');
+  for (const card of [
+    renderCommand('triage', { condition: 'knee pain' }, 'adult with knee pain for weeks'),
+    renderCommand('appointmentBooking', { reason: 'sore throat 3/7', booking: ['prefers phone'] }),
+    renderCommand('documentCoding', { document: { date: '07-Aug-2026', site: 'HUH', department: 'Cardiology', actions: [] } }),
+  ]) {
+    assert.equal(copied(card).length, 1, card.title + ' should offer exactly one');
   }
+});
+
+test('an emergency card offers nothing to copy', () => {
+  // Nobody types anything off "interrupt the duty doctor now" — they stand up.
+  const red = renderCommand('triage', { condition: 'chest pain' }, 'pt has chest pain and is short of breath');
+  assert.equal(copied(red).length, 0);
+
+  const spinal = renderCommand('triage', { condition: 'back pain' },
+    'Bad lower back pain, now numb around the groin and cannot tell when passing urine.');
+  assert.equal(copied(spinal).length, 0);
 });
