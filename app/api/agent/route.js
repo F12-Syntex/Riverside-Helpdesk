@@ -42,7 +42,7 @@ import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
-  CLINICAL_TEMPLATES, COMMAND_SCHEMAS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
+  CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
   commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionClarify, selectionPrompt,
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
@@ -402,9 +402,9 @@ export async function POST(request) {
             }
             commandAnswer = practiceSearchAnswer({ query: question, passages });
           } else {
-            // A long /triage is decomposed on the same call, exactly as an
-            // ordinary message is. A short one is not, so "/triage pt has a
-            // sore throat since Friday" costs what it always cost.
+            // A long /triage or /accurx is decomposed on the same call, exactly
+            // as an ordinary message is. A short one is not, so "/triage pt has
+            // a sore throat since Friday" costs what it always cost.
             const decompose = looksMultiIntent(question);
             try {
               const filled = await generateObject({
@@ -416,10 +416,13 @@ export async function POST(request) {
               recordUsage({ turnId, role: 'fast', phase: 'command', model, usage: filled.usage });
               scan = safetyScan({ message: question, requests: filled.object.requests });
 
-              // THE ONE SECOND PASS. Only here, only when the message actually
-              // split into several requests, and only ever able to raise what
-              // the scanners already decided.
-              if (command === 'triage' && scan.decomposed) {
+              // THE ONE SECOND PASS. Only on the commands whose card is a
+              // triage, only when the message actually split into several
+              // requests, and only ever able to raise what the scanners already
+              // decided. /accurx is one of them for the same reason /triage is:
+              // the card routes one request and the reader has to be told what
+              // the other four were.
+              if (DECOMPOSING_COMMANDS.includes(command) && scan.decomposed) {
                 scan = await deepenTriage({ openrouter, model, question, scan, turnId, send });
                 stage2 = 'triage';
               }
@@ -446,9 +449,10 @@ export async function POST(request) {
             items: [],
           });
 
-          // /triage renders the triage card, which runs the deterministic net
-          // over its own text. Nothing else a command produces does.
-          const commandSafety = safetyOutput(scan, { cardScans: command === 'triage' });
+          // /triage and /accurx render the triage card, which runs the
+          // deterministic net over its own text. Nothing else a command
+          // produces does.
+          const commandSafety = safetyOutput(scan, { cardScans: DECOMPOSING_COMMANDS.includes(command) });
 
           send({
             type: 'answer',

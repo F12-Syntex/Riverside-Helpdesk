@@ -34,7 +34,7 @@ It provides:
 | Practice Q&A | `/` (also `/helpbot`) | Answers "how do we do X here?" from the practice's own documents and Notebook, with a verbatim quote behind every claim. The front door of the app. |
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
-| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/appt` command, which adds the booking notes reception needs alongside the reason line. |
+| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/appt` command, which adds the booking notes reception needs alongside the reason line, and as `/accurx`, which puts that line on the same card as where the patient goes. |
 | Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |
@@ -685,9 +685,9 @@ action" risk.
   another complaint is dropped rather than written — the failure mode that had a
   knee card claiming self-care had failed on the strength of a sentence about
   the patient's voice.
-- **The one second model pass** (`/triage` only) may raise acuity above what the
-  scanners found and may never lower it; if it fails or times out the
-  deterministic answer stands unchanged.
+- **The one second model pass** (`/triage` and `/accurx` only) may raise acuity
+  above what the scanners found and may never lower it; if it fails or times out
+  the deterministic answer stands unchanged.
 - **Every turn records why**, not only what: the decomposed requests, the rule
   ids with their matched spans, and the Notebook page revisions behind the card
   (`question_log.provenance`, readable at `/stats`).

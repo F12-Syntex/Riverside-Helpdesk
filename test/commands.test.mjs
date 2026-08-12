@@ -12,10 +12,13 @@ import { renderCommand } from '../lib/templates/route.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
 test('the list is offered while the name is being typed, and not after', () => {
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['triage', 'document', 'appt', 'practice']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['triage', 'accurx', 'document', 'appt', 'practice']);
   assert.deepEqual(matchCommands('/t').map((c) => c.name), ['triage']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
-  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['appt']);
+  // Two commands start with an "a", so one more keystroke tells them apart.
+  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx', 'appt']);
+  assert.deepEqual(matchCommands('/ac').map((c) => c.name), ['accurx']);
+  assert.deepEqual(matchCommands('/ap').map((c) => c.name), ['appt']);
   assert.deepEqual(matchCommands('/triage').map((c) => c.name), ['triage']);
   // A space means the message has started; a list over it would be in the way.
   assert.deepEqual(matchCommands('/triage '), []);
@@ -203,6 +206,141 @@ test('/appt caps both lists rather than rendering whatever came back', () => {
   for (const list of lists) assert.ok(list.items.length <= 5, 'at most five');
 });
 
+/* --------------------------------------------------------------- /accurx */
+
+// The whole promise of the command: one paste, both answers. A card that
+// carried only one of them would be /triage or /appt wearing a new name.
+test('/accurx routes the patient AND writes the reason line', () => {
+  const card = renderCommand('accurxTriage', {
+    condition: 'heartburn',
+    reason: 'heartburn 3/52, worsening, gaviscon not helping',
+    booking: ['telephone after 2pm'],
+  }, 'I have had heartburn for about 3 weeks, gaviscon is not helping. Best to call after 2pm.');
+  const json = JSON.stringify(card);
+
+  // Where it goes, from the practice's own triage order.
+  assert.match(json, /Where this goes/);
+  assert.match(json, /Send it to/);
+  // And the wording, from the same message.
+  assert.match(json, /Copy into the appointment/);
+  assert.match(json, /heartburn 3\/52/);
+  assert.match(json, /Booking notes/);
+  assert.match(json, /telephone after 2pm/);
+  // Both halves say where they came from.
+  assert.ok(card.source.includes('Appointment reason'), 'the reason rules are cited');
+  assert.ok(card.source.length > 1, 'the routing pages are cited too');
+});
+
+test('/accurx keeps the reason line clear of the booking notes', () => {
+  const card = renderCommand('accurxTriage', {
+    condition: 'heartburn',
+    reason: 'heartburn 3/52, worsening, gaviscon not helping',
+    booking: ['telephone after 2pm', 'Turkish interpreter needed'],
+  }, 'pasted message');
+  const reason = card.blocks
+    .filter((b) => b.type === 'fields')
+    .flatMap((b) => b.items)
+    .find((item) => item.label === 'Reason');
+  assert.doesNotMatch(reason.value, /2pm|interpreter/i);
+});
+
+test('/accurx leads with where it goes, then the line to copy', () => {
+  // The two things that leave the card, in the order they are used: the
+  // destination goes into the task, the reason into what gets booked. Anything
+  // between them is something read before the reader gets to what they came for.
+  const card = renderCommand('accurxTriage', {
+    condition: 'sore throat',
+    reason: 'sore throat 3/7, no fever',
+  }, 'sore throat since Friday, no fever');
+  const titles = card.blocks.filter((b) => b.type === 'fields').map((b) => b.title);
+  assert.deepEqual(titles.slice(0, 2), ['Where this goes', 'Copy into the appointment']);
+});
+
+test('/accurx demotes the wording when the answer is an emergency', () => {
+  // Nobody books an appointment off "interrupt the duty doctor now", so the
+  // reason line is not the second thing on the card, and it does not offer a
+  // Copy — the same reason the emergency triage cards offer none.
+  const card = renderCommand('accurxTriage', {
+    condition: 'chest pain',
+    reason: 'chest pain since this morning, sob',
+  }, 'I have had a crushing pain in my chest since this morning and I am short of breath');
+  const json = JSON.stringify(card);
+
+  assert.match(json, /duty doctor/i);
+  assert.match(json, /handover/i);
+  // The wording is still there — it is what gets said when passing this on.
+  assert.match(json, /chest pain since this morning/);
+  assert.doesNotMatch(json, /Copy into the appointment/);
+  const copies = card.blocks
+    .filter((b) => b.type === 'fields')
+    .flatMap((b) => b.items)
+    .filter((item) => item.copy);
+  assert.equal(copies.length, 0, 'an emergency card offers nothing to copy');
+
+  // And it comes after the instruction, never before it.
+  const kinds = card.blocks.map((b) => (b.type === 'fields' ? b.title : b.type));
+  assert.ok(kinds.indexOf('For the handover note') > kinds.indexOf('bullets'), 'the wording sits below what to do');
+});
+
+test('/accurx demotes an eye emergency but not an ordinary eye request', () => {
+  // The two sit on the same page of the practice's material and one word apart
+  // in the message. Only one of them is somebody standing up.
+  const ae = JSON.stringify(renderCommand('accurxTriage', {
+    condition: 'eye injury', reason: 'eye trauma with bleeding',
+  }, 'I got hit in the eye and it is bleeding'));
+  assert.match(ae, /Moorfields/);
+  assert.match(ae, /For the handover note/);
+  assert.doesNotMatch(ae, /Copy into the appointment/);
+
+  const mecs = JSON.stringify(renderCommand('accurxTriage', {
+    condition: 'conjunctivitis', reason: 'red sticky eye 3/7, no vision change',
+  }, 'My eye has been red and sticky for 3 days'));
+  assert.match(mecs, /Rose Opticians/);
+  assert.match(mecs, /Copy into the appointment/);
+  assert.doesNotMatch(mecs, /not an appointment to book/);
+});
+
+test('/accurx keeps the wording rules out of the middle of the routing', () => {
+  // Two disclosures about house style, sitting between "where this goes" and
+  // the steps for booking it, are two disclosures in the way of somebody doing
+  // the thing. They go last, whichever order the rest of the card is in.
+  for (const card of [
+    renderCommand('accurxTriage', { condition: 'sore throat', reason: 'sore throat 3/7' }, 'pt sore throat since Friday'),
+    renderCommand('accurxTriage', { condition: 'chest pain', reason: 'chest pain since this morning' }, 'crushing chest pain since this morning, short of breath'),
+  ]) {
+    const last = card.blocks.slice(-3).map((b) => b.label || b.type);
+    assert.deepEqual(last, ['How the reason was written', 'What belongs in a booking note', 'note']);
+  }
+});
+
+test('/accurx still routes when the model wrote no reason line', () => {
+  // Half the answer missing is not a reason to give none of it: the routing is
+  // decided in code from the message and does not need the model's wording.
+  const card = renderCommand('accurxTriage', {}, 'pt has a sore throat since Friday, no fever');
+  const json = JSON.stringify(card);
+  assert.ok(card && card.title);
+  assert.match(json, /Where this goes/);
+  assert.match(json, /no reason line to write/i);
+});
+
+test('/accurx says what it decided and what it only rewrote', () => {
+  // The card looks like it has formed a view of the whole message, and half of
+  // it has not. Where the urgency was actually decided is said outright.
+  const json = JSON.stringify(renderCommand('accurxTriage', { condition: 'sore throat', reason: 'sore throat 3/7' }, 'sore throat'));
+  assert.match(json, /triage order/i);
+  assert.match(json, /shown \*\*above\*\* this card/i);
+});
+
+test('/accurx caps both lists rather than rendering whatever came back', () => {
+  const many = Array.from({ length: 9 }, (_, i) => 'note ' + i);
+  const card = renderCommand('accurxTriage', {
+    condition: 'knee pain', reason: 'knee pain 2/12', details: many, booking: many,
+  }, 'knee pain for two months');
+  for (const list of card.blocks.filter((b) => b.type === 'bullets')) {
+    assert.ok(list.items.length <= 5, 'at most five');
+  }
+});
+
 /* ------------------------------------ copying the one value that leaves */
 
 // Every command card ends in one value the reader types somewhere else: a
@@ -246,6 +384,17 @@ test('exactly one value per card carries it', () => {
   ]) {
     assert.equal(copied(card).length, 1, card.title + ' should offer exactly one');
   }
+});
+
+test('/accurx is the deliberate exception: two values leave it', () => {
+  // One Copy per card is the rule, so that the reader can see which value they
+  // came for. /accurx exists because they came for two — the destination for
+  // the task that passes the patient on, the reason for the appointment — and
+  // making them retype one of them undoes the point of the command.
+  const card = renderCommand('accurxTriage', {
+    condition: 'sore throat', reason: 'sore throat 3/7, no fever',
+  }, 'pt sore throat since Friday, no fever');
+  assert.deepEqual(copied(card).map((f) => f.label), ['Send it to', 'Reason']);
 });
 
 test('an emergency card offers nothing to copy', () => {

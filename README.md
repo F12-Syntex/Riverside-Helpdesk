@@ -92,9 +92,9 @@ clickable sources they can open in-browser.
     the message is over ~300 characters or carries a joining phrase ("also",
     "while I'm here"), so "how do I refer for an ECG" costs exactly what it did
     before.
-  - **`/triage` is the one exception to one-call.** It may issue a small
-    structured call per decomposed request, in parallel, returning an enum and a
-    label — no prose. **Code holds the veto**: that classification may only
+  - **`/triage` and `/accurx` are the one exception to one-call.** They may
+    issue a small structured call per decomposed request, in parallel, returning
+    an enum and a label — no prose. **Code holds the veto**: that classification may only
     *raise* acuity above what the scanners found, never lower it, and a pass
     that fails or times out leaves the deterministic answer standing. The regex
     is the guarantee; the model is a recall booster.
@@ -137,16 +137,33 @@ clickable sources they can open in-browser.
   merely uses the word gets no e-RS card and no referral steps
   (`lib/referrals/scope.mjs`).
 - **Slash commands say which card you want** rather than leaving it to be worked
-  out (`lib/commands.mjs`): `/triage` (where a patient goes), `/document` (a
-  filing title), `/appt` (the reason line and the booking notes), `/practice`
-  (search the documents, no model at all). `/appt` takes a pasted message and
-  writes two things kept deliberately apart — the one-line clinical shorthand
+  out (`lib/commands.mjs`): `/triage` (where a patient goes), `/accurx` (both of
+  those at once), `/document` (a filing title), `/appt` (the reason line and the
+  booking notes), `/practice` (search the documents, no model at all). `/appt`
+  takes a pasted message and writes two things kept deliberately apart — the one-line clinical shorthand
   that goes into the appointment, under the same rules the reason template
   already uses, and the practical notes reception needs to choose a slot. Those
   rules *drop* "best to call after 2pm" and "I'll need an interpreter" from the
   reason line on purpose; the booking notes are where they go instead of on the
   floor. It writes wording and decides no urgency — the deterministic scanners
   run over the same message on the same turn and render above the card.
+- **`/accurx` answers both halves of an AccurX request on one card**
+  (`lib/templates/accurx.mjs`): where the patient goes, and the reason line to
+  copy into what gets booked. Reception reads the request once and needs both,
+  so asking for them separately meant pasting the same message twice — and the
+  second paste is the one that does not happen when the phone rings. Neither
+  half is new: the routing *is* `/triage`'s card, run through the practice's own
+  order top to bottom, and the wording *is* `/appt`'s, under the same rules.
+  What the command decides is order. Ordinarily the destination and the reason
+  line sit together at the top, because they are the two things that leave the
+  card. On a card that ends in an emergency — a red flag, cauda equina, an eye
+  going straight to Moorfields — the wording drops its Copy, moves below
+  everything the routing card has to say, and is renamed the handover note:
+  nobody is booking an appointment off "interrupt the duty doctor now". Which of
+  the two it is comes from `endsInAnEmergency` in `lib/templates/triage.mjs`,
+  next to the branches that produce those cards, so the two cannot drift apart.
+  Like `/triage`, it decomposes a long message and runs the second pass over
+  each request.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching
