@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.26.0` | 2026-08-12 | feat | `46d3afe` | feat: copy the one value that leaves the card on /appt and /triage |
+| `1.25.3` | 2026-08-12 | fix | `e02edd5` | fix: anchor the version walk to the commit that produced 1.0.0 |
 | `1.25.2` | 2026-08-12 | fix | `eb7fd6c` | fix: read an injury described in the words patients use |
 | `1.25.1` | 2026-08-12 | chore | `c5ecf2b` | chore: sync the lockfile version with package.json |
 | `1.25.0` | 2026-08-11 | feat | `a1f8599` | feat: copy the filing title straight off the card |
