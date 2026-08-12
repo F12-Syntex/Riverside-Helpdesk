@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fcpAnswer, mskFeatures, needsFcp, isSpinalEmergency } from '../lib/templates/fcp.mjs';
+import { fcpAnswer, mskFeatures, needsFcp, needsGpFirst, isSpinalEmergency } from '../lib/templates/fcp.mjs';
 import { pharmacyFirstAnswer } from '../lib/templates/pharmacy.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 
@@ -213,6 +213,93 @@ test('an injury does not jump the pharmacy check', () => {
     text: 'Soft tissue injury to the calf after football, asking what they can take.',
   });
   assert.match(flat(card), /Community pharmacy \(Pharmacy First\)/);
+});
+
+/* ------------------------------- what is not the physio's problem at all */
+
+// The third message that produced a wrong answer. A leg injured over a year
+// ago that still swells, is numb and is sore, with the patient naming DVT as
+// their worry — answered with an FCP appointment.
+//
+// It got there honestly, which was the alarming part: `msk` matched the word
+// "ankle" out of the patient's OWN SELF-CARE ("I often do exercise like
+// rotating my ankle"), and NERVE_ROOT matched "numb". needsFcp is msk AND nerve
+// root, so it went to the physio. Swelling with loss of sensation is vascular
+// or neurological territory — assessment and probably investigation, not
+// exercises.
+const SWOLLEN_LEG = `My left leg is causing me issues i had an accident / injury to my Leg last year and it often gets swollen, feels numb and sore to date.
+How long have you had this? Over a year. I have periods when it "flares", its constantly feels sore and have a lack of sensation.
+Have you tried anything to help? I massage area, put my feet up, try to avoid standing for long periods. I often do exercise like rotating my ankle. I apply a leg gel at night and often use compression socks.
+Is there anything you're particularly worried about? I also worry about DVT although this could be because im anxious.`;
+
+test('a swollen, numb limb is not a physiotherapy problem', () => {
+  const f = mskFeatures(SWOLLEN_LEG);
+  assert.ok(f.swelling && f.sensoryLoss, 'both halves are read');
+  assert.ok(needsGpFirst(f));
+  assert.ok(!needsFcp(f), 'and needsFcp must refuse it, not merely be skipped');
+});
+
+test('the swollen leg goes to a GP instead of the FCP', () => {
+  const card = triagePatientAnswer({ condition: 'leg pain', text: SWOLLEN_LEG });
+  const json = flat(card);
+  assert.match(card.subtitle, /not the physio/i);
+  assert.match(json, /A GP appointment here/);
+  assert.doesNotMatch(json, /FCP new patient slot/, 'this must not be bookable as physio');
+  assert.doesNotMatch(json, /Hackney Downs PCN/);
+});
+
+test('the fcp template refuses it directly too', () => {
+  // The router can choose "fcp" off the message, so the exclusion cannot live
+  // only in triage.
+  const card = fcpAnswer({ condition: 'leg pain', text: SWOLLEN_LEG });
+  assert.match(card.subtitle, /not the physio/i);
+});
+
+test('it does not fall through to a pharmacy either', () => {
+  // "Ankle or foot pain or swelling" is a listed minor illness.
+  const json = flat(triagePatientAnswer({ condition: 'swollen ankle', text: 'ankle swollen and numb for months' }));
+  assert.doesNotMatch(json, /Community pharmacy/);
+  assert.match(json, /A GP appointment here/);
+});
+
+test('a clot or a vein named by anybody rules the physio out', () => {
+  for (const text of [
+    'calf pain after a long flight, worried it could be a blood clot',
+    'aching legs with varicose veins, wants advice',
+  ]) {
+    assert.match(triagePatientAnswer({ condition: 'leg pain', text }).subtitle, /not the physio/i, text);
+  }
+});
+
+test('the card repeats the patient’s own worry without confirming it', () => {
+  const json = flat(triagePatientAnswer({ condition: 'leg pain', text: SWOLLEN_LEG }));
+  assert.match(json, /not yours to rule out/i);
+  // It must not name a cause. That is the clinician's, and the whole reason
+  // this card exists is to get the message in front of one.
+  assert.doesNotMatch(json, /post-thrombotic|venous insufficiency|lymphoedema|nerve damage/i);
+});
+
+test('sciatica is untouched: numbness with no swelling is still the FCP', () => {
+  // NERVE_ROOT is right about what it was written for. This must not regress.
+  const f = mskFeatures(SCIATICA);
+  assert.ok(f.nerveRoot && !f.swelling);
+  assert.ok(!needsGpFirst(f));
+  assert.match(triagePatientAnswer({ condition: AS_ROUTED, text: SCIATICA }).subtitle, /First Contact Physiotherapist/);
+});
+
+test('a swollen ankle with no sensory change is still the physio’s', () => {
+  // Swelling alone is an ordinary musculoskeletal injury. Only swelling AND
+  // altered sensation together rule the FCP out.
+  const card = triagePatientAnswer({ condition: 'ankle sprain', text: 'twisted my ankle playing football, swollen and painful' });
+  assert.match(card.subtitle, /First Contact Physiotherapist/);
+});
+
+test('a spinal emergency still outranks it', () => {
+  const card = triagePatientAnswer({
+    condition: 'back pain',
+    text: 'Back pain, legs swollen and numb, and now numb around the groin and cannot pass urine.',
+  });
+  assert.match(card.subtitle, /Emergency/);
 });
 
 test('a part and a symptom only count inside the same sentence', () => {
