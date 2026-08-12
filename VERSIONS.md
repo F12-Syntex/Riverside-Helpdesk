@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.27.0` | 2026-08-12 | feat | `8d4156d` | feat: /accurx triages the request and writes the reason line at once |
+| `1.26.3` | 2026-08-12 | docs | `3cf5ec7` | docs: add the row for the swollen-limb routing fix |
 | `1.26.2` | 2026-08-12 | fix | `9667047` | fix: a swollen, numb limb needs a doctor, not the physio |
 | `1.26.1` | 2026-08-12 | docs | `18b82bf` | docs: add the rows for the version fix and the copy buttons |
 | `1.26.0` | 2026-08-12 | feat | `46d3afe` | feat: copy the one value that leaves the card on /appt and /triage |
