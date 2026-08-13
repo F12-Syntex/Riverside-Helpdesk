@@ -75,6 +75,18 @@ clickable sources they can open in-browser.
     pattern rule with no model anywhere in its path, so there is nothing for one
     to be talked out of. It is a refusal, not a routing decision, and the rest
     of the message is still answered.
+  - **Names and addresses never leave the browser.** A local check runs on the
+    message as it is sent — regex, a forename list and a token scan, no model
+    and no network (`lib/safety/identifiers.mjs`) — and a name or an address it
+    finds is replaced with `[name removed]` / `[address removed]` before the
+    request is built, before the transcript is written and before anything is
+    saved. `/api/agent` and `/api/ask` run the same check on arrival, so the
+    guard belongs to the endpoint and not just to the page. The reader is told
+    what went, as a count and never as a quote. It redacts rather than blocking
+    the send: making somebody retype a sentence in a hurry does not get the
+    name out of the world. `Dr`, `Nurse` and `Matron` introduce a colleague, so
+    those names stay, as do names in the practice directory — "which days is Dr
+    Ahmed in" and "the number for Alison Wade" are the job.
   - **Assertions are span-local and fail toward silence.** A card may only claim
     something about the complaint it is about, and only from words inside that
     complaint's own text. The knee card claimed "over-the-counter treatment has

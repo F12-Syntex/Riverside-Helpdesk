@@ -130,6 +130,17 @@ export default function ChatView({ v }) {
             {v.turn.imageNote && (
               <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>
             )}
+            {/* What the local identifier check took out of this question
+                before it was sent. The toast that said so has gone by now;
+                the question on screen has a hole in it and this is the only
+                thing that explains it. It counts what went and quotes none of
+                it — see lib/safety/identifiers.mjs. */}
+            {v.turn.redactedNote && (
+              <div style={s('display:flex;align-items:flex-start;gap:9px;margin-top:14px;background:#fff6cc;border:1px solid #f0dfa0;border-radius:10px;padding:9px 12px;font-size:13.5px;line-height:1.45;color:#5c4a00;')}>
+                <Svg w={15} sw={2.2} style={s('flex:none;margin-top:2px;color:#946800;')}>{Icons.triangle}</Svg>
+                <span>{v.turn.redactedNote}</span>
+              </div>
+            )}
             {/* The documents this question was asked about. Named, because an
                 answer about "the letter" has to say which letter — and because
                 nothing here is stored, so this is the only record of it. */}

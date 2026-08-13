@@ -18,6 +18,8 @@ import { normForMatch, quoteContainment } from '@/lib/ai/quote-match';
 import { retrieve, catalogText, chunksByTitle } from '@/rag/lib/store.mjs';
 import { getSupplementaryEntries } from '@/lib/ai/context.mjs';
 import { matchContacts, contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
+import { getDirectory } from '@/lib/lookup/directory';
+import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { searchKnowledge, knowledgeCatalogText, knowledgePassagesByTitles, conflictsForPassages, unifiedContacts, unifiedTelephoneSet } from '@/lib/knowledge';
 import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 import { fullNotebookContext } from '@/lib/notebook';
@@ -249,6 +251,10 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }
   if (!question.trim()) question = 'Please look at the attached image.';
+  // The same local name-and-address guard /api/agent applies, for the same
+  // reason: an endpoint that answers questions must not be the way a patient's
+  // name reaches a model, whoever posted to it. See lib/safety/identifiers.mjs.
+  question = redactIdentifiers(question, { allow: getDirectory() }).text;
 
   // Resolve follow-ups for retrieval by concatenating the recent conversation
   // locally — no extra model call. "how is this done" then searches with the

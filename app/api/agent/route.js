@@ -48,6 +48,7 @@ import {
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { looksMultiIntent } from '@/lib/safety/requests.mjs';
 import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
+import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
@@ -57,6 +58,7 @@ import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
+import { getDirectory } from '@/lib/lookup/directory';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
@@ -245,7 +247,14 @@ export async function POST(request) {
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
-  const question = typeof body?.question === 'string' && body.question.trim() ? body.question : 'Please look at the attached image.';
+  const asked = typeof body?.question === 'string' && body.question.trim() ? body.question : 'Please look at the attached image.';
+  // The same local name-and-address check the browser ran before sending
+  // (lib/safety/identifiers.mjs), run again here. In the ordinary case this
+  // changes nothing — the text arrived already redacted — and that is the
+  // point: the guard is a property of the endpoint, not of the page, so a
+  // message posted to /api/agent by anything else is held to it too. It runs
+  // before the model sees the question and before question_log stores it.
+  const question = redactIdentifiers(asked, { allow: getDirectory() }).text;
   const history = typeof body?.history === 'string' ? body.history : '';
   const images = Array.isArray(body?.images)
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)

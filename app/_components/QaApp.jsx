@@ -5,6 +5,7 @@ import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
 import { matchCommands, parseCommand } from '../../lib/commands.mjs';
+import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { machineId } from '../../lib/audit/client';
 import {
   isTestQuery, isGeneralTestQuery,
@@ -23,6 +24,7 @@ import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import { plainText } from './chat/Rich';
 import { mdPlain } from './chat/Md';
+import { notify } from './notify';
 
 // Attached images are downscaled in the browser before sending: big photos
 // waste tokens and upload time, and localStorage (where the chat persists)
@@ -589,7 +591,25 @@ class RiversidePracticeQA extends React.Component {
   }
 
   ask(text) {
-    const typed = (text || '').trim();
+    // NAMES AND ADDRESSES DO NOT LEAVE THIS MACHINE. The check is local and
+    // deterministic (lib/safety/identifiers.mjs) and it runs here, before the
+    // request is built, before the message is written to the transcript and
+    // before anything is saved: the redacted wording is the only wording that
+    // exists from this line on.
+    //
+    // It redacts rather than refusing to send. Making somebody retype a
+    // sentence under time pressure does not get the identifier out of the
+    // world, it just gets it typed again somewhere with no check on it. So the
+    // message goes, minus the name, with the reader told what was taken.
+    //
+    // The directory goes in as the allow list: "what is the number for Alison
+    // Wade" is a lookup of a colleague the practice has written down, and a
+    // check that eats that question is a check that gets ignored.
+    const guard = redactIdentifiers((text || '').trim(), { allow: this.state.directory });
+    if (guard.changed) {
+      notify(identifierWarning(guard.findings), { type: 'warn', duration: 11000 });
+    }
+    const typed = guard.text;
     // A slash command says which card to render, so the message goes up without
     // it and the template goes up beside it. "/triage" with nothing after it is
     // a command still being written, not a question — the field keeps it.
@@ -612,7 +632,10 @@ class RiversidePracticeQA extends React.Component {
       : 'Please look at the attached image.');
     // Shown as it was typed, command and all: the reader chose the command and
     // the transcript should not quietly drop it.
-    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name) };
+    // `redacted` is a count, not a copy — see lib/safety/identifiers.mjs. It
+    // rides along on the message so the transcript says why the question has a
+    // hole in it long after the toast has gone.
+    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings) };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
@@ -1446,6 +1469,9 @@ class RiversidePracticeQA extends React.Component {
           // The documents this question was asked about, named under it: an
           // answer about a letter has to say which letter.
           docNames: docs,
+          // What the local identifier check took out of this question before
+          // it was sent, if anything.
+          redactedNote: m.redacted || '',
           idxs: [],
         });
       } else {
@@ -1607,6 +1633,7 @@ class RiversidePracticeQA extends React.Component {
         imageNote: active.imageNote,
         docNames: active.docNames || [],
         hasDocs: !!(active.docNames && active.docNames.length),
+        redactedNote: active.redactedNote || '',
         items: active.idxs.map((i) => messages[i]),
       } : null,
       history: earlier,

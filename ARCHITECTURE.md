@@ -394,6 +394,11 @@ sequenceDiagram
 
 **Phase detail**
 
+0. **Identifier redaction** — before anything else, and with no model in its
+   path: names and addresses are stripped out of the question
+   (`lib/safety/identifiers.mjs`). The browser did this already as the message
+   was sent, so in the ordinary case nothing changes here; the endpoint repeats
+   it so a request made any other way is held to the same rule.
 1. **Cache read** — before the Notebook is even loaded. Exact match on a hash of
    the canonicalised question; failing that, one embedding call and a
    nearest-neighbour search. A row is only served if the model and the Notebook
@@ -680,6 +685,21 @@ action" risk.
   (`emergency > twoWeekWait > sameDay > routine > admin`); no model ranks it.
 - **A request about a third party's record is refused by a pattern rule** before
   anything is routed, with no model in its path.
+- **Names and addresses are taken out of the question before it is sent**
+  (`lib/safety/identifiers.mjs`). The check is local — regex, a forename list
+  and a token scan, no model and no network — and runs in the browser as the
+  message is sent, so an identifier it catches never leaves the machine it was
+  typed on; `/api/agent` and `/api/ask` run it again on arrival, so the guard
+  belongs to the endpoint rather than to the page. What was removed is shown as
+  a count, in a warning beside the question and in a toast; the identifier is
+  never quoted back and never reaches the model, the question log or the audit
+  log. It redacts rather than refusing to send, because making somebody retype
+  a sentence in a hurry does not get the name out of the world. Clinician
+  titles (`Dr`, `Nurse`, `Matron`) and names in the practice directory are left
+  alone deliberately — a check that eats "which days is Dr Ahmed in" is a check
+  that gets worked around. Attached documents are **not** redacted: they are
+  the reader's own material, sent on purpose, and a filing title is often about
+  the letter's own header.
 - **A card may only assert what its own complaint's text supports.** Every
   feature carries the span that proved it, and a sentence whose evidence lies in
   another complaint is dropped rather than written — the failure mode that had a
