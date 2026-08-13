@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.28.0` | 2026-08-13 | feat | `57ef5b4` | feat: take names and addresses out of a question before it is sent |
+| `1.27.1` | 2026-08-12 | docs | `6b89f5e` | docs: add the row for the /accurx command |
 | `1.27.0` | 2026-08-12 | feat | `8d4156d` | feat: /accurx triages the request and writes the reason line at once |
 | `1.26.3` | 2026-08-12 | docs | `3cf5ec7` | docs: add the row for the swollen-limb routing fix |
 | `1.26.2` | 2026-08-12 | fix | `9667047` | fix: a swollen, numb limb needs a doctor, not the physio |
