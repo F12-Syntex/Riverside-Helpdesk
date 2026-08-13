@@ -46,6 +46,7 @@ import {
   commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionClarify, selectionPrompt,
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
+import { ACCURX_ROUTE_SCHEMA, accurxRoutePrompt, destinationLabel } from '@/lib/templates/accurx-route.mjs';
 import { looksMultiIntent } from '@/lib/safety/requests.mjs';
 import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
@@ -222,6 +223,77 @@ async function deepenTriage({ openrouter, model, question, scan, turnId, send })
   });
 }
 
+/**
+ * /accurx ONLY — read the whole message and say where it goes.
+ *
+ * WHY THIS EXISTS. A pasted AccurX request is the longest thing anybody puts
+ * into this app and the one the pattern cascade is least equipped for: it
+ * matches words, and a message describing four things at once is a picture
+ * rather than a word. A patient wrote in after a recent miscarriage with daily
+ * headaches, two swollen legs, shoulder pain and dizziness, and every rule in
+ * lib/templates/triage.mjs fired correctly and sent her to a physiotherapist.
+ *
+ * So the message is READ, against the practice's own destinations and its own
+ * Notebook, on its own model role — see lib/settings.js, where `accurx`
+ * inherits from `fast` until somebody sets it. What comes back is one enum and
+ * one quote.
+ *
+ * THE PATTERNS KEEP THE VETO. The verdict goes to accurxAnswer, which takes the
+ * more senior of the two destinations and nothing else. This function cannot
+ * make anything less urgent no matter what it returns, and every failure path —
+ * no key, a timeout, a refusal, an unknown destination — returns null, which
+ * leaves the card exactly as the patterns already made it.
+ */
+async function readAccurxRoute({ openrouter, model, question, turnId, send }) {
+  send({ type: 'status', text: 'Reading the whole message' });
+  send({
+    type: 'tool-start',
+    id: 'accurx-route',
+    tool: 'read_where_it_goes',
+    label: 'Reading the whole message against the practice’s pages',
+    detail: 'where it goes',
+  });
+
+  // The practice's own pages, as the list the reading reasons from. Best effort
+  // and on this call's own clock: a Notebook that cannot be read leaves the
+  // destinations to reason from on their own rather than failing the read.
+  let notebook = '';
+  try {
+    const pages = await fullNotebookContext();
+    notebook = pages.length ? notebookCatalogue(pages) : '';
+  } catch (e) {
+    console.warn('[agent] notebook unavailable for the accurx read:', String(e).slice(0, 160));
+  }
+
+  let verdict = null;
+  try {
+    const out = await withTimeout(generateObject({
+      model: openrouter(model),
+      schema: ACCURX_ROUTE_SCHEMA,
+      temperature: 0,
+      prompt: accurxRoutePrompt({ question, notebook }),
+    }), CLASSIFY_TIMEOUT_MS);
+    recordUsage({ turnId, role: 'accurx', phase: 'accurxRoute', model, usage: out.usage });
+    verdict = out.object;
+  } catch (e) {
+    // The patterns already answered this. Say so in the log and carry on.
+    console.warn('[agent] accurx routing read failed:', String(e).slice(0, 160));
+  }
+
+  send({
+    type: 'tool-result',
+    id: 'accurx-route',
+    tool: 'read_where_it_goes',
+    // The destination it named, not whether it was used: whether it is used is
+    // decided against the patterns afterwards, and saying "raised" here would
+    // claim an outcome this function does not know.
+    summary: verdict ? destinationLabel(verdict.destination) || 'not sure' : 'not read',
+    items: [],
+  });
+
+  return verdict;
+}
+
 const NDJSON_HEADERS = {
   'Content-Type': 'application/x-ndjson; charset=utf-8',
   'Cache-Control': 'no-store, no-transform',
@@ -385,6 +457,9 @@ export async function POST(request) {
 
         if (command) {
           let commandAnswer = null;
+          // /accurx only: what reading the whole message made of where it goes.
+          // Declared out here so the turn can be logged with it.
+          let route = null;
 
           if (command === 'practiceSearch') {
             // NO MODEL AT ALL. The practice's documents are searched and the
@@ -415,6 +490,22 @@ export async function POST(request) {
             // as an ordinary message is. A short one is not, so "/triage pt has
             // a sore throat since Friday" costs what it always cost.
             const decompose = looksMultiIntent(question);
+
+            // TWO CALLS AT ONCE ON /accurx, NOT ONE AFTER THE OTHER. The values
+            // and the routing read the same message and neither needs the
+            // other's answer, so they are issued together and the turn waits
+            // once. The reading runs on its OWN role (lib/settings.js), which is
+            // why it is a separate call rather than four more fields on the
+            // schema below: the practice can put a better model on the judgement
+            // without paying for it on the extraction.
+            //
+            // Started OUTSIDE the try, and awaited on both paths, so a failure
+            // to fill in the values does not also throw away a routing read that
+            // succeeded. It never rejects — every failure inside it returns null.
+            const reading = command === 'accurxTriage'
+              ? readAccurxRoute({ openrouter, model: roles.accurx.model, question, turnId, send })
+              : Promise.resolve(null);
+
             try {
               const filled = await generateObject({
                 model: openrouter(model),
@@ -436,18 +527,23 @@ export async function POST(request) {
                 stage2 = 'triage';
               }
 
+              route = await reading;
               commandAnswer = renderCommand(command, filled.object, question, {
                 complaint: scan.complaint,
                 gist: (scan.routed && scan.routed.gist) || '',
+                route,
               });
             } catch (e) {
               // The values could not be filled in, but the command still said
               // what this is. The card is rendered from nothing rather than
               // answered as something else: a triage of the message as written,
-              // or the rules for titling a document.
+              // or the rules for titling a document. The routing read still
+              // counts — it read the message, not the values.
               console.warn('[agent] command values failed:', String(e).slice(0, 160));
-              commandAnswer = renderCommand(command, {}, question);
+              route = await reading;
+              commandAnswer = renderCommand(command, {}, question, { route });
             }
+            if (route) stage2 = stage2 ? stage2 + '+accurxRoute' : 'accurxRoute';
           }
 
           send({
@@ -478,7 +574,15 @@ export async function POST(request) {
             answer: shownText(commandSafety.alerts, commandAnswer),
             // A search runs no model, and the log should not name one.
             model: searching ? '' : model,
-            provenance: buildProvenance({ scan, card: commandAnswer, stage2 }),
+            provenance: buildProvenance({
+              scan,
+              card: commandAnswer,
+              stage2,
+              // Both halves: what the reading said, and where the card sent
+              // them. A read that was overruled by the patterns is exactly the
+              // thing worth being able to find later.
+              route: route ? { read: route.destination, card: (commandAnswer && commandAnswer.destination) || '' } : null,
+            }),
           });
           controller.close();
           await writtenCommand;

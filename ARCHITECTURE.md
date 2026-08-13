@@ -514,6 +514,14 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **reasoning** | `ai_model` | Researches the question **and writes every answer**. | `DEFAULT_AI_MODEL = google/gemini-3.5-flash-lite` |
 | **fast** | `ai_model_fast` | Short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
+| **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own pages and saying where it goes. | `OPENROUTER_ACCURX_MODEL` → **fast** |
+
+**The accurx role inherits from *fast*, not from reasoning** — the only one that
+does. Adding it changed nothing about what `/accurx` costs or which model runs
+it; the row exists so that a practice *can* put a better model on the one
+decision in the app that is a judgement about a patient rather than reading or
+extraction. It is also the only role whose output is a decision rather than
+material for one, which is why the veto below matters as much as the model does.
 
 There is no separate vision role — whichever model is answering reads pasted
 images, so the selected model must be vision-capable (the document ingester also
@@ -708,6 +716,21 @@ action" risk.
 - **The one second model pass** (`/triage` and `/accurx` only) may raise acuity
   above what the scanners found and may never lower it; if it fails or times out
   the deterministic answer stands unchanged.
+- **`/accurx` is read as well as matched, and the patterns keep the veto**
+  (`lib/templates/accurx-route.mjs`). The pattern cascade runs first and
+  unchanged; whatever it decides is the floor. A model then reads the whole
+  message against the practice's own destinations and its Notebook, and code
+  takes **the more senior of the two** — a ladder of who reads it (pharmacist
+  and physiotherapist below a GP, below the duty doctor, below an emergency),
+  not of urgency. So a reading that says "physio is fine" changes nothing and a
+  reading that says "a doctor today" moves it, which is the one direction that
+  is safe to be wrong in. The words that moved it are the patient's own,
+  verbatim, checked against the message before they are rendered; an escalation
+  whose quote does not check out still escalates but says nothing. Every failure
+  path — no model, a timeout, an unknown destination, "unsure" — leaves the card
+  exactly as the patterns made it. Both answers are written to
+  `question_log.provenance` (`route.read` beside `route.card`), so a reading
+  that was overruled can be found later.
 - **Every turn records why**, not only what: the decomposed requests, the rule
   ids with their matched spans, and the Notebook page revisions behind the card
   (`question_log.provenance`, readable at `/stats`).

@@ -176,6 +176,23 @@ clickable sources they can open in-browser.
   next to the branches that produce those cards, so the two cannot drift apart.
   Like `/triage`, it decomposes a long message and runs the second pass over
   each request.
+- **`/accurx` is read as well as matched** (`lib/templates/accurx-route.mjs`). A
+  patient wrote in after a recent miscarriage: severe daily headaches, swelling
+  and pain in **both** legs, shoulder pain, dizziness, bloods awaited. It came
+  back as a physiotherapy appointment — and nothing was broken. "Leg pain" and
+  "shoulder pain" made it musculoskeletal, "severe" made it disabling, and a
+  disabling musculoskeletal problem is an FCP job. Every rule fired correctly
+  and the answer was wrong, because the words were spread across four complaints
+  and no regex can see that the swelling is in two legs or that "recent
+  miscarriage" changes what all of it means together. That is not a tuning
+  problem; another feature word finds the next gap. So the message is now
+  **read** — on its own model role (Settings → AccurX routing), against the
+  practice's own destinations and its Notebook, not from general knowledge — and
+  **the patterns keep the veto**: code takes the more senior of the two
+  destinations and nothing else. A reading that says physio is fine changes
+  nothing. A reading that says "a doctor today" moves it, and the card shows the
+  patient's own words that moved it, checked against the message first. No
+  model, a timeout, or "unsure" leaves the card exactly as the patterns made it.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching
