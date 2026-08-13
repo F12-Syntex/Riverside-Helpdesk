@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.29.0` | 2026-08-13 | feat | `2b1e727` | feat: read an /accurx message as well as matching it |
+| `1.28.1` | 2026-08-13 | docs | `62d40ea` | docs: add the row for the identifier redaction |
 | `1.28.0` | 2026-08-13 | feat | `57ef5b4` | feat: take names and addresses out of a question before it is sent |
 | `1.27.1` | 2026-08-12 | docs | `6b89f5e` | docs: add the row for the /accurx command |
 | `1.27.0` | 2026-08-12 | feat | `8d4156d` | feat: /accurx triages the request and writes the reason line at once |
