@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ACCURX_CHECK_SCHEMA, DESTINATIONS, accurxCheckPrompt, applyRoute, destinationLabel, foldChecks,
-  pagesFor, rankOfDestination,
+  below, pagesFor, rankOfDestination,
 } from '../lib/templates/accurx-route.mjs';
 import { accurxAnswer } from '../lib/templates/accurx.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
@@ -427,22 +427,83 @@ test('a reading with no nurse in it leaves the card exactly as it was', () => {
 
 /* ------------------------------------------------------------ the prompt */
 
-test('each check is asked about its own service and is shown no others', () => {
+test('a check is asked about its own service, with the Notebook beside it', () => {
   const fcp = DESTINATIONS.find((d) => d.id === 'fcp');
   const prompt = accurxCheckPrompt({
     destination: fcp,
     question: MISCARRIAGE,
     notebook: '- Physiotherapy (FCP) — how FCP works',
   });
-  assert.match(prompt, new RegExp('does this message need ' + fcp.label.replace(/[().]/g, '\\$&'), 'i'));
+  assert.ok(prompt.includes(fcp.label));
   assert.match(prompt, /Physiotherapy \(FCP\) — how FCP works/, 'the Notebook goes in beside it');
   assert.match(prompt, /You cannot make anything less urgent/);
   assert.ok(prompt.includes(MISCARRIAGE.slice(0, 60)));
-  // The whole point of splitting it up: no weighing against the others, and
-  // nothing to defer to.
-  for (const other of DESTINATIONS.filter((d) => d.id !== 'fcp')) {
-    assert.ok(!prompt.includes(other.label), 'a check must not be shown ' + other.id);
+});
+
+/* ------------------------------------------------------------------------ *
+ * THE "pt has sore throat" REGRESSION.
+ *
+ * A sore throat came back as a GP appointment. Nothing was broken in the
+ * patterns — they said pharmacy, and still do. The fan-out asked each check
+ * "does this message need YOU?", so the pharmacy check said yes and the GP
+ * check said yes too, because a GP genuinely can see a sore throat. The fold
+ * takes the most senior yes, which turned an agreement into an escalation.
+ *
+ * The answer is READ as "nothing less senior will do", so that has to be the
+ * question — and a check cannot answer it without being shown what less senior
+ * looks like. These pin that, because it is the kind of thing that gets
+ * "simplified" back out by somebody tidying a long prompt.
+ * ------------------------------------------------------------------------ */
+
+test('below() is every service that is strictly less senior, and no peer', () => {
+  const gp = below('gp').map((d) => d.id);
+  assert.ok(gp.includes('pharmacy') && gp.includes('fcp') && gp.includes('nurse'), gp.join(','));
+  assert.ok(!gp.includes('gp'), 'not itself');
+  assert.ok(!gp.includes('dutyDoctor') && !gp.includes('emergency'), 'and nothing above it');
+  // Peers at the same rank are not below each other — neither may claim the
+  // other would have done.
+  assert.deepEqual(below('pharmacy').map((d) => d.id), []);
+  assert.ok(!below('emergency').map((d) => d.id).includes('eyeEmergency'), 'a tie is not a demotion');
+  assert.deepEqual(below('somewhere-else'), []);
+  for (const d of DESTINATIONS) {
+    for (const other of below(d.id)) assert.ok(other.rank < d.rank, other.id + ' under ' + d.id);
   }
+});
+
+test('a check is shown every service below it, and never one above it', () => {
+  for (const d of DESTINATIONS) {
+    const prompt = accurxCheckPrompt({ destination: d, question: 'pt has sore throat' });
+    for (const under of below(d.id)) {
+      assert.ok(prompt.includes(under.label), d.id + ' must be shown ' + under.id);
+      assert.ok(prompt.includes(under.covers), d.id + ' must be told what ' + under.id + ' covers');
+    }
+    // Showing what sits ABOVE is what lets a check defer — "the duty doctor
+    // will probably catch it" is how every one of them says no to the message
+    // that needed one of them to say yes.
+    const senior = DESTINATIONS.filter((o) => o.rank > d.rank);
+    for (const above of senior) {
+      assert.ok(!prompt.includes(above.label), d.id + ' must NOT be shown ' + above.id);
+    }
+  }
+});
+
+test('a check with something below it is asked which of them would do', () => {
+  const gp = DESTINATIONS.find((d) => d.id === 'gp');
+  const prompt = accurxCheckPrompt({ destination: gp, question: 'pt has sore throat' });
+  assert.match(prompt, /IF ANY ONE OF THEM COULD SAFELY DEAL WITH THIS MESSAGE, ANSWER "no"/);
+  assert.match(prompt, /A sore throat can be dealt with at a pharmacy/, 'the case that broke it is the worked example');
+  assert.match(prompt, /Community pharmacy \(Pharmacy First\)/);
+  // And the GP row itself has to say it, because a GP appointment reads like
+  // the safe answer for anything clinical and here it is the opposite.
+  assert.match(gp.refuses, /NOT the safe default/);
+});
+
+test('the bottom of the ladder is asked plainly, having nothing to pass down to', () => {
+  const pharmacy = DESTINATIONS.find((d) => d.id === 'pharmacy');
+  const prompt = accurxCheckPrompt({ destination: pharmacy, question: 'pt has sore throat' });
+  assert.match(prompt, /THE QUESTION: does this message need Community pharmacy/);
+  assert.ok(!/WHAT THE PRACTICE USES FIRST/.test(prompt), 'nothing sits below it, so there is no such list');
+  assert.match(prompt, /Nothing in the practice sits below it/);
 });
 
 test('every destination can be asked, and says what it refuses', () => {

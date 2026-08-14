@@ -727,8 +727,15 @@ action" risk.
   (`lib/templates/accurx-route.mjs`). The pattern cascade runs first and
   unchanged; whatever it decides is the floor. Every destination is then asked,
   **in parallel and one small call each**, a single closed question — "does this
-  message need you?" — against that service's own description of what it covers
-  and what it refuses, plus the Notebook pages about it. The answers are folded
+  message have to come to you, or would one of the services below you have
+  done?" — against that service's own description of what it covers and what it
+  refuses, the list of every service *less senior* than it, and the Notebook
+  pages about it. A check is never shown what sits above it: below is what it
+  needs in order to answer, above is what would let it defer ("the duty doctor
+  will catch it"). The question has to be a *floor* question because the fold
+  takes the maximum — a check asked merely whether it could deal with the
+  message says yes to everything a doctor could see, which is everything. The
+  answers are folded
   **in code**, by seniority: the most senior service that said yes wins, ties go
   to the more specific, and no second model call reconciles them. Code then
   takes **the more senior of that and the floor** — a ladder of who reads it

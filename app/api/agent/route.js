@@ -243,9 +243,11 @@ async function deepenTriage({ openrouter, model, question, scan, turnId, send })
  * destination out of a list of them, and it was the slowest thing on the card:
  * the model had to hold every service the practice has in mind and weigh them
  * against each other before it could emit a token. Each destination is now
- * asked its own closed question — "does this need YOU?" — against its own
- * description and its own Notebook pages, and they are issued together, so the
- * turn waits for the slowest small answer rather than for one large one. What
+ * asked its own closed question — "does this have to come to you, or would one
+ * of the services below you have done?" — against its own description, the list
+ * of what sits below it and its own Notebook pages, and they are issued
+ * together, so the turn waits for the slowest small answer rather than for one
+ * large one. What
  * comes back is folded by seniority in code (foldChecks): NO second call
  * reconciles them, because a model reconciling them is the comparison this was
  * split up to avoid.

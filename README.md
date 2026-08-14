@@ -219,8 +219,16 @@ clickable sources they can open in-browser.
     and weigh them against each other before it could emit a token, and it was
     the slowest thing on the card. It is now one small call per destination, all
     in flight together with the call that writes the reason line, each asked a
-    single closed question — "does this need *you*?" — against that one
-    service's own description of what it covers and what it refuses. The turn
+    single closed question — "does this have to come to *you*, or would one of
+    the services below you have done?" — against that one service's own
+    description of what it covers and what it refuses, and the list of what sits
+    below it. That wording is load-bearing. It was "does this need you?", and
+    that broke `pt has sore throat`: the GP check said yes, because a GP
+    genuinely can see a sore throat, and the most senior yes wins. A yes is read
+    as *nothing less senior will do*, so that has to be what is asked — and a
+    check can only answer it if it is shown what less senior looks like. Each
+    one sees what is **below** it and never what is above: below is what it
+    needs to decide, above is what would let it defer. The turn
     waits for the slowest small answer rather than for one large one, and the
     answers are folded **by seniority in code**: most senior yes wins, ties go
     to the more specific, no second call reconciles them. A check that times out
