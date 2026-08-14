@@ -56,6 +56,15 @@ test('a clinician outranks a pharmacist and a physiotherapist', () => {
   assert.ok(rankOfDestination('fcp') > rankOfDestination('pharmacy'));
 });
 
+test('a nurse clinic can never take a message off a doctor', () => {
+  for (const clinic of ['nurse', 'diabeticNurse']) {
+    assert.ok(rankOfDestination('gp') > rankOfDestination(clinic), clinic);
+    for (const floor of ['gp', 'dutyDoctor', 'emergency']) {
+      assert.equal(applyRoute(floor, { destination: clinic, evidence: 'Pain killers three times a day' }, MISCARRIAGE).destination, floor);
+    }
+  }
+});
+
 /* -------------------------------------------------------------- the veto */
 
 test('the reading may raise where a message goes', () => {
@@ -275,6 +284,83 @@ test('checks that did not come back cost their own vote and nothing else', () =>
 test('a yes for a service that is not on the ladder is ignored', () => {
   assert.equal(foldChecks([yes('district-nurse'), yes('pharmacy')]).destination, 'pharmacy');
   assert.equal(foldChecks([yes('district-nurse')]).destination, 'unsure');
+});
+
+/* --------------------------------------------------- the nurse signpost */
+
+const SMEAR = 'my smear is due and i also have a sore throat since friday';
+
+test('a nurse clinic that lost still gets named on the card', () => {
+  const card = accurxAnswer({
+    condition: 'sore throat',
+    text: SMEAR,
+    reason: 'sore throat 3/7, smear due',
+    route: {
+      destination: 'pharmacy',
+      evidence: '',
+      page: '',
+      saidYes: [{ id: 'nurse', evidence: 'my smear is due', page: '' }, { id: 'pharmacy', evidence: '', page: '' }],
+    },
+  });
+  // Where it goes is untouched — the patterns said pharmacy and it still does.
+  assert.equal(card.destination, 'pharmacy');
+  assert.match(words(card), /practice nurse/i);
+  assert.match(words(card), /my smear is due/, 'and it shows the words that say so');
+  assert.match(words(card), /nothing here has changed it/i);
+});
+
+test('the note is never shown beside an answer that means today', () => {
+  const nurse = [{ id: 'nurse', evidence: 'Pain killers three times a day', page: '' }];
+  for (const destination of ['dutyDoctor', 'emergency']) {
+    const card = accurxAnswer({
+      condition: 'headache',
+      text: MISCARRIAGE,
+      reason: 'severe persistent headaches 3/7',
+      route: { destination, evidence: 'Swelling in both legs', saidYes: nurse },
+    });
+    assert.ok(!/practice nurse/i.test(words(card)), destination + ' must not offer a nurse slot');
+  }
+});
+
+test('a nurse clinic the card IS sending them to is not also suggested', () => {
+  const card = accurxAnswer({
+    condition: 'sore throat',
+    text: SMEAR,
+    reason: 'sore throat 3/7, smear due',
+    route: {
+      destination: 'nurse',
+      evidence: 'my smear is due',
+      saidYes: [{ id: 'nurse', evidence: 'my smear is due', page: '' }],
+    },
+  });
+  assert.equal(card.destination, 'nurse', 'a pharmacy floor is below a nurse clinic, so this is a raise');
+  assert.match(sentTo(card), /practice nurse/i);
+  assert.ok(!/does what is being asked for/i.test(words(card)), 'it must not signpost where it is already sending them');
+});
+
+test('a nurse quote that is not in the message is dropped, and the note stands', () => {
+  const card = accurxAnswer({
+    condition: 'sore throat',
+    text: SMEAR,
+    reason: 'sore throat 3/7',
+    route: {
+      destination: 'pharmacy',
+      saidYes: [{ id: 'nurse', evidence: 'the patient asked for a cervical screening appointment', page: '' }],
+    },
+  });
+  assert.match(words(card), /practice nurse/i);
+  assert.ok(!/cervical screening appointment/.test(words(card)), 'it does not get to quote words nobody wrote');
+});
+
+test('a reading with no nurse in it leaves the card exactly as it was', () => {
+  const withOut = accurxAnswer({ condition: 'sore throat', text: SMEAR, reason: 'sore throat 3/7' });
+  const withEmpty = accurxAnswer({
+    condition: 'sore throat',
+    text: SMEAR,
+    reason: 'sore throat 3/7',
+    route: { destination: 'unsure', evidence: '', page: '', saidYes: [] },
+  });
+  assert.deepEqual(withEmpty, withOut);
 });
 
 /* ------------------------------------------------------------ the prompt */
