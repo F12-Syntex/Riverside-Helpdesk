@@ -484,6 +484,7 @@ somewhere else (email, Accurx).
 
 | Flow | Endpoint | What leaves the practice | Stored |
 | --- | --- | --- | --- |
+| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
 | Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the "Triaging notebook" section, to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
 | Document coding | `POST /api/docfile` (and the `docfile` branch of `/api/ask`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
@@ -515,13 +516,19 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **fast** | `ai_model_fast` | Short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own pages and saying where it goes — one small call per destination, all issued together. | `OPENROUTER_ACCURX_MODEL` → **fast** |
+| **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
 
-**The accurx role inherits from *fast*, not from reasoning** — the only one that
-does. Adding it changed nothing about what `/accurx` costs or which model runs
-it; the row exists so that a practice *can* put a better model on the one
-decision in the app that is a judgement about a patient rather than reading or
-extraction. It is also the only role whose output is a decision rather than
-material for one, which is why the veto below matters as much as the model does.
+**The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
+the only two that do, and for opposite reasons. `accurx` falls back to fast so
+that adding it changed nothing about what `/accurx` costs; the row exists so a
+practice *can* put a better model on the one decision in the app that is a
+judgement about a patient rather than reading or extraction. `superSpeed` does
+it because the reasoning model is the **wrong** default for it: that role holds
+the send while a message is screened, so an install that has chosen a large,
+careful model above would otherwise have put that model in front of every
+message anybody types. It is the only role a reader waits on with nothing on the
+screen yet, and it should be set to the quickest thing on the list rather than
+the cleverest.
 
 There is no separate vision role — whichever model is answering reads pasted
 images, so the selected model must be vision-capable (the document ingester also

@@ -87,6 +87,25 @@ clickable sources they can open in-browser.
     name out of the world. `Dr`, `Nurse` and `Matron` introduce a colleague, so
     those names stay, as do names in the practice directory — "which days is Dr
     Ahmed in" and "the number for Alison Wade" are the job.
+  - **What cannot be redacted is refused instead** (`lib/safety/patient-data.mjs`,
+    `POST /api/screen`). The local check catches the shapes it knows, and it
+    knows them because they can be recognised *and removed*. An NHS number is
+    ten digits and so is an order number; a date of birth is a date; "reg no
+    4471982" is a hospital number at one trust and a stock code at another. No
+    word list separates those, and a rule loose enough to try eats every
+    ordinary question with a number in it. So those go to a model on the
+    **Super speed** role — the one role a reader waits on with nothing on
+    screen, which is why it is a role of its own and should be set to the
+    quickest model rather than the cleverest — and a message it flags **is not
+    sent at all**: no request, no transcript line, nothing saved, and a popup
+    naming the *kind* to take out. The kind, never the detail: everything on
+    that box is assembled in code from a fixed list, so the thing being refused
+    can never end up displayed in the refusal. It screens the text **after** the
+    local redaction, so it sees exactly what was already about to be sent and
+    not a character more. And it **fails open** — no key, a timeout, an
+    unreadable answer, and the message goes as it always did. A guard that fails
+    closed is a guard that shuts the desk down when OpenRouter has a bad
+    minute, with a patient standing at it.
   - **Assertions are span-local and fail toward silence.** A card may only claim
     something about the complaint it is about, and only from words inside that
     complaint's own text. The knee card claimed "over-the-counter treatment has
