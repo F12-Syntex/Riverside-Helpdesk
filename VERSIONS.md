@@ -18,6 +18,11 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.30.1` | 2026-08-14 | docs | `f4fc992` | docs: write down how the /accurx read is asked now |
+| `1.30.0` | 2026-08-14 | feat | `8c78b26` | feat: read an /accurx request for the nurse clinics too |
+| `1.29.3` | 2026-08-14 | perf | `3369b80` | perf: ask every /accurx destination at once instead of one reader |
+| `1.29.2` | 2026-08-14 | fix | `5a174cc` | fix: render an /accurx raise as the destination it names |
+| `1.29.1` | 2026-08-13 | docs | `768403f` | docs: add the row for the /accurx reading pass |
 | `1.29.0` | 2026-08-13 | feat | `2b1e727` | feat: read an /accurx message as well as matching it |
 | `1.28.1` | 2026-08-13 | docs | `62d40ea` | docs: add the row for the identifier redaction |
 | `1.28.0` | 2026-08-13 | feat | `57ef5b4` | feat: take names and addresses out of a question before it is sent |
