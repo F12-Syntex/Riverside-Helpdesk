@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.31.1` | 2026-08-14 | docs | `a648f7b` | docs: write down the patient-data screen, and close its DPIA action |
+| `1.31.0` | 2026-08-14 | feat | `b38e394` | feat: refuse a message that carries patient details |
+| `1.30.2` | 2026-08-14 | docs | `2d2250c` | docs: add the rows for the parallel /accurx read |
 | `1.30.1` | 2026-08-14 | docs | `f4fc992` | docs: write down how the /accurx read is asked now |
 | `1.30.0` | 2026-08-14 | feat | `8c78b26` | feat: read an /accurx request for the nurse clinics too |
 | `1.29.3` | 2026-08-14 | perf | `3369b80` | perf: ask every /accurx destination at once instead of one reader |
