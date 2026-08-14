@@ -733,7 +733,10 @@ action" risk.
   to the more specific, and no second model call reconciles them. Code then
   takes **the more senior of that and the floor** — a ladder of who reads it
   (pharmacist, optician, nurse clinics and physiotherapist below a GP, below the
-  duty doctor, below an emergency), not of urgency. So a reading that says
+  duty doctor, below an emergency), not of urgency. At the top the eye A&E ties
+  with 999 and is listed first, so a message that is both goes to the card that
+  **names Moorfields** rather than to the one that says 999: an eye emergency
+  sent to a general A&E is an eye emergency answered twice as slowly. So a reading that says
   "physio is fine" changes nothing and a reading that says "a doctor today"
   moves it, which is the one direction that is safe to be wrong in. The words
   that moved it are the patient's own, verbatim, checked against the message

@@ -225,6 +225,16 @@ clickable sources they can open in-browser.
     answers are folded **by seniority in code**: most senior yes wins, ties go
     to the more specific, no second call reconciles them. A check that times out
     costs that service's vote and nothing else.
+  - **An eye emergency is its own destination, and it is a walk-in.** The other
+    two emergency cards mean somebody in the building stands up — fetch the duty
+    doctor, call 999. This one means the opposite: nobody here does anything and
+    the patient goes to Moorfields, so the hospital is *named*, with its address
+    and telephone on the card and the fact that the eye A&E is open 24 hours and
+    takes walk-ins — no referral, no appointment, nothing for reception to
+    arrange first. It ties with 999 on the ladder and is listed above it, so a
+    message that is both goes to the card that names the hospital. The minor eye
+    service sits at the other end of the same list for everything Rose Opticians
+    can actually see; the boundary between the two is on both checks.
   - **The practice nurse and the diabetic nurse are on the ladder too**, and
     because they rank below a doctor their answer is a **note** on the card
     rather than its destination: where the message goes is untouched, the note

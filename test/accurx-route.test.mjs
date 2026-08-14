@@ -286,6 +286,68 @@ test('a yes for a service that is not on the ladder is ignored', () => {
   assert.equal(foldChecks([yes('district-nurse')]).destination, 'unsure');
 });
 
+/* ------------------------------------------------------- the eye A&E */
+
+const CHEMICAL = 'i got bleach in my eye at work this morning and it is really painful';
+
+test('an eye emergency is its own destination, not the general one', () => {
+  const card = triagePatientAnswer({ condition: 'chemical eye injury', text: CHEMICAL });
+  assert.equal(card.destination, 'eyeEmergency');
+  assert.match(sentTo(card), /Moorfields/);
+  // The three things reception has to say next: where, that it is open, and
+  // that nobody has to arrange anything first.
+  assert.match(words(card), /162 City Road/);
+  assert.match(words(card), /24 hours/);
+  assert.match(words(card), /walk in/i);
+});
+
+test('the eye A&E ties with 999 and takes the tie', () => {
+  // Everything that reaches an eye A&E is an emergency, so both checks say yes
+  // to it. The tie must go to the one that names the hospital — a general A&E
+  // is an eye emergency answered twice as slowly.
+  assert.equal(rankOfDestination('eyeEmergency'), rankOfDestination('emergency'));
+  assert.equal(foldChecks([yes('emergency'), yes('eyeEmergency', 'bleach in my eye')]).destination, 'eyeEmergency');
+  // And neither can shove the other sideways once the patterns have chosen.
+  assert.equal(applyRoute('emergency', { destination: 'eyeEmergency' }, CHEMICAL).raised, false);
+  assert.equal(applyRoute('eyeEmergency', { destination: 'emergency' }, CHEMICAL).raised, false);
+});
+
+// On its words alone this is a minor eye service referral: "red", "sore" and
+// "watering" are all on the MECS list, and none of the words the cascade reads
+// as an eye emergency ("chemical", "bleach", "acid", "burn") is in it. Reading
+// it is what notices that decanting drain cleaner is a chemical injury.
+const DRAIN_CLEANER = 'my eye is red and sore and watering after i was decanting drain cleaner at work';
+
+const eyeRaise = () => accurxAnswer({
+  condition: 'sore eye',
+  text: DRAIN_CLEANER,
+  reason: 'red sore watering eye after chemical exposure at work',
+  route: { destination: 'eyeEmergency', evidence: 'decanting drain cleaner at work' },
+});
+
+test('reading a message to the eye A&E renders Moorfields, not the duty doctor', () => {
+  assert.equal(triagePatientAnswer({ condition: 'sore eye', text: DRAIN_CLEANER }).destination, 'minorEyeService');
+
+  const card = eyeRaise();
+  assert.equal(card.destination, 'eyeEmergency');
+  assert.match(sentTo(card), /Moorfields/);
+  assert.ok(!/duty doctor now/i.test(sentTo(card)), 'it must not answer an eye emergency with 999');
+  assert.match(words(card), /walk in/i);
+  assert.match(words(card), /162 City Road/);
+  assert.match(words(card), /decanting drain cleaner at work/, 'and it shows what moved it');
+});
+
+test('nobody books an appointment off the eye A&E card either', () => {
+  const card = eyeRaise();
+  assert.match(words(card), /handover/i);
+  const copied = flat(card.blocks).filter((b) => b.type === 'fields')
+    .flatMap((b) => b.items).filter((i) => i.copy).map((i) => i.value);
+  // The one Copy on the card is where the patient is going — which IS the thing
+  // that leaves it. The reason line does not get one: there is no appointment.
+  assert.deepEqual(copied, [destinationLabel('eyeEmergency')]);
+  assert.ok(!copied.some((v) => /eye pain and watering/.test(v)));
+});
+
 /* --------------------------------------------------- the nurse signpost */
 
 const SMEAR = 'my smear is due and i also have a sore throat since friday';
