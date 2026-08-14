@@ -151,6 +151,41 @@ test('a raise to an emergency takes the appointment line off the card', () => {
   assert.match(words(card), /handover/i);
 });
 
+test('a raise that names the physio renders as the physio, not as a doctor', () => {
+  // The floor is a pharmacy referral, so anything above rank 1 is a raise —
+  // including the destinations that are not a doctor. The card used to answer
+  // every non-emergency raise with "A GP appointment here", which is not where
+  // the reading sent it and not what the reader should book.
+  const text = 'my throat has been sore since Friday';
+  assert.equal(triagePatientAnswer({ condition: 'sore throat', text }).destination, 'pharmacy');
+
+  const card = accurxAnswer({
+    condition: 'sore throat',
+    text,
+    reason: 'sore throat 3/7',
+    route: { destination: 'fcp', evidence: 'my throat has been sore since Friday' },
+  });
+  assert.equal(card.destination, 'fcp');
+  assert.match(sentTo(card), /Physiotherapist/);
+  assert.ok(!/GP appointment here/i.test(words(card)), 'it must not tell them to book a doctor');
+  // And it still says what the wording alone would have done, and what moved it.
+  assert.match(words(card), /Community pharmacy/);
+  assert.match(words(card), /my throat has been sore since Friday/);
+});
+
+test('a raise to a doctor still renders the doctor card', () => {
+  for (const [said, expected] of [['gp', /GP appointment here/], ['dutyDoctor', /duty doctor/i]]) {
+    const card = accurxAnswer({
+      condition: 'sore throat',
+      text: 'my throat has been sore since Friday',
+      reason: 'sore throat 3/7',
+      route: { destination: said, evidence: 'my throat has been sore since Friday' },
+    });
+    assert.equal(card.destination, said);
+    assert.match(sentTo(card), expected);
+  }
+});
+
 test('with no reading at all the card is exactly what it always was', () => {
   const before = accurxAnswer({ condition: 'back pain', text: 'my back has hurt for a week, ibuprofen has not touched it', reason: 'back pain 1/7, ibuprofen ineffective' });
   const after = accurxAnswer({ condition: 'back pain', text: 'my back has hurt for a week, ibuprofen has not touched it', reason: 'back pain 1/7, ibuprofen ineffective', route: null });
