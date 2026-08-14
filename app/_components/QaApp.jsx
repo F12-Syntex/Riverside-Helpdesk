@@ -6,6 +6,7 @@ import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
 import { matchCommands, parseCommand } from '../../lib/commands.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
+import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
 import {
   isTestQuery, isGeneralTestQuery,
@@ -22,6 +23,7 @@ import GradientBackground from './GradientBackground';
 import CommandMenu from './CommandMenu';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
+import PatientDataModal from './PatientDataModal';
 import { plainText } from './chat/Rich';
 import { mdPlain } from './chat/Md';
 import { notify } from './notify';
@@ -175,6 +177,12 @@ class RiversidePracticeQA extends React.Component {
       // text" asks it rather than re-picking the command.
       cmdSel: -1,
       copiedNumber: '',
+      // The Super speed screen: `screening` while a message is being checked
+      // (the send is held, so the dock says so rather than looking dead), and
+      // `blocked` holding what was found once a message has been refused. Both
+      // are cleared the moment the reader touches the field again.
+      screening: false,
+      blocked: null,
       customGuides: [],
       showAdd: false,
       draft: this.blankDraft(),
@@ -590,7 +598,58 @@ class RiversidePracticeQA extends React.Component {
     return lines.join('\n');
   }
 
-  ask(text) {
+  /**
+   * THE SCREEN THAT HOLDS THE SEND. See lib/safety/patient-data.mjs.
+   *
+   * The redactor above this takes out what it can recognise AND remove — a name
+   * behind a title, a postcode, a street address. What it cannot do anything
+   * about is what it cannot tell apart from ordinary text: an NHS number is ten
+   * digits and so is an order number, a date of birth is a date. Those are put
+   * to the Super speed model, and a message that has one does not go at all.
+   *
+   * The text handed over is the REDACTED text — what was about to be posted to
+   * /api/agent anyway — so screening a message costs nothing in exposure.
+   *
+   * Never throws and never blocks on its own account. A network that is away, a
+   * screen that is slow, an answer in a shape nobody expected: all of them come
+   * back "not blocked", and the message goes exactly as it did before this
+   * existed. A guard that fails closed is a guard that shuts the desk down.
+   */
+  async screen(text) {
+    const nothing = { blocked: false, kinds: [], message: '' };
+    if (!String(text || '').trim()) return nothing;
+    try {
+      const res = await fetch('/api/screen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) return nothing;
+      const data = await res.json();
+      if (!data || data.blocked !== true) return nothing;
+      // EVERY WORD ON THE BOX IS BUILT HERE, from the fixed list in
+      // lib/safety/patient-data.mjs, out of ids the server already validated
+      // against that same list. Nothing that arrived over the wire is rendered
+      // — which is what makes it impossible for the thing being refused to end
+      // up displayed in the refusal.
+      const ids = (Array.isArray(data.kinds) ? data.kinds : [])
+        .map((id) => String(id || ''))
+        .filter((id) => kindLabel(id));
+      return {
+        blocked: true,
+        kinds: ids.map((id) => ({ id, label: kindLabel(id) })),
+        message: patientDataMessage(ids),
+      };
+    } catch (e) {
+      return nothing;
+    }
+  }
+
+  async ask(text) {
+    // A second Enter while the first message is still being screened would send
+    // the same words twice — once past the screen and once around it.
+    if (this.state.screening || this.state.blocked) return;
+
     // NAMES AND ADDRESSES DO NOT LEAVE THIS MACHINE. The check is local and
     // deterministic (lib/safety/identifiers.mjs) and it runs here, before the
     // request is built, before the message is written to the transcript and
@@ -627,6 +686,30 @@ class RiversidePracticeQA extends React.Component {
       .filter((d) => d.status === 'ready' && d.text)
       .map((d) => ({ name: d.name, text: d.text, truncated: d.truncated }));
     if (!t && !images.length && !attachments.length) return;
+
+    // THE SEND IS HELD HERE, and this is the only place in the app where a
+    // reader waits on a model with nothing on the screen yet. It runs after the
+    // redaction (so it screens what was going to be sent, not what was typed),
+    // after the "command still being written" return above (there is nothing to
+    // screen in "/triage " on its own), and before a single word reaches the
+    // transcript — a message that is refused was never asked, so it must not
+    // appear to have been.
+    //
+    // Only the TYPED message is screened. A dropped document is the reader's
+    // own material and is very often a letter about a patient by definition;
+    // screening it would refuse /document the one thing /document is for.
+    if (t) {
+      this.setState({ screening: true });
+      const verdict = await this.screen(t);
+      this.setState({ screening: false });
+      if (verdict.blocked) {
+        // Nothing is sent, nothing is saved, and `input` is deliberately left
+        // holding what they typed: the next thing they do is edit it.
+        this.setState({ blocked: verdict });
+        return;
+      }
+    }
+
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
@@ -1645,6 +1728,16 @@ class RiversidePracticeQA extends React.Component {
       draft: this.state.draft,
       draftSteps,
       draftError: this.state.draftError,
+      // The message that did not go, and the wait while one is being checked.
+      // `blocked` carries only kind ids turned into labels — never the words
+      // that caused it. See PatientDataModal.
+      blocked: this.state.blocked,
+      isScreening: this.state.screening,
+      onCloseBlocked: () => self.setState({ blocked: null }, () => {
+        // Straight back to the field with the message still in it: the whole
+        // point of the box is that the next thing to happen is an edit.
+        if (self.inputRef.current) self.inputRef.current.focus();
+      }),
       viewerOpen: !!this.state.viewer,
       viewer: this.buildViewerVM(),
       onCloseViewer: () => self.closeViewer(),
@@ -1791,10 +1884,18 @@ class RiversidePracticeQA extends React.Component {
                   one of the two can be open, because "/" is not a name. */}
               <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
 
+              {/* The one moment the field is busy on its own account: the
+                  message has been typed, Enter has been pressed, and it is
+                  being checked for patient details before it goes anywhere
+                  (lib/safety/patient-data.mjs). It is over in well under a
+                  second, and a field that looked dead for even that long would
+                  have somebody pressing Enter again. */}
               <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
-                <Svg w={20} sw={2.2}>{Icons.search}</Svg>
+                {v.isScreening
+                  ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+                  : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
               </span>
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder="Ask a question, type a name for its number" aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : 'Ask a question, type a name for its number'} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>
@@ -1821,6 +1922,10 @@ class RiversidePracticeQA extends React.Component {
         {v.viewerOpen && <DocumentViewer v={v} />}
 
         {v.showAdd && <AddGuideModal v={v} />}
+        {/* Above everything, including the guide modal: a message that was
+            refused is the only thing on this page that has to be dealt with
+            before anything else can happen. */}
+        <PatientDataModal v={v} />
       </div>
     );
   }

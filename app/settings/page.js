@@ -23,7 +23,7 @@ const LIST_LIMIT = 40;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'accurx'];
+const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed'];
 
 // A model's advertised rate. Shown per row because it is the number people
 // compare models on — but it is not what a question costs, which is why the
@@ -194,6 +194,7 @@ export default function SettingsPage() {
     fast: fastModel,
     web: roleValue('web') || model,
     accurx: roleValue('accurx') || fastModel,
+    superSpeed: roleValue('superSpeed') || fastModel,
   };
   const priceOf = (id) => models.find((m) => m.id === id) || models.find((m) => m.id === String(id).split(':')[0]) || null;
   const prices = React.useMemo(() => Object.fromEntries(models.map((m) => [m.id, m])), [models]);
@@ -278,6 +279,20 @@ export default function SettingsPage() {
             <ModelField
               label="AccurX routing model" value={roleValue('accurx')} models={models} index={index}
               placeholder={fastModel || 'inherit'} onChange={(v) => setRole('accurx', v)}
+            />
+          </Row>
+          {/* The only row where the answer is waited for with nothing on the
+              screen yet: this one holds the send while a message is checked for
+              patient details. Set it to the quickest thing on the list — it
+              answers one closed question with one word, and every millisecond
+              is a millisecond somebody spends looking at a message they have
+              already finished typing. It inherits from Fast, not from the model
+              above, so a careful slow model never ends up in front of the
+              keyboard by accident. */}
+          <Row name="Super speed" job="Checks a message for patient details before it is sent" rate={rateLine(priceOf(resolved.superSpeed))} used={usedLine('superSpeed')}>
+            <ModelField
+              label="Super speed model" value={roleValue('superSpeed')} models={models} index={index}
+              placeholder={fastModel || 'inherit'} onChange={(v) => setRole('superSpeed', v)}
             />
           </Row>
 
