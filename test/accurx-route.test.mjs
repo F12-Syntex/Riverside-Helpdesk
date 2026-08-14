@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ACCURX_ROUTE_SCHEMA, DESTINATIONS, accurxRoutePrompt, applyRoute, destinationLabel, rankOfDestination,
+  ACCURX_CHECK_SCHEMA, DESTINATIONS, accurxCheckPrompt, applyRoute, destinationLabel, foldChecks,
+  pagesFor, rankOfDestination,
 } from '../lib/templates/accurx-route.mjs';
 import { accurxAnswer } from '../lib/templates/accurx.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
@@ -223,21 +224,110 @@ test('the quote is checked against the WHOLE message, not the routed complaint',
   assert.match(words(card), /After Recent miscarriage/);
 });
 
-/* ------------------------------------------------------------ the prompt */
+/* ------------------------------------------------------- folding the checks */
 
-test('the prompt offers the practice’s destinations and nothing else', () => {
-  const prompt = accurxRoutePrompt({ question: MISCARRIAGE, notebook: '- Physiotherapy (FCP) — how FCP works' });
-  for (const d of DESTINATIONS) assert.match(prompt, new RegExp('"' + d.id + '"'));
-  assert.match(prompt, /Physiotherapy \(FCP\) — how FCP works/, 'the Notebook goes in beside them');
-  assert.match(prompt, /You cannot make anything less urgent/);
-  assert.ok(prompt.includes(MISCARRIAGE.slice(0, 60)));
+const yes = (id, evidence = '', page = '') => ({ id, belongs: 'yes', evidence, page });
+const no = (id) => ({ id, belongs: 'no', evidence: '', page: '' });
+
+test('the most senior service that said yes is the one that wins', () => {
+  const folded = foldChecks([
+    yes('fcp', 'pain specifically in the left shoulder'),
+    yes('dutyDoctor', 'Swelling in both legs'),
+    yes('gp', 'Awaiting full blood test from the GP'),
+    no('pharmacy'),
+  ]);
+  assert.equal(folded.destination, 'dutyDoctor');
+  assert.equal(folded.evidence, 'Swelling in both legs', 'and it is that service’s own quote, not another’s');
 });
 
-test('the schema will not accept a destination the practice does not have', () => {
-  assert.ok(ACCURX_ROUTE_SCHEMA.safeParse({ destination: 'dutyDoctor' }).success);
-  assert.ok(ACCURX_ROUTE_SCHEMA.safeParse({ destination: 'unsure' }).success);
-  assert.ok(!ACCURX_ROUTE_SCHEMA.safeParse({ destination: 'A&E' }).success);
-  assert.ok(!ACCURX_ROUTE_SCHEMA.safeParse({}).success, 'a destination is not optional');
+test('a tie at the same rank goes to the more specific service, in ladder order', () => {
+  const shared = [...new Set(DESTINATIONS.map((d) => d.rank))]
+    .map((rank) => DESTINATIONS.filter((d) => d.rank === rank))
+    .filter((group) => group.length > 1);
+  assert.ok(shared.length, 'this test is only meaningful while several services share a rank');
+  for (const group of shared) {
+    const folded = foldChecks(group.map((d) => yes(d.id)));
+    assert.equal(folded.destination, group[0].id, 'the first at that rank, which is the most specific');
+  }
+});
+
+test('nothing said yes is a real answer, and it changes nothing', () => {
+  const folded = foldChecks(DESTINATIONS.map((d) => no(d.id)));
+  assert.equal(folded.destination, 'unsure');
+  assert.equal(applyRoute('fcp', folded, MISCARRIAGE).raised, false);
+});
+
+test('"unsure" from a check counts as a no', () => {
+  const folded = foldChecks([{ id: 'dutyDoctor', belongs: 'unsure', evidence: 'Swelling in both legs' }, no('gp')]);
+  assert.equal(folded.destination, 'unsure');
+});
+
+test('checks that did not come back cost their own vote and nothing else', () => {
+  // One timeout, one refusal, one good answer. The good one still stands.
+  const folded = foldChecks([null, yes('gp', 'symptoms are ongoing'), null]);
+  assert.equal(folded.destination, 'gp');
+  // Every one of them failing is the same as never having asked.
+  assert.equal(foldChecks([null, null, null]), null);
+  assert.equal(foldChecks([]), null);
+  assert.equal(applyRoute('fcp', foldChecks([]), MISCARRIAGE).raised, false);
+});
+
+test('a yes for a service that is not on the ladder is ignored', () => {
+  assert.equal(foldChecks([yes('district-nurse'), yes('pharmacy')]).destination, 'pharmacy');
+  assert.equal(foldChecks([yes('district-nurse')]).destination, 'unsure');
+});
+
+/* ------------------------------------------------------------ the prompt */
+
+test('each check is asked about its own service and is shown no others', () => {
+  const fcp = DESTINATIONS.find((d) => d.id === 'fcp');
+  const prompt = accurxCheckPrompt({
+    destination: fcp,
+    question: MISCARRIAGE,
+    notebook: '- Physiotherapy (FCP) — how FCP works',
+  });
+  assert.match(prompt, new RegExp('does this message need ' + fcp.label.replace(/[().]/g, '\\$&'), 'i'));
+  assert.match(prompt, /Physiotherapy \(FCP\) — how FCP works/, 'the Notebook goes in beside it');
+  assert.match(prompt, /You cannot make anything less urgent/);
+  assert.ok(prompt.includes(MISCARRIAGE.slice(0, 60)));
+  // The whole point of splitting it up: no weighing against the others, and
+  // nothing to defer to.
+  for (const other of DESTINATIONS.filter((d) => d.id !== 'fcp')) {
+    assert.ok(!prompt.includes(other.label), 'a check must not be shown ' + other.id);
+  }
+});
+
+test('every destination can be asked, and says what it refuses', () => {
+  for (const d of DESTINATIONS) {
+    const prompt = accurxCheckPrompt({ destination: d, question: 'my knee hurts' });
+    assert.ok(prompt.includes(d.covers), d.id + ' must say what it covers');
+    assert.ok(prompt.includes(d.refuses), d.id + ' must say what it will not take');
+  }
+});
+
+test('a check gets the Notebook pages about its own service and no others', () => {
+  const pages = [
+    { docTitle: 'Physiotherapy (FCP)', text: 'How the first contact physiotherapist works.' },
+    { docTitle: 'Pharmacy First and CPSAS', text: 'What the community pharmacy can treat.' },
+    { docTitle: 'Bin collections', text: 'Tuesdays.' },
+  ];
+  assert.deepEqual(pagesFor('fcp', pages).map((p) => p.docTitle), ['Physiotherapy (FCP)']);
+  assert.deepEqual(pagesFor('pharmacy', pages).map((p) => p.docTitle), ['Pharmacy First and CPSAS']);
+  // A page is matched on its first line too, not only its title.
+  assert.deepEqual(
+    pagesFor('fcp', [{ docTitle: 'Knees', text: 'Musculoskeletal problems in adults.' }]).map((p) => p.docTitle),
+    ['Knees'],
+  );
+  assert.deepEqual(pagesFor('somewhere-else', pages), [], 'an unknown service gets nothing');
+  assert.deepEqual(pagesFor('fcp', []), []);
+});
+
+test('the schema will not accept an answer that is not yes, no or unsure', () => {
+  assert.ok(ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'yes' }).success);
+  assert.ok(ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'unsure' }).success);
+  assert.ok(!ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'maybe' }).success);
+  assert.ok(!ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'dutyDoctor' }).success, 'a check names no destination — it was handed one');
+  assert.ok(!ACCURX_CHECK_SCHEMA.safeParse({}).success, 'an answer is not optional');
 });
 
 /* -------------------------------------------------------------- the role */
