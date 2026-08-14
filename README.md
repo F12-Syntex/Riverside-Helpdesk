@@ -106,10 +106,12 @@ clickable sources they can open in-browser.
     before.
   - **`/triage` and `/accurx` are the one exception to one-call.** They may
     issue a small structured call per decomposed request, in parallel, returning
-    an enum and a label — no prose. **Code holds the veto**: that classification may only
-    *raise* acuity above what the scanners found, never lower it, and a pass
-    that fails or times out leaves the deterministic answer standing. The regex
-    is the guarantee; the model is a recall booster.
+    an enum and a label — no prose; `/accurx` additionally asks one per
+    destination, also in parallel, returning a yes or a no. **Code holds the
+    veto** on both: a classification may only *raise* acuity above what the
+    scanners found, never lower it, a destination may only move a card to a more
+    senior one, and a pass that fails or times out leaves the deterministic
+    answer standing. The regex is the guarantee; the model is a recall booster.
   - **The known limit, stated plainly:** patterns miss paraphrase. "My voice
     sounds rough" will not match "hoarse". Build an eval set from the real
     `question_log` rows at `/stats` and measure recall before trusting any of
@@ -193,6 +195,23 @@ clickable sources they can open in-browser.
   nothing. A reading that says "a doctor today" moves it, and the card shows the
   patient's own words that moved it, checked against the message first. No
   model, a timeout, or "unsure" leaves the card exactly as the patterns made it.
+  - **Every destination is asked at once, not one after another.** The reading
+    was a single call that had to hold every service the practice has in mind
+    and weigh them against each other before it could emit a token, and it was
+    the slowest thing on the card. It is now one small call per destination, all
+    in flight together with the call that writes the reason line, each asked a
+    single closed question — "does this need *you*?" — against that one
+    service's own description of what it covers and what it refuses. The turn
+    waits for the slowest small answer rather than for one large one, and the
+    answers are folded **by seniority in code**: most senior yes wins, ties go
+    to the more specific, no second call reconciles them. A check that times out
+    costs that service's vote and nothing else.
+  - **The practice nurse and the diabetic nurse are on the ladder too**, and
+    because they rank below a doctor their answer is a **note** on the card
+    rather than its destination: where the message goes is untouched, the note
+    says the nurse does what is being asked for and quotes the patient saying
+    so, and whether to book a nurse slot stays reception's call. It is never
+    shown on an emergency card or beside the duty doctor.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching

@@ -514,7 +514,7 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **reasoning** | `ai_model` | Researches the question **and writes every answer**. | `DEFAULT_AI_MODEL = google/gemini-3.5-flash-lite` |
 | **fast** | `ai_model_fast` | Short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
-| **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own pages and saying where it goes. | `OPENROUTER_ACCURX_MODEL` → **fast** |
+| **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own pages and saying where it goes — one small call per destination, all issued together. | `OPENROUTER_ACCURX_MODEL` → **fast** |
 
 **The accurx role inherits from *fast*, not from reasoning** — the only one that
 does. Adding it changed nothing about what `/accurx` costs or which model runs
@@ -718,19 +718,33 @@ action" risk.
   the deterministic answer stands unchanged.
 - **`/accurx` is read as well as matched, and the patterns keep the veto**
   (`lib/templates/accurx-route.mjs`). The pattern cascade runs first and
-  unchanged; whatever it decides is the floor. A model then reads the whole
-  message against the practice's own destinations and its Notebook, and code
-  takes **the more senior of the two** — a ladder of who reads it (pharmacist
-  and physiotherapist below a GP, below the duty doctor, below an emergency),
-  not of urgency. So a reading that says "physio is fine" changes nothing and a
-  reading that says "a doctor today" moves it, which is the one direction that
-  is safe to be wrong in. The words that moved it are the patient's own,
-  verbatim, checked against the message before they are rendered; an escalation
-  whose quote does not check out still escalates but says nothing. Every failure
-  path — no model, a timeout, an unknown destination, "unsure" — leaves the card
-  exactly as the patterns made it. Both answers are written to
-  `question_log.provenance` (`route.read` beside `route.card`), so a reading
-  that was overruled can be found later.
+  unchanged; whatever it decides is the floor. Every destination is then asked,
+  **in parallel and one small call each**, a single closed question — "does this
+  message need you?" — against that service's own description of what it covers
+  and what it refuses, plus the Notebook pages about it. The answers are folded
+  **in code**, by seniority: the most senior service that said yes wins, ties go
+  to the more specific, and no second model call reconciles them. Code then
+  takes **the more senior of that and the floor** — a ladder of who reads it
+  (pharmacist, optician, nurse clinics and physiotherapist below a GP, below the
+  duty doctor, below an emergency), not of urgency. So a reading that says
+  "physio is fine" changes nothing and a reading that says "a doctor today"
+  moves it, which is the one direction that is safe to be wrong in. The words
+  that moved it are the patient's own, verbatim, checked against the message
+  before they are rendered; an escalation whose quote does not check out still
+  escalates but says nothing. Every failure path — no model, a timeout, an
+  unknown destination, "unsure" — leaves the card exactly as the patterns made
+  it, and one check failing costs that one service's vote rather than the read.
+  Both answers are written to `question_log.provenance` (`route.read` beside
+  `route.card`), so a reading that was overruled can be found later.
+- **A nurse clinic is a note on the `/accurx` card, never its destination.** The
+  practice nurse and the diabetic nurse rank below a doctor, and the patterns
+  send anything they do not recognise to a doctor, so their answer would
+  otherwise never be seen. Lifting them above a GP would let a model take
+  somebody *off* a doctor's list, which the veto exists to prevent. So a losing
+  "yes" from one is rendered as a note naming the clinic and quoting the
+  patient's own words — with where the message goes untouched, and suppressed
+  entirely on an emergency card or beside the duty doctor. Booking a nurse slot
+  stays reception's decision.
 - **Every turn records why**, not only what: the decomposed requests, the rule
   ids with their matched spans, and the Notebook page revisions behind the card
   (`question_log.provenance`, readable at `/stats`).
