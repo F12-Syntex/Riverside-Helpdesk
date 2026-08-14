@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `1.32.0` | 2026-08-14 | feat | `d68cbe2` | feat: send an /accurx eye emergency to Moorfields, and say they can walk in |
+| `1.31.2` | 2026-08-14 | docs | `76ac6e6` | docs: add the rows for the patient-data screen |
 | `1.31.1` | 2026-08-14 | docs | `a648f7b` | docs: write down the patient-data screen, and close its DPIA action |
 | `1.31.0` | 2026-08-14 | feat | `b38e394` | feat: refuse a message that carries patient details |
 | `1.30.2` | 2026-08-14 | docs | `2d2250c` | docs: add the rows for the parallel /accurx read |
