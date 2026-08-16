@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.5.0` | 2026-08-16 | feat | `bf503e5` | feat: an evaluation the implementing agent is not allowed to see |
+| `2.4.0` | 2026-08-16 | feat | `4f5bbce` | feat: a possible pregnancy takes a UTI off the pharmacy pathway |
+| `2.3.3` | 2026-08-16 | fix | `5e55597` | fix: read what the patient ruled out, not just what they mentioned |
+| `2.3.2` | 2026-08-16 | docs | `2d5cead` | docs: add the rows for the reasoning and the send fix |
 | `2.3.1` | 2026-08-16 | fix | `9617721` | fix: put the message on screen the moment Enter is pressed |
 | `2.3.0` | 2026-08-16 | feat | `d312d59` | feat: /accurx has to say why, and the card shows it |
 | `2.2.1` | 2026-08-16 | docs | `d70e489` | docs: add the row for the routing guide transcription |
