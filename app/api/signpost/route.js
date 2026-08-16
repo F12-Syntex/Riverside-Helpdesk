@@ -40,8 +40,8 @@ export const maxDuration = 120;
 
 // The team the model may route to, and the order the routing runs in — both
 // read from the practice's destinations file rather than written out again here.
-// The keys below are the keys this endpoint answers with; the page shows the
-// label beside them.
+// A destination's id is what this endpoint answers with; the page shows the
+// label beside it.
 const TEAM = DESTINATIONS;
 
 const URGENCIES = new Set(['emergency', 'same-day', 'routine']);
@@ -54,7 +54,7 @@ ${routingGuidance()}
 RULES
 - Be CONCISE. This is a routing hint for trained reception staff, not advice.
 - The order above is the practice's own and runs top to bottom. Nothing later overrides something earlier: a request matching both a red flag and a minor illness is a red flag.
-- If ANY red-flag / emergency feature is present (chest pain, severe breathlessness, stroke signs, anaphylaxis, heavy bleeding, sepsis signs, suicidal intent, seriously unwell child), route to urgent-care with urgency "emergency" — regardless of what the request nominally asks for.
+- If ANY red-flag / emergency feature is present (chest pain, severe breathlessness, stroke signs, anaphylaxis, heavy bleeding, sepsis signs, suicidal intent, seriously unwell child), route to emergency with urgency "emergency" — regardless of what the request nominally asks for. An emergency that is purely about the eye is eyeEmergency instead.
 - When the request mixes several needs, route to whoever must act FIRST and mention the rest in the steps.
 - If genuinely unclear, route to gp — never guess a nurse pathway for an undifferentiated problem.
 - Do not invent details that are not in the consultation text. Do not write any patient-identifiable information.
@@ -109,13 +109,13 @@ export async function POST(request) {
     // Unknown/missing routing key falls back to the GP — the safe default for
     // anything the model could not place, and the same default the practice's
     // own order ends on.
-    const team = TEAM.find((t) => t.key === parsed.who) || TEAM.find((t) => t.key === 'gp');
+    const team = TEAM.find((t) => t.id === parsed.who) || TEAM.find((t) => t.id === 'gp');
     const urgency = URGENCIES.has(parsed.urgency) ? parsed.urgency : 'same-day';
     const strings = (v, max) => (Array.isArray(v) ? v : [])
       .filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()).slice(0, max);
 
     return NextResponse.json({
-      who: team.key,
+      who: team.id,
       whoLabel: team.label,
       urgency,
       reason: typeof parsed.reason === 'string' ? parsed.reason.trim() : '',

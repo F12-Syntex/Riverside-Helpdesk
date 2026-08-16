@@ -23,19 +23,23 @@ const goesTo = (text, condition = '') => {
 /* ------------------------------------------------------------ the roster */
 
 test('every destination the practice has is named once, with both lists', () => {
-  const keys = DESTINATIONS.map((d) => d.key);
-  assert.deepEqual(keys, ['urgent-care', 'gp', 'fcp', 'pharmacy-first', 'diabetes-nurse', 'practice-nurse']);
-  assert.equal(new Set(keys).size, keys.length, 'no destination is written twice');
+  const ids = DESTINATIONS.map((d) => d.id);
+  assert.deepEqual(ids, [
+    'minorEyeService', 'pharmacy', 'diabeticNurse', 'fcp', 'nurse',
+    'gp', 'dutyDoctor', 'eyeEmergency', 'emergency',
+  ]);
+  assert.equal(new Set(ids).size, ids.length, 'no destination is written twice');
   for (const d of DESTINATIONS) {
-    assert.ok(d.sendTo, d.key + ' says what a card puts on its destination line');
-    assert.ok(d.handles.length, d.key + ' says what it takes');
-    assert.ok(d.never.length, d.key + ' says what it does not');
+    assert.ok(d.sendTo, d.id + ' says what a card puts on its destination line');
+    assert.ok(d.covers, d.id + ' says what it takes');
+    assert.ok(d.refuses, d.id + ' says what it will not');
+    assert.ok(d.rank >= 1, d.id + ' has a seniority the reader can fold by');
   }
 });
 
 test('the prose the signposting page reads is built from the same arrays', () => {
   const guidance = routingGuidance();
-  for (const d of DESTINATIONS) assert.ok(guidance.includes(d.key), d.key + ' is in the prompt');
+  for (const d of DESTINATIONS) assert.ok(guidance.includes(d.id), d.id + ' is in the prompt');
   assert.match(guidance, /Nurses work Mondays, Wednesdays and Fridays/);
   assert.match(guidance, /top to bottom/);
 });
@@ -61,9 +65,9 @@ test('travel is read before immunisation, because the six-week rule is the answe
 });
 
 test('a nurse procedure goes to the nurse, not to a pharmacy or a doctor', () => {
-  assert.equal(goesTo('pt had stitches at the Royal London and needs them out on Thursday'), sendTo('practice-nurse'));
-  assert.equal(goesTo('pt asking for her dressing to be changed'), sendTo('practice-nurse'));
-  assert.equal(goesTo('pt is due her cervical smear and wants to book it'), sendTo('practice-nurse'));
+  assert.equal(goesTo('pt had stitches at the Royal London and needs them out on Thursday'), sendTo('nurse'));
+  assert.equal(goesTo('pt asking for her dressing to be changed'), sendTo('nurse'));
+  assert.equal(goesTo('pt is due her cervical smear and wants to book it'), sendTo('nurse'));
 });
 
 test('a wound that is going wrong is a doctor, not a dressing appointment', () => {
@@ -73,7 +77,7 @@ test('a wound that is going wrong is a doctor, not a dressing appointment', () =
   assert.equal(nurseTaskNeedsGp(nurseTask('due her smear'), 'she had a temperature last week'), false);
 
   const text = 'pt needs her dressing changed, the wound is oozing and the redness is spreading up her arm';
-  assert.equal(goesTo(text), sendTo('gp'));
+  assert.equal(goesTo(text), sendTo('dutyDoctor'));
   assert.match(JSON.stringify(triagePatientAnswer({ condition: 'dressing change', text })), /duty doctor/i);
 });
 
@@ -93,7 +97,7 @@ test('routine diabetes care goes to the diabetes nurse', () => {
   assert.ok(needsDiabetesNurse('pt says her diabetic review is due and wants to book it'));
   assert.ok(needsDiabetesNurse('diabetic patient asking about his HbA1c follow-up'));
   assert.ok(needsDiabetesNurse('wants a diabetic foot check booked'));
-  assert.equal(goesTo('pt says her diabetic review is due and wants to book it'), sendTo('diabetes-nurse'));
+  assert.equal(goesTo('pt says her diabetic review is due and wants to book it'), sendTo('diabeticNurse'));
 });
 
 test('diabetes alone is not a diabetes appointment', () => {
@@ -105,12 +109,12 @@ test('diabetes alone is not a diabetes appointment', () => {
 test('a patient who has not been diagnosed is a doctor', () => {
   assert.ok(diabetesNeedsGp('pt thinks she might be diabetic and wants to be tested'));
   assert.equal(needsDiabetesNurse('pt thinks she might be diabetic and wants a review'), false);
-  assert.equal(goesTo('pt thinks she might be diabetic and wants to be tested'), sendTo('gp'));
+  assert.equal(goesTo('pt thinks she might be diabetic and wants to be tested'), sendTo('dutyDoctor'));
 });
 
 test('an unwell diabetic is a doctor, not a review appointment', () => {
   assert.ok(diabetesNeedsGp('diabetic patient vomiting since last night and sugars are very high'));
-  assert.equal(goesTo('diabetic patient vomiting since last night, asking to book her review'), sendTo('gp'));
+  assert.equal(goesTo('diabetic patient vomiting since last night, asking to book her review'), sendTo('dutyDoctor'));
 });
 
 test('a diabetic foot that has gone wrong does not wait for the recall', () => {
