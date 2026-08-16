@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.1.4` | 2026-08-16 | perf | `2cea874` | perf: /accurx reads the destinations in one call, not ten |
+| `2.1.3` | 2026-08-16 | docs | `c9bc6cb` | docs: add the row for the destinations consolidation |
 | `2.1.2` | 2026-08-16 | refactor | `fb2aa55` | refactor: one description of the destinations, not three |
 | `2.1.1` | 2026-08-16 | docs | `4655f67` | docs: add the rows for the command removal and the nurse routes |
 | `2.1.0` | 2026-08-16 | feat | `5823cb0` | feat: route to the nurse clinic and the diabetes nurse |
