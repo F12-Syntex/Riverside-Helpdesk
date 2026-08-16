@@ -18,6 +18,12 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `4.1.1` | 2026-08-16 | docs | `23014cf` | docs: describe the /accurx reading that actually runs |
+| `4.1.0` | 2026-08-16 | feat | `128347f` | feat: measure what the /accurx read costs, over repeats |
+| `4.0.1` | 2026-08-16 | fix | `022de13` | fix: the card supplies the words the reading stopped writing |
+| `4.0.0` | 2026-08-16 | feat | `c8a5589` | feat!: /accurx routes from the routing guide, and only from it |
+| `3.0.4` | 2026-08-16 | fix | `2d7c471` | fix: /accurx no longer dies on the scope of `reading` |
+| `3.0.3` | 2026-08-16 | docs | `7fcdf2e` | docs: add the row for the requests collision fix |
 | `3.0.2` | 2026-08-16 | fix | `2b9ccc1` | fix: the requests the reading found now reach the card |
 | `3.0.1` | 2026-08-16 | docs | `0e81249` | docs: add the row for the reading-only /accurx |
 | `3.0.0` | 2026-08-16 | feat | `aeb1170` | feat!: /accurx is decided by reading the message, and nothing else |
