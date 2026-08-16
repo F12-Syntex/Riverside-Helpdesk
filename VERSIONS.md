@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.1.0` | 2026-08-16 | feat | `5823cb0` | feat: route to the nurse clinic and the diabetes nurse |
+| `2.0.0` | 2026-08-16 | feat | `9d73da6` | feat!: /accurx replaces /triage and /appt |
+| `1.32.3` | 2026-08-14 | docs | `7613ee1` | docs: add the row for the sore throat fix |
 | `1.32.2` | 2026-08-14 | fix | `361b814` | fix: stop the /accurx read escalating everything a doctor could see |
 | `1.32.1` | 2026-08-14 | docs | `20aea90` | docs: add the row for the eye A&E destination |
 | `1.32.0` | 2026-08-14 | feat | `d68cbe2` | feat: send an /accurx eye emergency to Moorfields, and say they can walk in |
