@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.7.0` | 2026-08-16 | feat | `0436a76` | feat: a card that means "now" can no longer render as a booking |
+| `2.6.1` | 2026-08-16 | docs | `5ec124e` | docs: add the row for the evaluation fixes |
 | `2.6.0` | 2026-08-16 | feat | `013e12f` | feat: act on what the evaluation found, not on the cases it found it with |
 | `2.5.1` | 2026-08-16 | docs | `db3d9e8` | docs: add the rows for the negation fix and the evaluation harness |
 | `2.5.0` | 2026-08-16 | feat | `bf503e5` | feat: an evaluation the implementing agent is not allowed to see |
