@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ACCURX_CHECK_SCHEMA, DESTINATIONS, accurxCheckPrompt, applyRoute, destinationLabel, foldChecks,
-  below, pagesFor, rankOfDestination,
+  ACCURX_READ_SCHEMA, DESTINATIONS, accurxReadPrompt, applyRoute, destinationLabel,
+  rankOfDestination, readingVerdict, signpostsFrom,
 } from '../lib/templates/accurx-route.mjs';
 import { accurxAnswer } from '../lib/templates/accurx.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
@@ -233,57 +233,67 @@ test('the quote is checked against the WHOLE message, not the routed complaint',
   assert.match(words(card), /After Recent miscarriage/);
 });
 
-/* ------------------------------------------------------- folding the checks */
+/* ------------------------------------------------- what the one call said */
 
-const yes = (id, evidence = '', page = '') => ({ id, belongs: 'yes', evidence, page });
-const no = (id) => ({ id, belongs: 'no', evidence: '', page: '' });
+// The reading is ONE call now, so there is nothing to fold: the schema returns
+// the destination itself. What is left to check is the adapter between what that
+// call returns and what applyRoute and signpostsFrom already took — and, above
+// all, that a reading which cannot be trusted still means "leave it alone".
 
-test('the most senior service that said yes is the one that wins', () => {
-  const folded = foldChecks([
-    yes('fcp', 'pain specifically in the left shoulder'),
-    yes('dutyDoctor', 'Swelling in both legs'),
-    yes('gp', 'Awaiting full blood test from the GP'),
-    no('pharmacy'),
-  ]);
-  assert.equal(folded.destination, 'dutyDoctor');
-  assert.equal(folded.evidence, 'Swelling in both legs', 'and it is that service’s own quote, not another’s');
+test('a destination the reader named is carried through as it stands', () => {
+  const verdict = readingVerdict({
+    destination: 'dutyDoctor',
+    evidence: 'Swelling in both legs',
+    page: 'Triaging notebook',
+  });
+  assert.equal(verdict.destination, 'dutyDoctor');
+  assert.equal(verdict.evidence, 'Swelling in both legs');
+  assert.equal(verdict.page, 'Triaging notebook');
+  assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, true);
 });
 
-test('a tie at the same rank goes to the more specific service, in ladder order', () => {
-  const shared = [...new Set(DESTINATIONS.map((d) => d.rank))]
-    .map((rank) => DESTINATIONS.filter((d) => d.rank === rank))
-    .filter((group) => group.length > 1);
-  assert.ok(shared.length, 'this test is only meaningful while several services share a rank');
-  for (const group of shared) {
-    const folded = foldChecks(group.map((d) => yes(d.id)));
-    assert.equal(folded.destination, group[0].id, 'the first at that rank, which is the most specific');
-  }
+test('"unsure" is a real answer, and it changes nothing', () => {
+  const verdict = readingVerdict({ destination: 'unsure', evidence: '' });
+  assert.equal(verdict.destination, 'unsure');
+  assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, false);
 });
 
-test('nothing said yes is a real answer, and it changes nothing', () => {
-  const folded = foldChecks(DESTINATIONS.map((d) => no(d.id)));
-  assert.equal(folded.destination, 'unsure');
-  assert.equal(applyRoute('fcp', folded, MISCARRIAGE).raised, false);
+test('a destination that is not on the ladder is the same as no answer', () => {
+  // The enum stops the model returning one, but these values also arrive from
+  // renderCommand's fallback path and from anything a later caller hands in. An
+  // id nothing can rank must never raise a card.
+  const verdict = readingVerdict({ destination: 'district-nurse', evidence: 'x' });
+  assert.equal(verdict.destination, 'unsure');
+  assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, false);
 });
 
-test('"unsure" from a check counts as a no', () => {
-  const folded = foldChecks([{ id: 'dutyDoctor', belongs: 'unsure', evidence: 'Swelling in both legs' }, no('gp')]);
-  assert.equal(folded.destination, 'unsure');
+test('a reading that did not happen is null, not a verdict', () => {
+  // The call failed, or the command was not /accurx. applyRoute treats null as
+  // never having asked, which is what it is.
+  assert.equal(readingVerdict(null), null);
+  assert.equal(readingVerdict({}), null);
+  assert.equal(readingVerdict({ destination: '' }), null);
+  assert.equal(readingVerdict('dutyDoctor'), null);
+  assert.equal(applyRoute('fcp', readingVerdict(null), MISCARRIAGE).raised, false);
 });
 
-test('checks that did not come back cost their own vote and nothing else', () => {
-  // One timeout, one refusal, one good answer. The good one still stands.
-  const folded = foldChecks([null, yes('gp', 'symptoms are ongoing'), null]);
-  assert.equal(folded.destination, 'gp');
-  // Every one of them failing is the same as never having asked.
-  assert.equal(foldChecks([null, null, null]), null);
-  assert.equal(foldChecks([]), null);
-  assert.equal(applyRoute('fcp', foldChecks([]), MISCARRIAGE).raised, false);
+test('the nurse clinics come back for the note, whatever the destination was', () => {
+  const verdict = readingVerdict({
+    destination: 'dutyDoctor',
+    evidence: 'Swelling in both legs',
+    nurseClinics: [{ id: 'nurse', evidence: 'my smear is due' }],
+  });
+  assert.deepEqual(verdict.saidYes.map((s) => s.id), ['nurse']);
+  assert.equal(verdict.saidYes[0].evidence, 'my smear is due');
 });
 
-test('a yes for a service that is not on the ladder is ignored', () => {
-  assert.equal(foldChecks([yes('district-nurse'), yes('pharmacy')]).destination, 'pharmacy');
-  assert.equal(foldChecks([yes('district-nurse')]).destination, 'unsure');
+test('a nurse clinic that is not one is dropped', () => {
+  const verdict = readingVerdict({
+    destination: 'gp',
+    nurseClinics: [{ id: 'made-up' }, { id: 'diabeticNurse', evidence: 'my diabetic review is due' }],
+  });
+  assert.deepEqual(verdict.saidYes.map((s) => s.id), ['diabeticNurse']);
+  assert.equal(readingVerdict({ destination: 'gp' }).saidYes.length, 0);
 });
 
 /* ------------------------------------------------------- the eye A&E */
@@ -306,7 +316,11 @@ test('the eye A&E ties with 999 and takes the tie', () => {
   // to it. The tie must go to the one that names the hospital — a general A&E
   // is an eye emergency answered twice as slowly.
   assert.equal(rankOfDestination('eyeEmergency'), rankOfDestination('emergency'));
-  assert.equal(foldChecks([yes('emergency'), yes('eyeEmergency', 'bleach in my eye')]).destination, 'eyeEmergency');
+  // The reader names one destination now rather than voting for several, so the
+  // tie is kept where it can still be got wrong: the ladder's own order, which
+  // is what the prompt is written from and what a fold would have used.
+  const ids = DESTINATIONS.map((d) => d.id);
+  assert.ok(ids.indexOf('eyeEmergency') < ids.indexOf('emergency'), 'the specific one is offered first');
   // And neither can shove the other sideways once the patterns have chosen.
   assert.equal(applyRoute('emergency', { destination: 'eyeEmergency' }, CHEMICAL).raised, false);
   assert.equal(applyRoute('eyeEmergency', { destination: 'emergency' }, CHEMICAL).raised, false);
@@ -427,142 +441,96 @@ test('a reading with no nurse in it leaves the card exactly as it was', () => {
 
 /* ------------------------------------------------------------ the prompt */
 
-test('a check is asked about its own service, with the Notebook beside it', () => {
-  const fcp = DESTINATIONS.find((d) => d.id === 'fcp');
-  const prompt = accurxCheckPrompt({
-    destination: fcp,
-    question: MISCARRIAGE,
-    notebook: '- Physiotherapy (FCP) — how FCP works',
+test('the one call is shown the whole ladder, both halves of every entry', () => {
+  const prompt = accurxReadPrompt({ question: MISCARRIAGE, notebook: '- Physiotherapy (FCP) — how FCP works' });
+  for (const d of DESTINATIONS) {
+    assert.ok(prompt.includes(d.label), d.id + ' is on the ladder');
+    assert.ok(prompt.includes(d.covers), d.id + ' says what it covers');
+    //  is the half that does the work: a reader told only what a
+    // service covers says yes to anything adjacent to it.
+    assert.ok(prompt.includes(d.refuses), d.id + ' says what it will not take');
+  }
+  assert.ok(prompt.includes('- Physiotherapy (FCP) — how FCP works'), 'the Notebook goes in beside them');
+  assert.ok(prompt.includes(MISCARRIAGE.slice(0, 60)), 'and the message itself');
+});
+
+test('the ladder is written least senior first', () => {
+  const prompt = accurxReadPrompt({ question: 'pt has sore throat' });
+  const at = (id) => prompt.indexOf(DESTINATIONS.find((d) => d.id === id).label);
+  assert.ok(at('pharmacy') < at('gp'), 'a pharmacy is read before a doctor');
+  assert.ok(at('gp') < at('dutyDoctor'));
+  assert.ok(at('dutyDoctor') < at('emergency'));
+});
+
+test('the wording rules go in as two lists, and stay apart', () => {
+  const prompt = accurxReadPrompt({
+    question: 'heartburn for 3 weeks, best to call after 2pm',
+    reasonRules: ['clinical shorthand only'],
+    bookingRules: ['when they can attend'],
   });
-  assert.ok(prompt.includes(fcp.label));
-  assert.match(prompt, /Physiotherapy \(FCP\) — how FCP works/, 'the Notebook goes in beside it');
-  assert.match(prompt, /You cannot make anything less urgent/);
-  assert.ok(prompt.includes(MISCARRIAGE.slice(0, 60)));
+  assert.match(prompt, /- clinical shorthand only/);
+  assert.match(prompt, /- when they can attend/);
+  assert.ok(prompt.includes('NEVER in "reason" and NEVER in "condition"'));
+});
+
+test('the reader is told it decides nothing about urgency', () => {
+  const prompt = accurxReadPrompt({ question: 'pt has sore throat' });
+  assert.match(prompt, /Urgency is decided in code/);
+  assert.match(prompt, /NOT writing the answer/);
 });
 
 /* ------------------------------------------------------------------------ *
  * THE "pt has sore throat" REGRESSION.
  *
  * A sore throat came back as a GP appointment. Nothing was broken in the
- * patterns — they said pharmacy, and still do. The fan-out asked each check
- * "does this message need YOU?", so the pharmacy check said yes and the GP
- * check said yes too, because a GP genuinely can see a sore throat. The fold
- * takes the most senior yes, which turned an agreement into an escalation.
+ * patterns — they said pharmacy, and still do. The reader was asked which
+ * service the message NEEDS, and a GP genuinely can see a sore throat, so the
+ * most senior yes turned an agreement into an escalation.
  *
- * The answer is READ as "nothing less senior will do", so that has to be the
- * question — and a check cannot answer it without being shown what less senior
- * looks like. These pin that, because it is the kind of thing that gets
- * "simplified" back out by somebody tidying a long prompt.
+ * The fix is in the question, not in the number of calls, which is why these
+ * outlived the fan-out they were written for: the reader is asked for the LEAST
+ * senior service that can safely deal with the message. It is the kind of thing
+ * that gets "simplified" back out by somebody tidying a long prompt.
  * ------------------------------------------------------------------------ */
 
-test('below() is every service that is strictly less senior, and no peer', () => {
-  const gp = below('gp').map((d) => d.id);
-  assert.ok(gp.includes('pharmacy') && gp.includes('fcp') && gp.includes('nurse'), gp.join(','));
-  assert.ok(!gp.includes('gp'), 'not itself');
-  assert.ok(!gp.includes('dutyDoctor') && !gp.includes('emergency'), 'and nothing above it');
-  // Peers at the same rank are not below each other — neither may claim the
-  // other would have done.
-  assert.deepEqual(below('pharmacy').map((d) => d.id), []);
-  assert.ok(!below('emergency').map((d) => d.id).includes('eyeEmergency'), 'a tie is not a demotion');
-  assert.deepEqual(below('somewhere-else'), []);
-  for (const d of DESTINATIONS) {
-    for (const other of below(d.id)) assert.ok(other.rank < d.rank, other.id + ' under ' + d.id);
-  }
+test('the question asked is the least senior service, not the one that could', () => {
+  const prompt = accurxReadPrompt({ question: 'pt has sore throat' });
+  assert.match(prompt, /LEAST SENIOR service/);
+  assert.match(prompt, /not the same question as which service could see it/i);
+  assert.match(prompt, /A sore throat is the pharmacy’s/, 'the case that broke it is the worked example');
 });
 
-test('a check is shown every service below it, and never one above it', () => {
-  for (const d of DESTINATIONS) {
-    const prompt = accurxCheckPrompt({ destination: d, question: 'pt has sore throat' });
-    for (const under of below(d.id)) {
-      assert.ok(prompt.includes(under.label), d.id + ' must be shown ' + under.id);
-      assert.ok(prompt.includes(under.covers), d.id + ' must be told what ' + under.id + ' covers');
-    }
-    // Showing what sits ABOVE is what lets a check defer — "the duty doctor
-    // will probably catch it" is how every one of them says no to the message
-    // that needed one of them to say yes.
-    const senior = DESTINATIONS.filter((o) => o.rank > d.rank);
-    for (const above of senior) {
-      assert.ok(!prompt.includes(above.label), d.id + ' must NOT be shown ' + above.id);
-    }
-  }
-});
-
-test('a check with something below it is asked which of them would do', () => {
+test('the GP entry itself says it is not the safe default', () => {
+  // A GP appointment reads like the safe answer for anything clinical, and here
+  // it is the opposite: naming one takes the patient off the service that would
+  // have dealt with them.
   const gp = DESTINATIONS.find((d) => d.id === 'gp');
-  const prompt = accurxCheckPrompt({ destination: gp, question: 'pt has sore throat' });
-  assert.match(prompt, /IF ANY ONE OF THEM COULD SAFELY DEAL WITH THIS MESSAGE, ANSWER "no"/);
-  assert.match(prompt, /A sore throat can be dealt with at a pharmacy/, 'the case that broke it is the worked example');
-  assert.match(prompt, /Community pharmacy \(Pharmacy First\)/);
-  // And the GP row itself has to say it, because a GP appointment reads like
-  // the safe answer for anything clinical and here it is the opposite.
   assert.match(gp.refuses, /NOT the safe default/);
+  assert.ok(accurxReadPrompt({ question: 'pt has sore throat' }).includes(gp.refuses));
 });
 
-test('the bottom of the ladder is asked plainly, having nothing to pass down to', () => {
-  const pharmacy = DESTINATIONS.find((d) => d.id === 'pharmacy');
-  const prompt = accurxCheckPrompt({ destination: pharmacy, question: 'pt has sore throat' });
-  assert.match(prompt, /THE QUESTION: does this message need Community pharmacy/);
-  assert.ok(!/WHAT THE PRACTICE USES FIRST/.test(prompt), 'nothing sits below it, so there is no such list');
-  assert.match(prompt, /Nothing in the practice sits below it/);
-});
-
-test('every destination can be asked, and says what it refuses', () => {
+test('the schema will not take a destination the ladder does not have', () => {
+  const ok = ACCURX_READ_SCHEMA.safeParse({ destination: 'pharmacy' });
+  assert.equal(ok.success, true);
+  assert.equal(ACCURX_READ_SCHEMA.safeParse({ destination: 'district-nurse' }).success, false);
+  // Every id on the ladder is offerable, and so is "unsure".
   for (const d of DESTINATIONS) {
-    const prompt = accurxCheckPrompt({ destination: d, question: 'my knee hurts' });
-    assert.ok(prompt.includes(d.covers), d.id + ' must say what it covers');
-    assert.ok(prompt.includes(d.refuses), d.id + ' must say what it will not take');
+    assert.equal(ACCURX_READ_SCHEMA.safeParse({ destination: d.id }).success, true, d.id);
   }
+  assert.equal(ACCURX_READ_SCHEMA.safeParse({ destination: 'unsure' }).success, true);
 });
 
-test('a check gets the Notebook pages about its own service and no others', () => {
-  const pages = [
-    { docTitle: 'Physiotherapy (FCP)', text: 'How the first contact physiotherapist works.' },
-    { docTitle: 'Pharmacy First and CPSAS', text: 'What the community pharmacy can treat.' },
-    { docTitle: 'Bin collections', text: 'Tuesdays.' },
-  ];
-  assert.deepEqual(pagesFor('fcp', pages).map((p) => p.docTitle), ['Physiotherapy (FCP)']);
-  assert.deepEqual(pagesFor('pharmacy', pages).map((p) => p.docTitle), ['Pharmacy First and CPSAS']);
-  // A page is matched on its first line too, not only its title.
-  assert.deepEqual(
-    pagesFor('fcp', [{ docTitle: 'Knees', text: 'Musculoskeletal problems in adults.' }]).map((p) => p.docTitle),
-    ['Knees'],
-  );
-  assert.deepEqual(pagesFor('somewhere-else', pages), [], 'an unknown service gets nothing');
-  assert.deepEqual(pagesFor('fcp', []), []);
-});
-
-test('the schema will not accept an answer that is not yes, no or unsure', () => {
-  assert.ok(ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'yes' }).success);
-  assert.ok(ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'unsure' }).success);
-  assert.ok(!ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'maybe' }).success);
-  assert.ok(!ACCURX_CHECK_SCHEMA.safeParse({ belongs: 'dutyDoctor' }).success, 'a check names no destination — it was handed one');
-  assert.ok(!ACCURX_CHECK_SCHEMA.safeParse({}).success, 'an answer is not optional');
-});
-
-/* -------------------------------------------------------------- the role */
-
-test('the accurx role is settable and inherits from fast, not from reasoning', () => {
-  assert.ok(ROLE_KEYS.includes('accurx'));
-  assert.equal(ROLE_SETTING_KEY.accurx, 'ai_model_accurx');
-
-  const nothing = resolveRoles({ base: 'a/reasoning', stored: {}, env: {} });
-  assert.equal(nothing.accurx.model, 'a/reasoning', 'with no fast model set, fast IS the reasoning model');
-
-  const fastSet = resolveRoles({ base: 'a/reasoning', stored: { fast: 'b/fast' }, env: {} });
-  assert.equal(fastSet.accurx.model, 'b/fast', 'it follows fast, not the model above it');
-  assert.equal(fastSet.accurx.source, 'fast');
-
-  const chosen = resolveRoles({ base: 'a/reasoning', stored: { fast: 'b/fast', accurx: 'c/reader' }, env: {} });
-  assert.equal(chosen.accurx.model, 'c/reader');
-  assert.equal(chosen.accurx.source, 'database');
-
-  const fromEnv = resolveRoles({ base: 'a/reasoning', stored: { fast: 'b/fast' }, env: { OPENROUTER_ACCURX_MODEL: 'd/env' } });
-  assert.equal(fromEnv.accurx.model, 'd/env');
-});
-
-test('adding the role left the others exactly where they were', () => {
-  const roles = resolveRoles({ base: 'a/reasoning', stored: { fast: 'b/fast', web: 'c/web' }, env: {} });
-  assert.equal(roles.reasoning.model, 'a/reasoning');
-  assert.equal(roles.fast.model, 'b/fast');
-  assert.equal(roles.web.model, 'c/web');
+test('the one call returns the wording as well as the destination', () => {
+  const parsed = ACCURX_READ_SCHEMA.parse({
+    destination: 'pharmacy',
+    evidence: 'sore throat since friday',
+    condition: 'sore throat',
+    reason: 'sore throat 3/7, no fever',
+    booking: ['telephone after 2pm'],
+  });
+  assert.equal(parsed.condition, 'sore throat');
+  assert.equal(parsed.reason, 'sore throat 3/7, no fever');
+  assert.deepEqual(parsed.booking, ['telephone after 2pm']);
+  assert.deepEqual(parsed.details, [], 'and the lists default to empty rather than missing');
+  assert.deepEqual(parsed.nurseClinics, []);
 });

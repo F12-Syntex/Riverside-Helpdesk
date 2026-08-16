@@ -205,32 +205,30 @@ clickable sources they can open in-browser.
   and no regex can see that the swelling is in two legs or that "recent
   miscarriage" changes what all of it means together. That is not a tuning
   problem; another feature word finds the next gap. So the message is now
-  **read** — on its own model role (Settings → AccurX routing), against the
-  practice's own destinations and its Notebook, not from general knowledge — and
+  **read** — one call, on its own model role (Settings → AccurX routing), which
+  names where it goes *and* writes the reason line, against the practice's own
+  destinations (`lib/triage/destinations.mjs`) and its Notebook rather than from
+  general knowledge — and
   **the patterns keep the veto**: code takes the more senior of the two
   destinations and nothing else. A reading that says physio is fine changes
   nothing. A reading that says "a doctor today" moves it, and the card shows the
   patient's own words that moved it, checked against the message first. No
   model, a timeout, or "unsure" leaves the card exactly as the patterns made it.
-  - **Every destination is asked at once, not one after another.** The reading
-    was a single call that had to hold every service the practice has in mind
-    and weigh them against each other before it could emit a token, and it was
-    the slowest thing on the card. It is now one small call per destination, all
-    in flight together with the call that writes the reason line, each asked a
-    single closed question — "does this have to come to *you*, or would one of
-    the services below you have done?" — against that one service's own
-    description of what it covers and what it refuses, and the list of what sits
-    below it. That wording is load-bearing. It was "does this need you?", and
-    that broke `pt has sore throat`: the GP check said yes, because a GP
-    genuinely can see a sore throat, and the most senior yes wins. A yes is read
-    as *nothing less senior will do*, so that has to be what is asked — and a
-    check can only answer it if it is shown what less senior looks like. Each
-    one sees what is **below** it and never what is above: below is what it
-    needs to decide, above is what would let it defer. The turn
-    waits for the slowest small answer rather than for one large one, and the
-    answers are folded **by seniority in code**: most senior yes wins, ties go
-    to the more specific, no second call reconciles them. A check that times out
-    costs that service's vote and nothing else.
+  - **One call for the whole card.** It was ten: one per destination asking
+    whether the message was theirs, plus one writing the reason line. They had
+    to be asked separately because nothing described the destinations in a form
+    a single prompt could be handed — each check was told about its own service
+    by name and nothing else. `lib/triage/destinations.mjs` describes them now,
+    so the whole ladder goes into one prompt as data and one reader sees what
+    nine saw between them, at a tenth of the calls.
+  - **What the reader is asked is load-bearing, and it is not "which service
+    does this need".** That question broke `pt has sore throat`: a GP genuinely
+    can see a sore throat, so naming one is true and wrong — it takes the
+    patient off the pharmacy that would have dealt with them. It is asked for
+    the **least senior** service that can safely deal with the whole message,
+    and every entry on the ladder carries what it **refuses** as well as what it
+    covers, because refusing is the half that decides it. The GP entry says in
+    its own words that a GP appointment is not the safe default here.
   - **An eye emergency is its own destination, and it is a walk-in.** The other
     two emergency cards mean somebody in the building stands up — fetch the duty
     doctor, call 999. This one means the opposite: nobody here does anything and
