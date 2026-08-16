@@ -467,14 +467,28 @@ export async function POST(request) {
                 model: callModel,
                 usage: filled.usage,
               });
-              scan = safetyScan({ message: question, requests: filled.object.requests });
+              // THE CLINICAL SCANNERS DO NOT RUN ON /accurx ANY MORE.
+              //
+              // They banded a message by matching words, and no amount of having
+              // read the message could retire a band the words had raised. The
+              // one that ended it told reception to interrupt a doctor over
+              // "chest pain", quoting as its own evidence the sentence saying the
+              // chest pain was last winter, that A&E ran every test, that her
+              // heart was fine and that it turned out to be reflux.
+              //
+              // On this path the reading is the only judgement now, its account
+              // is on the card, and every request the message made is listed
+              // there with what happens to it. The second pass goes with them —
+              // there is no band left for it to raise.
+              //
+              // THE PRIVACY GUARDS ARE NOT PART OF THIS. Identifier redaction and
+              // the patient-data screen run before anything is sent and are not
+              // clinical judgement: they are about what leaves the building.
+              scan = reading
+                ? { items: [], complaint: '', routed: null, decomposed: false }
+                : safetyScan({ message: question, requests: filled.object.requests });
 
-              // THE ONE SECOND PASS. Only on a command whose card is a triage,
-              // only when the message actually split into several requests, and
-              // only ever able to raise what the scanners already decided.
-              // /accurx qualifies because its card routes one request and the
-              // reader has to be told what the other four were.
-              if (DECOMPOSING_COMMANDS.includes(command) && scan.decomposed) {
+              if (!reading && DECOMPOSING_COMMANDS.includes(command) && scan.decomposed) {
                 scan = await deepenTriage({ openrouter, model, question, scan, turnId, send });
                 stage2 = 'triage';
               }
@@ -508,9 +522,12 @@ export async function POST(request) {
             items: [],
           });
 
-          // /accurx renders the triage card, which runs the deterministic net
-          // over its own text. Nothing else a command produces does.
-          const commandSafety = safetyOutput(scan, { cardScans: DECOMPOSING_COMMANDS.includes(command) });
+          // Nothing to band on /accurx: the reading is the judgement and its
+          // account is on the card itself. Every other command still gets the
+          // deterministic floor, which is what it was written for.
+          const commandSafety = reading
+            ? { alerts: [], panel: null }
+            : safetyOutput(scan, { cardScans: DECOMPOSING_COMMANDS.includes(command) });
 
           send({
             type: 'answer',

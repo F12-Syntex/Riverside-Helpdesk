@@ -217,9 +217,15 @@ test('/accurx demotes the wording when the answer is an emergency', () => {
   // Nobody books an appointment off "interrupt the duty doctor now", so the
   // reason line is not the second thing on the card, and it does not offer a
   // Copy — the same reason the emergency triage cards offer none.
+  // The reading decides on this path now, so the test supplies one — which is
+  // what /api/agent always does. Without it there is nothing to route by, and
+  // the card says so rather than guessing from the words.
   const card = renderCommand('accurxTriage', {
     condition: 'chest pain',
     reason: 'chest pain since this morning, sob',
+    destination: 'emergency',
+    evidence: 'crushing pain in my chest since this morning',
+    reasoning: 'Crushing central chest pain since this morning with breathlessness, happening now.',
   }, 'I have had a crushing pain in my chest since this morning and I am short of breath');
   const json = JSON.stringify(card);
 
@@ -243,14 +249,22 @@ test('/accurx demotes an eye emergency but not an ordinary eye request', () => {
   // The two sit on the same page of the practice's material and one word apart
   // in the message. Only one of them is somebody standing up.
   const ae = JSON.stringify(renderCommand('accurxTriage', {
-    condition: 'eye injury', reason: 'eye trauma with bleeding',
+    condition: 'eye injury',
+    reason: 'eye trauma with bleeding',
+    destination: 'eyeEmergency',
+    evidence: 'I got hit in the eye and it is bleeding',
+    reasoning: 'A blunt injury to the eye with bleeding, happening now.',
   }, 'I got hit in the eye and it is bleeding'));
   assert.match(ae, /Moorfields/);
   assert.match(ae, /For the handover note/);
   assert.doesNotMatch(ae, /Copy into the appointment/);
 
   const mecs = JSON.stringify(renderCommand('accurxTriage', {
-    condition: 'conjunctivitis', reason: 'red sticky eye 3/7, no vision change',
+    condition: 'conjunctivitis',
+    reason: 'red sticky eye 3/7, no vision change',
+    destination: 'minorEyeService',
+    evidence: 'My eye has been red and sticky for 3 days',
+    reasoning: 'Three days of a red, sticky eye with no change in vision — what the minor eye service sees.',
   }, 'My eye has been red and sticky for 3 days'));
   assert.match(mecs, /Rose Opticians/);
   assert.match(mecs, /Copy into the appointment/);
@@ -282,10 +296,19 @@ test('/accurx still routes when the model wrote no reason line', () => {
 
 test('/accurx says what it decided and what it only rewrote', () => {
   // The card looks like it has formed a view of the whole message, and half of
-  // it has not. Where the urgency was actually decided is said outright.
-  const json = JSON.stringify(renderCommand('accurxTriage', { condition: 'sore throat', reason: 'sore throat 3/7' }, 'sore throat'));
-  assert.match(json, /triage order/i);
-  assert.match(json, /shown \*\*above\*\* this card/i);
+  // it has not: the reason line is a rewrite. Which half did what is said
+  // outright — and it no longer claims a triage order underneath it, because
+  // there is not one.
+  const json = JSON.stringify(renderCommand('accurxTriage', {
+    condition: 'sore throat',
+    reason: 'sore throat 3/7',
+    destination: 'pharmacy',
+    evidence: 'sore throat',
+    reasoning: 'Three days of a sore throat, nothing tried yet, no fever.',
+  }, 'sore throat'));
+  assert.match(json, /reading the whole message/i);
+  assert.match(json, /judges nothing/i);
+  assert.match(json, /no keyword matching underneath/i);
 });
 
 test('/accurx caps both lists rather than rendering whatever came back', () => {

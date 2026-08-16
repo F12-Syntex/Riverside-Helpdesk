@@ -132,7 +132,9 @@ test('reading the whole message sends it to a doctor today instead', () => {
   assert.ok(!/physiotherapist/i.test(sentTo(card)), 'it must not still say FCP');
   // The card says where the words would have sent it, and what moved it.
   assert.match(words(card), /Swelling in both legs/);
-  assert.match(words(card), /First Contact Physiotherapist/, 'the reader is told what the wording alone would have done');
+  // Nothing says "the patterns would have sent this to the physio" any more,
+  // because the patterns no longer send anything anywhere on this path.
+  assert.doesNotMatch(sentTo(card), /Physiotherapist/, 'and the physio is not where it goes');
 });
 
 test('the reason line and the booking notes survive the raise', () => {
@@ -178,8 +180,8 @@ test('a raise that names the physio renders as the physio, not as a doctor', () 
   assert.equal(card.destination, 'fcp');
   assert.match(sentTo(card), /Physiotherapist/);
   assert.ok(!/GP appointment here/i.test(words(card)), 'it must not tell them to book a doctor');
-  // And it still says what the wording alone would have done, and what moved it.
-  assert.match(words(card), /Community pharmacy/);
+  // And it still quotes what decided it. What it no longer does is report a
+  // pattern answer, because there is no longer a pattern answer to report.
   assert.match(words(card), /my throat has been sore since Friday/);
 });
 
@@ -196,27 +198,27 @@ test('a raise to a doctor still renders the doctor card', () => {
   }
 });
 
-test('with no reading at all the card is exactly what it always was', () => {
-  const before = accurxAnswer({ condition: 'back pain', text: 'my back has hurt for a week, ibuprofen has not touched it', reason: 'back pain 1/7, ibuprofen ineffective' });
-  const after = accurxAnswer({ condition: 'back pain', text: 'my back has hurt for a week, ibuprofen has not touched it', reason: 'back pain 1/7, ibuprofen ineffective', route: null });
-  assert.deepEqual(before, after);
-  assert.equal(before.destination, 'fcp');
-  assert.ok(!/read as one message/i.test(words(before)), 'no reading, no claim that one happened');
+test('with no reading at all, the card says so and goes to the duty doctor', () => {
+  // There is no pattern cascade underneath to fall back on. The practice's own
+  // rule covers it — what cannot be placed is the duty doctor's — and the card
+  // says that is why, rather than implying anything was assessed.
+  const card = accurxAnswer({ condition: 'sore throat', text: 'sore throat since friday', reason: 'sore throat 3/7' });
+  assert.equal(card.destination, 'dutyDoctor');
+  assert.match(words(card), /could not be read/i);
+  assert.match(words(card), /not because anything about it was assessed/i);
 });
 
-test('a reading that agrees with the patterns adds nothing to the card', () => {
-  const agreed = accurxAnswer({
-    condition: 'back pain',
-    text: 'my back has hurt for a week, ibuprofen has not touched it',
-    reason: 'back pain 1/7, ibuprofen ineffective',
-    route: { destination: 'fcp', evidence: 'ibuprofen has not touched it' },
+test('an unsure reading is the same as no reading', () => {
+  // "unsure" is a real answer and it means the reading declined to place it, so
+  // it lands where anything unplaceable lands.
+  const card = accurxAnswer({
+    condition: 'sore throat',
+    text: 'sore throat since friday',
+    reason: 'sore throat 3/7',
+    route: { destination: 'unsure', evidence: '' },
   });
-  const alone = accurxAnswer({
-    condition: 'back pain',
-    text: 'my back has hurt for a week, ibuprofen has not touched it',
-    reason: 'back pain 1/7, ibuprofen ineffective',
-  });
-  assert.deepEqual(agreed, alone);
+  assert.equal(card.destination, 'dutyDoctor');
+  assert.match(words(card), /could not be read/i);
 });
 
 test('the quote is checked against the WHOLE message, not the routed complaint', () => {
