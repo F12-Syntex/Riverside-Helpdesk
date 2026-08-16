@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.2.0` | 2026-08-16 | feat | `cd0fec7` | feat: transcribe the practice's routing guide, all sixteen routes |
+| `2.1.8` | 2026-08-16 | docs | `c3695ec` | docs: bring the version table up to the tip |
 | `2.1.7` | 2026-08-16 | docs | `8f260bd` | docs: add the row for the routing document reference |
 | `2.1.6` | 2026-08-16 | docs | `0f36c01` | docs: name docs/routing.md as what the destinations are transcribed from |
 | `2.1.5` | 2026-08-16 | docs | `920ec9d` | docs: add the row for the single /accurx call |
