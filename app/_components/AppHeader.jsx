@@ -2,17 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { s, Hover, Svg, Icons } from './ui';
 import MobileNav from './MobileNav';
+import ContactsSheet from './ContactsSheet';
 
 
 export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const pathname = usePathname();
-  // The directory is one tap from every page. It goes on the page it leads
-  // to, where it would only lead back to itself.
-  const showContacts = pathname !== '/contacts';
+  // The directory opens over the page it was asked for from, and closes back
+  // onto it. Nobody goes anywhere, so a half-typed question is still there
+  // afterwards.
+  const [contactsOpen, setContactsOpen] = React.useState(false);
+  const closeContacts = React.useCallback(() => setContactsOpen(false), []);
 
   return (
     // The header carries no bar of its own — it sits on the page, as the dock
@@ -34,16 +35,16 @@ export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null })
 
         {/* The practice's own telephone directory. A pill rather than a menu
             entry: it is the thing reception reaches for most, and reaching it
-            should never cost more than the one tap. On phones it keeps the
-            handset and drops the word (see globals.css). */}
-        {showContacts && (
-          <Hover tag={Link} href="/contacts" className="riva-contacts-pill" aria-label="Contacts"
-            base="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:999px;background:#fff;border:1px solid #d8dde0;color:#005eb8;font:inherit;font-size:14.5px;font-weight:600;text-decoration:none;white-space:nowrap;"
-            hover="background:#e8f1f8;border-color:#005eb8;color:#003087;">
-            <Svg w={16} sw={2.2}>{Icons.phone}</Svg>
-            <span className="riva-contacts-pill-label">Contacts</span>
-          </Hover>
-        )}
+            should never cost more than the one tap. It opens the directory
+            over this page rather than going to one — see ContactsSheet. On
+            phones it keeps the handset and drops the word (see globals.css). */}
+        <Hover tag="button" type="button" onClick={() => setContactsOpen(true)} className="riva-contacts-pill"
+          aria-label="Contacts" aria-haspopup="dialog" aria-expanded={contactsOpen ? 'true' : 'false'}
+          base="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:999px;background:#fff;border:1px solid #d8dde0;color:#005eb8;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;white-space:nowrap;"
+          hover="background:#e8f1f8;border-color:#005eb8;color:#003087;">
+          <Svg w={16} sw={2.2}>{Icons.phone}</Svg>
+          <span className="riva-contacts-pill-label">Contacts</span>
+        </Hover>
 
         {/* Page tabs (e.g. Rota / Staff) — segmented control, shown all sizes. */}
         {tabs && (
@@ -68,7 +69,11 @@ export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null })
         </Hover>
       </div>
 
-      {menuOpen && <MobileNav v={v} tabs={tabs} onClose={() => setMenuOpen(false)} />}
+      {menuOpen && (
+        <MobileNav v={v} tabs={tabs} onClose={() => setMenuOpen(false)}
+          onContacts={() => { setMenuOpen(false); setContactsOpen(true); }} />
+      )}
+      {contactsOpen && <ContactsSheet onClose={closeContacts} />}
     </header>
   );
 }

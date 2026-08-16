@@ -15,7 +15,6 @@ import { s, Hover, Svg, Icons } from './ui';
 const TOOLS = [
   { href: '/', label: 'Practice Q&A' },
   { href: '/lookup', label: 'Instant lookup' },
-  { href: '/contacts', label: 'Contacts' },
   { href: '/tools', label: 'All tools' },
   // Hidden for now — keep in step with TOOLS in app/page.js. The routes still
   // work directly (/diagram is the full system map).
@@ -41,7 +40,7 @@ const GROUP_LABEL = 'font-size:13px;font-weight:700;color:#768692;text-transform
 const LINK_BASE = 'font-size:20px;font-weight:600;color:#005eb8;text-decoration:underline;text-underline-offset:.12em;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;text-align:left;';
 const LINK_HOVER = 'color:#003087;text-decoration-thickness:2px;';
 
-export default function MobileNav({ v, tabs, onClose }) {
+export default function MobileNav({ v, tabs, onClose, onContacts }) {
   const showViews = !!(v && v.onSetView);
   const showTabs = !!(tabs && tabs.items && tabs.items.length);
 
@@ -56,6 +55,12 @@ export default function MobileNav({ v, tabs, onClose }) {
       <div style={s('flex:1;overflow-y:auto;padding:24px 22px 32px;')}>
         <div style={s(GROUP_LABEL)}>Go to</div>
         <nav style={s('display:flex;flex-direction:column;gap:18px;align-items:flex-start;')}>
+          {/* Contacts is first and is not a link: it opens the directory over
+              whatever page the menu was opened from, so it closes back onto
+              it rather than landing somewhere new. */}
+          {onContacts && (
+            <Hover tag="button" onClick={onContacts} base={LINK_BASE} hover={LINK_HOVER}>Contacts</Hover>
+          )}
           {TOOLS.map((t) => (
             <Hover key={t.href} tag={Link} href={t.href} onClick={onClose} base={LINK_BASE} hover={LINK_HOVER}>{t.label}</Hover>
           ))}

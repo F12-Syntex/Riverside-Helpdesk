@@ -208,11 +208,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .riva-contacts-pill { width: 42px; padding: 0 !important; justify-content: center; }
   .riva-contacts-pill-label { display: none; }
 
-  /* Tighter gutters, and each contact's numbers wrap under its name rather
-     than squeezing the name to nothing. */
-  .riva-contacts-main { padding: 16px 14px 40px !important; }
-  .riva-contact-row { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+  /* In the contacts sheet, each contact's numbers wrap under its name rather
+     than squeezing the name to nothing, and the list gets the taller run a
+     bottom sheet can afford. */
+  .riva-contact-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .riva-contact-numbers { justify-content: flex-start !important; }
+  .riva-contacts-list { max-height: 64vh !important; }
 
   /* Multi-column blocks stack into a single column. */
   .riva-grid-2 { grid-template-columns: 1fr !important; }

@@ -14,7 +14,8 @@ import AppHeader from '../_components/AppHeader';
 const TOOLS = [
   { href: '/', title: 'Ask a practice question', icon: Icons.chat },
   { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
-  { href: '/contacts', title: 'Contacts', icon: Icons.phone },
+  // The practice's own directory is not here: it is the Contacts pill in the
+  // header, on every page, and opens over the page rather than replacing it.
   // Hidden from the index but still reachable directly:
   //  - /settings   — which AI model the assistant runs on (in the menu, not here)
   //  - /diagram    — the full system map (documentation, not a daily tool)
