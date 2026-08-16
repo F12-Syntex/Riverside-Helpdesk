@@ -698,18 +698,6 @@ class RiversidePracticeQA extends React.Component {
     // Only the TYPED message is screened. A dropped document is the reader's
     // own material and is very often a letter about a patient by definition;
     // screening it would refuse /document the one thing /document is for.
-    if (t) {
-      this.setState({ screening: true });
-      const verdict = await this.screen(t);
-      this.setState({ screening: false });
-      if (verdict.blocked) {
-        // Nothing is sent, nothing is saved, and `input` is deliberately left
-        // holding what they typed: the next thing they do is edit it.
-        this.setState({ blocked: verdict });
-        return;
-      }
-    }
-
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
@@ -733,7 +721,43 @@ class RiversidePracticeQA extends React.Component {
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
     // they were reading an earlier one when they asked it.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, () => { this.save(); this.fetchAI(question, aiIdx); });
+    // ON SCREEN FIRST, SENT SECOND.
+    //
+    // The patient-data screen used to be awaited HERE, before this line, so
+    // Enter did nothing at all for as long as that call took: the reader watched
+    // their own message not appear. The screen is still the last thing before
+    // anything leaves the browser — it is the request that waits, not the
+    // interface. What they typed is on screen the moment they press Enter, with
+    // the loading card under it, and a message the screen refuses is taken back
+    // off again below.
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, async () => {
+      this.save();
+
+      // Only the TYPED message is screened. A dropped document is the reader's
+      // own material and is very often a letter about a patient by definition;
+      // screening it would refuse /document the one thing /document is for.
+      if (t) {
+        this.setState({ screening: true });
+        const verdict = await this.screen(t);
+        this.setState({ screening: false });
+        if (verdict.blocked) {
+          // Nothing was sent and nothing is kept. The two messages come back
+          // off the transcript — a message that was refused was never asked, so
+          // it must not be left looking as though it was — and `input` is put
+          // back holding what they typed, because the next thing they do is
+          // edit it.
+          this.setState((state) => ({
+            messages: state.messages.slice(0, aiIdx - 1),
+            input: typed,
+            blocked: verdict,
+            emitting: false,
+          }), () => this.save());
+          return;
+        }
+      }
+
+      this.fetchAI(question, aiIdx);
+    });
     // The emit plays once, then the strip above the dock goes quiet again.
     clearTimeout(this.emitTimer);
     this.emitTimer = setTimeout(() => this.setState({ emitting: false }), 640);
