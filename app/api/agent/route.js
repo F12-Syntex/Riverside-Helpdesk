@@ -389,6 +389,15 @@ export async function POST(request) {
           // /accurx only: what reading the whole message made of where it goes.
           // Declared out here so the turn can be logged with it.
           let route = null;
+          // WHETHER THIS IS THE READING PATH, DECLARED WHERE IT IS READ.
+          //
+          // It was declared inside the else-branch below and read again after
+          // that branch had closed, to decide whether the deterministic scanners
+          // band the card. Every /accurx threw ReferenceError there: the model
+          // had already been paid for, the card had already been built, and the
+          // reader got a failed turn. It is declared with `route` now, because
+          // the two are read in the same places.
+          const reading = command === 'accurxTriage';
 
           if (command === 'practiceSearch') {
             // NO MODEL AT ALL. The practice's documents are searched and the
@@ -437,28 +446,28 @@ export async function POST(request) {
             // because it is now the call that decides where somebody goes as
             // well as the one that writes the line — the practice can put a
             // better model on it without paying for one everywhere else.
-            const reading = command === 'accurxTriage';
             const callModel = reading ? roles.accurx.model : model;
 
-            // The practice's own pages, for the reading half. Best effort: a
-            // Notebook that cannot be read leaves the destinations' own
-            // descriptions to reason from rather than failing the turn.
-            let notebook = '';
-            if (reading) {
-              try {
-                notebook = notebookCatalogue(await fullNotebookContext());
-              } catch (e) {
-                console.warn('[agent] notebook unavailable for the accurx read:', String(e).slice(0, 160));
-              }
-              send({ type: 'status', text: 'Reading where it goes' });
-            }
+            // THE NOTEBOOK DOES NOT GO INTO THE /accurx READ.
+            //
+            // It did, as "the practice's own pages", and it was the wrong
+            // source for this question twice over. The routing guide
+            // (docs/routing.md, as data in lib/triage/destinations.mjs) is what
+            // says where a task goes; the Notebook is how the practice does
+            // things, and a reader given both weighed a page about running a
+            // clinic against the guide's own account of what that clinic
+            // refuses. It also cost a database round-trip and about three
+            // thousand prompt tokens on the call the reader waits for.
+            //
+            // So the ladder is the only source now, and the prompt says so.
+            if (reading) send({ type: 'status', text: 'Reading where it goes' });
 
             try {
               const filled = await generateObject({
                 model: openrouter(callModel),
                 schema: (decompose && MULTI_COMMAND_SCHEMAS[command]) || COMMAND_SCHEMAS[command],
                 temperature: 0,
-                prompt: commandPrompt({ template: command, question, attached, decompose, notebook }),
+                prompt: commandPrompt({ template: command, question, attached, decompose }),
               });
               recordUsage({
                 turnId,
