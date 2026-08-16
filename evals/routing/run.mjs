@@ -107,16 +107,21 @@ const patterns = triagePatientAnswer({
   text: message,
 });
 
-// The scan, given the requests when the message was split — which is what
-// decides the panel beside the card and what the alerts above it say.
-const scan = safetyScan({ message, requests: values.requests });
+// The scan over the message as one piece, for the alerts printed below.
+//
+// IT IS NOT GIVEN `values.requests` ANY MORE, and it must not be: those are
+// `{ what, who, goes, note }` from the reading, not the `{ gist, text }` spans
+// the scanner splits a message into. Handing one shape to something expecting
+// the other scanned nothing, silently.
+const scan = safetyScan({ message });
 
-// The card as the app renders it, including the reading's raise where there was
-// one, and narrowed to the routed request exactly as /api/agent narrows it.
-const card = renderCommand('accurxTriage', values, message, {
-  complaint: scan.complaint,
-  gist: (scan.routed && scan.routed.gist) || '',
-}) || patterns;
+// The card EXACTLY as /api/agent renders it on the reading path, which means no
+// complaint and no gist. The endpoint zeroes the scan there — see
+// app/api/agent/route.js, `{ items: [], complaint: '', routed: null,
+// decomposed: false }` — because the reading is the only judgement now. A
+// harness that passed a complaint in would narrow the card to one request where
+// production never narrows it, and would be marking a pipeline nobody runs.
+const card = renderCommand('accurxTriage', values, message, { complaint: '', gist: '' }) || patterns;
 
 console.log(JSON.stringify({
   patternsDestination: patterns.destination || '',
@@ -126,7 +131,15 @@ console.log(JSON.stringify({
   // Whether the message was split at all, what it split into, and which one the
   // card is about. A card that answers one of nine requests is only judgeable
   // next to the other eight.
-  decomposed: { gate: decompose, split: !!scan.decomposed, requests: (values.requests || []).map((r) => r.gist || r.text) },
+  // What the reading found the message was asking for. `r.what` is the field
+  // ACCURX_READ_SCHEMA actually defines; this read `r.gist || r.text`, which are
+  // the old split's names, so every request printed as `null` and the one thing
+  // a multi-request case is judged on was invisible to the judge.
+  decomposed: {
+    gate: decompose,
+    split: !!scan.decomposed,
+    requests: (values.requests || []).map((r) => [r.what, r.goes, r.note].filter(Boolean).join(' → ')),
+  },
   answering: scan.complaint ? ((scan.routed && scan.routed.gist) || scan.complaint) : '(the whole message)',
   reading: reading || 'not run (pass --read)',
   routeVerdict: wantsRead ? readingVerdict(values) : null,

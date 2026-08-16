@@ -31,6 +31,25 @@ patch.
    `OPENROUTER_API_KEY` it reports the pattern cascade alone and says so — say so
    in your report too, because half the system was not exercised.
 
+   `evals/routing/cases-hard.md` holds twelve harder cases, each recording the
+   wrong answer it is built to attract. Their messages are already written out
+   one per file in `evals/routing/messages/`, so they run straight through.
+
+   **NEVER JUDGE A ROUTE ON ONE PASS.** temperature 0 is not determinism. The
+   same twelve messages, on a prompt proved byte-identical by its token count,
+   scored 8/12 and then 5/12 on consecutive runs. For any claim about routing —
+   "this got better", "that regressed", "the prompt change helped" — use
+
+   ```
+   node evals/routing/bench.mjs report.json --repeats 5
+   ```
+
+   which runs every case five times and reports each as `hits/of` with the spread
+   of answers it actually gave, so a case that is right three times in five
+   cannot be written up as right. Two prompt rules were adopted and then reverted
+   here on the strength of single passes before anyone noticed. Token counts and
+   latency are stable enough to read from one pass; routes are not.
+
 3. Compare what came back with what the case expects. The JSON gives you:
 
    | field | what it is |
