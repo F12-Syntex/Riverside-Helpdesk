@@ -26,11 +26,12 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 import { ACCURX_READ_SCHEMA, accurxReadPrompt, readingVerdict } from '../../lib/templates/accurx-route.mjs';
-import { renderCommand } from '../../lib/templates/route.mjs';
+import { DECOMPOSITION_RULES, REQUESTS_FIELD, renderCommand } from '../../lib/templates/route.mjs';
 import { triagePatientAnswer } from '../../lib/templates/triage.mjs';
 import { answerToText } from '../../lib/questions/flatten.mjs';
 import { BOOKING_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
 import { safetyScan } from '../../lib/safety/scan.mjs';
+import { looksMultiIntent } from '../../lib/safety/requests.mjs';
 
 // .env.local, read the way next reads it, because this runs outside next.
 function loadEnv() {
@@ -42,7 +43,7 @@ function loadEnv() {
   }
 }
 
-async function readMessage(message) {
+async function readMessage(message, decompose) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return { skipped: 'no OPENROUTER_API_KEY — patterns only' };
 
@@ -50,7 +51,10 @@ async function readMessage(message) {
   const openrouter = createOpenRouter({ apiKey });
   const out = await generateObject({
     model: openrouter(model),
-    schema: ACCURX_READ_SCHEMA,
+    // The SAME schema the endpoint uses, decomposition included when the gate
+    // opens. Marking the routing on a call that could only ever return one
+    // request would mark a system nobody runs.
+    schema: decompose ? ACCURX_READ_SCHEMA.extend(REQUESTS_FIELD) : ACCURX_READ_SCHEMA,
     temperature: 0,
     // No Notebook. This harness is about the routing model, and a Notebook that
     // differs between runs makes a failure impossible to attribute.
@@ -58,6 +62,7 @@ async function readMessage(message) {
       question: message,
       reasonRules: REASON_RULES,
       bookingRules: BOOKING_RULES,
+      extra: decompose ? DECOMPOSITION_RULES : '',
     }),
   });
   return { model, values: out.object };
@@ -73,15 +78,20 @@ if (!file) {
 loadEnv();
 const message = fs.readFileSync(file, 'utf8').trim();
 
-// What the deterministic cascade alone makes of it. Always reported: a
-// disagreement between the two halves is the most useful line on the page.
-const patterns = triagePatientAnswer({ condition: '', text: message });
+// THE DETERMINISTIC HALF, RUN THE WAY THE CARD RUNS IT.
+//
+// This passed `condition: ''` once, and triagePatientAnswer answers an empty
+// condition with the card that asks the reader to describe the problem — so the
+// floor was empty on every case and the evaluation was marking one layer of a
+// two-layer system. The card itself never does that: accurxAnswer hands it the
+// condition the model named, falling back to the message. So does this.
+const decompose = looksMultiIntent(message);
 
 let reading = null;
 let values = {};
 if (wantsRead) {
   try {
-    const got = await readMessage(message);
+    const got = await readMessage(message, decompose);
     if (got.skipped) reading = { skipped: got.skipped };
     else {
       values = got.values || {};
@@ -92,16 +102,32 @@ if (wantsRead) {
   }
 }
 
+const patterns = triagePatientAnswer({
+  condition: String(values.condition || '').trim() || message,
+  text: message,
+});
+
+// The scan, given the requests when the message was split — which is what
+// decides the panel beside the card and what the alerts above it say.
+const scan = safetyScan({ message, requests: values.requests });
+
 // The card as the app renders it, including the reading's raise where there was
-// one: renderCommand is the same function /api/agent calls.
-const card = renderCommand('accurxTriage', values, message, {}) || patterns;
-const scan = safetyScan({ message });
+// one, and narrowed to the routed request exactly as /api/agent narrows it.
+const card = renderCommand('accurxTriage', values, message, {
+  complaint: scan.complaint,
+  gist: (scan.routed && scan.routed.gist) || '',
+}) || patterns;
 
 console.log(JSON.stringify({
   patternsDestination: patterns.destination || '',
   destination: card.destination || patterns.destination || '',
   title: card.title || '',
   subtitle: card.subtitle || '',
+  // Whether the message was split at all, what it split into, and which one the
+  // card is about. A card that answers one of nine requests is only judgeable
+  // next to the other eight.
+  decomposed: { gate: decompose, split: !!scan.decomposed, requests: (values.requests || []).map((r) => r.gist || r.text) },
+  answering: scan.complaint ? ((scan.routed && scan.routed.gist) || scan.complaint) : '(the whole message)',
   reading: reading || 'not run (pass --read)',
   routeVerdict: wantsRead ? readingVerdict(values) : null,
   alerts: (scan.items || []).map((i) => ({ rule: i.ruleId, acuity: i.acuity, label: i.label })),
