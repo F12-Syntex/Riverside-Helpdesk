@@ -165,7 +165,7 @@ function withTimeout(promise, ms) {
 }
 
 /**
- * THE ONE SECOND PASS IN THE APP — /triage only.
+ * THE ONE SECOND PASS IN THE APP — /accurx only.
  *
  * One small structured call per decomposed request, issued together so five of
  * them cost one round trip rather than five. Each returns an enum and a label:
@@ -388,7 +388,7 @@ export async function POST(request) {
         const writing = recordQuestion({
           turnId,
           machineId,
-          // Logged as it was typed. A message sent with /triage was a different
+          // Logged as it was typed. A message sent with /accurx was a different
           // act from the same words typed plain, and the log should say so.
           question: command ? '/' + (commandByTemplate(command)?.name || '') + ' ' + question : question,
           model,
@@ -457,7 +457,7 @@ export async function POST(request) {
         //
         // Only when no template fits does the turn fall through to prose.
         //
-        // A COMMAND SKIPS THE CHOOSING. /triage and /document have already said
+        // A COMMAND SKIPS THE CHOOSING. /accurx and /document have already said
         // what the message is, so the model is asked for that one template's
         // values and nothing else: no Notebook catalogue to read, a schema with
         // one field in it, and no way for the turn to end up somewhere else.
@@ -512,9 +512,9 @@ export async function POST(request) {
             }
             commandAnswer = practiceSearchAnswer({ query: question, passages });
           } else {
-            // A long /triage or /accurx is decomposed on the same call, exactly
-            // as an ordinary message is. A short one is not, so "/triage pt has
-            // a sore throat since Friday" costs what it always cost.
+            // A long /accurx is decomposed on the same call, exactly as an
+            // ordinary message is. A short one is not, so "/accurx pt has a sore
+            // throat since Friday" costs what it always cost.
             const decompose = looksMultiIntent(question);
 
             // EVERY CALL AT ONCE ON /accurx, NOT ONE AFTER THE OTHER. The
@@ -545,12 +545,11 @@ export async function POST(request) {
               recordUsage({ turnId, role: 'fast', phase: 'command', model, usage: filled.usage });
               scan = safetyScan({ message: question, requests: filled.object.requests });
 
-              // THE ONE SECOND PASS. Only on the commands whose card is a
-              // triage, only when the message actually split into several
-              // requests, and only ever able to raise what the scanners already
-              // decided. /accurx is one of them for the same reason /triage is:
-              // the card routes one request and the reader has to be told what
-              // the other four were.
+              // THE ONE SECOND PASS. Only on a command whose card is a triage,
+              // only when the message actually split into several requests, and
+              // only ever able to raise what the scanners already decided.
+              // /accurx qualifies because its card routes one request and the
+              // reader has to be told what the other four were.
               if (DECOMPOSING_COMMANDS.includes(command) && scan.decomposed) {
                 scan = await deepenTriage({ openrouter, model, question, scan, turnId, send });
                 stage2 = 'triage';
@@ -583,9 +582,8 @@ export async function POST(request) {
             items: [],
           });
 
-          // /triage and /accurx render the triage card, which runs the
-          // deterministic net over its own text. Nothing else a command
-          // produces does.
+          // /accurx renders the triage card, which runs the deterministic net
+          // over its own text. Nothing else a command produces does.
           const commandSafety = safetyOutput(scan, { cardScans: DECOMPOSING_COMMANDS.includes(command) });
 
           send({

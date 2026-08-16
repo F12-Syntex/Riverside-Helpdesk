@@ -173,7 +173,7 @@ class RiversidePracticeQA extends React.Component {
       dirSel: -1,
       dirClosed: false,
       // The slash commands, offered while a command name is being typed. -1
-      // until the arrow keys move into the list, so Enter on "/triage some
+      // until the arrow keys move into the list, so Enter on "/accurx some
       // text" asks it rather than re-picking the command.
       cmdSel: -1,
       copiedNumber: '',
@@ -670,7 +670,7 @@ class RiversidePracticeQA extends React.Component {
     }
     const typed = guard.text;
     // A slash command says which card to render, so the message goes up without
-    // it and the template goes up beside it. "/triage" with nothing after it is
+    // it and the template goes up beside it. "/accurx" with nothing after it is
     // a command still being written, not a question — the field keeps it.
     const parsed = parseCommand(typed);
     if (parsed && !parsed.rest) {
@@ -727,7 +727,7 @@ class RiversidePracticeQA extends React.Component {
     // `steps` and `statusText` are filled in live from the agent's stream: each
     // search it runs appears in the card while it is still working.
     // `commandTemplate` rides along so a retry asks the same way: retrying a
-    // /triage as an ordinary question would answer a different thing.
+    // /accurx as an ordinary question would answer a different thing.
     const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null, alerts: [], panel: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;

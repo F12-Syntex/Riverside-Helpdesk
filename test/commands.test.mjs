@@ -9,27 +9,28 @@ import {
   COMMANDS, awaitingArguments, commandByTemplate, forcedTemplate, matchCommands, parseCommand,
 } from '../lib/commands.mjs';
 import { renderCommand } from '../lib/templates/route.mjs';
+import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
 test('the list is offered while the name is being typed, and not after', () => {
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['triage', 'accurx', 'document', 'appt', 'practice']);
-  assert.deepEqual(matchCommands('/t').map((c) => c.name), ['triage']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'document', 'practice']);
+  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
-  // Two commands start with an "a", so one more keystroke tells them apart.
-  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx', 'appt']);
-  assert.deepEqual(matchCommands('/ac').map((c) => c.name), ['accurx']);
-  assert.deepEqual(matchCommands('/ap').map((c) => c.name), ['appt']);
-  assert.deepEqual(matchCommands('/triage').map((c) => c.name), ['triage']);
+  assert.deepEqual(matchCommands('/accurx').map((c) => c.name), ['accurx']);
+  // The two that were removed are no longer offered, so typing one falls through
+  // to being asked as written.
+  assert.deepEqual(matchCommands('/t'), []);
+  assert.deepEqual(matchCommands('/ap'), []);
   // A space means the message has started; a list over it would be in the way.
-  assert.deepEqual(matchCommands('/triage '), []);
-  assert.deepEqual(matchCommands('/triage sore throat'), []);
+  assert.deepEqual(matchCommands('/accurx '), []);
+  assert.deepEqual(matchCommands('/accurx sore throat'), []);
   assert.deepEqual(matchCommands('how do I refer for an ECG'), []);
   assert.deepEqual(matchCommands('/zzz'), []);
 });
 
 test('the message survives the command intact', () => {
-  const parsed = parseCommand('/triage pt has a sore throat since Friday, no fever');
-  assert.equal(parsed.command.template, 'triage');
+  const parsed = parseCommand('/accurx pt has a sore throat since Friday, no fever');
+  assert.equal(parsed.command.template, 'accurxTriage');
   assert.equal(parsed.rest, 'pt has a sore throat since Friday, no fever');
 
   // Several lines of a pasted letter, kept whole.
@@ -41,34 +42,32 @@ test('the message survives the command intact', () => {
 test('an unknown command is asked as written rather than swallowed', () => {
   assert.equal(parseCommand('/refer for an ECG'), null);
   assert.equal(parseCommand('how do I refer for an ECG'), null);
+  // Including the two that used to exist. Somebody with the old habit gets their
+  // message answered the ordinary way rather than swallowed.
+  assert.equal(parseCommand('/triage pt has a sore throat'), null);
+  assert.equal(parseCommand('/appt heartburn 3 weeks'), null);
 });
 
 test('a command with nothing after it is a command still being written', () => {
-  assert.equal(awaitingArguments('/triage').name, 'triage');
-  assert.equal(awaitingArguments('/triage   ').name, 'triage');
-  assert.equal(awaitingArguments('/triage a patient'), null);
+  assert.equal(awaitingArguments('/accurx').name, 'accurx');
+  assert.equal(awaitingArguments('/accurx   ').name, 'accurx');
+  assert.equal(awaitingArguments('/accurx a patient'), null);
 });
 
 test('the server honours only a template a command claims', () => {
-  assert.equal(forcedTemplate('triage'), 'triage');
+  assert.equal(forcedTemplate('accurxTriage'), 'accurxTriage');
   assert.equal(forcedTemplate('documentCoding'), 'documentCoding');
   assert.equal(forcedTemplate('practiceSearch'), 'practiceSearch');
   // Anything else — including a real template no command offers — is ignored,
-  // so the field cannot be used to force an arbitrary card.
+  // so the field cannot be used to force an arbitrary card. "triage" is one of
+  // those now: the router still chooses it, but no command claims it.
+  assert.equal(forcedTemplate('triage'), '');
+  assert.equal(forcedTemplate('appointmentBooking'), '');
   assert.equal(forcedTemplate('referral'), '');
   assert.equal(forcedTemplate('notebook'), '');
   assert.equal(forcedTemplate(''), '');
-  assert.equal(commandByTemplate('triage').name, 'triage');
-});
-
-test('/triage always renders a triage, even with no condition named', () => {
-  const named = renderCommand('triage', { condition: 'conjunctivitis' }, 'pt eyes red with discharge');
-  assert.ok(named && named.title, 'a triage card is rendered');
-
-  // The model returned nothing usable. The message itself is still triaged —
-  // falling through to prose would answer a different question.
-  const bare = renderCommand('triage', {}, 'pt has chest pain and is short of breath');
-  assert.ok(bare && bare.title, 'the message is triaged on its own');
+  assert.equal(commandByTemplate('accurxTriage').name, 'accurx');
+  assert.equal(commandByTemplate('triage'), null);
 });
 
 test('/document falls back to the coding rules, never to prose', () => {
@@ -89,6 +88,11 @@ test('/document falls back to the coding rules, never to prose', () => {
 test('a template no command claims renders nothing', () => {
   assert.equal(renderCommand('referral', {}, 'ecg'), null);
   assert.equal(renderCommand('', {}, ''), null);
+  // The two the commands lost. Nothing can force their cards through the command
+  // path any more; a described symptom still reaches the triage card through the
+  // ordinary router.
+  assert.equal(renderCommand('triage', { condition: 'sore throat' }, 'pt sore throat'), null);
+  assert.equal(renderCommand('appointmentBooking', { reason: 'sore throat 3/7' }, 'pasted'), null);
 });
 
 test('every model-filled command names a template the renderer knows', () => {
@@ -159,57 +163,10 @@ test('a passage longer than a paragraph is cut at a sentence, and says it was', 
   assert.match(quoted, /\[…\]$/);
 });
 
-/* ----------------------------------------------------------------- /appt */
-
-test('/appt keeps the reason line and the booking notes apart', () => {
-  const card = renderCommand('appointmentBooking', {
-    reason: 'heartburn 3/52, worsening, gaviscon not helping; pt concerned re omeprazole/clopidogrel interaction',
-    details: [],
-    booking: ['telephone after 2pm', 'Turkish interpreter needed'],
-  }, 'pasted message');
-  const json = JSON.stringify(card);
-
-  assert.match(card.title, /Reason and booking notes/);
-  assert.match(json, /Copy into the appointment/);
-  assert.match(json, /heartburn 3\/52/);
-  assert.match(json, /Booking notes/);
-  assert.match(json, /telephone after 2pm/);
-  assert.match(json, /Turkish interpreter/);
-
-  // The two lists are read by two different people at two different moments,
-  // and the reason rules drop contact preferences on purpose. A booking note
-  // that leaked into the reason line would defeat both.
-  const reasonField = card.blocks.find((b) => b.type === 'fields').items[0].value;
-  assert.doesNotMatch(reasonField, /2pm|interpreter/i);
-});
-
-test('/appt says plainly that it has not decided urgency', () => {
-  // A card that summarises a patient's message looks exactly like a card that
-  // has assessed it. This one has not, and says so.
-  const json = JSON.stringify(renderCommand('appointmentBooking', { reason: 'sore throat 2/7' }));
-  assert.match(json, /does \*\*not\*\* decide how urgent/i);
-  assert.match(json, /shown \*\*above\*\* this card/i);
-});
-
-test('/appt falls back to the reason rules, never to prose', () => {
-  // Nothing to write a line from — the same shape as /document falling back to
-  // the coding rules. Still the practice's own material.
-  const bare = renderCommand('appointmentBooking', {}, 'anything');
-  assert.ok(bare && bare.title, 'the rules card answers instead');
-  assert.match(bare.title, /Writing the reason for appointment/);
-});
-
-test('/appt caps both lists rather than rendering whatever came back', () => {
-  const many = Array.from({ length: 9 }, (_, i) => 'note ' + i);
-  const card = renderCommand('appointmentBooking', { reason: 'knee pain 2/12', details: many, booking: many });
-  const lists = card.blocks.filter((b) => b.type === 'bullets');
-  for (const list of lists) assert.ok(list.items.length <= 5, 'at most five');
-});
-
 /* --------------------------------------------------------------- /accurx */
 
-// The whole promise of the command: one paste, both answers. A card that
-// carried only one of them would be /triage or /appt wearing a new name.
+// The whole promise of the command: one paste, both answers. A card carrying
+// only one of them would be one of the two commands it replaced, renamed.
 test('/accurx routes the patient AND writes the reason line', () => {
   const card = renderCommand('accurxTriage', {
     condition: 'heartburn',
@@ -360,15 +317,8 @@ test('/document offers the filing title', () => {
   assert.deepEqual(copied(card).map((f) => f.label), ['Title']);
 });
 
-test('/appt offers the reason line', () => {
-  const card = renderCommand('appointmentBooking', { reason: 'knee pain 2/12, req physio' });
-  const one = copied(card);
-  assert.deepEqual(one.map((f) => f.label), ['Reason']);
-  assert.equal(one[0].value, 'knee pain 2/12, req physio');
-});
-
-test('/triage offers where it goes', () => {
-  const card = renderCommand('triage', { condition: 'sore throat' }, 'pt sore throat');
+test('a triage card offers where it goes', () => {
+  const card = triagePatientAnswer({ condition: 'sore throat', text: 'pt sore throat' });
   const one = copied(card);
   assert.deepEqual(one.map((f) => f.label), ['Send it to']);
   assert.match(one[0].value, /Community pharmacy/);
@@ -378,8 +328,8 @@ test('exactly one value per card carries it', () => {
   // A Copy on every row would be four buttons on a referral card and no signal
   // about which one the reader actually needs, so it stays opt-in.
   for (const card of [
-    renderCommand('triage', { condition: 'knee pain' }, 'adult with knee pain for weeks'),
-    renderCommand('appointmentBooking', { reason: 'sore throat 3/7', booking: ['prefers phone'] }),
+    triagePatientAnswer({ condition: 'knee pain', text: 'adult with knee pain for weeks' }),
+    triagePatientAnswer({ condition: 'stitches out', text: 'pt needs her stitches out on Thursday' }),
     renderCommand('documentCoding', { document: { date: '07-Aug-2026', site: 'HUH', department: 'Cardiology', actions: [] } }),
   ]) {
     assert.equal(copied(card).length, 1, card.title + ' should offer exactly one');
@@ -399,10 +349,12 @@ test('/accurx is the deliberate exception: two values leave it', () => {
 
 test('an emergency card offers nothing to copy', () => {
   // Nobody types anything off "interrupt the duty doctor now" — they stand up.
-  const red = renderCommand('triage', { condition: 'chest pain' }, 'pt has chest pain and is short of breath');
+  const red = triagePatientAnswer({ condition: 'chest pain', text: 'pt has chest pain and is short of breath' });
   assert.equal(copied(red).length, 0);
 
-  const spinal = renderCommand('triage', { condition: 'back pain' },
-    'Bad lower back pain, now numb around the groin and cannot tell when passing urine.');
+  const spinal = triagePatientAnswer({
+    condition: 'back pain',
+    text: 'Bad lower back pain, now numb around the groin and cannot tell when passing urine.',
+  });
   assert.equal(copied(spinal).length, 0);
 });
