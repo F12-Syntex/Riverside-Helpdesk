@@ -15,13 +15,27 @@ import { searchContacts } from '@/lib/contacts';
  * half-typed, and closing it puts you back exactly where you were.
  * Nothing navigates, so there is nothing to come back from.
  *
- * The whole directory is already in the page, so it opens instantly and
- * filters as it is typed. Every number is verbatim from
- * lib/contacts.data.json; this sheet chooses what to show and never
- * touches what it says.
+ * The practice's own directory is already in the page, so it opens
+ * instantly and filters as it is typed. Behind it, the same box searches
+ * the CQC register — every service registered in England — which is far
+ * too large to send to the browser and so is asked for over /api/cqc as
+ * the typing settles. The practice's own numbers always come first: they
+ * are the ones reception actually rings.
+ *
+ * Every number is verbatim from lib/contacts.data.json or from the
+ * register itself; this sheet chooses what to show and never touches
+ * what it says.
  * ------------------------------------------------------------------ */
 
 const COPIED_MS = 1400;
+
+// How long the typing has to settle before the register is asked. Short
+// enough to feel immediate, long enough that a word typed at speed is one
+// request rather than six.
+const CQC_DEBOUNCE_MS = 180;
+
+// One letter is not a search — the register is not even asked.
+const CQC_MIN_CHARS = 2;
 
 // The label with the characters the search matched picked out, so it is
 // obvious why an entry is in the list.
@@ -63,8 +77,29 @@ export default function ContactsSheet({ onClose }) {
 
   React.useEffect(() => setMounted(true), []);
 
+  const [cqc, setCqc] = React.useState({ for: '', entries: [], loading: false });
   const results = React.useMemo(() => searchContacts(query), [query]);
-  const searching = query.trim().length > 0;
+  const trimmed = query.trim();
+  const searching = trimmed.length > 0;
+
+  // The register, asked for once the typing settles. Each request replaces
+  // the one before it, and a reply that arrives after the query has moved on
+  // is dropped rather than shown against the wrong search.
+  React.useEffect(() => {
+    if (trimmed.length < CQC_MIN_CHARS) { setCqc({ for: '', entries: [], loading: false }); return undefined; }
+    setCqc((c) => ({ ...c, loading: true }));
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch('/api/cqc?q=' + encodeURIComponent(trimmed), { cache: 'no-store', signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : { entries: [] }))
+        .then((d) => setCqc({ for: trimmed, entries: d.entries || [], loading: false }))
+        .catch(() => { if (!controller.signal.aborted) setCqc({ for: trimmed, entries: [], loading: false }); });
+    }, CQC_DEBOUNCE_MS);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [trimmed]);
+
+  // Only ever shown against the query it was fetched for.
+  const cqcRows = cqc.for === trimmed ? cqc.entries : [];
 
   // Escape closes it from anywhere, which is what a keyboard expects of
   // something that opened over what it was doing.
@@ -138,7 +173,7 @@ export default function ContactsSheet({ onClose }) {
               type="text"
               autoComplete="off"
               aria-label="Search contacts"
-              placeholder="Search a name, a department, part of a number"
+              placeholder="A name, a department, a town, a postcode, a number"
               style={s('flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 44px;border:2px solid #d8dde0;border-radius:999px;background:#f8fafb;outline:none;color:#212b32;')} />
             {searching && (
               <Hover tag="button" type="button" onClick={() => { setQuery(''); if (field.current) field.current.focus(); }} aria-label="Clear search"
@@ -149,7 +184,11 @@ export default function ContactsSheet({ onClose }) {
             )}
           </div>
           <div aria-live="polite" style={s('display:flex;align-items:center;gap:10px;min-height:20px;margin-top:8px;padding:0 6px;font-size:13px;color:#4c6272;')}>
-            <span>{results.length} {results.length === 1 ? 'contact' : 'contacts'}{searching ? ' found' : ''}</span>
+            <span>
+              {results.length} {results.length === 1 ? 'contact' : 'contacts'}{searching ? ' here' : ''}
+              {cqcRows.length ? ' · ' + cqcRows.length + ' on the register' : ''}
+              {cqc.loading && searching ? ' · searching the register…' : ''}
+            </span>
             {copied && (
               <span style={s('display:inline-flex;align-items:center;gap:6px;font-weight:600;color:#007f3b;')}>
                 <Svg w={13} sw={3}>{Icons.check}</Svg> Copied {copied}
@@ -158,19 +197,49 @@ export default function ContactsSheet({ onClose }) {
           </div>
         </div>
 
-        {/* The list scrolls inside the sheet, so the search field and the
-            count never leave the top of it. */}
-        <div className="riva-contacts-list" style={s('max-height:min(56vh,460px);overflow-y:auto;overscroll-behavior:contain;padding:0 20px 18px;')}>
-          {results.length === 0 ? (
-            <p style={s('margin:18px 4px 8px;font-size:15px;color:#4c6272;')}>
-              Nothing here matches “{query.trim()}”. This is the practice’s own list — for anywhere else in England, close this and ask for the number in the question field.
-            </p>
-          ) : (
+        {/* The list scrolls inside the sheet, which is a fixed size: it is the
+            same shape with one match as with a hundred, so nothing under the
+            cursor moves as the letters go in. */}
+        <div className="riva-contacts-list" style={s('flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 20px 18px;')}>
+          {results.length > 0 && (
             <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;')}>
               {results.map((r, i) => (
                 <Row key={r.entry.label + '#' + i} result={r} copied={copied} onCopy={copy} first={i === 0} />
               ))}
             </ul>
+          )}
+
+          {results.length === 0 && (
+            <p style={s('margin:16px 4px 4px;font-size:14.5px;color:#4c6272;')}>
+              {searching
+                ? 'Nothing in the practice’s own list matches “' + trimmed + '”.'
+                : 'Type to search.'}
+            </p>
+          )}
+
+          {/* Everything else registered in England, under its own heading so
+              it is never mistaken for one of the practice's own numbers. */}
+          {searching && (cqcRows.length > 0 || cqc.loading) && (
+            <>
+              <div style={s('position:sticky;top:0;background:#fff;padding:14px 4px 6px;margin-top:6px;border-top:1px solid #eef1f2;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a99a3;')}>
+                CQC register
+              </div>
+              {cqcRows.length > 0 ? (
+                <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;')}>
+                  {cqcRows.map((entry, i) => (
+                    <Row key={entry.id || entry.label + '#cqc' + i} result={{ entry, indices: [] }} copied={copied} onCopy={copy} first={i === 0} />
+                  ))}
+                </ul>
+              ) : (
+                <p style={s('margin:6px 4px;font-size:14px;color:#8a99a3;')}>Searching…</p>
+              )}
+            </>
+          )}
+
+          {searching && !cqc.loading && cqcRows.length === 0 && trimmed.length >= CQC_MIN_CHARS && results.length === 0 && (
+            <p style={s('margin:6px 4px;font-size:14px;color:#4c6272;')}>
+              Nothing on the register either. Try fewer words, or a town or postcode.
+            </p>
           )}
         </div>
       </div>
@@ -192,6 +261,12 @@ function Row({ result, copied, onCopy, first }) {
         <span style={s('font-size:15.5px;font-weight:700;color:#212b32;')}>
           <Label text={entry.label} indices={indices} />
         </span>
+        {/* A register entry carries its address: two branches of the same
+            chain are the same name, and this is the line that tells them
+            apart. */}
+        {entry.note && (
+          <span style={s('font-size:13px;color:#4c6272;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{entry.note}</span>
+        )}
         {emails.length > 0 && (
           <span style={s('display:flex;flex-wrap:wrap;gap:4px 12px;')}>
             {emails.map((e) => (

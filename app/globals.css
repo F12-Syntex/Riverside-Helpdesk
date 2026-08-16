@@ -22,12 +22,11 @@ html { scrollbar-gutter: stable; }
   --riva-dock-pad-b: calc(22px + env(safe-area-inset-bottom));
   /* The dock as it sits at the foot of the page, from the bottom edge of
      the screen to the top of the strip above the field. */
-  --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-pad-b));
-  /* What the opening screen hangs under the field, and which the hero above has
-     to clear. Nothing hangs there now — the shortcut row, the drag-and-drop line
-     and the patient-data line have all gone — so it is zero, and the heading
-     sits its own margin above the field rather than a phantom 102px higher. */
-  --riva-dock-extras: 0px;
+  --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-extras) + var(--riva-dock-pad-b));
+  /* What the opening screen hangs under the field, and which the hero above
+     has to clear: the Contacts pill, in plain sight under the box rather than
+     tucked in a corner of the header. Its height plus the gap above it. */
+  --riva-dock-extras: 52px;
   /* What the dock grows UPWARDS by when something is attached to the next
      question — a row per dropped document, a strip for the images. The dock is
      pinned to the bottom of the screen, so those rows push its top up into
@@ -209,11 +208,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .riva-contacts-pill-label { display: none; }
 
   /* In the contacts sheet, each contact's numbers wrap under its name rather
-     than squeezing the name to nothing, and the list gets the taller run a
+     than squeezing the name to nothing, and the sheet takes the taller run a
      bottom sheet can afford. */
   .riva-contact-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .riva-contact-numbers { justify-content: flex-start !important; }
-  .riva-contacts-list { max-height: 64vh !important; }
+  .riva-contacts-sheet { height: 82vh !important; }
 
   /* Multi-column blocks stack into a single column. */
   .riva-grid-2 { grid-template-columns: 1fr !important; }
@@ -270,6 +269,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * carries .riva-sheet (and its own max-width inline); on phones it goes
  * full-width and slides up from the bottom edge. */
 .riva-modal-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(33,43,50,.45); display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+/* The contacts sheet is one fixed shape, whatever is in it. A panel that
+ * grew with its results moved the row under the cursor on every keystroke,
+ * which is unusable when the thing being typed at is a list of numbers. So
+ * the frame is set and the list scrolls inside it. */
+.riva-contacts-sheet { height: min(620px, 78vh); display: flex; flex-direction: column; }
 .riva-sheet { width: 100%; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(33,43,50,.2); overflow: hidden; animation: rivaUp .15s ease; }
 
 @keyframes rivaSheetUp { from { transform: translateY(100%); } to { transform: none; } }

@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.0.0` | 2026-08-16 | feat | `f7725fe` | feat!: the directory opens over the page, not instead of it |
 | `4.2.1` | 2026-08-16 | docs | `0dca6af` | docs: record 4.2.0 in the versions table |
 | `4.2.0` | 2026-08-16 | feat | `c92219b` | feat: the directory gets a page, and a pill on every header |
 | `4.1.2` | 2026-08-16 | docs | `b738834` | docs: add the rows for the guide-only /accurx |

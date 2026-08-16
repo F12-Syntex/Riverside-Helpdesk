@@ -24,6 +24,7 @@ import CommandMenu from './CommandMenu';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
+import ContactsSheet from './ContactsSheet';
 import { plainText } from './chat/Rich';
 import { mdPlain } from './chat/Md';
 import { notify } from './notify';
@@ -184,6 +185,8 @@ class RiversidePracticeQA extends React.Component {
       screening: false,
       blocked: null,
       customGuides: [],
+      // The practice directory, opened from the pill under the box.
+      contactsOpen: false,
       showAdd: false,
       draft: this.blankDraft(),
       copiedIdx: null,
@@ -1748,6 +1751,10 @@ class RiversidePracticeQA extends React.Component {
       isViewingHistory: activeTurn !== lastTurn,
       onLatest: () => self.setState({ activeTurn: null }),
       cats: this.cats(),
+      // The directory, opened from under the box and closed back onto it.
+      contactsOpen: this.state.contactsOpen,
+      onOpenContacts: () => self.setState({ contactsOpen: true }),
+      onCloseContacts: () => self.setState({ contactsOpen: false }),
       showAdd: this.state.showAdd,
       draft: this.state.draft,
       draftSteps,
@@ -1810,7 +1817,7 @@ class RiversidePracticeQA extends React.Component {
         {/* Keyed on the state so the header fades through a change rather
             than being swapped under the reader. */}
         <div key={v.isKb ? 'sources' : (v.isEmpty ? 'empty' : 'answers')} style={s('position:relative;z-index:1;flex:none;animation:rivaHeaderIn .45s ease both;')}>
-          <AppHeader v={v} />
+          <AppHeader v={v} onContacts={v.onOpenContacts} />
         </div>
 
         {/* The way back to an empty page, at the top left where a back
@@ -1925,6 +1932,20 @@ class RiversidePracticeQA extends React.Component {
               </Hover>
             </form>
 
+            {/* Under the box, where it is looked at, rather than in a corner
+                of the header where it is not. The room it takes is declared
+                as --riva-dock-extras in globals.css, so the heading above
+                clears it and the answers behind stop short of it. */}
+            <div style={s('display:flex;justify-content:center;padding-top:14px;')}>
+              <Hover tag="button" type="button" onClick={v.onOpenContacts} className="riva-lift"
+                aria-haspopup="dialog" aria-expanded={v.contactsOpen ? 'true' : 'false'}
+                base="display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.86);border:1px solid #d8dde0;color:#005eb8;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(33,43,50,.06);"
+                hover="background:#fff;border-color:#005eb8;color:#003087;">
+                <Svg w={15} sw={2.2}>{Icons.phone}</Svg>
+                Contacts
+              </Hover>
+            </div>
+
           </div>
         </div>
         )}
@@ -1946,6 +1967,7 @@ class RiversidePracticeQA extends React.Component {
         {v.viewerOpen && <DocumentViewer v={v} />}
 
         {v.showAdd && <AddGuideModal v={v} />}
+        {v.contactsOpen && <ContactsSheet onClose={v.onCloseContacts} />}
         {/* Above everything, including the guide modal: a message that was
             refused is the only thing on this page that has to be dealt with
             before anything else can happen. */}
