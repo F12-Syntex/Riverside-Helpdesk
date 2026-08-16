@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `3.0.2` | 2026-08-16 | fix | `2b9ccc1` | fix: the requests the reading found now reach the card |
+| `3.0.1` | 2026-08-16 | docs | `0e81249` | docs: add the row for the reading-only /accurx |
 | `3.0.0` | 2026-08-16 | feat | `aeb1170` | feat!: /accurx is decided by reading the message, and nothing else |
 | `2.7.1` | 2026-08-16 | docs | `6effe61` | docs: add the row for the interrupt card |
 | `2.7.0` | 2026-08-16 | feat | `0436a76` | feat: a card that means "now" can no longer render as a booking |
