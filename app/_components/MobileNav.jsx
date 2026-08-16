@@ -15,6 +15,7 @@ import { s, Hover, Svg, Icons } from './ui';
 const TOOLS = [
   { href: '/', label: 'Practice Q&A' },
   { href: '/lookup', label: 'Instant lookup' },
+  { href: '/contacts', label: 'Contacts' },
   { href: '/tools', label: 'All tools' },
   // Hidden for now — keep in step with TOOLS in app/page.js. The routes still
   // work directly (/diagram is the full system map).

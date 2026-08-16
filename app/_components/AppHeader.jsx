@@ -2,12 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { s, Hover, Svg, Icons } from './ui';
 import MobileNav from './MobileNav';
 
 
 export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const pathname = usePathname();
+  // The directory is one tap from every page. It goes on the page it leads
+  // to, where it would only lead back to itself.
+  const showContacts = pathname !== '/contacts';
 
   return (
     // The header carries no bar of its own — it sits on the page, as the dock
@@ -26,6 +31,19 @@ export default function AppHeader({ v, subtitle = 'Practice Q&A', tabs = null })
         {/* The Sources button is out of the header for now. SourcesView, the
             view state and the menu's own entry are all still wired, so it
             comes back by restoring this button alone. */}
+
+        {/* The practice's own telephone directory. A pill rather than a menu
+            entry: it is the thing reception reaches for most, and reaching it
+            should never cost more than the one tap. On phones it keeps the
+            handset and drops the word (see globals.css). */}
+        {showContacts && (
+          <Hover tag={Link} href="/contacts" className="riva-contacts-pill" aria-label="Contacts"
+            base="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:999px;background:#fff;border:1px solid #d8dde0;color:#005eb8;font:inherit;font-size:14.5px;font-weight:600;text-decoration:none;white-space:nowrap;"
+            hover="background:#e8f1f8;border-color:#005eb8;color:#003087;">
+            <Svg w={16} sw={2.2}>{Icons.phone}</Svg>
+            <span className="riva-contacts-pill-label">Contacts</span>
+          </Hover>
+        )}
 
         {/* Page tabs (e.g. Rota / Staff) — segmented control, shown all sizes. */}
         {tabs && (
