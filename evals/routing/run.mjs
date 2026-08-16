@@ -26,7 +26,7 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 import { ACCURX_READ_SCHEMA, accurxReadPrompt, readingVerdict } from '../../lib/templates/accurx-route.mjs';
-import { DECOMPOSITION_RULES, REQUESTS_FIELD, renderCommand } from '../../lib/templates/route.mjs';
+import { renderCommand } from '../../lib/templates/route.mjs';
 import { triagePatientAnswer } from '../../lib/templates/triage.mjs';
 import { answerToText } from '../../lib/questions/flatten.mjs';
 import { BOOKING_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
@@ -54,7 +54,8 @@ async function readMessage(message, decompose) {
     // The SAME schema the endpoint uses, decomposition included when the gate
     // opens. Marking the routing on a call that could only ever return one
     // request would mark a system nobody runs.
-    schema: decompose ? ACCURX_READ_SCHEMA.extend(REQUESTS_FIELD) : ACCURX_READ_SCHEMA,
+    // One schema, whatever the message. The reading returns its own requests.
+    schema: ACCURX_READ_SCHEMA,
     temperature: 0,
     // No Notebook. This harness is about the routing model, and a Notebook that
     // differs between runs makes a failure impossible to attribute.
@@ -62,7 +63,6 @@ async function readMessage(message, decompose) {
       question: message,
       reasonRules: REASON_RULES,
       bookingRules: BOOKING_RULES,
-      extra: decompose ? DECOMPOSITION_RULES : '',
     }),
   });
   return { model, values: out.object };
