@@ -5,12 +5,16 @@
 // no retrieval, no citations — because the output is a routing suggestion for
 // staff to sanity-check, not clinical advice.
 //
-// The one exception is the practice's own triaging guidance: the "Triaging
-// notebook" section of the in-app Notebook is read live and folded into the
-// prompt, so the routing follows how this practice actually triages. It is
-// best-effort — if the Notebook cannot be read the endpoint still signposts.
+// WHERE THE ROUTING COMES FROM. This endpoint used to read the "Triaging
+// notebook" section of the in-app Notebook live and paste it into the prompt.
+// That made the routing model something nobody could test and something that
+// changed under the code whenever a page was edited — and it meant this page and
+// the assistant's own triage cards answered the same question from two different
+// sets of rules. Both now read lib/triage/destinations.mjs: the practice's
+// destinations written down once, with what each one takes, what it never takes,
+// and the order the checks run in.
 import { NextResponse } from 'next/server';
-import { notebookSectionContext } from '@/lib/notebook';
+import { DESTINATIONS, routingGuidance } from '@/lib/triage/destinations.mjs';
 import { getAiModel } from '@/lib/settings';
 import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
@@ -34,46 +38,25 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 
-// The practice team the model may route to. Kept as data so the roster is easy
-// to amend in one place when the team changes.
-const TEAM = [
-  { key: 'gp', label: 'GP (doctor)', handles: 'undifferentiated or complex symptoms, anything needing diagnosis or examination, mental health concerns, safeguarding, abnormal results needing interpretation, urgent same-day clinical problems' },
-  { key: 'diabetes-nurse', label: 'Diabetes nurse', handles: 'diabetes reviews, HbA1c follow-up, blood sugar concerns, diabetic foot checks, insulin/diabetes medication queries in established diabetics' },
-  { key: 'practice-nurse', label: 'Practice nurse', handles: 'immunisations and vaccinations, wound care and dressings (bandage changes), stitch/clip removal, cervical smears, blood pressure checks, B12 injections, travel advice' },
-  { key: 'pharmacist', label: 'In-house pharmacist', handles: 'medication queries and reviews, repeat prescription issues, dose queries, minor side effects, asthma reviews and inhaler technique' },
-  { key: 'admin', label: 'Reception / admin', handles: 'appointment booking or cancellation, fit (sick) note continuations, test result release once already actioned, registration and forms, letters' },
-  { key: 'urgent-care', label: '999 / A&E or NHS 111', handles: 'emergencies and red-flag symptoms: chest pain, breathing difficulty, stroke signs, heavy bleeding, sepsis signs, suicidal intent' },
-];
+// The team the model may route to, and the order the routing runs in — both
+// read from the practice's destinations file rather than written out again here.
+// The keys below are the keys this endpoint answers with; the page shows the
+// label beside them.
+const TEAM = DESTINATIONS;
 
 const URGENCIES = new Set(['emergency', 'same-day', 'routine']);
 
-// The Notebook section whose subtree holds the practice's triaging guidance.
-const TRIAGE_SECTION = 'Triaging notebook';
-
-function buildPrompt(text, guidance) {
-  const roster = TEAM.map((t) => `- ${t.key}: ${t.label} — handles: ${t.handles}`).join('\n');
-  // Practice guidance is authoritative: where the notes say how a given request
-  // is triaged at this practice, follow them over the generic rules below.
-  const guidanceBlock = guidance
-    ? `PRACTICE TRIAGING GUIDANCE (from the practice's Notebook — follow this when it applies; it overrides the generic rules below):
-"""
-${guidance}
-"""
-
-`
-    : '';
+function buildPrompt(text) {
   return `You are a signposting assistant for a UK GP practice (The Riverside Practice). Reception pastes the text of a patient's AccurX online consultation (patient-identifiable details removed). Suggest which member of the practice team should handle it.
 
-PRACTICE TEAM (route to exactly one, by key):
-${roster}
+${routingGuidance()}
 
-${guidanceBlock}RULES
+RULES
 - Be CONCISE. This is a routing hint for trained reception staff, not advice.
+- The order above is the practice's own and runs top to bottom. Nothing later overrides something earlier: a request matching both a red flag and a minor illness is a red flag.
 - If ANY red-flag / emergency feature is present (chest pain, severe breathlessness, stroke signs, anaphylaxis, heavy bleeding, sepsis signs, suicidal intent, seriously unwell child), route to urgent-care with urgency "emergency" — regardless of what the request nominally asks for.
-- Asthma routine reviews / inhaler queries go to the pharmacist; an asthma attack or worsening breathlessness is a GP same-day or an emergency.
-- Diabetes routine care goes to the diabetes nurse; newly suspected diabetes or an unwell diabetic goes to the GP.
 - When the request mixes several needs, route to whoever must act FIRST and mention the rest in the steps.
-- If genuinely unclear, route to the GP — never guess a nurse/pharmacist pathway for an undifferentiated problem.
+- If genuinely unclear, route to gp — never guess a nurse pathway for an undifferentiated problem.
 - Do not invent details that are not in the consultation text. Do not write any patient-identifiable information.
 
 Reply with ONLY this JSON (no markdown fences):
@@ -109,14 +92,10 @@ export async function POST(request) {
   if (!text) return NextResponse.json({ error: 'Empty consultation text.' }, { status: 400 });
   if (text.length > 20_000) return NextResponse.json({ error: 'Consultation text is too long.' }, { status: 400 });
 
-  // Practice triaging guidance is best-effort: a missing or unreachable Notebook
-  // must never stop reception getting a routing suggestion.
-  const guidance = await notebookSectionContext(TRIAGE_SECTION).catch(() => '');
-
   try {
     // No-retention routing and no extended reasoning, both from lib/ai/openrouter.
     const res = await fetch(...chatRequest(apiKey, {
-      model, temperature: 0.1, messages: [{ role: 'user', content: buildPrompt(text, guidance) }],
+      model, temperature: 0.1, messages: [{ role: 'user', content: buildPrompt(text) }],
     }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
@@ -128,8 +107,9 @@ export async function POST(request) {
 
     const parsed = parseReply(raw);
     // Unknown/missing routing key falls back to the GP — the safe default for
-    // anything the model could not place.
-    const team = TEAM.find((t) => t.key === parsed.who) || TEAM[0];
+    // anything the model could not place, and the same default the practice's
+    // own order ends on.
+    const team = TEAM.find((t) => t.key === parsed.who) || TEAM.find((t) => t.key === 'gp');
     const urgency = URGENCIES.has(parsed.urgency) ? parsed.urgency : 'same-day';
     const strings = (v, max) => (Array.isArray(v) ? v : [])
       .filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()).slice(0, max);

@@ -34,7 +34,7 @@ It provides:
 | Practice Q&A | `/` (also `/helpbot`) | Answers "how do we do X here?" from the practice's own documents and Notebook, with a verbatim quote behind every claim. The front door of the app. |
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
-| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/appt` command, which adds the booking notes reception needs alongside the reason line, and as `/accurx`, which puts that line on the same card as where the patient goes. |
+| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/accurx` command, which puts that line, and the booking notes reception needs, on the same card as where the patient goes. |
 | Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |
@@ -485,7 +485,7 @@ somewhere else (email, Accurx).
 | Flow | Endpoint | What leaves the practice | Stored |
 | --- | --- | --- | --- |
 | Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
-| Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the "Triaging notebook" section, to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
+| Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the practice's destinations (`lib/triage/destinations.mjs`), to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
 | Document coding | `POST /api/docfile` (and the `docfile` branch of `/api/ask`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
 | Medication check | `POST /api/medication` | Medicine name + optional question, to OpenRouter with the `openrouter:web_search` server tool (Exa). | The result is cached in `medications`; the question text is stored in the `queries` jsonb. |
@@ -720,7 +720,7 @@ action" risk.
   another complaint is dropped rather than written — the failure mode that had a
   knee card claiming self-care had failed on the strength of a sentence about
   the patient's voice.
-- **The one second model pass** (`/triage` and `/accurx` only) may raise acuity
+- **The one second model pass** (`/accurx` only) may raise acuity
   above what the scanners found and may never lower it; if it fails or times out
   the deterministic answer stands unchanged.
 - **`/accurx` is read as well as matched, and the patterns keep the veto**

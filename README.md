@@ -123,7 +123,7 @@ clickable sources they can open in-browser.
     the message is over ~300 characters or carries a joining phrase ("also",
     "while I'm here"), so "how do I refer for an ECG" costs exactly what it did
     before.
-  - **`/triage` and `/accurx` are the one exception to one-call.** They may
+  - **`/accurx` is the one exception to one-call.** It may
     issue a small structured call per decomposed request, in parallel, returning
     an enum and a label — no prose; `/accurx` additionally asks one per
     destination, also in parallel, returning a yes or a no. **Code holds the
@@ -170,24 +170,23 @@ clickable sources they can open in-browser.
   merely uses the word gets no e-RS card and no referral steps
   (`lib/referrals/scope.mjs`).
 - **Slash commands say which card you want** rather than leaving it to be worked
-  out (`lib/commands.mjs`): `/triage` (where a patient goes), `/accurx` (both of
-  those at once), `/document` (a filing title), `/appt` (the reason line and the
-  booking notes), `/practice` (search the documents, no model at all). `/appt`
-  takes a pasted message and writes two things kept deliberately apart — the one-line clinical shorthand
-  that goes into the appointment, under the same rules the reason template
-  already uses, and the practical notes reception needs to choose a slot. Those
-  rules *drop* "best to call after 2pm" and "I'll need an interpreter" from the
-  reason line on purpose; the booking notes are where they go instead of on the
-  floor. It writes wording and decides no urgency — the deterministic scanners
-  run over the same message on the same turn and render above the card.
+  out (`lib/commands.mjs`): `/accurx` (where the patient goes and the reason
+  line, from one paste), `/document` (a filing title), `/practice` (search the
+  documents, no model at all). There used to be two more — `/triage`, which said
+  where a patient went, and `/appt`, which wrote the reason line and the booking
+  notes — and `/accurx` is both of them on one card, so they were removed rather
+  than kept as half-answers beside it. A described symptom typed without any
+  command still reaches the same triage card: that path never went through
+  `/triage`.
 - **`/accurx` answers both halves of an AccurX request on one card**
   (`lib/templates/accurx.mjs`): where the patient goes, and the reason line to
   copy into what gets booked. Reception reads the request once and needs both,
   so asking for them separately meant pasting the same message twice — and the
   second paste is the one that does not happen when the phone rings. Neither
-  half is new: the routing *is* `/triage`'s card, run through the practice's own
-  order top to bottom, and the wording *is* `/appt`'s, under the same rules.
-  What the command decides is order. Ordinarily the destination and the reason
+  half is new: the routing is the triage card, run through the practice's own
+  order top to bottom over the destinations in `lib/triage/destinations.mjs`,
+  and the wording is the reason line and booking notes under the rules in
+  `lib/templates/writing.mjs`. What the command decides is order. Ordinarily the destination and the reason
   line sit together at the top, because they are the two things that leave the
   card. On a card that ends in an emergency — a red flag, cauda equina, an eye
   going straight to Moorfields — the wording drops its Copy, moves below
@@ -195,8 +194,7 @@ clickable sources they can open in-browser.
   nobody is booking an appointment off "interrupt the duty doctor now". Which of
   the two it is comes from `endsInAnEmergency` in `lib/templates/triage.mjs`,
   next to the branches that produce those cards, so the two cannot drift apart.
-  Like `/triage`, it decomposes a long message and runs the second pass over
-  each request.
+  It decomposes a long message and runs the second pass over each request.
 - **`/accurx` is read as well as matched** (`lib/templates/accurx-route.mjs`). A
   patient wrote in after a recent miscarriage: severe daily headaches, swelling
   and pain in **both** legs, shoulder pain, dizziness, bloods awaited. It came
@@ -333,12 +331,23 @@ clickable sources they can open in-browser.
   on e-RS at all. Every stage is gated on it — the lookup, the research tool, the
   card the writer produced and the card filled in afterwards — so four e-RS
   fields never appear above an answer with no e-RS form behind it.
+- **`lib/triage/destinations.mjs`** — where the practice sends things, written
+  down once: the duty doctor, the FCP, Pharmacy First, the nurse clinic and the
+  diabetes nurse, each with what it takes and what it never takes, plus the
+  matching for the two nurse routes and the order the checks run in. The triage
+  cards (`lib/templates/triage.mjs`, `lib/templates/nurse.mjs`) and the
+  signposting page (`app/api/signpost/route.js`) both read it, so the two cannot
+  answer the same question differently. It replaced a live read of the "Triaging
+  notebook" Notebook section, which changed under the code, could not be tested,
+  and never mentioned the nurse or the diabetes nurse at all — so a smear, a
+  dressing or a diabetic review was routed by a triage that had never heard of
+  the nurse clinic.
 - **`lib/safety/`** — the deterministic floor, and the only thing in the app
   that runs on every single turn. `requests.mjs` (the multi-intent gate and the
   decomposed spans), `spans.mjs` (locality — message-wide checks against
   span-local assertions), `ng12.mjs`, `redflags.mjs`, `confidentiality.mjs`,
   `acuity.mjs` (the rank table), `scan.mjs` (which request the card is about,
-  and what has to be said above it), `triage-pass.mjs` (the `/triage` second
+  and what has to be said above it), `triage-pass.mjs` (the `/accurx` second
   pass and the veto that keeps it honest). No model is consulted anywhere in
   the folder; `lib/templates/safety.mjs` renders what it finds.
 - **`lib/answer-cache/`** — answers already given, so the same question is not
