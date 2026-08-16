@@ -723,36 +723,63 @@ action" risk.
 - **The one second model pass** (`/accurx` only) may raise acuity
   above what the scanners found and may never lower it; if it fails or times out
   the deterministic answer stands unchanged.
-- **`/accurx` is read as well as matched, and the patterns keep the veto**
-  (`lib/templates/accurx-route.mjs`). The pattern cascade runs first and
-  unchanged; whatever it decides is the floor. Every destination is then asked,
-  **in parallel and one small call each**, a single closed question — "does this
-  message have to come to you, or would one of the services below you have
-  done?" — against that service's own description of what it covers and what it
-  refuses, the list of every service *less senior* than it, and the Notebook
-  pages about it. A check is never shown what sits above it: below is what it
-  needs in order to answer, above is what would let it defer ("the duty doctor
-  will catch it"). The question has to be a *floor* question because the fold
-  takes the maximum — a check asked merely whether it could deal with the
-  message says yes to everything a doctor could see, which is everything. The
-  answers are folded
-  **in code**, by seniority: the most senior service that said yes wins, ties go
-  to the more specific, and no second model call reconciles them. Code then
-  takes **the more senior of that and the floor** — a ladder of who reads it
-  (pharmacist, optician, nurse clinics and physiotherapist below a GP, below the
-  duty doctor, below an emergency), not of urgency. At the top the eye A&E ties
-  with 999 and is listed first, so a message that is both goes to the card that
-  **names Moorfields** rather than to the one that says 999: an eye emergency
-  sent to a general A&E is an eye emergency answered twice as slowly. So a reading that says
-  "physio is fine" changes nothing and a reading that says "a doctor today"
-  moves it, which is the one direction that is safe to be wrong in. The words
-  that moved it are the patient's own, verbatim, checked against the message
-  before they are rendered; an escalation whose quote does not check out still
-  escalates but says nothing. Every failure path — no model, a timeout, an
-  unknown destination, "unsure" — leaves the card exactly as the patterns made
-  it, and one check failing costs that one service's vote rather than the read.
-  Both answers are written to `question_log.provenance` (`route.read` beside
-  `route.card`), so a reading that was overruled can be found later.
+- **`/accurx` is decided by reading the message, against the routing guide and
+  nothing else** (`lib/templates/accurx-route.mjs`). **One call**, on its own
+  model role, returning where it goes, why, the wording, and every separate thing
+  the message asked for. It used to be a fan-out of one closed question per
+  destination beside a second call that wrote the reason line; the destinations
+  are written down as data now (`lib/triage/destinations.mjs`), which is what
+  lets one reader be handed the whole ladder and see what nine saw between them.
+  - **The prompt IS the guide.** Every destination least-senior-first with its
+    `covers` and — the half that decides most messages — its `refuses`; the
+    practice's **hard gates**, which are absolute and not clinical judgements (no
+    phlebotomy under 16, FCP adults only, HPV to 24 and under, six weeks for
+    travel jabs, Health Checks from 40, health-check bloods before 1 pm, nurse
+    clinics Mon/Wed/Fri); and the nurse rules and the bloods-first list. All of it
+    is generated from the same array `docs/routing.md` is transcribed into, so the
+    prompt cannot drift from the cards or from the signposting page.
+  - **The Notebook is not in it.** It was, as a catalogue of page titles. The
+    Notebook is how the practice *does* things and the guide is where a task
+    *goes*; a title was all the reading ever saw of a page, so what it actually
+    got was a list of headings to match against — the failure mode this path
+    exists to replace. Removing it also took a database round-trip and roughly
+    3,000 prompt tokens off the one call the receptionist waits for.
+  - **There is no pattern floor here any more, and the prompt says so.** The
+    cascade came off this path when it told reception to interrupt a doctor over
+    a chest pain the same message said was investigated at A&E last winter and
+    turned out to be reflux — an alarm the words had raised that nothing was
+    allowed to retire. Nothing now catches what the reading misses and nothing
+    retires what it raises, so it is given the guide's own front-page rule
+    instead: **when you are not sure, route upward**; `dutyDoctor` is the right
+    answer for anything that cannot be confidently placed. `applyRoute` still
+    implements the never-lower fold and is still tested, but the only caller that
+    passes it a floor is the ordinary router's own triage card.
+  - **`unsure`, a timeout, no key, a refusal, an unknown destination** all land on
+    the duty doctor — one rule in one place (`lib/templates/accurx.mjs`) rather
+    than a special case per failure.
+  - The words that decided it are the patient's own, verbatim, checked with
+    `spanWithin` before they are rendered; a destination whose quote does not
+    check out still stands but says nothing. Both answers go to
+    `question_log.provenance` (`route.read` beside `route.card`), so a reading can
+    be found and argued with later.
+  - **What it costs, measured** — `evals/routing/bench.mjs --repeats 5` over the
+    twelve hard cases in `evals/routing/cases-hard.md`: sixty calls a side, same
+    model, temperature 0. Removing the Notebook, adding the hard gates and asking
+    for one sentence of reasoning took the **input from 8,013 to 6,632 tokens
+    (−17%)**, the **output from 371 to 257 (−31%)**, the reasoning from 70 words
+    to 30, and a sequential pass from **1,575 ms to about 1,190 ms per call**.
+  - **And it cost nothing in accuracy, which is a weaker claim than it sounds.**
+    61.7% of calls landed on the guide's route before, 66.7% after — a difference
+    of about 0.6 standard errors at n=60, which is to say: unchanged, as far as
+    this suite can see. The one movement bigger than the noise is the
+    never-right column, 3 cases down to 1, carried by the travel-vaccination case
+    going from 0/5 (it answered "unsure" three times) to 4/5 once the six-weeks
+    gate was in the prompt. **Read the routing numbers from repeats, never from
+    one pass**: temperature 0 is not determinism, and the same twelve messages on
+    a byte-identical prompt scored 8/12 and then 5/12 on consecutive runs here.
+    Two prompt rules were adopted and then reverted on the strength of single
+    passes before that was noticed. The token and latency figures are stable and
+    can be read from one pass; the routes cannot.
 - **A nurse clinic is a note on the `/accurx` card, never its destination.** The
   practice nurse and the diabetic nurse rank below a doctor, and the patterns
   send anything they do not recognise to a doctor, so their answer would

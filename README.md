@@ -206,13 +206,26 @@ clickable sources they can open in-browser.
   miscarriage" changes what all of it means together. That is not a tuning
   problem; another feature word finds the next gap. So the message is now
   **read** — one call, on its own model role (Settings → AccurX routing), which
-  names where it goes *and* writes the reason line, against the practice's own
-  destinations (`lib/triage/destinations.mjs`) and its Notebook rather than from
-  general knowledge — and
-  **the patterns keep the veto**: code takes the more senior of the two
-  destinations and nothing else. A reading that says physio is fine changes
-  nothing. A reading that says "a doctor today" moves it, and the card shows the
-  patient's own words that moved it, checked against the message first. No
+  names where it goes *and* writes the reason line.
+- **The reading is done against the routing guide, and nothing else.** Its prompt
+  is `docs/routing.md` as data (`lib/triage/destinations.mjs`): every destination
+  least-senior-first with what it covers and what it *refuses*, the practice's
+  hard gates — no phlebotomy under 16, HPV to 24 and under, six weeks for travel
+  jabs, health-check bloods before 1 pm — and the nurse-clinic rules.
+  **The Notebook is not in front of it.** It was, and it was the wrong source for
+  this one question: the Notebook is how the practice *does* things, the guide is
+  where a task *goes*, and all the reading ever saw of the Notebook was a list of
+  page titles to match a heading against — which is the failure mode the reading
+  exists to replace. Removing it also took a database round-trip and about 3,000
+  prompt tokens off the one call the receptionist waits for.
+- **The reading is the only judgement, so the prompt says so.** The pattern
+  cascade came off this path when it told reception to interrupt a doctor over a
+  chest pain the same message said was investigated at A&E last winter and turned
+  out to be reflux. Nothing now catches what the reading misses and nothing
+  retires what it raises, in either direction — so it is given the guide's own
+  front-page rule instead: **when you are not sure, route upward.** The card
+  shows the patient's own words that decided it, checked against the message
+  first. No
   model, a timeout, or "unsure" leaves the card exactly as the patterns made it.
   - **One call for the whole card.** It was ten: one per destination asking
     whether the message was theirs, plus one writing the reason line. They had
