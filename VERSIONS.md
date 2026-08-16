@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.3.1` | 2026-08-16 | fix | `9617721` | fix: put the message on screen the moment Enter is pressed |
+| `2.3.0` | 2026-08-16 | feat | `d312d59` | feat: /accurx has to say why, and the card shows it |
+| `2.2.1` | 2026-08-16 | docs | `d70e489` | docs: add the row for the routing guide transcription |
 | `2.2.0` | 2026-08-16 | feat | `cd0fec7` | feat: transcribe the practice's routing guide, all sixteen routes |
 | `2.1.8` | 2026-08-16 | docs | `c3695ec` | docs: bring the version table up to the tip |
 | `2.1.7` | 2026-08-16 | docs | `8f260bd` | docs: add the row for the routing document reference |
