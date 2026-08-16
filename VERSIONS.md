@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `2.6.0` | 2026-08-16 | feat | `013e12f` | feat: act on what the evaluation found, not on the cases it found it with |
+| `2.5.1` | 2026-08-16 | docs | `db3d9e8` | docs: add the rows for the negation fix and the evaluation harness |
 | `2.5.0` | 2026-08-16 | feat | `bf503e5` | feat: an evaluation the implementing agent is not allowed to see |
 | `2.4.0` | 2026-08-16 | feat | `4f5bbce` | feat: a possible pregnancy takes a UTI off the pharmacy pathway |
 | `2.3.3` | 2026-08-16 | fix | `5e55597` | fix: read what the patient ruled out, not just what they mentioned |
