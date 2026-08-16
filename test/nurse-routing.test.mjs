@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DESTINATIONS, diabetesNeedsGp, needsDiabetesNurse, nurseTask, nurseTaskNeedsGp, routingGuidance, sendTo,
+  DESTINATIONS, HARD_GATES, diabetesNeedsGp, needsDiabetesNurse, nurseTask, nurseTaskNeedsGp, routingGuidance, sendTo,
 } from '../lib/triage/destinations.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 
@@ -23,10 +23,16 @@ const goesTo = (text, condition = '') => {
 /* ------------------------------------------------------------ the roster */
 
 test('every destination the practice has is named once, with both lists', () => {
+  // Every route on the guide's own "routes at a glance" page, in ladder order.
+  // The red button is the one route that is not an entry: it brings staff to the
+  // front desk and does nothing for a message, so it lives on the emergency
+  // entry as what to do as well when the patient is in the building.
   const ids = DESTINATIONS.map((d) => d.id);
   assert.deepEqual(ids, [
-    'minorEyeService', 'pharmacy', 'diabeticNurse', 'fcp', 'nurse',
-    'gp', 'dutyDoctor', 'eyeEmergency', 'emergency',
+    'minorEyeService', 'pharmacy', 'midwife', 'socialPrescriber',
+    'diabeticNurse', 'fcp', 'nurse', 'pharmacyTeam', 'districtNurse',
+    'doctorTask', 'gp', 'dutyDoctor', 'dutyInterrupt', 'ae',
+    'eyeEmergency', 'emergency',
   ]);
   assert.equal(new Set(ids).size, ids.length, 'no destination is written twice');
   for (const d of DESTINATIONS) {
@@ -34,7 +40,18 @@ test('every destination the practice has is named once, with both lists', () => 
     assert.ok(d.covers, d.id + ' says what it takes');
     assert.ok(d.refuses, d.id + ' says what it will not');
     assert.ok(d.rank >= 1, d.id + ' has a seniority the reader can fold by');
+    // Which page of docs/routing.md it was transcribed from, so an entry can be
+    // checked against the source rather than taken on trust.
+    assert.ok(d.doc, d.id + ' names the guide page it came from');
+    assert.match(d.section, /^[A-D]$/, d.id + ' names the guide section it is in');
   }
+  // The ladder must never let a nurse clinic outrank a doctor, whatever else is
+  // added to it — that is what makes their "yes" a note rather than a route.
+  const rank = (id) => DESTINATIONS.find((d) => d.id === id).rank;
+  for (const clinic of ['nurse', 'diabeticNurse']) assert.ok(rank(clinic) < rank('gp'), clinic);
+  assert.ok(rank('gp') < rank('dutyDoctor'));
+  assert.ok(rank('dutyDoctor') < rank('dutyInterrupt'));
+  assert.ok(rank('dutyInterrupt') < rank('emergency'));
 });
 
 test('the prose the signposting page reads is built from the same arrays', () => {
@@ -57,6 +74,25 @@ test('a procedure the nurse does is matched by name', () => {
   // Not a procedure. A description of an illness is not a nurse booking.
   assert.equal(nurseTask('pt has a sore throat since Friday'), null);
   assert.equal(nurseTask(''), null);
+});
+
+test('a blood test asked for is the nurse; one being chased is not', () => {
+  // Both say "blood test". The guide books the first as a nurse appointment and
+  // sends the second to the doctor as a task, so the words around it decide.
+  assert.equal(nurseTask('pt asking to book a blood test').id, 'bloods');
+  assert.equal(nurseTask('pt chasing her blood test results'), null);
+  assert.equal(nurseTask('awaiting blood test from the GP'), null);
+});
+
+test('the guide’s own hard gates are carried, word for word in substance', () => {
+  const gates = HARD_GATES.map((g) => g.gate).join(' | ');
+  for (const expected of ['Under 16 — FCP', 'HPV vaccination', 'Travel vaccinations', 'Nurse clinics']) {
+    assert.ok(gates.includes(expected), expected);
+  }
+  // They reach the reader too — a gate nobody is shown is a gate nobody applies.
+  const guidance = routingGuidance();
+  assert.match(guidance, /HARD GATES/);
+  assert.match(guidance, /route UPWARD/, 'and the rule that overrides every other rule');
 });
 
 test('travel is read before immunisation, because the six-week rule is the answer', () => {
