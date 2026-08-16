@@ -439,6 +439,92 @@ test('a reading with no nurse in it leaves the card exactly as it was', () => {
   assert.deepEqual(withEmpty, withOut);
 });
 
+/* ------------------------------------------------------------------------ *
+ * THE EAR THAT WENT TO A PHARMACY.
+ *
+ * "Ongoing issue with ear infections the past 3-4 months … pain and aching now
+ * at a high level … tried ear drops previously … see GP for inspection and
+ * medication" came back as "Acute otitis media — Pharmacy First", on a card
+ * that printed the pathway's age range of 1 to 17 underneath it.
+ *
+ * The patterns did what they say: "ear infection" is on the pharmacy list. What
+ * was missing was any obligation to say WHY — and every one of the three things
+ * that made it wrong (the months, the treatment already tried, the request to
+ * be looked at) is in the message and in none of the keywords.
+ * ------------------------------------------------------------------------ */
+
+const EAR = [
+  'Describe the problem Ongoing issue with ear inflections / issue the past 3-4 months Full feeling',
+  'Pain & aching (now at a high level) Both ears, but at different times.',
+  'How long have you had this? Is it getting better or worse? 2 months Ongoing past few years.',
+  'Have you tried anything to help? Ear drops previously.',
+  'Is there anything you are particularly worried about? Yes infection and ongoing care.',
+  'Expectations See GP for inspection and medication / care advice.',
+].join(' ');
+
+test('the patterns alone still send this ear to a pharmacy', () => {
+  // A record, not a wish. This is what the reading exists to catch, and if it
+  // ever changes on its own this says so rather than the fix quietly becoming
+  // unnecessary and unnoticed.
+  assert.equal(triagePatientAnswer({ condition: 'ear infection', text: EAR }).destination, 'pharmacy');
+});
+
+test('a reading that reasons about it moves the ear to a doctor', () => {
+  const card = accurxAnswer({
+    condition: 'recurrent ear pain',
+    text: EAR,
+    message: EAR,
+    reason: 'recurrent ear pain 3-4/12, ear drops tried, req inspection',
+    route: {
+      destination: 'gp',
+      evidence: 'Ear drops previously',
+      reasoning: 'Months of recurrent pain in both ears, drops already tried without settling it, and the patient is asking for it to be looked at. A pharmacist cannot examine an ear or review ongoing care.',
+      ruledOut: [{ id: 'pharmacy', label: 'Community pharmacy (Pharmacy First)', why: 'The otitis media pathway is for 1 to 17 and covers a new episode, not months of it after treatment has failed.' }],
+    },
+  });
+  assert.equal(card.destination, 'gp');
+  assert.ok(!/Pharmacy First/.test(sentTo(card)), 'it must not still say pharmacy');
+});
+
+test('the card carries the reasoning, and what it turned down', () => {
+  const card = accurxAnswer({
+    condition: 'recurrent ear pain',
+    text: EAR,
+    message: EAR,
+    reason: 'recurrent ear pain 3-4/12',
+    route: {
+      destination: 'gp',
+      evidence: 'Ear drops previously',
+      reasoning: 'Months of recurrent pain, drops already tried, and the patient is asking for an examination.',
+      ruledOut: [{ id: 'pharmacy', label: 'Community pharmacy (Pharmacy First)', why: 'Outside the pathway’s age range and past what self-care can settle.' }],
+    },
+  });
+  const text = words(card);
+  assert.match(text, /Months of recurrent pain/, 'the account of the decision is on the card');
+  assert.match(text, /Outside the pathway’s age range/, 'and so is the service it turned down');
+  assert.match(text, /route it yourself/, 'with the reminder that reception can overrule it');
+});
+
+test('the reasoning shows even when the reading agreed with the patterns', () => {
+  // "Why is this the pharmacy's?" is asked at the desk about the cards that were
+  // right, too. A justification that only appears when something moved is a
+  // justification for the reading, not for the answer.
+  const card = accurxAnswer({
+    condition: 'sore throat',
+    text: 'sore throat since friday, no fever',
+    message: 'sore throat since friday, no fever',
+    reason: 'sore throat 3/7, no fever',
+    route: {
+      destination: 'pharmacy',
+      evidence: 'sore throat since friday',
+      reasoning: 'Three days, nothing tried yet, no fever, and the sore throat pathway takes 5 and over.',
+      ruledOut: [],
+    },
+  });
+  assert.equal(card.destination, 'pharmacy');
+  assert.match(words(card), /Three days, nothing tried yet/);
+});
+
 /* ------------------------------------------------------------ the prompt */
 
 test('the one call is shown the whole ladder, both halves of every entry', () => {
