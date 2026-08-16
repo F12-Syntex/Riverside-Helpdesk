@@ -246,12 +246,23 @@ test('a destination the reader named is carried through as it stands', () => {
   const verdict = readingVerdict({
     destination: 'dutyDoctor',
     evidence: 'Swelling in both legs',
-    page: 'Triaging notebook',
   });
   assert.equal(verdict.destination, 'dutyDoctor');
   assert.equal(verdict.evidence, 'Swelling in both legs');
-  assert.equal(verdict.page, 'Triaging notebook');
   assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, true);
+});
+
+// The reading is shown the routing guide and nothing else, so there is no page
+// it could have relied on. A model that names one anyway — out of habit, or
+// from a Notebook it can no longer see — must not get that title through, where
+// it would read as a source somebody could go and check.
+test('a page the reader names is dropped: it was shown no pages', () => {
+  const verdict = readingVerdict({
+    destination: 'dutyDoctor',
+    evidence: 'Swelling in both legs',
+    page: 'Triaging notebook',
+  });
+  assert.equal(verdict.page, '');
 });
 
 test('"unsure" is a real answer, and it changes nothing', () => {
@@ -530,16 +541,34 @@ test('the reasoning shows even when the reading agreed with the patterns', () =>
 /* ------------------------------------------------------------ the prompt */
 
 test('the one call is shown the whole ladder, both halves of every entry', () => {
-  const prompt = accurxReadPrompt({ question: MISCARRIAGE, notebook: '- Physiotherapy (FCP) — how FCP works' });
+  const prompt = accurxReadPrompt({ question: MISCARRIAGE });
   for (const d of DESTINATIONS) {
     assert.ok(prompt.includes(d.label), d.id + ' is on the ladder');
     assert.ok(prompt.includes(d.covers), d.id + ' says what it covers');
-    //  is the half that does the work: a reader told only what a
+    // `refuses` is the half that does the work: a reader told only what a
     // service covers says yes to anything adjacent to it.
     assert.ok(prompt.includes(d.refuses), d.id + ' says what it will not take');
   }
-  assert.ok(prompt.includes('- Physiotherapy (FCP) — how FCP works'), 'the Notebook goes in beside them');
   assert.ok(prompt.includes(MISCARRIAGE.slice(0, 60)), 'and the message itself');
+});
+
+// THE GUIDE IS THE ONLY SOURCE, and the prompt has to say so rather than merely
+// omit everything else — a reader that is shown one ladder and told nothing
+// about its standing will still reach for what it knows about the NHS at large.
+test('the ladder is named as the only source, and no Notebook goes in with it', () => {
+  const prompt = accurxReadPrompt({ question: MISCARRIAGE });
+  assert.ok(/routing guide/i.test(prompt), 'the ladder is named as the practice’s routing guide');
+  assert.ok(/only thing you know about this practice/i.test(prompt), 'and as the only thing it knows');
+  assert.ok(!/notebook/i.test(prompt), 'the Notebook is not mentioned, offered or asked about');
+});
+
+// The lengths are the latency. Every one of these fields is emitted before the
+// receptionist sees anything, so a prompt that stops asking for short answers is
+// a prompt that has quietly got slower.
+test('the prompt asks for short answers, and says why', () => {
+  const prompt = accurxReadPrompt({ question: MISCARRIAGE });
+  assert.ok(/ANSWER SHORT/.test(prompt), 'brevity is stated up front');
+  assert.ok(/ONE sentence, 30 words at most/.test(prompt), 'the reasoning is capped where it is asked for');
 });
 
 test('the ladder is written least senior first', () => {
