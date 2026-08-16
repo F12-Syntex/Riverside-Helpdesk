@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `3.0.0` | 2026-08-16 | feat | `aeb1170` | feat!: /accurx is decided by reading the message, and nothing else |
+| `2.7.1` | 2026-08-16 | docs | `6effe61` | docs: add the row for the interrupt card |
 | `2.7.0` | 2026-08-16 | feat | `0436a76` | feat: a card that means "now" can no longer render as a booking |
 | `2.6.1` | 2026-08-16 | docs | `5ec124e` | docs: add the row for the evaluation fixes |
 | `2.6.0` | 2026-08-16 | feat | `013e12f` | feat: act on what the evaluation found, not on the cases it found it with |
