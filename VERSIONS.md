@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `4.2.0` | 2026-08-16 | feat | `c92219b` | feat: the directory gets a page, and a pill on every header |
+| `4.1.2` | 2026-08-16 | docs | `b738834` | docs: add the rows for the guide-only /accurx |
 | `4.1.1` | 2026-08-16 | docs | `23014cf` | docs: describe the /accurx reading that actually runs |
 | `4.1.0` | 2026-08-16 | feat | `128347f` | feat: measure what the /accurx read costs, over repeats |
 | `4.0.1` | 2026-08-16 | fix | `022de13` | fix: the card supplies the words the reading stopped writing |
