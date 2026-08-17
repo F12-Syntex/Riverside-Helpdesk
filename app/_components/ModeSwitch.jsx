@@ -78,9 +78,11 @@ export default function ModeSwitch({ mode, open, onToggle, onPick, place = 'abov
         hover={'background:' + (active ? '#dbeaf6' : '#eef2f4') + ';color:#005eb8;'}>
         <Svg w={20} sw={2.2}>{ICON[mode] || Icons.search}</Svg>
         {active && <span>{active.label}</span>}
-        {/* The caret is what says this is a control rather than decoration.
-            It is the only mark added to the resting field. */}
-        <Svg w={12} sw={2.6} style={s('opacity:.75;')}>{Icons.chevronRight}</Svg>
+        {/* The caret is what says this is a control rather than decoration, and
+            it is the only mark added to the resting field. Turned to point down
+            at the list it opens: the icon set has no downward chevron, and one
+            pointing right reads as "go to" rather than "there is more here". */}
+        <Svg w={12} sw={2.6} style={s('opacity:.75;transform:rotate(90deg);')}>{Icons.chevronRight}</Svg>
       </Hover>
 
       {open && (

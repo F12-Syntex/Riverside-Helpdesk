@@ -184,6 +184,8 @@ class RiversidePracticeQA extends React.Component {
       // stayed put would be a hazard rather than a convenience.
       mode: '',
       modeOpen: false,
+      // Worked out when the picker opens; see placeForMode.
+      modePlace: 'above',
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
       // (the send is held, so the dock says so rather than looking dead), and
@@ -386,6 +388,25 @@ class RiversidePracticeQA extends React.Component {
   // The same choice, made with the button in the field rather than by typing.
   // It sets a mode rather than writing "/form " into the box, so the reader
   // types their question and nothing else — and the box stays readable.
+  // WHICH SIDE THE PICKER OPENS ON, measured rather than assumed.
+  //
+  // The telephone list hangs below the field on the opening screen, because the
+  // dock is lifted to the middle of the page there and anything above it would
+  // cover the heading. The mode picker is twice as tall — six rows — and on a
+  // phone the lift is small, so "below" put it off the bottom of the screen
+  // entirely: the list was open, and none of it was reachable.
+  //
+  // So the room underneath is measured when it opens. Below when it fits,
+  // above when it does not, which on a phone is always.
+  placeForMode() {
+    if (typeof window === 'undefined') return 'above';
+    const form = document.querySelector('.riva-dock-form');
+    if (!form) return 'above';
+    const below = window.innerHeight - form.getBoundingClientRect().bottom;
+    // Six rows and the gap above them. Under this the list would be clipped.
+    return below >= 300 ? 'below' : 'above';
+  }
+
   pickMode(name) {
     this.setState({ mode: name || '', modeOpen: false }, () => {
       const field = this.inputRef && this.inputRef.current;
@@ -1764,7 +1785,10 @@ class RiversidePracticeQA extends React.Component {
       // typing a slash. See app/_components/ModeSwitch.jsx.
       mode: this.state.mode,
       modeOpen: this.state.modeOpen,
-      onToggleMode: () => self.setState((st) => ({ modeOpen: !st.modeOpen, cmdSel: -1, dirSel: -1 })),
+      onToggleMode: () => self.setState((st) => (st.modeOpen
+        ? { modeOpen: false }
+        : { modeOpen: true, modePlace: self.placeForMode(), cmdSel: -1, dirSel: -1 })),
+      modePlace: this.state.modePlace,
       onPickMode: (name) => self.pickMode(name),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
@@ -1986,7 +2010,7 @@ class RiversidePracticeQA extends React.Component {
                   open={v.modeOpen}
                   onToggle={v.onToggleMode}
                   onPick={v.onPickMode}
-                  place={v.isEmpty ? 'below' : 'above'} />
+                  place={v.modePlace} />
               )}
               <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.mode ? ' riva-dock-field-mode' : '') + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
