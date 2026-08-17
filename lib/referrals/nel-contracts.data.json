@@ -19,294 +19,374 @@
     {
       "area": "NEL-Wide Specifications",
       "specification": "NHS NEL Housebound Check and Winter Vaccination Support",
-      "templates": "NEL Housebound Winter Vacs OneTemplate Contract",
+      "templates": [
+        "NEL Housebound Winter Vacs",
+        "OneTemplate Contract"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "NHS ADHD Shared Pathway for Ongoing Management of Care LES for Adults",
-      "templates": "OneTemplate Prescriber (Mental Health page) OneTemplate NonPrescriber (Mental Health page)",
+      "templates": [
+        "OneTemplate Prescriber (Mental Health page)",
+        "OneTemplate NonPrescriber (Mental Health page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "Simple Wound Care Service",
-      "templates": "OneTemplate NonPrescriber (Wound Care page) OneProcedure (Wound Care page)",
+      "templates": [
+        "OneTemplate NonPrescriber (Wound Care page)",
+        "OneProcedure (Wound Care page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "Latent Tuberculosis Infection (LTBI) Screening Programme",
-      "templates": "Alert: TB screening for new patients Alert: TB screening for existing patients OneTemplate Contract (TB Screening page) OneTemplate Prescriber (Local Contracts page) OneTemplate NonPrescriber (Local Contracts page)",
+      "templates": [
+        "Alert: TB screening for new patients",
+        "Alert: TB screening for existing patients",
+        "OneTemplate Contract (TB Screening page)",
+        "OneTemplate Prescriber (Local Contracts page)",
+        "OneTemplate NonPrescriber (Local Contracts page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "NEL Phlebotomy Service",
-      "templates": "OneTemplate Prescriber (Local Contracts page) OneTemplate NonPrescriber (Treatment Room page) OneProcedure (Phlebotomy page) OneTemplate Contract (Phlebotomy page)",
+      "templates": [
+        "OneTemplate Prescriber (Local Contracts page)",
+        "OneTemplate NonPrescriber (Treatment Room page)",
+        "OneProcedure (Phlebotomy page)",
+        "OneTemplate Contract (Phlebotomy page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "NEL Supplementary Care Home Service",
-      "templates": "NEL Care home template",
+      "templates": [
+        "NEL Care home template"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "Respiratory Diagnostics – Spirometry and Feno (Adults)",
-      "templates": "OneTemplate Prescriber (Local Contracts page) OneTemplate NonPrescriber (Treatment Room page) OneProcedure (Spirometry/FeNO page) OneTemplate Contract (Spirometry/FeNO page)",
+      "templates": [
+        "OneTemplate Prescriber (Local Contracts page)",
+        "OneTemplate NonPrescriber (Treatment Room page)",
+        "OneProcedure (Spirometry/FeNO page)",
+        "OneTemplate Contract (Spirometry/FeNO page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "Asylum Seekers and Refugee Health Service in a Primary Care Setting LIS",
-      "templates": "OneTemplate Prescriber (Homeless or Refugee page) OneTemplate NonPrescriber (Homeless or Refugee page)",
+      "templates": [
+        "OneTemplate Prescriber (Homeless or Refugee page)",
+        "OneTemplate NonPrescriber (Homeless or Refugee page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "NEL Homeless Health Primary Care and Outreach Service for People Experiencing Homelessness",
-      "templates": "OneTemplate Prescriber (Homeless or Refugee page) OneTemplate NonPrescriber (Homeless or Refugee page)",
+      "templates": [
+        "OneTemplate Prescriber (Homeless or Refugee page)",
+        "OneTemplate NonPrescriber (Homeless or Refugee page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "Interim NEL Safeguarding GP Local Incentive Scheme",
-      "templates": "NEL Safeguarding",
+      "templates": [
+        "NEL Safeguarding"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "PCN Childhood Immunisation Engagement Programme",
-      "templates": "Searches: 015 Childhood Vaccinations OneTemplate NonPrescriber (Childhood Imms page)",
+      "templates": [
+        "Searches: 015 Childhood Vaccinations",
+        "OneTemplate NonPrescriber (Childhood Imms page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "NEL Mental Health Depot",
-      "templates": "OneTemplate Prescriber (Mental Health page)",
+      "templates": [
+        "OneTemplate Prescriber (Mental Health page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Primary Care MH ADHD (MHA)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Early Years",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Primary Care Stable Prostate Cancer Monitoring Service",
-      "templates": "Alert: G12 Cancer Recognition - PSA Radar",
+      "templates": [
+        "Alert: G12 Cancer Recognition - PSA Radar"
+      ],
       "comment": "Further coverage through searches in development",
       "status": "For Release In Development"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "GP Latent Tuberculosis Screening Service",
-      "templates": "Alert: TB screening for new patients Alert: TB screening for existing patients OneTemplate Contract (TB Screening page) OneTemplate Prescriber (Local Contracts page) OneTemplate NonPrescriber (Local Contracts page)",
+      "templates": [
+        "Alert: TB screening for new patients",
+        "Alert: TB screening for existing patients",
+        "OneTemplate Contract (TB Screening page)",
+        "OneTemplate Prescriber (Local Contracts page)",
+        "OneTemplate NonPrescriber (Local Contracts page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Children’s Long Term Conditions",
-      "templates": "OneTemplate Prescriber (Asthma page) OneTemplate NonPrescriber (Asthma page)",
+      "templates": [
+        "OneTemplate Prescriber (Asthma page)",
+        "OneTemplate NonPrescriber (Asthma page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Long Term Conditions and Prevention Contract - Cancer",
-      "templates": "OneTemplate Prescriber (Cancer page) OneTemplate NonPrescriber (Cancer page)",
+      "templates": [
+        "OneTemplate Prescriber (Cancer page)",
+        "OneTemplate NonPrescriber (Cancer page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Duty Doctor",
-      "templates": "N/A",
+      "templates": [
+        "N/A"
+      ],
       "comment": "Not for template. Clinic hrs, call backs",
       "status": "N/A"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Proactive Care: Home Visiting Service",
-      "templates": "NEL Care home template",
+      "templates": [
+        "NEL Care home template"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "NEL Community Anticoagulation Service",
-      "templates": "TBC",
+      "templates": [
+        "TBC"
+      ],
       "comment": "",
       "status": ""
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "High Intensity user Scheme 2025/26",
-      "templates": "N/A",
+      "templates": [
+        "N/A"
+      ],
       "comment": "Not for template. Frequent attenders questionnaire doc \"RP Frequent Attenders (HIUS) feedback form\"",
       "status": "N/A"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "NHS Health Checks",
-      "templates": "NHS Health Check template",
+      "templates": [
+        "NHS Health Check template"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Phlebotomy",
-      "templates": "OneTemplate Prescriber (Local Contracts page) OneTemplate NonPrescriber (Treatment Room page) OneProcedure (Phlebotomy page) OneTemplate Contract (Phlebotomy page)",
+      "templates": [
+        "OneTemplate Prescriber (Local Contracts page)",
+        "OneTemplate NonPrescriber (Treatment Room page)",
+        "OneProcedure (Phlebotomy page)",
+        "OneTemplate Contract (Phlebotomy page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Enhanced sexual and reproductive health services",
-      "templates": "OneTemplate Prescriber (Sexual Health page)",
+      "templates": [
+        "OneTemplate Prescriber (Sexual Health page)"
+      ],
       "comment": "",
       "status": "QA"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Teledermatology",
-      "templates": "Referral Forms",
+      "templates": [
+        "Referral Forms"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Primary Care Mental Health Alliance inc. Depot and Care Plans",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "City & Hackney Localisations",
       "specification": "Equalities LES",
-      "templates": "OneTemplate Prescriber (Introduction page) OneTemplate NonPrescriber (Introduction page) OneProcedure (Introduction page) OneTemplate Contract (Introduction page)",
+      "templates": [
+        "OneTemplate Prescriber (Introduction page)",
+        "OneTemplate NonPrescriber (Introduction page)",
+        "OneProcedure (Introduction page)",
+        "OneTemplate Contract (Introduction page)"
+      ],
       "comment": "",
       "status": "For Release"
     },
     {
       "area": "Newham Localisations",
       "specification": "Vulnerable Children MDTs",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Newham Localisations",
       "specification": "Epilepsy",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Newham Localisations",
       "specification": "Childhood Asthma Reviews (48hr)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Tower Hamlets Localisations",
       "specification": "Supporting Child’s Safeguarding within Tower Hamlets",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Tower Hamlets Localisations",
       "specification": "Homeless Practice LES Element",
-      "templates": "OneTemplate NonPrescriber (Homeless or Refugee Page)",
+      "templates": [
+        "OneTemplate NonPrescriber (Homeless or Refugee Page)"
+      ],
       "comment": "No specific template required",
       "status": "QA"
     },
     {
       "area": "Tower Hamlets Localisations",
       "specification": "Young Person Enabler Scheme",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Tower Hamlets Localisations",
       "specification": "Meetings and engagement (MDTs)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Tower Hamlets Localisations",
       "specification": "Improving Patient Outcomes Funding Scheme",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Tower Hamlets Localisations",
       "specification": "Latent TB infection (TH)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Waltham Forest Localisations",
       "specification": "Vulnerable Children MDTs",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Waltham Forest Localisations",
       "specification": "Childhood Asthma Reviews (48hr)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Barking & Dagenham, Havering & Redbridge",
       "specification": "Local Vaccination Service (BHR variation)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "Barking & Dagenham, Havering & Redbridge",
       "specification": "Simple Wound Care (BHR variation)",
-      "templates": "",
+      "templates": [],
       "comment": "",
       "status": "In Development"
     },
     {
       "area": "NEL-Wide Specifications",
       "specification": "NEL Proactive Care Outcomes Framework inc. ICC - still being drafted",
-      "templates": "",
+      "templates": [],
       "comment": "Specification in draft with ICB",
       "status": "Awaiting Spec"
     }

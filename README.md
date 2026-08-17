@@ -210,12 +210,29 @@ clickable sources they can open in-browser.
 - **Slash commands say which card you want** rather than leaving it to be worked
   out (`lib/commands.mjs`): `/accurx` (where the patient goes and the reason
   line, from one paste), `/document` (a filing title), `/practice` (search the
-  documents, no model at all). There used to be two more — `/triage`, which said
+  documents, no model at all), `/form` (a NEL referral form) and `/template`
+  (the EMIS template that records a NEL contract). There used to be two more — `/triage`, which said
   where a patient went, and `/appt`, which wrote the reason line and the booking
   notes — and `/accurx` is both of them on one card, so they were removed rather
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
+- **`/form` and `/template` answer from a list, with no model anywhere in the
+  path.** The reader has already said which of the two Primary Care IT lists they
+  want, and the rest of the line is the query, so the turn is a ranked string
+  match against a file in this repository: no model call, no tokens, no network.
+  `/form suspected skin cancer` names the referral form; `/template NEL Housebound
+  Winter` takes a **template's** name and answers with the contract specification
+  it sits under, which is the direction staff need — the template name is what is
+  written on the task, and the specification is what the contract is called in
+  every other conversation about it.
+- **A command answers from its own list or says it cannot.** Neither ever falls
+  through to prose. `/form fit note` says the tree has no form by that name, names
+  the list it searched and how old it is, and points at asking without the command
+  — which is the path that also checks the practice's own notes. A model writing
+  plausibly about a form that is not on PCIT's list is the exact failure typing
+  the command is meant to rule out. Asking in ordinary words is unchanged and
+  still goes through the router, where falling through to prose is right.
 - **`/accurx` answers both halves of an AccurX request on one card**
   (`lib/templates/accurx.mjs`): where the patient goes, and the reason line to
   copy into what gets booked. Reception reads the request once and needs both,

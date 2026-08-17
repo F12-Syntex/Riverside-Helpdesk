@@ -4,7 +4,9 @@ import {
   PRACTICE_AREA, QUERY_ALIASES, buildFormIndex, expandQuery, findReferralForms,
   isConfident, nelTree, rankForms,
 } from '../lib/referrals/nel-tree.mjs';
-import { nelReferralFormAnswer, referralAnswer } from '../lib/templates/referrals.mjs';
+import { nelFormNotFound, nelReferralFormAnswer, referralAnswer } from '../lib/templates/referrals.mjs';
+import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
+import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
 
 // The NEL Referral Tree is 533 form names lifted out of a PDF, and the whole
 // value of them is that they are the strings staff type into EMIS. So these
@@ -238,6 +240,39 @@ test('a form we cannot see says whose it is', () => {
 test('nothing on the tree is null, so the caller can fall through', () => {
   assert.equal(nelReferralFormAnswer('printer toner'), null);
   assert.equal(nelReferralFormAnswer(''), null);
+});
+
+/* ------------------------------------------------------------ /form */
+
+// Typing the command names the list to search, so a miss is that list saying it
+// has nothing — never a model writing plausibly about a form that is not on it.
+// That is the entire reason to type /form instead of asking in words.
+test('/form is a command, and it claims its own template', () => {
+  const parsed = parseCommand('/form suspected skin cancer');
+  assert.equal(parsed.command.template, 'referralForm');
+  assert.equal(parsed.command.fill, 'lookup');
+  assert.equal(parsed.rest, 'suspected skin cancer');
+  // The server honours a template only when a command claims it.
+  assert.equal(forcedTemplate('referralForm'), 'referralForm');
+});
+
+// The router must not be able to choose it: an ordinary question keeps going
+// through `referral`, which checks the practice's own material first.
+test('the model cannot pick the command-only template', () => {
+  const templates = SELECTION_SCHEMA.shape.template._def.values;
+  assert.ok(!templates.includes('referralForm'));
+  assert.ok(templates.includes('referral'));
+});
+
+test('a miss on /form is answered by the tree, not by prose', () => {
+  const card = nelFormNotFound('fit note');
+  assert.match(card.title, /fit note/);
+  assert.match(card.title, /no form by that name/);
+  assert.match(card.subtitle, /City & Hackney/);
+  // It says which list it searched, and how old that list is.
+  assert.deepEqual(card.source, ['NEL Referral Tree (Primary Care IT), as of 18 June 2026']);
+  // And points at the path that DOES check the practice's own notes.
+  assert.match(JSON.stringify(card.blocks), /without the command/);
 });
 
 /* -------------------------------------------------------- the precedence */

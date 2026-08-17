@@ -13,13 +13,15 @@ import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
 test('the list is offered while the name is being typed, and not after', () => {
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'document', 'practice']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'document', 'form', 'template', 'practice']);
   assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
+  assert.deepEqual(matchCommands('/f').map((c) => c.name), ['form']);
   assert.deepEqual(matchCommands('/accurx').map((c) => c.name), ['accurx']);
-  // The two that were removed are no longer offered, so typing one falls through
-  // to being asked as written.
-  assert.deepEqual(matchCommands('/t'), []);
+  // "/t" now offers /template. It used to offer nothing, because the letter
+  // belonged to /triage, which was removed — see below for what still has to be
+  // true of the removed names.
+  assert.deepEqual(matchCommands('/t').map((c) => c.name), ['template']);
   assert.deepEqual(matchCommands('/ap'), []);
   // A space means the message has started; a list over it would be in the way.
   assert.deepEqual(matchCommands('/accurx '), []);

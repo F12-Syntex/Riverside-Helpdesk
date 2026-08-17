@@ -54,6 +54,8 @@ import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
+import { nelFormNotFound, nelReferralFormAnswer } from '@/lib/templates/referrals.mjs';
+import { contractNotFound, contractTemplateAnswer } from '@/lib/templates/contracts.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
@@ -365,15 +367,21 @@ export async function POST(request) {
         // values and nothing else: no Notebook catalogue to read, a schema with
         // one field in it, and no way for the turn to end up somewhere else.
         const searching = command === 'practiceSearch';
-        send({
-          type: 'status',
-          text: searching ? 'Searching the practice documents' : (command ? 'Filling in the card' : 'Working out what this is'),
-        });
+        // The two list lookups. Named here rather than described as "filling in
+        // the card", which is what the model-filled commands do and would be a
+        // lie about a path no model is on.
+        const lookingUp = command === 'referralForm' ? 'the NEL Referral Tree'
+          : command === 'contractTemplate' ? 'Primary Care IT’s contract list'
+            : '';
+        const said = searching ? 'Searching the practice documents'
+          : lookingUp ? `Looking it up in ${lookingUp}`
+            : command ? 'Filling in the card' : 'Working out what this is';
+        send({ type: 'status', text: said });
         send({
           type: 'tool-start',
           id: 'select',
-          tool: searching ? 'search_documents' : 'pick_template',
-          label: searching ? 'Searching the practice documents' : (command ? 'Told which answer to give' : 'Choosing the answer'),
+          tool: searching ? 'search_documents' : lookingUp ? 'look_up_list' : 'pick_template',
+          label: searching || lookingUp ? said : (command ? 'Told which answer to give' : 'Choosing the answer'),
           detail: question.slice(0, 120),
         });
 
@@ -423,6 +431,21 @@ export async function POST(request) {
               console.warn('[agent] practice search failed:', String(e).slice(0, 160));
             }
             commandAnswer = practiceSearchAnswer({ query: question, passages });
+          } else if (command === 'referralForm' || command === 'contractTemplate') {
+            // NO MODEL AT ALL, and no network either — both lists are files in
+            // this repository, so the card is built and returned in the time it
+            // takes to rank a few hundred strings.
+            //
+            // The reader named the list by typing the command, so a miss is
+            // answered by that list saying it has nothing, NOT by falling through
+            // to prose about it. `nelReferralFormAnswer` and
+            // `contractTemplateAnswer` return null on a miss, which is right on
+            // the routed path where something else answers; here there is nothing
+            // else, and a model writing plausibly about a form that is not on
+            // PCIT's list is precisely what typing /form is meant to rule out.
+            commandAnswer = command === 'referralForm'
+              ? (nelReferralFormAnswer(question) || nelFormNotFound(question))
+              : (contractTemplateAnswer(question) || contractNotFound(question));
           } else {
             // A long /accurx is decomposed on the same call, exactly as an
             // ordinary message is. A short one is not, so "/accurx pt has a sore

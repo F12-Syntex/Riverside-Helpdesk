@@ -127,6 +127,36 @@ function rowsFrom(items) {
   return rows;
 }
 
+/**
+ * The template cell, cut back into the separate template names it holds.
+ *
+ * One cell routinely names several templates, and joining them gives
+ * "NEL Housebound Winter Vacs OneTemplate Contract" — two templates that read as
+ * one, and neither of them a string that finds anything when it is typed into
+ * EMIS. There is no separator to split that back apart on afterwards: a template
+ * name contains spaces, brackets and colons of its own.
+ *
+ * So it is cut HERE, where the line breaks the PDF drew are still available. Each
+ * name starts on its own line and wraps onto the ones after it, so a line opening
+ * with one of the four family names — or a bare "NEL …" title — begins a new
+ * template, and anything else continues the one before it. That is what keeps
+ * "OneTemplate Prescriber" and "(Mental Health page)" together as one name.
+ *
+ * Every split is printed on each run, because this is a reading of a layout
+ * rather than a rule the document states.
+ */
+function splitTemplates(lines = []) {
+  const STARTS = /^(OneTemplate|OneProcedure|OneLauncher|Alert:|Searches:|NEL\s)/;
+  const names = [];
+  for (const raw of lines) {
+    const line = norm(raw);
+    if (!line) continue;
+    if (!names.length || STARTS.test(line)) names.push(line);
+    else names[names.length - 1] += ` ${line}`;
+  }
+  return names.map(norm).filter(Boolean);
+}
+
 async function main() {
   if (!fs.existsSync(SOURCE)) {
     console.error(`Source PDF not found:\n  ${SOURCE}`);
@@ -148,10 +178,7 @@ async function main() {
   const contracts = rows.map((row) => ({
     area: norm(row.area.join(' ')),
     specification: norm(row.specification.join(' ')),
-    // A row often names several templates; they are kept as one string because
-    // the table wraps them and there is no separator to split on that a name
-    // could not itself contain.
-    templates: norm(row.templates.join(' ')),
+    templates: splitTemplates(row.templates),
     comment: norm(row.comment.join(' ')),
     status: norm(row.status.join(' ')),
   })).filter((c) => c.specification);
@@ -191,6 +218,13 @@ async function main() {
   const byArea = {};
   for (const c of contracts) byArea[c.area] = (byArea[c.area] || 0) + 1;
   for (const [k, n] of Object.entries(byArea)) console.log(`   ${String(n).padStart(3)}  ${k}`);
+  console.log('\nTemplate names, as split. Check these against the PDF:');
+  for (const c of contracts) {
+    console.log(`   ${c.specification}`);
+    if (!c.templates.length) console.log('      (none named)');
+    for (const t of c.templates) console.log(`      • ${t}`);
+  }
+
   if (compound.length) {
     console.log(`\n${compound.length} row(s) show more than one status, as the table does:`);
     for (const c of compound) console.log(`   ${c.specification} → ${JSON.stringify(c.status)}`);
