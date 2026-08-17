@@ -24,9 +24,11 @@ html { scrollbar-gutter: stable; }
      the screen to the top of the strip above the field. */
   --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-extras) + var(--riva-dock-pad-b));
   /* What the opening screen hangs under the field, and which the hero above
-     has to clear: the Contacts pill, in plain sight under the box rather than
-     tucked in a corner of the header. Its height plus the gap above it. */
-  --riva-dock-extras: 52px;
+     has to clear. Nothing, now the Contacts pill has gone from under the box:
+     the directory is reached by typing a name, or from the header. Kept as a
+     variable rather than deleted from the three sums below, so the next thing
+     hung under the field is one number away from being made room for. */
+  --riva-dock-extras: 0px;
   /* What the dock grows UPWARDS by when something is attached to the next
      question — a row per dropped document, a strip for the images. The dock is
      pinned to the bottom of the screen, so those rows push its top up into

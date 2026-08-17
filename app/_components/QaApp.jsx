@@ -296,15 +296,17 @@ class RiversidePracticeQA extends React.Component {
     return scored.slice(0, 10).map((x) => x.e);
   }
 
-  // Typing is answered immediately; the directory waits until the typing
-  // stops, so the panel settles into place instead of blinking.
+  // The practice's own list is matched on the keystroke itself. It is a few
+  // dozen rows already in memory, so waiting for typing to stop bought
+  // nothing but a quarter-second of the panel not being there yet — and the
+  // person typing "podiatry" wants the number before they finish the word.
+  // Only the register waits, and only long enough to not send a request per
+  // keystroke; looksLikeLookup() already keeps the panel shut for anything
+  // that reads as a sentence, which is what stops it flickering.
   onInput(value) {
-    this.setState({ input: value, dirSel: -1, dirClosed: false, cmdSel: -1 });
+    this.setState({ input: value, dirQuery: value, dirSel: -1, dirClosed: false, cmdSel: -1 });
     clearTimeout(this.dirTimer);
-    this.dirTimer = setTimeout(() => {
-      this.setState({ dirQuery: value });
-      this.searchCqc(value);
-    }, 260);
+    this.dirTimer = setTimeout(() => this.searchCqc(value), 110);
   }
 
   // The register is ~57k services, so it is searched on the server. Replies
@@ -1932,19 +1934,11 @@ class RiversidePracticeQA extends React.Component {
               </Hover>
             </form>
 
-            {/* Under the box, where it is looked at, rather than in a corner
-                of the header where it is not. The room it takes is declared
-                as --riva-dock-extras in globals.css, so the heading above
-                clears it and the answers behind stop short of it. */}
-            <div style={s('display:flex;justify-content:center;padding-top:14px;')}>
-              <Hover tag="button" type="button" onClick={v.onOpenContacts} className="riva-lift"
-                aria-haspopup="dialog" aria-expanded={v.contactsOpen ? 'true' : 'false'}
-                base="display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.86);border:1px solid #d8dde0;color:#005eb8;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(33,43,50,.06);"
-                hover="background:#fff;border-color:#005eb8;color:#003087;">
-                <Svg w={15} sw={2.2}>{Icons.phone}</Svg>
-                Contacts
-              </Hover>
-            </div>
+            {/* Nothing hangs under the box any more. The directory is
+                reached by typing a name — the panel is offered on the
+                keystroke itself — or from the pill in the header; a third
+                way in, sitting under the field, was one too many. The room
+                it took (--riva-dock-extras) is now zero. */}
 
           </div>
         </div>
