@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.3.3` | 2026-08-17 | fix | `07658ef` | fix: the referral data no longer breaks the browser build |
+| `5.3.2` | 2026-08-17 | docs | `33ed935` | docs: record 5.3.1 in the versions table |
 | `5.3.1` | 2026-08-17 | docs | `bbe85a6` | docs: correct the tool loop the router replaced |
 | `5.3.0` | 2026-08-17 | feat | `2e5b55a` | feat: the mobilisation sitrep answers by contract |
 | `5.2.0` | 2026-08-17 | feat | `4edeffe` | feat: the referral tree answers by form name |
