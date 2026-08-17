@@ -15,9 +15,13 @@ import { s, Hover } from './ui';
  * matches change underneath it, the panel grows or shrinks to its new
  * height rather than jumping, and each new row fades in behind the one
  * before it. Numbers are shown verbatim from the directory.
+ *
+ * The movements are deliberately short. This panel opens while somebody
+ * is still typing the name, so a graceful quarter-second is a quarter-
+ * second of looking at an answer that has already been worked out.
  * ------------------------------------------------------------------ */
 
-const EXIT_MS = 180;
+const EXIT_MS = 110;
 
 // How tall the panel is allowed to get before it starts scrolling instead.
 // About five rows: enough to see there is more, short enough that it never
@@ -70,12 +74,12 @@ export default function DirectoryPanel({ v, place = 'above' }) {
 
   return (
     <div
-      style={s('position:absolute;left:0;right:0;z-index:5;background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.16);overflow:hidden;transition:height .24s cubic-bezier(.2,.7,.3,1);'
+      style={s('position:absolute;left:0;right:0;z-index:5;background:#fff;border:1px solid #dde4e7;border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.16);overflow:hidden;transition:height .13s cubic-bezier(.2,.7,.3,1);'
         + (place === 'below' ? 'top:calc(100% + 10px);transform-origin:top center;' : 'bottom:calc(100% + 10px);transform-origin:bottom center;')
         + (height == null ? '' : 'height:' + height + 'px;')
         + (leaving
-          ? 'animation:rivaPanelOut .18s ease both;pointer-events:none;'
-          : 'animation:rivaPanelIn .22s cubic-bezier(.2,.7,.3,1) both;'))}>
+          ? 'animation:rivaPanelOut .11s ease both;pointer-events:none;'
+          : 'animation:rivaPanelIn .13s cubic-bezier(.2,.7,.3,1) both;'))}>
       <div ref={scroller} style={s('height:100%;overflow-y:auto;overscroll-behavior:contain;')}>
       <div ref={inner} role="listbox" aria-label="Contacts">
         <div style={s('display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:8px 16px;background:#f0f4f5;border-bottom:1px solid #dde4e7;')}>
@@ -91,7 +95,7 @@ export default function DirectoryPanel({ v, place = 'above' }) {
           <Hover tag="button" type="button" role="option" aria-selected={r.isSelected} onClick={r.onPick}
             base={'display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:none;'
               + (r.group && r.group !== (rows[i - 1] || {}).group ? '' : 'border-top:1px solid #eef1f2;')
-              + 'padding:12px 16px;font:inherit;cursor:pointer;transition:background .16s ease,color .16s ease;animation:rivaAnswerIn .26s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + (i * 0.035).toFixed(3) + 's;'
+              + 'padding:12px 16px;font:inherit;cursor:pointer;transition:background .16s ease,color .16s ease;animation:rivaAnswerIn .15s cubic-bezier(.2,.7,.3,1) both;animation-delay:' + Math.min(i * 0.012, 0.06).toFixed(3) + 's;'
               + (r.isSelected ? 'background:#e8f1f8;' : 'background:#fff;')}
             hover="background:#f0f6fb;">
             <span style={s('flex:1;min-width:0;')}>
