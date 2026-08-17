@@ -54,7 +54,7 @@ import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
-import { nelFormNotFound, nelReferralFormAnswer } from '@/lib/templates/referrals.mjs';
+import { emailReferral, findEmailedReferral, nelFormNotFound, nelReferralFormAnswer } from '@/lib/templates/referrals.mjs';
 import { contractNotFound, contractTemplateAnswer } from '@/lib/templates/contracts.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
@@ -443,9 +443,21 @@ export async function POST(request) {
             // the routed path where something else answers; here there is nothing
             // else, and a model writing plausibly about a form that is not on
             // PCIT's list is precisely what typing /form is meant to rule out.
-            commandAnswer = command === 'referralForm'
-              ? (nelReferralFormAnswer(question) || nelFormNotFound(question))
-              : (contractTemplateAnswer(question) || contractNotFound(question));
+            if (command === 'referralForm') {
+              // THE PRACTICE'S OWN ROUTE COMES FIRST, EVEN HERE. /form says
+              // "search the tree", but a dozen referrals are sent by email with
+              // the practice's own form and address, and the tree happily
+              // answers those with somebody else's form — "district nurse"
+              // returns Islington's, when this practice emails RP ACN 2022. The
+              // command should not be the one path that can talk a reader out of
+              // the practice's own process.
+              const emailed = findEmailedReferral({ name: question, pages: notebookPages });
+              commandAnswer = emailed
+                ? emailReferral(emailed)
+                : (nelReferralFormAnswer(question) || nelFormNotFound(question));
+            } else {
+              commandAnswer = contractTemplateAnswer(question) || contractNotFound(question);
+            }
           } else {
             // A long /accurx is decomposed on the same call, exactly as an
             // ordinary message is. A short one is not, so "/accurx pt has a sore

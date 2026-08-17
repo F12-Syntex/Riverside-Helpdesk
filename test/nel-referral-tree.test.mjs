@@ -307,3 +307,96 @@ test('a referral nobody has recorded and the tree lacks is still honest', () => 
   const card = referralAnswer({ question: 'printer toner referral', name: 'printer toner', pages: [] });
   assert.match(card.subtitle, /Not recorded/);
 });
+
+/* ------------------------------- what a trial with clinical personas found */
+
+// Five agents role-playing a receptionist, a practice nurse, a GP, the medical
+// secretary and the practice manager put ~75 real questions through this, and a
+// second pass reproduced each complaint against the PDF. Almost every wrong
+// answer had one cause: being the ONLY match left after ranking was treated as
+// being the RIGHT match, so a weak survivor became a single, unhedged, copyable
+// form name. These pin the fixes.
+
+test('a weak single match is hedged, not stated', () => {
+  // "bloods" scored 60 and came back as a confident, copyable "24 Hour Blood
+  // Pressure Monitoring Request Form".
+  const found = findReferralForms('bloods');
+  assert.equal(found.confident, false);
+  assert.equal(found.tentative, true);
+  const card = nelReferralFormAnswer('bloods');
+  assert.match(card.subtitle, /closest match/i);
+  const warn = card.blocks.find((b) => b && b.type === 'note' && b.tone === 'warn');
+  assert.match(warn.text, /Nothing on the tree matches/);
+  // The name is still offered, because it is still the nearest thing there is.
+  assert.equal(card.blocks.find((b) => b.type === 'fields').items[0].value,
+    '24 Hour Blood Pressure Monitoring Request Form');
+});
+
+test('a strong match is still stated plainly', () => {
+  for (const q of ['suspected skin cancer', 'tongue tie', 'dexa', 'cremation form']) {
+    const found = findReferralForms(q);
+    assert.equal(found.confident, true, `"${q}" lost its confidence`);
+    assert.equal(found.tentative, false);
+    assert.doesNotMatch(nelReferralFormAnswer(q).subtitle, /closest match/i);
+  }
+});
+
+// "derm" returned a confident "Derman Referral Form" — a community
+// organisation, nothing to do with dermatology.
+test('a near-miss on a short word does not win outright', () => {
+  const found = findReferralForms('derm');
+  assert.equal(found.confident, false);
+  assert.ok(found.matches.length > 1, 'the teledermatology forms should be offered too');
+  assert.match(JSON.stringify(found.matches.map((f) => f.name)), /Teledermatology/);
+});
+
+// A letter or a leaflet is not a referral form. "Talking Therapies Referral
+// Information" is a leaflet and won "talking therapies" outright; "Asthma Stop
+// smoking support letter" beat "Smoking Cessation Service Referral Form".
+test('a handout does not outrank a form', () => {
+  const smoking = findReferralForms('stop smoking').matches.map((f) => f.name);
+  assert.ok(smoking.includes('Smoking Cessation Service Referral Form'),
+    `the real form was hidden: ${smoking.join(' | ')}`);
+  const talking = findReferralForms('talking therapies').matches.map((f) => f.name);
+  assert.ok(talking.length > 1, 'the leaflet answered on its own');
+});
+
+test('a handout is still found when a handout is what was asked for', () => {
+  const found = findReferralForms('housing letter');
+  assert.equal(found.matches[0].name, 'Housing Support Letter');
+});
+
+// Demoting the handouts must not make the whole answer vanish: judging "is
+// there an answer here" on the demoted scores made "stop smoking" report that
+// the tree had nothing, which was true of neither the letter nor the form.
+test('demoting a handout never empties an answer that existed', () => {
+  for (const q of ['stop smoking', 'talking therapies']) {
+    const found = findReferralForms(q);
+    assert.ok(found.matches.length, `"${q}" lost its answer entirely`);
+  }
+});
+
+// The words staff actually say. "hearing" found nothing, while the tree carries
+// "AQP Audiology Referral Form CEG" for City & Hackney.
+test('hearing reaches the audiology forms', () => {
+  const names = findReferralForms('hearing').matches.map((f) => f.name);
+  assert.ok(names.some((n) => /Audiology/i.test(n)), names.join(' | '));
+});
+
+// Five rows carry no tick in any column. Saying they belong to another borough
+// is an assertion the document does not make.
+test('a form with no availability is not blamed on another borough', () => {
+  const card = nelReferralFormAnswer('dementia');
+  const warn = card.blocks.find((b) => b && b.type === 'note' && b.tone === 'warn');
+  assert.match(warn.text, /without saying which areas/);
+  assert.doesNotMatch(warn.text, /other North East London areas/);
+});
+
+// Every found card now carries it. It used to appear only on the miss card —
+// i.e. exactly when there was no form to be talked out of.
+test('every found form says the practice may email it instead', () => {
+  for (const q of ['tongue tie', 'dexa', 'suspected skin cancer']) {
+    assert.match(JSON.stringify(nelReferralFormAnswer(q).blocks), /sends some referrals by email/,
+      `"${q}" does not mention the practice's own route`);
+  }
+});
