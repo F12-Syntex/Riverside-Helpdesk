@@ -4,7 +4,7 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { matchCommands, parseCommand } from '../../lib/commands.mjs';
+import { COMMANDS, commandByName, matchCommands, modePlaceholder, parseCommand } from '../../lib/commands.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -21,6 +21,7 @@ import SourcesView from './SourcesView';
 import DirectoryPanel from './DirectoryPanel';
 import GradientBackground from './GradientBackground';
 import CommandMenu from './CommandMenu';
+import ModeSwitch from './ModeSwitch';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
@@ -177,6 +178,12 @@ class RiversidePracticeQA extends React.Component {
       // until the arrow keys move into the list, so Enter on "/accurx some
       // text" asks it rather than re-picking the command.
       cmdSel: -1,
+      // The kind of answer chosen with the button in the field, as a command
+      // name — '' is Q&A, which is what almost every message is. It lasts ONE
+      // message: see app/_components/ModeSwitch.jsx for why a switch that
+      // stayed put would be a hazard rather than a convenience.
+      mode: '',
+      modeOpen: false,
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
       // (the send is held, so the dock says so rather than looking dead), and
@@ -212,6 +219,17 @@ class RiversidePracticeQA extends React.Component {
   }
 
   componentDidMount() {
+    // The mode list closes when the next thing clicked is not in the dock. It
+    // is the only floating panel here that is opened by a button rather than by
+    // typing, so it is the only one that can be left open by walking away from
+    // it.
+    this.onDocDown = (e) => {
+      if (!this.state.modeOpen) return;
+      const form = document.querySelector('.riva-dock-form');
+      if (form && form.contains(e.target)) return;
+      this.setState({ modeOpen: false });
+    };
+    document.addEventListener('mousedown', this.onDocDown);
     try {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [] });
@@ -250,6 +268,7 @@ class RiversidePracticeQA extends React.Component {
   }
 
   componentWillUnmount() {
+    if (this.onDocDown) document.removeEventListener('mousedown', this.onDocDown);
     clearTimeout(this.emitTimer);
     clearTimeout(this.copyTimer);
     clearTimeout(this.dirTimer);
@@ -364,11 +383,29 @@ class RiversidePracticeQA extends React.Component {
     });
   }
 
+  // The same choice, made with the button in the field rather than by typing.
+  // It sets a mode rather than writing "/form " into the box, so the reader
+  // types their question and nothing else — and the box stays readable.
+  pickMode(name) {
+    this.setState({ mode: name || '', modeOpen: false }, () => {
+      const field = this.inputRef && this.inputRef.current;
+      if (field) field.focus();
+    });
+  }
+
   // Arrow keys move into the list; Enter only takes a number once someone
   // has, so typing a question and pressing Enter still asks it. The command
   // list has the keys first while it is open — it is directly under the
   // cursor, and nothing else can be meant by an arrow key at that moment.
   onInputKey(e) {
+    // Escape backs out of the mode, one step at a time: the open list first,
+    // then the mode itself. Somebody who chose the wrong one gets out of it
+    // without reaching for the mouse.
+    if (e.key === 'Escape' && (this.state.modeOpen || this.state.mode)) {
+      e.preventDefault();
+      this.setState((st) => (st.modeOpen ? { modeOpen: false } : { mode: '' }));
+      return;
+    }
     const commands = matchCommands(this.state.input);
     if (commands.length) {
       if (e.key === 'ArrowDown') {
@@ -682,7 +719,11 @@ class RiversidePracticeQA extends React.Component {
       this.setState({ input: '/' + parsed.command.name + ' ', cmdSel: -1 });
       return;
     }
-    const command = parsed ? parsed.command : null;
+    // A TYPED COMMAND BEATS THE BUTTON. It is the more specific thing the
+    // reader just did, and it is what the muscle memory of anyone already
+    // using the commands reaches for. The button only decides the kind of
+    // answer when nothing was typed to decide it.
+    const command = parsed ? parsed.command : (commandByName(this.state.mode) || null);
     const t = parsed ? parsed.rest : typed;
     const images = this.state.pendingImages.map((im) => im.dataUrl);
     // Only documents that finished reading go up. One still being read, or one
@@ -735,7 +776,10 @@ class RiversidePracticeQA extends React.Component {
     // interface. What they typed is on screen the moment they press Enter, with
     // the loading card under it, and a message the screen refuses is taken back
     // off again below.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, async () => {
+    // `mode: ''` is the important one. The kind of answer lasts exactly one
+    // message, so the box cannot be left set to the referral-form list by
+    // somebody who walked away mid-call.
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1, mode: '', modeOpen: false }, async () => {
       this.save();
 
       // Only the TYPED message is screened. A dropped document is the reader's
@@ -1716,6 +1760,12 @@ class RiversidePracticeQA extends React.Component {
         isSelected: i === self.state.cmdSel,
         onPick: () => self.pickCommand(c.name),
       })),
+      // The kind of answer, chosen with the button in the field rather than by
+      // typing a slash. See app/_components/ModeSwitch.jsx.
+      mode: this.state.mode,
+      modeOpen: this.state.modeOpen,
+      onToggleMode: () => self.setState((st) => ({ modeOpen: !st.modeOpen, cmdSel: -1, dirSel: -1 })),
+      onPickMode: (name) => self.pickMode(name),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
       canReset: this.state.messages.length > 0,
@@ -1923,12 +1973,22 @@ class RiversidePracticeQA extends React.Component {
                   (lib/safety/patient-data.mjs). It is over in well under a
                   second, and a field that looked dead for even that long would
                   have somebody pressing Enter again. */}
-              <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
-                {v.isScreening
-                  ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-                  : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
-              </span>
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : 'Ask a question, type a name for its number'} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              {/* While the message is being screened the field belongs to the
+                  screen, so the mode button gives up its place to the spinner
+                  rather than sitting next to one. */}
+              {v.isScreening ? (
+                <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;z-index:3;')}>
+                  <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+                </span>
+              ) : (
+                <ModeSwitch
+                  mode={v.mode}
+                  open={v.modeOpen}
+                  onToggle={v.onToggleMode}
+                  onPick={v.onPickMode}
+                  place={v.isEmpty ? 'below' : 'above'} />
+              )}
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.mode ? ' riva-dock-field-mode' : '') + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>

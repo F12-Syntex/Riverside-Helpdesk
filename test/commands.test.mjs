@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  COMMANDS, awaitingArguments, commandByTemplate, forcedTemplate, matchCommands, parseCommand,
+  COMMANDS, MODES, QA_MODE, awaitingArguments, commandByName, commandByTemplate, forcedTemplate,
+  matchCommands, modePlaceholder, parseCommand,
 } from '../lib/commands.mjs';
 import { renderCommand } from '../lib/templates/route.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
@@ -382,4 +383,52 @@ test('an emergency card offers nothing to copy', () => {
     text: 'Bad lower back pain, now numb around the groin and cannot tell when passing urine.',
   });
   assert.equal(copied(spinal).length, 0);
+});
+
+/* ------------------------------------------------- choosing without typing */
+
+// The commands were only ever reachable by typing "/", which meant only people
+// who had been told they existed ever used them. The picker in the field offers
+// all of them; these guard the words it uses, which live beside the commands so
+// the button and the typed command cannot drift apart.
+
+test('every command carries the words the picker needs', () => {
+  for (const c of COMMANDS) {
+    assert.ok(c.label, `${c.name} has no label`);
+    assert.ok(c.placeholder, `${c.name} has no placeholder`);
+    assert.ok(c.summary, `${c.name} has no summary`);
+    // The placeholder says what to TYPE. Naming the command again would waste
+    // the one line of instruction there is room for — the chip beside it has
+    // already said which mode this is.
+    assert.ok(!c.placeholder.startsWith('/'), `${c.name}'s placeholder repeats the command`);
+  }
+});
+
+test('the modes are Q&A first, then every command, and nothing else', () => {
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'document', 'form', 'template', 'practice']);
+  assert.equal(MODES[0].label, 'Q&A');
+  assert.equal(MODES[0].name, '', 'the resting mode is not a command');
+  // Every mode but the first must be a real command, or the picker offers
+  // something the server will not honour.
+  for (const m of MODES.slice(1)) assert.ok(commandByName(m.name), `${m.name} is not a command`);
+});
+
+test('the field asks for the right thing in each mode', () => {
+  assert.equal(modePlaceholder(''), QA_MODE.placeholder);
+  assert.match(modePlaceholder('form'), /referral/i);
+  assert.match(modePlaceholder('template'), /contract|template/i);
+  assert.match(modePlaceholder('accurx'), /AccurX/);
+  // An unknown mode is Q&A, so a stale value in a browser cannot leave the
+  // field captioned with something that no longer exists.
+  assert.equal(modePlaceholder('nonsense'), QA_MODE.placeholder);
+  assert.equal(modePlaceholder(undefined), QA_MODE.placeholder);
+});
+
+// A mode is only useful if it reaches the same place the typed command does.
+test('picking a mode and typing its command mean the same thing', () => {
+  for (const m of MODES.slice(1)) {
+    const typed = parseCommand(`/${m.name} something`);
+    assert.equal(typed.command.template, commandByName(m.name).template);
+    assert.equal(forcedTemplate(typed.command.template), typed.command.template);
+  }
 });

@@ -530,6 +530,10 @@ body { overflow-x: hidden; }
 /* The Q&A field carries a search icon on the left and its ask button on the
  * right, both inside the pill, so its gutters are cut to fit around them. */
 .riva-dock-field-search { padding: 0 70px 0 56px !important; }
+/* Room for the mode chip, which is wider than the magnifying glass it
+   replaces once it carries a word. Only while a mode is chosen, so the
+   resting field is the width it always was. */
+.riva-dock-field-mode { padding-left: 138px !important; }
 .riva-dock-send { transition: background-color .18s ease, box-shadow .18s ease; }
 .riva-dock-send:hover { box-shadow: 0 4px 14px rgba(0,94,184,.38); }
 
@@ -608,6 +612,7 @@ body { overflow-x: hidden; }
   .riva-dock-field { font-size: 17px !important; padding: 0 20px !important; }
   .riva-dock-field-icon { padding: 0 46px !important; }
   .riva-dock-field-search { padding: 0 62px 0 48px !important; }
+  .riva-dock-field-mode { padding-left: 128px !important; }
   .riva-dock-send { width: 44px !important; height: 44px !important; right: 8px !important; }
   /* The glow is a desktop pleasure; on a phone it eats the small margin
      between the dock and the edge of the screen. */
