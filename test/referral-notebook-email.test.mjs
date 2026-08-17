@@ -90,8 +90,18 @@ test('a prose mention is not a listing', () => {
 
 test('with no Notebook loaded it falls back rather than guessing', () => {
   assert.equal(findEmailedReferral({ name: 'dietitian', pages: [] }), null);
+  // Without the page, the practice's own answer for "dietitian" is unavailable.
+  // What replaces it is not an invented e-RS pairing, which is the thing this
+  // test exists to forbid: the NEL Referral Tree lists two paediatric dietitian
+  // forms for City & Hackney, so the card names them as they are listed and says
+  // where the list came from. Nothing is guessed either way.
   const card = referralAnswer({ question: 'how do I do a dietitian referral', name: 'dietitian', pages: [] });
-  assert.match(card.subtitle, /Not recorded/);
+  assert.match(JSON.stringify(card.source), /Referral Tree/);
+  assert.doesNotMatch(flat(card), /Smartcard/);
+
+  // A name neither the practice nor the tree has is still the honest card.
+  const nothing = referralAnswer({ question: 'how do I do a printer toner referral', name: 'printer toner', pages: [] });
+  assert.match(nothing.subtitle, /Not recorded/);
 });
 
 test('a referral on no list at all still gets the honest card', () => {

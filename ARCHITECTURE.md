@@ -354,6 +354,7 @@ an individual by workstation.
 | `lib/lookup/cqc.data.json.gz` | The CQC register extract, ~57k registered services. Public data. |
 | `lib/lookup/hospitals.data.json` | Hospital reference data. |
 | `ereferrals.csv` | The e-RS referral-types export (406 Specialty/Clinic Type pairings). |
+| `lib/referrals/nel-tree.data.json` | Primary Care IT's NEL Referral Tree: 533 referral form names, each with its clinical category and which of the five North East London areas can see it (247 for City & Hackney). Generated from the published support article by `npm run data:nel-tree`; reference data, no patient content. |
 | `.env.local` | Secrets. Git-ignored (`.env*.local`). |
 
 ---

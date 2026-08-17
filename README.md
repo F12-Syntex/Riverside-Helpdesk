@@ -159,6 +159,27 @@ clickable sources they can open in-browser.
   found and cites the page. A referral the practice adds to its own page is
   answerable the moment they save it. A recorded e-RS pairing still wins over
   list membership, being the more specific fact.
+- **Which form to open comes from PCIT's NEL Referral Tree, verbatim.** The
+  practice's own material answers how a referral is *sent*; the tree answers
+  *which form*. It is the protocol inside EMIS Web holding every referral form in
+  North East London — 533 of them, of which 247 are on a City & Hackney practice's
+  tree — and it has no search beyond Ctrl+F, so "which form for suspected skin
+  cancer" was previously answered "not recorded in the practice's notes" for four
+  hundred-odd forms the practice can in fact see. Now the model names what is
+  being referred for and **code looks the form up** in
+  `lib/referrals/nel-tree.data.json`, generated from PCIT's published article by
+  `npm run data:nel-tree`. The form name is shown exactly as the tree lists it, and
+  offered to copy, because it is a string somebody retypes into Ctrl+F and a name
+  spelled nearly right finds nothing. Several matches are shown as several rather
+  than resolved to one — "dermatology" genuinely is three forms. A form ticked for
+  another borough only is *named as another borough's*, which beats silence: the
+  alternative is somebody scrolling a menu for a button that was never there. The
+  practice's own recorded pairings and Notebook page both still win, and a form
+  the tree has nothing for still gets the honest "not recorded" card.
+  **Availability is read by tick column, not by counting ticks** — the flattened
+  text of the source PDF gives ticks in order but not which of the five columns
+  each sat in, so "Wider determinants of health questionnaire NEL" is Newham and
+  Waltham Forest and nothing in the text says so.
 - **A referral the Notebook does not cover still gets a speciality and a clinic
   type.** They are determined from the practice's own e-RS referral-types export
   (via SNOMED), filled into the e-RS card, and shown with what they were
