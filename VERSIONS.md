@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.1.2` | 2026-08-17 | perf | `6821671` | perf: the number list opens on the keystroke, not after it |
+| `5.1.1` | 2026-08-17 | refactor | `a61d4ac` | refactor: the contacts pill leaves the space under the box |
 | `5.1.0` | 2026-08-16 | feat | `1de59e3` | feat: the pill moves under the box, and the register joins the sheet |
 | `5.0.0` | 2026-08-16 | feat | `f7725fe` | feat!: the directory opens over the page, not instead of it |
 | `4.2.1` | 2026-08-16 | docs | `0dca6af` | docs: record 4.2.0 in the versions table |
