@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.3.5` | 2026-08-17 | docs | `867a98c` | docs: catch the versions table up with the tree and sitrep work |
 | `5.3.4` | 2026-08-17 | docs | `d2ddb8f` | docs: record 5.3.2 in the versions table |
 | `5.3.3` | 2026-08-17 | fix | `07658ef` | fix: the referral data no longer breaks the browser build |
 | `5.3.2` | 2026-08-17 | docs | `33ed935` | docs: record 5.3.1 in the versions table |
