@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.5.4` | 2026-08-17 | fix | `5001737` | fix: the mode picker clears the text, and opens where it can be reached |
+| `5.5.3` | 2026-08-17 | docs | `f45c3bc` | docs: record 5.5.2 in the versions table |
 | `5.5.2` | 2026-08-17 | fix | `c1313bb` | fix: the contract lookup no longer outranks the practice's own notes |
 | `5.5.1` | 2026-08-17 | docs | `4165afb` | docs: record 5.5.0 in the versions table |
 | `5.5.0` | 2026-08-17 | feat | `c996079` | feat: the kind of answer is chosen in the field, not typed |
