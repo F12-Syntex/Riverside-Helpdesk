@@ -4,7 +4,9 @@ import {
   PRACTICE_AREA, QUERY_ALIASES, buildFormIndex, expandQuery, findReferralForms,
   isConfident, nelTree, rankForms,
 } from '../lib/referrals/nel-tree.mjs';
-import { nelFormNotFound, nelReferralFormAnswer, referralAnswer } from '../lib/templates/referrals.mjs';
+import {
+  nelFormNotFound, nelReferralFormAnswer, referralAnswer, referralFormCommandAnswer,
+} from '../lib/templates/referrals.mjs';
 import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
 import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
 
@@ -398,5 +400,34 @@ test('every found form says the practice may email it instead', () => {
   for (const q of ['tongue tie', 'dexa', 'suspected skin cancer']) {
     assert.match(JSON.stringify(nelReferralFormAnswer(q).blocks), /sends some referrals by email/,
       `"${q}" does not mention the practice's own route`);
+  }
+});
+
+/* --------------------------------------------- the order /form decides in */
+
+// /form says "search the tree", and the tree will answer a referral this
+// practice sends by email with somebody else's form: "district nurse" is
+// Islington's service, while this practice emails RP ACN 2022. A command must
+// not be the one path that talks staff out of their own practice's process.
+test('/form puts the practice’s own emailed route first', () => {
+  const pages = [{
+    docTitle: 'Referrals sent by email',
+    text: 'These go by email rather than e-RS:\n- District nurse\n- Wheelchair service\n',
+  }];
+  const card = referralFormCommandAnswer({ query: 'district nurse', pages });
+  assert.match(card.subtitle, /email/i);
+  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
+});
+
+test('/form falls to the tree when the practice lists nothing', () => {
+  const card = referralFormCommandAnswer({ query: 'tongue tie', pages: [] });
+  assert.equal(card.title, 'Tongue Tie Referral Form 2021 CH');
+});
+
+test('/form never returns null, so the turn can never reach prose', () => {
+  for (const q of ['printer toner', '', '   ']) {
+    const card = referralFormCommandAnswer({ query: q, pages: [] });
+    assert.ok(card && card.title, `"${q}" produced no card`);
+    assert.match(JSON.stringify(card.source), /Referral Tree/);
   }
 });
