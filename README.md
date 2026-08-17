@@ -180,6 +180,17 @@ clickable sources they can open in-browser.
   text of the source PDF gives ticks in order but not which of the five columns
   each sat in, so "Wider determinants of health questionnaire NEL" is Newham and
   Waltham Forest and nothing in the text says so.
+- **Which EMIS template records a contract is answered with the date it was true
+  on.** PCIT name a contract one way and the template that records it another, and
+  there are 42 of them (`lib/referrals/nel-contracts.data.json`, from the PCCIF
+  mobilisation Sitrep). So "which template for the ADHD shared pathway" gets the
+  template name verbatim, to copy. The build status beside it is the part that
+  rots — it came off a **daily** bulletin which says of itself that the position
+  changes through the week — so every card leads with **"as at 28 July 2026"**, a
+  status that is not "For Release" is shown as a warning to check rather than a
+  fact to repeat, and PCIT's own number is on the card so checking is one call. A
+  status presented as current weeks after it was written is worse than none: it is
+  fast, it looks authoritative, and it is wrong.
 - **A referral the Notebook does not cover still gets a speciality and a clinic
   type.** They are determined from the practice's own e-RS referral-types export
   (via SNOMED), filled into the e-RS card, and shown with what they were

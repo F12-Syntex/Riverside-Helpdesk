@@ -1,6 +1,6 @@
 {
   "name": "riverside-emis-helper",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "private": true,
   "description": "Riverside Practice Q&A: a document-grounded reception assistant for The Riverside Practice, using OpenRouter.",
   "scripts": {
@@ -18,6 +18,7 @@
     "db:reset-rota": "node scripts/reset-and-seed-rota.mjs",
     "data:cqc": "node scripts/build-cqc-directory.mjs",
     "data:nel-tree": "node scripts/build-nel-referral-tree.mjs",
+    "data:nel-contracts": "node scripts/build-nel-contracts.mjs",
     "data:ers": "node scripts/ingest-snomed-ers.mjs",
     "versions": "node scripts/versions.mjs"
   },
