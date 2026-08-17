@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.5.0` | 2026-08-17 | feat | `c996079` | feat: the kind of answer is chosen in the field, not typed |
+| `5.4.1` | 2026-08-17 | docs | `9a81da4` | docs: record 5.4.0 in the versions table |
 | `5.4.0` | 2026-08-17 | feat | `2b4b795` | feat: /form and /template answer from the two PCIT lists |
 | `5.3.6` | 2026-08-17 | docs | `80b2d3b` | docs: record 5.3.4 in the versions table |
 | `5.3.5` | 2026-08-17 | docs | `867a98c` | docs: catch the versions table up with the tree and sitrep work |
