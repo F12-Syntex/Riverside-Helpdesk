@@ -7,19 +7,25 @@ clickable sources they can open in-browser.
 
 ## How it works
 
-- Questions go to `POST /api/agent`, an **agentic loop** built on the Vercel AI
-  SDK and routed through **OpenRouter**. Retrieval is a *tool the model calls*,
-  not a fixed step that happens before it: it searches the practice's material
-  as many times as the question needs, opens a whole Notebook page when a
-  fragment is not enough, and can search the web when the practice's own
-  material genuinely does not cover the question. The API key and server-side
-  knowledge never reach the browser.
-- The tools it has: `search_practice` (documents + Notebook + EMIS guides),
-  `list_practice_sources`, `outline_practice_sources`, `open_practice_sources`,
-  `search_web`, `read_web_page`, `find_contact`, `check_rota` and
-  `suggest_ers_referral_route`. The practice's own material always gets first
-  refusal — a web search with no practice lookup behind it triggers one
-  automatically.
+- Questions go to `POST /api/agent`, routed through **OpenRouter**. It is **one
+  model call, not a research loop**: the model reads the message, chooses the
+  template that fits it and fills that template's variables — and the answer is
+  then the template, rendered in code from the values it returned. Understanding
+  a message is what a model is good at, so it does that; the shape of what comes
+  out is what a model is unreliable at, so code does that. The API key and
+  server-side knowledge never reach the browser.
+- **The Notebook is a template too.** It arrives as a list of page titles and the
+  model returns a title; the page is then rendered from the database exactly as
+  the practice wrote it. So even open-ended questions come back as a variable
+  filled in rather than prose the model composed — the same answer every time,
+  about ten output tokens, and no way for a procedure to be paraphrased on its
+  way to somebody following it.
+- **The tool-calling loop this replaced is gone**, along with
+  `lib/agent/tools.mjs` and the `search_practice` / `find_contact` /
+  `suggest_ers_referral_route` tools it carried. `ANSWER-PIPELINE-REDESIGN.md`
+  records how it used to work and why. Parts of this file and of
+  `ARCHITECTURE.md` still describe the loop and have not been rewritten yet —
+  where the two disagree, `app/api/agent/route.js` is what runs.
 - **Every tool takes a list.** Three wordings of a search, or four files to
   read, go in one call: the loop is capped at six steps, and a step spent
   asking for something already decided on is a step not spent reading.

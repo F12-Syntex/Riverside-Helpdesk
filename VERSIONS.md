@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.3.0` | 2026-08-17 | feat | `2e5b55a` | feat: the mobilisation sitrep answers by contract |
 | `5.2.0` | 2026-08-17 | feat | `4edeffe` | feat: the referral tree answers by form name |
 | `5.1.3` | 2026-08-17 | docs | `d4e1bb8` | docs: record 5.1.2 in the versions table |
 | `5.1.2` | 2026-08-17 | perf | `6821671` | perf: the number list opens on the keystroke, not after it |
