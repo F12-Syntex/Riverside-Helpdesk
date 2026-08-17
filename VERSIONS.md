@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.4.0` | 2026-08-17 | feat | `2b4b795` | feat: /form and /template answer from the two PCIT lists |
+| `5.3.6` | 2026-08-17 | docs | `80b2d3b` | docs: record 5.3.4 in the versions table |
 | `5.3.5` | 2026-08-17 | docs | `867a98c` | docs: catch the versions table up with the tree and sitrep work |
 | `5.3.4` | 2026-08-17 | docs | `d2ddb8f` | docs: record 5.3.2 in the versions table |
 | `5.3.3` | 2026-08-17 | fix | `07658ef` | fix: the referral data no longer breaks the browser build |
