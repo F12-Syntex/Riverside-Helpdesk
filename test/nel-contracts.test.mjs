@@ -5,7 +5,8 @@ import {
 } from '../lib/referrals/nel-contracts.mjs';
 import { contractNotFound, contractTemplateAnswer } from '../lib/templates/contracts.mjs';
 import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
-import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
+import { SELECTION_SCHEMA, selectionPrompt } from '../lib/templates/route.mjs';
+import { referralAnswer } from '../lib/templates/referrals.mjs';
 
 // The contract-to-template mapping out of PCIT's mobilisation Sitrep. Two things
 // are being guarded here. One is that the table was read correctly, which is
@@ -249,4 +250,37 @@ test('a miss on /template is answered by the Sitrep, not by prose', () => {
   // It says what the list does and does not cover, and that it is dated.
   assert.match(JSON.stringify(card.blocks), /not every service the practice runs/);
   assert.match(JSON.stringify(card.blocks), /support@primarycareit\.co\.uk/);
+});
+
+/* ------------------------------------------- not at the Notebook's expense */
+
+// The router picks ONE template, and the prompt makes "notebook" the fallback —
+// chosen when none of the numbered shapes fit. Adding contractTemplate high in
+// that list therefore put the practice's own procedures at risk: "how do we do
+// wound care" names a NEL contract, and answering it with PCIT's template names
+// and a build status from a dated bulletin would be a worse answer than the
+// Notebook page the reader wanted. The prompt has to say so out loud, because
+// nothing in the code can catch it — by the time a template is chosen, the
+// choice has been made.
+test('the prompt keeps the Notebook ahead of the contract lookup', () => {
+  const prompt = selectionPrompt({ question: 'anything', notebook: 'Some page\n' });
+  assert.match(prompt, /THE NOTEBOOK OUTRANKS IT/);
+  // The examples matter more than the rule: they are what a model actually
+  // pattern-matches against.
+  assert.match(prompt, /How do we do wound care/);
+  assert.match(prompt, /choose "notebook"/);
+  assert.match(prompt, /Naming a NEL contract is not enough on its own/);
+});
+
+// The other half of the same guard, on the referral side. That one IS enforced
+// in code — referralAnswer reads the Notebook before it reaches the tree — so
+// this pins the behaviour rather than the wording.
+test('the Notebook still beats the tree in code, not just in the prompt', () => {
+  const pages = [{
+    docTitle: 'Referrals sent by email',
+    text: 'These go by email rather than e-RS:\n- Wheelchair service\n',
+  }];
+  const card = referralAnswer({ question: 'wheelchair referral', name: 'wheelchair', pages });
+  assert.match(card.subtitle, /email/i);
+  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
 });
