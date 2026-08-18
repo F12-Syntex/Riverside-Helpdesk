@@ -14,30 +14,37 @@ import { MODES } from '../../lib/commands.mjs';
  * rather than from a model. A feature nobody can see is a feature
  * nobody uses.
  *
- * IT IS ONE CONTROL AT THE LEFT, NOT FOUR POSITIONS OF A TRACK. The
- * segmented pill named every mode at rest, which is what solved the
- * discovery problem — but four filled columns is a wide, busy thing to
- * hang over the page for a choice that is left alone almost every time,
- * and the sliding thumb kept saying "something is happening here" when
- * nothing was. What is left is one quiet button at the left edge of the
- * strip, reading the mode that is armed, that opens the list when it is
- * clicked. Closed, it is four words wide; open, every mode is named with
- * the line that says what it does — which the pill never had room for.
+ * IT IS ONE CONTROL, NOT FOUR POSITIONS OF A TRACK. The segmented pill
+ * named every mode at rest, which is what solved the discovery problem —
+ * but four filled columns is a wide, busy thing to hang over the page for
+ * a choice that is left alone almost every time, and the sliding thumb
+ * kept saying "something is happening here" when nothing was. What is
+ * left is one button reading the mode that is armed, which opens the list
+ * when it is clicked. Closed it is a word wide; open, every mode is named
+ * with the line that says what it does — which the pill never had room
+ * for.
  *
- * IT STILL SAYS WHAT IS ARMED WITHOUT BEING OPENED. That is the part
- * worth keeping from the pill: the button carries the mode's own label,
- * and reads blue and filled whenever it is anything other than Q&A, so a
- * field that is about to answer out of the referral list cannot look
- * like a field that is about to answer a question.
+ * WHERE IT SITS: BESIDE THE FIELD, AS PART OF IT. It used to float in the
+ * strip above the box as a small pill, at its own height, with its own
+ * radius, over a dock made of one large one — three ways of being a
+ * rounded thing in six inches of screen, which read as clutter rather
+ * than as a set. It is now the first control ON the dock's own row: the
+ * SAME 68px as the field (--riva-dock-field-h), the same white surface,
+ * the same border and the same lift, sitting immediately to its left. The
+ * strip goes back to carrying only the send bar and the "Copied" line,
+ * and the dock's height is unchanged, because the control is beside the
+ * field rather than above it.
  *
- * WHERE IT SITS. In the strip directly above the field, which is
- * ALREADY 32px tall and already reserved in --riva-dock-h, so nothing on
- * the page moves to make room and the dock does not grow. The list is
- * absolutely positioned above the button, out of the flow for the same
- * reason the telephone panel is: the dock stays put while it is open.
- * The strip's other two occupants — the send bar and the "Copied" line —
- * are both under three seconds, and they take the strip back while they
- * need it.
+ * IT IS A BLOCK, NOT A PILL. The field is the pill on this row — one of
+ * them, and it is the thing everybody came to use. The mode reads as the
+ * square-shouldered control in front of it, the way a select does, so the
+ * eye can tell at a glance which of the two is the box you type in.
+ *
+ * IT STILL SAYS WHAT IS ARMED WITHOUT BEING OPENED. The button carries a
+ * "Mode" caption above the mode's own name, and turns blue-on-pale-blue
+ * whenever it is anything other than Q&A, so a field about to answer out
+ * of the referral list cannot look like a field about to answer a
+ * question.
  *
  * IT LASTS ONE MESSAGE. The mode goes back to Q&A as soon as the
  * question is sent, and that is the whole safety of it. A switch that
@@ -132,19 +139,29 @@ export default function ModeSwitch({ mode, onPick }) {
         title={current.summary}
         onClick={() => (open ? setOpen(false) : show())}
         className="riva-modes-btn"
-        base={'display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px 0 12px;'
-          + 'border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;'
-          + 'white-space:nowrap;transition:background .16s ease,border-color .16s ease,color .16s ease;'
+        base={'display:flex;align-items:center;gap:10px;height:100%;padding:0 16px;font:inherit;'
+          + 'cursor:pointer;white-space:nowrap;text-align:left;'
+          + 'transition:background .16s ease,border-color .16s ease,box-shadow .22s ease;'
           + (armed
-            ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;'
-            : 'background:rgba(255,255,255,.78);border:1px solid #dde4e7;color:#4c6272;')}
-        hover={armed ? 'background:#00437f;border-color:#00437f;' : 'border-color:#005eb8;color:#00437f;'}>
-        <span>{current.label}</span>
+            ? 'background:#eaf2fa;border:2px solid #005eb8;'
+            : 'background:#fff;border:2px solid #cdd8dd;')}
+        hover={armed ? 'background:#dfebf7;' : 'border-color:#aab8bf;'}>
+        <span style={s('display:flex;flex-direction:column;gap:2px;')}>
+          {/* The caption says what the word underneath is FOR. Without it the
+              button reads as a stray label beside the box rather than as the
+              one control that decides what the box will answer with. */}
+          <span className="riva-modes-cap" style={s('font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8a99a3;')}>
+            Mode
+          </span>
+          <span style={s('font-size:15.5px;font-weight:700;color:' + (armed ? '#005eb8' : '#212b32') + ';')}>
+            {current.label}
+          </span>
+        </span>
         {/* One chevron, pointing up at the list it will open and turning over
             once it is open, so the button says which way it is going rather
             than only what it holds. Turned in CSS (.riva-modes-caret). */}
-        <span className="riva-modes-caret" aria-hidden="true" style={s('display:flex;opacity:.8;')}>
-          <Svg w={12} sw={2.4}>{Icons.chevronRight}</Svg>
+        <span className="riva-modes-caret" aria-hidden="true" style={s('display:flex;color:' + (armed ? '#005eb8' : '#8a99a3') + ';')}>
+          <Svg w={14} sw={2.4}>{Icons.chevronRight}</Svg>
         </span>
       </Hover>
 

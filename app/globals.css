@@ -538,15 +538,16 @@ body { overflow-x: hidden; }
  * copied number. Its height is reserved so the dock never moves as they
  * come and go. */
 .riva-dock-strip { height: var(--riva-dock-strip-h); display: flex; align-items: center; overflow: hidden; }
-/* The mode switch: one button at the left of the strip, and the list it
-   opens. The button is the only part that takes room in the strip — the list
-   is out of the flow, above it, so opening the modes never moves the dock. */
-.riva-modes { position: relative; display: inline-flex; }
-/* The strip clips its contents so the send bar disappears at the top edge on
-   its way up. While the list is open there is no send bar — the two are never
-   on screen together — so the clip is lifted for exactly that moment, which is
-   what lets the list stand above a 32px strip at all. */
-.riva-dock-strip:has(.riva-modes-open) { overflow: visible; }
+/* The mode switch: the first control on the dock's own row, immediately left
+   of the field, and the list it opens. Everything about its box is the field's
+   — the height the page reserves against, the white, the border weight, the
+   lift — except the corners, which are square-shouldered rather than a second
+   pill on a row that already has one. */
+.riva-modes { position: relative; display: flex; flex: none; height: var(--riva-dock-field-h); }
+.riva-modes-btn {
+  border-radius: 18px;
+  box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
+}
 .riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
 /* The chevron points the way the list will go — up, because it opens above the
    button — and turns over to point back down once it is open. */
@@ -560,10 +561,15 @@ body { overflow-x: hidden; }
   animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
 }
 .riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: -2px; }
-/* The strip is 26px on a phone, so the button loses the 2px it can spare and
-   the list stops just short of the screen edges. */
+/* On a phone the row is 390px wide and every pixel the mode takes comes off
+   the field, so it gives up its caption, its chevron and most of its gutters
+   and keeps only the word — which is the part that has to be readable, being
+   the one that says what the box is about to answer with. */
 @media (max-width: 600px) {
-  .riva-modes-btn { height: 24px !important; }
+  .riva-modes-btn { padding: 0 11px !important; gap: 0 !important; border-radius: 15px; }
+  /* The caret carries its display inline, so it takes an !important to go. */
+  .riva-modes-cap { display: none; }
+  .riva-modes-caret { display: none !important; }
   .riva-modes-list { min-width: 240px; max-width: calc(100vw - 32px); }
 }
 @media (prefers-reduced-motion: reduce) {

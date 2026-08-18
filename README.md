@@ -200,21 +200,27 @@ clickable sources they can open in-browser.
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
-- **The kind of answer is chosen above the box, not typed.** One button at the
-  left of the strip directly above the field
-  (`app/_components/ModeSwitch.jsx`) reads whichever mode is armed and opens the
-  list of them — Q&A, Form, Template, Practice — when it is clicked. Each mode is
-  named there with the line that says what it does, which the four-position pill
-  it replaced had no room for, and the button turns blue and filled whenever it
-  is anything other than Q&A, so a field about to answer out of the referral list
-  cannot look like a field about to answer a question. The list is out of the
-  flow, above the button, so opening it moves nothing. Arrow keys walk it, Enter
-  takes a mode, Escape closes it. **`/accurx` and `/document` are
+- **The kind of answer is chosen beside the box, not typed.** One button
+  immediately to the left of the field (`app/_components/ModeSwitch.jsx`) reads
+  whichever mode is armed and opens the list of them — Q&A, Form, Template,
+  Practice — when it is clicked. Each mode is named there with the line that says
+  what it does, which the four-position pill it replaced had no room for, and the
+  button reads blue on pale blue whenever it is anything other than Q&A, so a
+  field about to answer out of the referral list cannot look like a field about
+  to answer a question. It stands at the field's own height
+  (`--riva-dock-field-h`) on the field's own row, with the same white, the same
+  border weight and the same lift, and square shoulders rather than a second pill
+  on a row that already has one — it used to float above the box at its own size
+  and its own radius, which read as clutter beside a dock made of one large pill.
+  The list is out of the flow, above the button, so opening it moves nothing.
+  Arrow keys walk it, Enter takes a mode, Escape closes it. On a phone the button
+  keeps only the mode's name, because every pixel it takes comes off the field.
+  **`/accurx` and `/document` are
   hidden rather than withdrawn**: they are not offered by the switch or by the
   "/" list, and typing either in full still works exactly as it did, because both
-  are everyday answers used by habit. That strip was already 32px
-  tall and already counted in the dock's height, so nothing on the page moves and
-  nothing was added to the header or the footer. Typing "/" still works and still
+  are everyday answers used by habit. The strip above the field goes back to
+  carrying only the send bar and the "Copied" line, so the dock's height is
+  unchanged and nothing was added to the header or the footer. Typing "/" still works and still
   wins over the switch, being the more specific thing the reader just did. **The
   choice lasts exactly one message**: a switch left armed on a shared reception PC
   would eventually answer an ordinary question out of the referral-form list, and

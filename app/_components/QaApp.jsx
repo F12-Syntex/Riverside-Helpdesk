@@ -1901,15 +1901,14 @@ class RiversidePracticeQA extends React.Component {
             {/* The question leaves the field as a bar travelling up to where
                 the heading is landing. A copied number takes the same line,
                 so nothing else has to move. */}
-            {/* The strip was reserved height with almost nothing in it. The
-                modes live here now: named, always visible, one click to arm.
-                The send bar and the "Copied" line are both under three seconds
-                and take the strip back while they run, so nothing is ever
-                stacked and the dock never changes height. */}
+            {/* The strip carries the bar and the "Copied" line only. The mode
+                switch used to sit here too, as a small pill at its own height
+                over a dock made of one large one; it is on the dock's own row
+                now, beside the field. */}
             <div className="riva-dock-strip" aria-live="polite">
               {v.emitting ? <span className="riva-dock-emit" />
                 : v.hasCopied ? <span style={s('font-size:14px;font-weight:600;color:#007f3b;')}>Copied {v.copiedNumber}</span>
-                  : <ModeSwitch mode={v.mode} onPick={v.onPickMode} />}
+                  : null}
             </div>
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
@@ -1957,7 +1956,7 @@ class RiversidePracticeQA extends React.Component {
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
-            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
+            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;align-items:center;gap:10px;')}>
               {/* The telephone list hangs off the field — under it on the
                   opening screen, where anything above would cover the
                   heading, and over it once the page has an answer on it.
@@ -1969,21 +1968,32 @@ class RiversidePracticeQA extends React.Component {
                   one of the two can be open, because "/" is not a name. */}
               <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
 
-              {/* The one moment the field is busy on its own account: the
-                  message has been typed, Enter has been pressed, and it is
-                  being checked for patient details before it goes anywhere
-                  (lib/safety/patient-data.mjs). It is over in well under a
-                  second, and a field that looked dead for even that long would
-                  have somebody pressing Enter again. */}
-              <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
-                {v.isScreening
-                  ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-                  : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
-              </span>
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-              <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
-                <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
-              </Hover>
+              {/* The kind of answer, chosen before the question is typed and
+                  standing at the same height as the field it governs. See
+                  app/_components/ModeSwitch.jsx. */}
+              <ModeSwitch mode={v.mode} onPick={v.onPickMode} />
+
+              {/* The field and the two things that live inside it — the search
+                  icon and the ask button — are one box, so they are positioned
+                  against it rather than against the whole row. Without this
+                  the icon would land on the mode switch. */}
+              <div style={s('position:relative;flex:1;min-width:0;display:flex;')}>
+                {/* The one moment the field is busy on its own account: the
+                    message has been typed, Enter has been pressed, and it is
+                    being checked for patient details before it goes anywhere
+                    (lib/safety/patient-data.mjs). It is over in well under a
+                    second, and a field that looked dead for even that long would
+                    have somebody pressing Enter again. */}
+                <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
+                  {v.isScreening
+                    ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+                    : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
+                </span>
+                <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+                <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
+                  <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
+                </Hover>
+              </div>
             </form>
 
             {/* Nothing hangs under the box any more. The directory is
