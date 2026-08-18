@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.7.4` | 2026-08-18 | refactor | `fb41c1c` | refactor: the modes are one button, not four positions |
+| `5.7.3` | 2026-08-18 | docs | `ad966dc` | docs: record 5.7.2 in the versions table |
 | `5.7.2` | 2026-08-18 | fix | `263bafa` | fix: a template shortlist shows the template that matched |
 | `5.7.1` | 2026-08-18 | docs | `0c49cd8` | docs: record 5.7.0 in the versions table |
 | `5.7.0` | 2026-08-18 | feat | `f97a189` | feat: a four-position switch, and two commands hidden |
