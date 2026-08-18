@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.6.0` | 2026-08-18 | feat | `8e153ff` | feat: the modes are named above the box, not hidden behind a caret |
+| `5.5.9` | 2026-08-17 | docs | `cd5b304` | docs: record 5.5.8 in the versions table |
 | `5.5.8` | 2026-08-17 | refactor | `5dd9f1f` | refactor: /form decides its order where that order can be tested |
 | `5.5.7` | 2026-08-17 | docs | `0f39e86` | docs: record 5.5.6 in the versions table |
 | `5.5.6` | 2026-08-17 | fix | `5342d80` | fix: being the only match is not the same as being the right one |
