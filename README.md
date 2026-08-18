@@ -200,36 +200,32 @@ clickable sources they can open in-browser.
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
-- **The kind of answer is chosen beside the box, not typed.** One button
-  immediately to the left of the field (`app/_components/ModeSwitch.jsx`) reads
-  whichever mode is armed and opens the list of them — Q&A, Form, Template,
-  Practice — when it is clicked. Each mode is named there with the line that says
-  what it does, which the four-position pill it replaced had no room for, and the
-  button reads blue on pale blue whenever it is anything other than Q&A, so a
-  field about to answer out of the referral list cannot look like a field about
-  to answer a question. It stands at the field's own height
-  (`--riva-dock-field-h`) on the field's own row, with the same white, the same
-  border weight, the same lift and the same fully rounded ends, so the two read as
-  one pair of controls — it used to float above the box at its own size and its
-  own radius, which read as clutter beside a dock made of one large pill.
-  The list is out of the flow, above the button, so opening it moves nothing.
-  Arrow keys walk it, Enter takes a mode, Escape closes it. The button shows the
-  mode's name on one line and holds its width at the longest of the four, so
-  arming one does not resize the field beside it; on a phone it drops the chevron
-  and shrinks to the word, because every pixel it takes comes off the field.
+- **The kind of answer is chosen under the box, not typed.** Four pills sit
+  directly under the field — Q&A, Form, Template, Practice
+  (`app/_components/ModeSwitch.jsx`) — each a word that can be read without
+  opening anything and armed with one click, with the armed one filled. Q&A is
+  one of the four rather than an absence, so the row reads as a setting rather
+  than as three switches that might all be off. Two earlier controls are gone:
+  a segmented track with a sliding thumb, which was machinery for a choice
+  that is left alone almost every time, and a button-and-menu beside the field,
+  which hid three of the four modes behind a click and took width off a
+  placeholder that needs it. The row's height is declared once
+  (`--riva-dock-extras`), which the dock's height, the room the page leaves at
+  its foot and the opening screen's lift are all worked out from, so nothing
+  had to be measured twice to make room for it.
   **`/accurx` and `/document` are
-  hidden rather than withdrawn**: they are not offered by the switch or by the
+  hidden rather than withdrawn**: they are not offered by the pills or by the
   "/" list, and typing either in full still works exactly as it did, because both
-  are everyday answers used by habit. The strip above the field goes back to
-  carrying only the send bar and the "Copied" line, so the dock's height is
-  unchanged and nothing was added to the header or the footer. Typing "/" still works and still
-  wins over the switch, being the more specific thing the reader just did. **The
-  choice lasts exactly one message**: a switch left armed on a shared reception PC
+  are everyday answers used by habit. The strip above the field carries only the
+  send bar and the "Copied" line, and nothing was added to the header or the
+  footer. Typing "/" still works and still wins over the pills, being the more
+  specific thing the reader just did. **The
+  choice lasts exactly one message**: a mode left armed on a shared reception PC
   would eventually answer an ordinary question out of the referral-form list, and
   the failure modes are not symmetric — a wrong `/form` says honestly that the
   list has no such entry, while a wrong `/accurx` renders a confident triage card
   with a destination and an urgency for a question that was never about a patient.
-  A question asked with a mode carries **"Asked as Form"** in the transcript,
+  A question asked with a pill carries **"Asked as Form"** in the transcript,
   because `/form knee` typed into the box stays in the reader's own words for ever
   and choosing the mode with a button would otherwise leave nothing on screen
   explaining which list the answer came from.

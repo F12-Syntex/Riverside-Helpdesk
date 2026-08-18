@@ -1956,7 +1956,7 @@ class RiversidePracticeQA extends React.Component {
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
-            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;align-items:center;gap:10px;')}>
+            <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
               {/* The telephone list hangs off the field — under it on the
                   opening screen, where anything above would cover the
                   heading, and over it once the page has an answer on it.
@@ -1968,39 +1968,29 @@ class RiversidePracticeQA extends React.Component {
                   one of the two can be open, because "/" is not a name. */}
               <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
 
-              {/* The kind of answer, chosen before the question is typed and
-                  standing at the same height as the field it governs. See
-                  app/_components/ModeSwitch.jsx. */}
-              <ModeSwitch mode={v.mode} onPick={v.onPickMode} />
-
-              {/* The field and the two things that live inside it — the search
-                  icon and the ask button — are one box, so they are positioned
-                  against it rather than against the whole row. Without this
-                  the icon would land on the mode switch. */}
-              <div style={s('position:relative;flex:1;min-width:0;display:flex;')}>
-                {/* The one moment the field is busy on its own account: the
-                    message has been typed, Enter has been pressed, and it is
-                    being checked for patient details before it goes anywhere
-                    (lib/safety/patient-data.mjs). It is over in well under a
-                    second, and a field that looked dead for even that long would
-                    have somebody pressing Enter again. */}
-                <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
-                  {v.isScreening
-                    ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-                    : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
-                </span>
-                <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-                <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
-                  <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
-                </Hover>
-              </div>
+              {/* The one moment the field is busy on its own account: the
+                  message has been typed, Enter has been pressed, and it is
+                  being checked for patient details before it goes anywhere
+                  (lib/safety/patient-data.mjs). It is over in well under a
+                  second, and a field that looked dead for even that long would
+                  have somebody pressing Enter again. */}
+              <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
+                {v.isScreening
+                  ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+                  : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
+              </span>
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
+                <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
+              </Hover>
             </form>
 
-            {/* Nothing hangs under the box any more. The directory is
-                reached by typing a name — the panel is offered on the
-                keystroke itself — or from the pill in the header; a third
-                way in, sitting under the field, was one too many. The room
-                it took (--riva-dock-extras) is now zero. */}
+            {/* The kind of answer: four words under the box, one click to
+                arm, the armed one filled. Read in the order they are used —
+                the question first, the kind of answer second. The room the
+                row takes is --riva-dock-extras, so the page above the dock
+                already leaves it. See app/_components/ModeSwitch.jsx. */}
+            <ModeSwitch mode={v.mode} onPick={v.onPickMode} />
 
           </div>
         </div>

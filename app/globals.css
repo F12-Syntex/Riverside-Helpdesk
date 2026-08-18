@@ -23,12 +23,12 @@ html { scrollbar-gutter: stable; }
   /* The dock as it sits at the foot of the page, from the bottom edge of
      the screen to the top of the strip above the field. */
   --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-extras) + var(--riva-dock-pad-b));
-  /* What the opening screen hangs under the field, and which the hero above
-     has to clear. Nothing, now the Contacts pill has gone from under the box:
-     the directory is reached by typing a name, or from the header. Kept as a
-     variable rather than deleted from the three sums below, so the next thing
-     hung under the field is one number away from being made room for. */
-  --riva-dock-extras: 0px;
+  /* What the dock hangs under the field, and which the hero above has to
+     clear: the row of mode pills (32px) and the margin over it (12px). This is
+     the one number that makes room for it — the dock's own height, the space
+     the page leaves at its foot and the lift on the opening screen are all
+     worked out from the three sums below. */
+  --riva-dock-extras: 44px;
   /* What the dock grows UPWARDS by when something is attached to the next
      question — a row per dropped document, a strip for the images. The dock is
      pinned to the bottom of the screen, so those rows push its top up into
@@ -538,46 +538,26 @@ body { overflow-x: hidden; }
  * copied number. Its height is reserved so the dock never moves as they
  * come and go. */
 .riva-dock-strip { height: var(--riva-dock-strip-h); display: flex; align-items: center; overflow: hidden; }
-/* The mode switch: the first control on the dock's own row, immediately left
-   of the field, and the list it opens. Its box is the field's box — the height
-   the page reserves against, the white, the border weight, the lift and the
-   same fully rounded ends — so the two read as one pair of controls rather
-   than as a control and something stuck beside it. */
-.riva-modes { position: relative; display: flex; flex: none; height: var(--riva-dock-field-h); }
-.riva-modes-btn {
-  border-radius: 999px;
-  /* Wide enough for the longest mode's name, so the field beside it does not
-     resize every time somebody arms a different one — and so the word sits
-     clear of the rounded ends rather than against them. */
-  min-width: 152px;
-  box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
+/* The modes: four pills under the field, and nothing else. Each is a word
+   that can be read without opening anything and armed with one click; the
+   armed one is the filled one. The row is left-aligned with the field it
+   belongs to, and the room it takes is declared once as --riva-dock-extras
+   so everything the page measures against the dock already knows about it. */
+.riva-modes {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; height: 32px;
 }
-.riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
-/* The chevron points the way the list will go — up, because it opens above the
-   button — and turns over to point back down once it is open. */
-.riva-modes-caret { transform: rotate(-90deg); transition: transform .18s cubic-bezier(.2,.7,.3,1); }
-.riva-modes-open .riva-modes-caret { transform: rotate(90deg); }
-.riva-modes-list {
-  position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 7;
-  min-width: 268px; max-width: min(340px, calc(100vw - 48px));
-  background: #fff; border: 1px solid #dde4e7; border-radius: 14px;
-  box-shadow: 0 12px 34px rgba(33,43,50,.16); overflow: hidden;
-  animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
-}
-.riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: -2px; }
-/* On a phone the row is 390px wide and every pixel the mode takes comes off
-   the field, so the button gives up its chevron, its reserved width and most
-   of its gutters, and is only ever as wide as the word it is showing. */
+.riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
+/* On a phone the four still fit a 358px row; if a fifth mode is ever offered
+   they scroll sideways rather than wrapping, because the row's height is what
+   the page reserves against and a second line would push the dock through it. */
 @media (max-width: 600px) {
-  .riva-modes-btn { min-width: 0; padding: 0 16px !important; gap: 0 !important; }
-  .riva-modes-name { font-size: 15px !important; }
-  /* The caret carries its display inline, so it takes an !important to go. */
-  .riva-modes-caret { display: none !important; }
-  .riva-modes-list { min-width: 240px; max-width: calc(100vw - 32px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .riva-modes-caret { transition: none; }
-  .riva-modes-list { animation: none; }
+  .riva-modes {
+    margin-top: 10px; height: 30px; gap: 6px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .riva-modes::-webkit-scrollbar { display: none; }
+  .riva-mode { flex: none; height: 30px !important; padding: 0 13px !important; font-size: 13px !important; }
 }
 .riva-dock-emit {
   width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;
@@ -631,6 +611,8 @@ body { overflow-x: hidden; }
   :root {
     --riva-dock-field-h: 60px;
     --riva-dock-strip-h: 26px;
+    /* The pill row is 30px on a phone, with 10px over it. */
+    --riva-dock-extras: 40px;
     --riva-dock-lift: 0px;
     --riva-hero-gap: 34px;
     --riva-fade-top: 40px;
