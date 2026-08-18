@@ -200,9 +200,14 @@ clickable sources they can open in-browser.
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
-- **The kind of answer is chosen above the box, not typed.** Six named pills —
-  Q&A, AccurX, Document, Form, Template, Practice — sit in the strip directly
-  above the field (`app/_components/ModeSwitch.jsx`). That strip was already 32px
+- **The kind of answer is chosen above the box, not typed.** A four-position
+  switch — Q&A, Form, Template, Practice — sits in the strip directly above the
+  field (`app/_components/ModeSwitch.jsx`), with a thumb that slides to whichever
+  is armed. On a phone it becomes a scrolling row instead, because four thumb
+  positions across 390px are too tight to hit. **`/accurx` and `/document` are
+  hidden rather than withdrawn**: they are not offered by the switch or by the
+  "/" list, and typing either in full still works exactly as it did, because both
+  are everyday answers used by habit. That strip was already 32px
   tall and already counted in the dock's height, so nothing on the page moves and
   nothing was added to the header or the footer. Typing "/" still works and still
   wins over the pills, being the more specific thing the reader just did. **The

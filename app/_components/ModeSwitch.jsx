@@ -22,7 +22,7 @@ import { MODES } from '../../lib/commands.mjs';
  * space problem and not the problem. Every mode is named here, with no
  * click needed to find out they are there.
  *
- * IT IS ONE OBJECT, NOT SIX. An earlier pass gave each mode its own
+ * IT IS ONE SWITCH, NOT A ROW OF BUTTONS. An earlier pass gave each mode its own
  * bordered chip with an icon, and six outlined things floating over the
  * page read as clutter rather than as a control. They share one quiet
  * track now, the way a segmented control does: only the chosen one is
@@ -51,8 +51,18 @@ import { MODES } from '../../lib/commands.mjs';
  * ------------------------------------------------------------------ */
 
 export default function ModeSwitch({ mode, onPick }) {
+  const at = Math.max(0, MODES.findIndex((m) => m.name === mode));
   return (
-    <div className="riva-modes" role="radiogroup" aria-label="Kind of answer">
+    <div
+      className="riva-modes"
+      role="radiogroup"
+      aria-label="Kind of answer"
+      style={{ '--riva-mode-i': at, '--riva-mode-n': MODES.length }}>
+      {/* The thumb. One element that slides, rather than a fill that jumps from
+          one label to the next: the movement is what says these are positions of
+          one switch and not five separate buttons. Behind the labels, and hidden
+          from assistive technology, which reads the radio group instead. */}
+      <span className="riva-modes-thumb" aria-hidden="true" />
       {MODES.map((row) => {
         const on = row.name === mode;
         return (
@@ -65,11 +75,11 @@ export default function ModeSwitch({ mode, onPick }) {
             title={row.summary}
             onClick={() => onPick(row.name)}
             className={'riva-mode' + (on ? ' riva-mode-on' : '')}
-            base={'display:inline-flex;align-items:center;flex:none;height:24px;padding:0 12px;'
-              + 'border:none;border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;'
-              + 'letter-spacing:0;cursor:pointer;white-space:nowrap;'
-              + 'transition:background .16s ease,color .16s ease;'
-              + (on ? 'background:#005eb8;color:#fff;' : 'background:transparent;color:#5b7183;')}
+            base={'position:relative;z-index:1;display:inline-flex;align-items:center;'
+              + 'justify-content:center;height:24px;padding:0 14px;border:none;background:transparent;'
+              + 'border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;'
+              + 'white-space:nowrap;transition:color .16s ease;'
+              + (on ? 'color:#fff;' : 'color:#5b7183;')}
             hover={on ? '' : 'color:#00437f;'}>
             {row.label}
           </Hover>
