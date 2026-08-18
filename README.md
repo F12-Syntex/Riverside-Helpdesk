@@ -213,8 +213,10 @@ clickable sources they can open in-browser.
   one pair of controls — it used to float above the box at its own size and its
   own radius, which read as clutter beside a dock made of one large pill.
   The list is out of the flow, above the button, so opening it moves nothing.
-  Arrow keys walk it, Enter takes a mode, Escape closes it. On a phone the button
-  keeps only the mode's name, because every pixel it takes comes off the field.
+  Arrow keys walk it, Enter takes a mode, Escape closes it. The button shows the
+  mode's name on one line and holds its width at the longest of the four, so
+  arming one does not resize the field beside it; on a phone it drops the chevron
+  and shrinks to the word, because every pixel it takes comes off the field.
   **`/accurx` and `/document` are
   hidden rather than withdrawn**: they are not offered by the switch or by the
   "/" list, and typing either in full still works exactly as it did, because both

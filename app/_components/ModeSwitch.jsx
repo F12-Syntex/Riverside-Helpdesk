@@ -41,11 +41,12 @@ import { MODES } from '../../lib/commands.mjs';
  * opposite — it made the mode look like something bolted on beside the
  * dock rather than part of it.
  *
- * IT STILL SAYS WHAT IS ARMED WITHOUT BEING OPENED. The button carries a
- * "Mode" caption above the mode's own name, and turns blue-on-pale-blue
- * whenever it is anything other than Q&A, so a field about to answer out
- * of the referral list cannot look like a field about to answer a
- * question.
+ * IT STILL SAYS WHAT IS ARMED WITHOUT BEING OPENED. The button carries the
+ * mode's own name on one line, and turns blue-on-pale-blue whenever it is
+ * anything other than Q&A, so a field about to answer out of the referral
+ * list cannot look like a field about to answer a question. Its width is
+ * held at the longest of the four names, so arming one does not resize the
+ * field beside it.
  *
  * IT LASTS ONE MESSAGE. The mode goes back to Q&A as soon as the
  * question is sent, and that is the whole safety of it. A switch that
@@ -140,23 +141,19 @@ export default function ModeSwitch({ mode, onPick }) {
         title={current.summary}
         onClick={() => (open ? setOpen(false) : show())}
         className="riva-modes-btn"
-        base={'display:flex;align-items:center;gap:10px;height:100%;padding:0 18px 0 22px;font:inherit;'
-          + 'cursor:pointer;white-space:nowrap;text-align:left;'
+        base={'display:flex;align-items:center;justify-content:space-between;gap:12px;height:100%;'
+          + 'padding:0 22px;font:inherit;cursor:pointer;white-space:nowrap;text-align:left;'
           + 'transition:background .16s ease,border-color .16s ease,box-shadow .22s ease;'
           + (armed
             ? 'background:#eaf2fa;border:2px solid #005eb8;'
             : 'background:#fff;border:2px solid #cdd8dd;')}
         hover={armed ? 'background:#dfebf7;' : 'border-color:#aab8bf;'}>
-        <span style={s('display:flex;flex-direction:column;gap:2px;')}>
-          {/* The caption says what the word underneath is FOR. Without it the
-              button reads as a stray label beside the box rather than as the
-              one control that decides what the box will answer with. */}
-          <span className="riva-modes-cap" style={s('font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8a99a3;')}>
-            Mode
-          </span>
-          <span style={s('font-size:15.5px;font-weight:700;color:' + (armed ? '#005eb8' : '#212b32') + ';')}>
-            {current.label}
-          </span>
+        {/* One line, and one word on it. A caption stacked over the mode's name
+            was two lines of small type inside a 68px round-ended control, which
+            left the words crowding the curve at both ends and reading as
+            something that did not fit. The word people need is the mode's. */}
+        <span className="riva-modes-name" style={s('font-size:16px;font-weight:700;color:' + (armed ? '#005eb8' : '#212b32') + ';')}>
+          {current.label}
         </span>
         {/* One chevron, pointing up at the list it will open and turning over
             once it is open, so the button says which way it is going rather

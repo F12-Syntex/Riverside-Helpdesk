@@ -546,6 +546,10 @@ body { overflow-x: hidden; }
 .riva-modes { position: relative; display: flex; flex: none; height: var(--riva-dock-field-h); }
 .riva-modes-btn {
   border-radius: 999px;
+  /* Wide enough for the longest mode's name, so the field beside it does not
+     resize every time somebody arms a different one — and so the word sits
+     clear of the rounded ends rather than against them. */
+  min-width: 152px;
   box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
 }
 .riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
@@ -562,13 +566,12 @@ body { overflow-x: hidden; }
 }
 .riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: -2px; }
 /* On a phone the row is 390px wide and every pixel the mode takes comes off
-   the field, so it gives up its caption, its chevron and most of its gutters
-   and keeps only the word — which is the part that has to be readable, being
-   the one that says what the box is about to answer with. */
+   the field, so the button gives up its chevron, its reserved width and most
+   of its gutters, and is only ever as wide as the word it is showing. */
 @media (max-width: 600px) {
-  .riva-modes-btn { padding: 0 14px !important; gap: 0 !important; }
+  .riva-modes-btn { min-width: 0; padding: 0 16px !important; gap: 0 !important; }
+  .riva-modes-name { font-size: 15px !important; }
   /* The caret carries its display inline, so it takes an !important to go. */
-  .riva-modes-cap { display: none; }
   .riva-modes-caret { display: none !important; }
   .riva-modes-list { min-width: 240px; max-width: calc(100vw - 32px); }
 }
