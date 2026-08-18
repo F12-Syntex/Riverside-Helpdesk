@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.9.0` | 2026-08-18 | feat | `c870817` | feat: AccurX is offered again, in the list and the "/" menu |
+| `5.8.5` | 2026-08-18 | docs | `2643d01` | docs: record 5.8.4 in the versions table |
 | `5.8.4` | 2026-08-18 | style | `2b3f15c` | style: the modes open from the search icon |
 | `5.8.3` | 2026-08-18 | docs | `6c75ed8` | docs: record 5.8.2 in the versions table |
 | `5.8.2` | 2026-08-18 | style | `ed9ce72` | style: /practice reads like a document, not like output |
