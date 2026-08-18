@@ -127,13 +127,42 @@ test('/practice shows the passages as written, and says where each came from', (
   });
 
   const rendered = JSON.stringify(card);
-  // The wording survives whole, and is marked as a quotation.
-  assert.match(rendered, /> Written consent must be recorded before any record is shared/);
-  assert.match(rendered, /### Data Sharing Policy — Consent/);
+  // The wording survives whole — as prose under the document's name, not as a
+  // blockquote: unedited is not the same as unformatted.
+  assert.match(rendered, /### Data Sharing Policy — Consent\\n\\nWritten consent must be recorded before any record is shared/);
+  assert.doesNotMatch(rendered, /> Written consent/);
   // No link: the renderer has no links, so one would arrive as square brackets.
   assert.doesNotMatch(rendered, /\[Open the document\]/);
   assert.deepEqual(card.source, ['Data Sharing Policy', 'Confidentiality poster']);
-  assert.match(card.subtitle, /^2 passages/);
+  // The claim that no model touched it is on the card, once, quietly.
+  assert.match(card.subtitle, /Word for word from 2 practice documents/);
+});
+
+test('/practice keeps the document own paragraphs and lists', () => {
+  const card = practiceSearchAnswer({
+    query: 'infection control',
+    passages: [{
+      docTitle: 'Infection Control',
+      text: 'Hands are washed between   patients.\n\nThe room is cleaned:\n- wipe the couch\n- change the paper\n\n\n\nRecord it in the log.',
+    }],
+  });
+  const body = card.blocks.find((b) => b.type === 'text').markdown;
+  // Paragraph breaks and the list survive; the runs of spaces and the run of
+  // blank lines — a PDF extractor's punctuation, not the policy's — do not.
+  assert.match(body, /patients\.\n\nThe room is cleaned:\n- wipe the couch\n- change the paper\n\nRecord it in the log\./);
+  assert.doesNotMatch(body, /  /);
+  assert.doesNotMatch(body, /\n\n\n/);
+});
+
+test('/practice reads a document heading as words, not as markup', () => {
+  const card = practiceSearchAnswer({
+    query: 'consent',
+    passages: [{ docTitle: 'Policy', text: '## Consent\n> Ask first.' }],
+  });
+  const body = card.blocks.find((b) => b.type === 'text').markdown;
+  // One heading on the block — the one naming the document — and no quote bar.
+  assert.equal(body.split('\n').filter((l) => l.startsWith('#')).length, 1);
+  assert.match(body, /\nConsent\nAsk first\./);
 });
 
 test('/practice says nothing matched rather than answering some other way', () => {
@@ -159,9 +188,9 @@ test('one long policy cannot crowd out the rest', () => {
 test('a passage longer than a paragraph is cut at a sentence, and says it was', () => {
   const long = 'Sentence one is here. ' + 'Filler that keeps going and going. '.repeat(40);
   const card = practiceSearchAnswer({ query: 'x', passages: [{ docTitle: 'Doc', text: long }] });
-  const quoted = card.blocks.find((b) => b.type === 'text' && b.markdown.startsWith('>')).markdown;
-  assert.ok(quoted.length < 760, 'the excerpt is bounded');
-  assert.match(quoted, /\[…\]$/);
+  const passage = card.blocks.find((b) => b.type === 'text').markdown;
+  assert.ok(passage.length < 780, 'the excerpt is bounded');
+  assert.match(passage, /\[…\]$/);
 });
 
 /* --------------------------------------------------------------- /accurx */

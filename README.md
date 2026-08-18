@@ -481,7 +481,13 @@ The assistant keeps each source type predictable:
 
 - **Documents:** found by PostgreSQL full-text (`GIN`) search rather than by a
   vector, and served by `/practice`, which shows the passages themselves with no
-  model in the path (`lib/templates/practice.mjs`).
+  model in the path (`lib/templates/practice.mjs`). **Unedited is not the same as
+  unformatted**: the words are exactly the document's, but they are laid out the
+  way every other piece of text in the app is — a heading naming the document,
+  then its own paragraphs and lists. They used to arrive as blockquotes with the
+  whitespace collapsed out of them, which read as machine output and was harder
+  to follow than the policy it came from. The claim that no model touched the
+  answer is one grey line under the title rather than a banner across the card.
 - **Notebook:** every non-empty page is loaded fresh from the live Notebook
   tables on every request and is never chunked or shortened. The model is given
   the page TITLES and returns one; the page is then rendered from the database
