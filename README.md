@@ -217,13 +217,16 @@ clickable sources they can open in-browser.
   buttons hanging off the dock for a choice left alone almost every time and had
   to appear and disappear with the cursor to stay out of the way, and before that
   a segmented track with a sliding thumb.
-  **`/accurx` and `/document` are
-  hidden rather than withdrawn**: they are not offered by the list or by the
-  "/" list typed into the box, and typing either in full still works exactly as it did, because both
-  are everyday answers used by habit. The strip above the field carries only the
-  send bar and the "Copied" line, and nothing was added to the header or the
-  footer. Typing "/" still works and still wins over the disc, being the more
-  specific thing the reader just did. **The
+  **`/accurx` is offered here**, first after Q&A: it is the one the practice
+  reaches for most — a pasted AccurX request answered with the route, the urgency
+  and the reason line on one card — and hiding the command somebody new to the
+  desk would most benefit from finding was the wrong trade for a shorter list.
+  **`/document` is hidden rather than withdrawn**: it is offered by neither the
+  list nor the "/" menu, and typing it in full still works exactly as it did,
+  because filing a letter is an everyday answer used by habit. The strip above
+  the field carries only the send bar and the "Copied" line, and nothing was
+  added to the header or the footer. Typing "/" still works and still wins over
+  the disc, being the more specific thing the reader just did. **The
   choice lasts exactly one message**: a mode left armed on a shared reception PC
   would eventually answer an ordinary question out of the referral-form list, and
   the failure modes are not symmetric — a wrong `/form` says honestly that the

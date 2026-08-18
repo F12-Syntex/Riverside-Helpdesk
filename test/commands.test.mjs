@@ -14,13 +14,16 @@ import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
 test('the list is offered while the name is being typed, and not after', () => {
-  // /accurx and /document are hidden: no longer offered anywhere, still typeable.
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['form', 'template', 'practice']);
+  // /document is hidden: not offered anywhere, still typeable. /accurx is
+  // offered again — it is the one the practice reaches for most.
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'form', 'template', 'practice']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
   assert.deepEqual(matchCommands('/f').map((c) => c.name), ['form']);
   assert.deepEqual(matchCommands('/t').map((c) => c.name), ['template']);
-  assert.deepEqual(matchCommands('/a'), []);
-  assert.deepEqual(matchCommands('/accurx'), []);
+  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
+  assert.deepEqual(matchCommands('/accurx').map((c) => c.name), ['accurx']);
+  assert.deepEqual(matchCommands('/d'), []);
+  assert.deepEqual(matchCommands('/document'), []);
   assert.deepEqual(matchCommands('/ap'), []);
   // A space means the message has started; a list over it would be in the way.
   assert.deepEqual(matchCommands('/accurx '), []);
@@ -432,7 +435,7 @@ test('every command carries the words the picker needs', () => {
 });
 
 test('the modes are Q&A first, then every command, and nothing else', () => {
-  assert.deepEqual(MODES.map((m) => m.name), ['', 'form', 'template', 'practice']);
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'form', 'template', 'practice']);
   assert.equal(MODES[0].label, 'Q&A');
   assert.equal(MODES[0].name, '', 'the resting mode is not a command');
   // Every mode but the first must be a real command, or the picker offers
@@ -445,8 +448,9 @@ test('the field asks for the right thing in each mode', () => {
   assert.match(modePlaceholder('form'), /referral/i);
   assert.match(modePlaceholder('template'), /contract|template/i);
   assert.match(modePlaceholder('practice'), /practice documents/i);
+  assert.match(modePlaceholder('accurx'), /AccurX/);
   // A hidden command is not a mode, so it gets Q&A's wording rather than its own.
-  assert.equal(modePlaceholder('accurx'), QA_MODE.placeholder);
+  assert.equal(modePlaceholder('document'), QA_MODE.placeholder);
   // An unknown mode is Q&A, so a stale value in a browser cannot leave the
   // field captioned with something that no longer exists.
   assert.equal(modePlaceholder('nonsense'), QA_MODE.placeholder);
@@ -465,10 +469,11 @@ test('picking a mode and typing its command mean the same thing', () => {
 
 /* ----------------------------------------------- hidden, not withdrawn */
 
-// /accurx and /document stopped being advertised, in the switch and in the "/"
-// list. They must not have stopped WORKING: both are everyday answers, the
-// people who use them use them by habit, and withdrawing them to tidy a list
-// would break the two commands the practice reaches for most.
+// /document is not advertised, in the modes or in the "/" list. It must not
+// have stopped WORKING: filing a letter is an everyday answer, the people who
+// use it use it by habit, and withdrawing it to tidy a list would break a
+// command the practice reaches for. /accurx was hidden alongside it and is
+// offered again, so it is checked here from the other direction.
 test('a hidden command still parses and still forces its template', () => {
   for (const [typed, template] of [
     ['/accurx pt has a sore throat since Friday', 'accurxTriage'],
@@ -487,7 +492,11 @@ test('a hidden command still parses and still forces its template', () => {
 
 test('hiding is only about what is offered', () => {
   const hidden = COMMANDS.filter((c) => c.hidden).map((c) => c.name);
-  assert.deepEqual(hidden, ['accurx', 'document']);
+  assert.deepEqual(hidden, ['document']);
+  // Offered again, and offered by both surfaces at once — a mode nobody can
+  // reach from the "/" list, or the other way round, is two lists to keep.
+  assert.ok(MODES.some((m) => m.name === 'accurx'), 'accurx is not a mode');
+  assert.ok(matchCommands('/').some((c) => c.name === 'accurx'), 'accurx is not in the "/" list');
   // Still in the full list and still resolvable...
   for (const name of hidden) assert.ok(commandByName(name), `${name} was removed, not hidden`);
   // ...and still awaiting arguments, so "/accurx" alone is a command being

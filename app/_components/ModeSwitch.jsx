@@ -47,7 +47,9 @@ import { MODES } from '../../lib/commands.mjs';
  * through a phone call. The failure modes are not symmetric: a wrong
  * /form says honestly that the list has no such entry, while a wrong
  * /accurx renders a confident triage card, with a destination and an
- * urgency, for a question that was never about a patient.
+ * urgency, for a question that was never about a patient. AccurX is on
+ * this list — it is the answer the practice reaches for most — so that
+ * one-message rule is now load-bearing rather than a precaution.
  *
  * TYPING STILL WINS. A command typed into the box overrides whatever is
  * armed here: it is the more specific thing the reader just did.
