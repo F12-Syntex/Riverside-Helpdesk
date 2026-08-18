@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.6.2` | 2026-08-18 | fix | `019f9dd` | fix: the contract lookup can reach the practice's own notes |
+| `5.6.1` | 2026-08-18 | docs | `ede4169` | docs: record 5.6.0 in the versions table |
 | `5.6.0` | 2026-08-18 | feat | `8e153ff` | feat: the modes are named above the box, not hidden behind a caret |
 | `5.5.9` | 2026-08-17 | docs | `cd5b304` | docs: record 5.5.8 in the versions table |
 | `5.5.8` | 2026-08-17 | refactor | `5dd9f1f` | refactor: /form decides its order where that order can be tested |
