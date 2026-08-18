@@ -284,3 +284,25 @@ test('the Notebook still beats the tree in code, not just in the prompt', () => 
   assert.match(card.subtitle, /email/i);
   assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
 });
+
+// The last of the three Notebook conflicts the audit found. contractTemplate was
+// the only answer path that never received the Notebook at all: on a hit it
+// showed PCIT's row instead of the practice's page, and on a miss it returned
+// null and the turn reached a prose model told outright that it has no access to
+// the practice's material.
+test('the practice’s own page beats PCIT’s row about the same contract', () => {
+  const pages = [{
+    docTitle: 'Notebook: Nursing / Simple wound care',
+    text: 'Simple dressings are done by the HCA in the treatment room. Book a 20 minute slot.',
+  }];
+  const card = contractTemplateAnswer('simple wound care', { pages });
+  assert.match(JSON.stringify(card), /treatment room/);
+  assert.ok(!/Sitrep/.test(JSON.stringify(card.source)), 'the Sitrep answered over the practice');
+});
+
+test('an unrelated Notebook page does not hijack a contract question', () => {
+  const pages = [{ docTitle: 'Notebook: Reception / Car parking', text: 'Staff permits.' }];
+  const card = contractTemplateAnswer('simple wound care', { pages });
+  assert.equal(card.title, 'Simple Wound Care Service');
+  assert.match(JSON.stringify(card.source), /Sitrep/);
+});
