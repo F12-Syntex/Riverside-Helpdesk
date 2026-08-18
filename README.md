@@ -203,7 +203,13 @@ clickable sources they can open in-browser.
 - **The kind of answer is chosen under the box, not typed.** Four pills sit
   directly under the field — Q&A, Form, Template, Practice
   (`app/_components/ModeSwitch.jsx`) — each a word that can be read without
-  opening anything and armed with one click, with the armed one filled. Q&A is
+  opening anything and armed with one click, with the armed one filled. **They
+  arrive with the cursor**: the opening screen is a heading and a box, and the
+  pills appear when the box is touched and fade when it is let go, because
+  "what kind of answer" is not a question anybody has until they are about to
+  ask something. The room they take is reserved either way, so the dock never
+  moves as they come and go, and an armed mode other than Q&A keeps them on
+  screen whatever the focus is doing. Q&A is
   one of the four rather than an absence, so the row reads as a setting rather
   than as three switches that might all be off. Two earlier controls are gone:
   a segmented track with a sliding thumb, which was machinery for a choice

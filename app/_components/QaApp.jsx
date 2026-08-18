@@ -178,11 +178,17 @@ class RiversidePracticeQA extends React.Component {
       // until the arrow keys move into the list, so Enter on "/accurx some
       // text" asks it rather than re-picking the command.
       cmdSel: -1,
-      // The kind of answer chosen with the button in the field, as a command
+      // The kind of answer chosen with the pills under the box, as a command
       // name — '' is Q&A, which is what almost every message is. It lasts ONE
       // message: see app/_components/ModeSwitch.jsx for why a switch that
       // stayed put would be a hazard rather than a convenience.
       mode: '',
+      // Whether the pills are showing. They are the answer to a question
+      // nobody has asked until they touch the box, so they arrive with the
+      // cursor and go when it does — see ModeSwitch.jsx. The room they take
+      // is reserved either way, so nothing on the page moves as they come and
+      // go, and an armed mode keeps them up whatever the focus is doing.
+      modesShown: false,
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
       // (the send is held, so the dock says so rather than looking dead), and
@@ -259,6 +265,7 @@ class RiversidePracticeQA extends React.Component {
     clearTimeout(this.emitTimer);
     clearTimeout(this.copyTimer);
     clearTimeout(this.dirTimer);
+    clearTimeout(this.modesTimer);
     this.mockTimers.forEach(clearTimeout);
   }
 
@@ -378,6 +385,23 @@ class RiversidePracticeQA extends React.Component {
       const field = this.inputRef && this.inputRef.current;
       if (field) field.focus();
     });
+  }
+
+  // The pills follow the cursor. Focus moving BETWEEN the field and a pill is
+  // the same session, not a departure, so hiding waits a beat and is cancelled
+  // by whatever takes the focus next — otherwise the row would blink out under
+  // the finger on its way to being clicked.
+  showModes() {
+    if (this.modesTimer) { clearTimeout(this.modesTimer); this.modesTimer = null; }
+    if (!this.state.modesShown) this.setState({ modesShown: true });
+  }
+
+  hideModes() {
+    if (this.modesTimer) clearTimeout(this.modesTimer);
+    this.modesTimer = setTimeout(() => {
+      this.modesTimer = null;
+      this.setState({ modesShown: false });
+    }, 120);
   }
 
   // Arrow keys move into the list; Enter only takes a number once someone
@@ -1761,6 +1785,12 @@ class RiversidePracticeQA extends React.Component {
       // typing a slash. See app/_components/ModeSwitch.jsx.
       mode: this.state.mode,
       onPickMode: (name) => self.pickMode(name),
+      // Shown while the box is being used, and kept up whatever the focus is
+      // doing whenever a mode other than Q&A is armed: a field about to answer
+      // out of the referral list has to say so on screen.
+      modesShown: this.state.modesShown || Boolean(this.state.mode),
+      onModesFocus: () => self.showModes(),
+      onModesBlur: () => self.hideModes(),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
       canReset: this.state.messages.length > 0,
@@ -1979,18 +2009,19 @@ class RiversidePracticeQA extends React.Component {
                   ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
                   : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
               </span>
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} onFocus={v.onModesFocus} onBlur={v.onModesBlur} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>
             </form>
 
-            {/* The kind of answer: four words under the box, one click to
-                arm, the armed one filled. Read in the order they are used —
-                the question first, the kind of answer second. The room the
-                row takes is --riva-dock-extras, so the page above the dock
-                already leaves it. See app/_components/ModeSwitch.jsx. */}
-            <ModeSwitch mode={v.mode} onPick={v.onPickMode} />
+            {/* The kind of answer: four words under the box, offered when the
+                box is touched and gone again when it is let go, one click to
+                arm, the armed one filled. The room the row takes is reserved
+                either way (--riva-dock-extras), so nothing on the page moves
+                as it comes and goes. See app/_components/ModeSwitch.jsx. */}
+            <ModeSwitch mode={v.mode} onPick={v.onPickMode} shown={v.modesShown}
+              onFocus={v.onModesFocus} onBlur={v.onModesBlur} />
 
           </div>
         </div>

@@ -22,6 +22,16 @@ import { MODES } from '../../lib/commands.mjs';
  * hid three of the four modes behind a click and still had to explain
  * itself with a caption. A row of words needs neither.
  *
+ * THEY COME WITH THE CURSOR. At rest the opening screen is a heading and
+ * a box; the pills arrive when the box is touched and fade when it is let
+ * go, because "what kind of answer" is not a question anybody has until
+ * they are about to ask something. THE ROOM THEY TAKE IS RESERVED EITHER
+ * WAY (--riva-dock-extras), so the dock never moves as they come and go —
+ * a control that shoves the box it belongs to is worse than one that is
+ * always there. Two things keep them up regardless: focus anywhere in the
+ * row itself, and any armed mode other than Q&A, because a field about to
+ * answer out of the referral list has to say so on screen.
+ *
  * UNDER THE FIELD, NOT BESIDE IT AND NOT ABOVE IT. Beside it, the
  * control was competing with the box for the row and taking width off a
  * placeholder that needs it — badly on a phone. Above it, it shared the
@@ -49,9 +59,16 @@ import { MODES } from '../../lib/commands.mjs';
  * armed here: it is the more specific thing the reader just did.
  * ------------------------------------------------------------------ */
 
-export default function ModeSwitch({ mode, onPick }) {
+export default function ModeSwitch({ mode, onPick, shown = true, onFocus, onBlur }) {
   return (
-    <div className="riva-modes" role="group" aria-label="Kind of answer">
+    <div
+      className={'riva-modes' + (shown ? '' : ' riva-modes-away')}
+      role="group"
+      aria-label="Kind of answer"
+      /* Focus moving from the field into a pill is the same session, so the
+         row hears about both and keeps itself up. */
+      onFocus={onFocus}
+      onBlur={onBlur}>
       {MODES.map((row) => {
         const on = row.name === mode;
         return (
@@ -59,6 +76,12 @@ export default function ModeSwitch({ mode, onPick }) {
             key={row.name || 'qa'}
             tag="button"
             type="button"
+            /* The click must not cost the field its cursor: somebody arming a
+               mode is mid-question, and a box that loses focus (and, on a
+               phone, its keyboard) to a mode change is a box you have to tap
+               twice. The mousedown never reaches the field, and pickMode puts
+               the cursor back for the keyboard path. */
+            onMouseDown={(e) => e.preventDefault()}
             /* Toggle buttons rather than radios: every pill stays an ordinary
                tab stop that way, and "pressed" is exactly what the filled one
                is. The group's label says what the set is for. */

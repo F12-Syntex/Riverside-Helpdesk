@@ -546,8 +546,15 @@ body { overflow-x: hidden; }
 .riva-modes {
   display: flex; align-items: center; gap: 8px;
   margin-top: 12px; height: 32px;
+  transition: opacity .18s ease, transform .18s cubic-bezier(.2,.7,.3,1);
 }
+/* Away, not gone: the row keeps its place in the layout so the dock does not
+   move, and keeps its tab stops so a keyboard can still reach it — landing on
+   a pill is itself what brings the row back. Only the mouse is turned away,
+   so a stray click on empty space cannot hit an invisible button. */
+.riva-modes-away { opacity: 0; transform: translateY(-4px); pointer-events: none; }
 .riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .riva-modes { transition: none; } }
 /* On a phone the four still fit a 358px row; if a fifth mode is ever offered
    they scroll sideways rather than wrapping, because the row's height is what
    the page reserves against and a second line would push the dock through it. */
