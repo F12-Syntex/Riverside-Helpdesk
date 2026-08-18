@@ -217,6 +217,21 @@ clickable sources they can open in-browser.
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
+- **The kind of answer is chosen above the box, not typed.** Six named pills —
+  Q&A, AccurX, Document, Form, Template, Practice — sit in the strip directly
+  above the field (`app/_components/ModeSwitch.jsx`). That strip was already 32px
+  tall and already counted in the dock's height, so nothing on the page moves and
+  nothing was added to the header or the footer. Typing "/" still works and still
+  wins over the pills, being the more specific thing the reader just did. **The
+  choice lasts exactly one message**: a switch left armed on a shared reception PC
+  would eventually answer an ordinary question out of the referral-form list, and
+  the failure modes are not symmetric — a wrong `/form` says honestly that the
+  list has no such entry, while a wrong `/accurx` renders a confident triage card
+  with a destination and an urgency for a question that was never about a patient.
+  A question asked with a pill carries **"Asked as Form"** in the transcript,
+  because `/form knee` typed into the box stays in the reader's own words for ever
+  and choosing the mode with a button would otherwise leave nothing on screen
+  explaining which list the answer came from.
 - **`/form` and `/template` answer from a list, with no model anywhere in the
   path.** The reader has already said which of the two Primary Care IT lists they
   want, and the rest of the line is the query, so the turn is a ranked string
