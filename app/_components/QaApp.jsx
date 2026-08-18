@@ -4,7 +4,7 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { COMMANDS, commandByName, matchCommands, modePlaceholder, parseCommand } from '../../lib/commands.mjs';
+import { commandByName, matchCommands, modePlaceholder, parseCommand } from '../../lib/commands.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -183,9 +183,6 @@ class RiversidePracticeQA extends React.Component {
       // message: see app/_components/ModeSwitch.jsx for why a switch that
       // stayed put would be a hazard rather than a convenience.
       mode: '',
-      modeOpen: false,
-      // Worked out when the picker opens; see placeForMode.
-      modePlace: 'above',
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
       // (the send is held, so the dock says so rather than looking dead), and
@@ -221,17 +218,6 @@ class RiversidePracticeQA extends React.Component {
   }
 
   componentDidMount() {
-    // The mode list closes when the next thing clicked is not in the dock. It
-    // is the only floating panel here that is opened by a button rather than by
-    // typing, so it is the only one that can be left open by walking away from
-    // it.
-    this.onDocDown = (e) => {
-      if (!this.state.modeOpen) return;
-      const form = document.querySelector('.riva-dock-form');
-      if (form && form.contains(e.target)) return;
-      this.setState({ modeOpen: false });
-    };
-    document.addEventListener('mousedown', this.onDocDown);
     try {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [] });
@@ -270,7 +256,6 @@ class RiversidePracticeQA extends React.Component {
   }
 
   componentWillUnmount() {
-    if (this.onDocDown) document.removeEventListener('mousedown', this.onDocDown);
     clearTimeout(this.emitTimer);
     clearTimeout(this.copyTimer);
     clearTimeout(this.dirTimer);
@@ -388,27 +373,8 @@ class RiversidePracticeQA extends React.Component {
   // The same choice, made with the button in the field rather than by typing.
   // It sets a mode rather than writing "/form " into the box, so the reader
   // types their question and nothing else — and the box stays readable.
-  // WHICH SIDE THE PICKER OPENS ON, measured rather than assumed.
-  //
-  // The telephone list hangs below the field on the opening screen, because the
-  // dock is lifted to the middle of the page there and anything above it would
-  // cover the heading. The mode picker is twice as tall — six rows — and on a
-  // phone the lift is small, so "below" put it off the bottom of the screen
-  // entirely: the list was open, and none of it was reachable.
-  //
-  // So the room underneath is measured when it opens. Below when it fits,
-  // above when it does not, which on a phone is always.
-  placeForMode() {
-    if (typeof window === 'undefined') return 'above';
-    const form = document.querySelector('.riva-dock-form');
-    if (!form) return 'above';
-    const below = window.innerHeight - form.getBoundingClientRect().bottom;
-    // Six rows and the gap above them. Under this the list would be clipped.
-    return below >= 300 ? 'below' : 'above';
-  }
-
   pickMode(name) {
-    this.setState({ mode: name || '', modeOpen: false }, () => {
+    this.setState({ mode: name || '' }, () => {
       const field = this.inputRef && this.inputRef.current;
       if (field) field.focus();
     });
@@ -422,9 +388,10 @@ class RiversidePracticeQA extends React.Component {
     // Escape backs out of the mode, one step at a time: the open list first,
     // then the mode itself. Somebody who chose the wrong one gets out of it
     // without reaching for the mouse.
-    if (e.key === 'Escape' && (this.state.modeOpen || this.state.mode)) {
+    // Escape backs out of a mode without reaching for the mouse.
+    if (e.key === 'Escape' && this.state.mode) {
       e.preventDefault();
-      this.setState((st) => (st.modeOpen ? { modeOpen: false } : { mode: '' }));
+      this.setState({ mode: '' });
       return;
     }
     const commands = matchCommands(this.state.input);
@@ -773,7 +740,15 @@ class RiversidePracticeQA extends React.Component {
     // `redacted` is a count, not a copy — see lib/safety/identifiers.mjs. It
     // rides along on the message so the transcript says why the question has a
     // hole in it long after the toast has gone.
-    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings) };
+    // `askedAs` is the kind of answer this question was sent as, and it is
+    // recorded because the button erased the only trace there used to be.
+    // "/form knee" typed into the box stays in the reader's own message for
+    // ever; choosing Form and typing "knee" leaves "knee", so the one artefact
+    // that would explain a confidently wrong answer had been deleted by moving
+    // from typing to a button. Empty for an ordinary question, and for a typed
+    // command, which still says so itself.
+    const askedAs = !parsed && command ? command.label : '';
+    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings), askedAs };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
@@ -800,7 +775,7 @@ class RiversidePracticeQA extends React.Component {
     // `mode: ''` is the important one. The kind of answer lasts exactly one
     // message, so the box cannot be left set to the referral-form list by
     // somebody who walked away mid-call.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1, mode: '', modeOpen: false }, async () => {
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1, mode: '' }, async () => {
       this.save();
 
       // Only the TYPED message is screened. A dropped document is the reader's
@@ -1649,6 +1624,7 @@ class RiversidePracticeQA extends React.Component {
           // What the local identifier check took out of this question before
           // it was sent, if anything.
           redactedNote: m.redacted || '',
+          askedAs: m.askedAs || '',
           idxs: [],
         });
       } else {
@@ -1784,11 +1760,6 @@ class RiversidePracticeQA extends React.Component {
       // The kind of answer, chosen with the button in the field rather than by
       // typing a slash. See app/_components/ModeSwitch.jsx.
       mode: this.state.mode,
-      modeOpen: this.state.modeOpen,
-      onToggleMode: () => self.setState((st) => (st.modeOpen
-        ? { modeOpen: false }
-        : { modeOpen: true, modePlace: self.placeForMode(), cmdSel: -1, dirSel: -1 })),
-      modePlace: this.state.modePlace,
       onPickMode: (name) => self.pickMode(name),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
@@ -1820,6 +1791,7 @@ class RiversidePracticeQA extends React.Component {
         docNames: active.docNames || [],
         hasDocs: !!(active.docNames && active.docNames.length),
         redactedNote: active.redactedNote || '',
+        askedAs: active.askedAs || '',
         items: active.idxs.map((i) => messages[i]),
       } : null,
       history: earlier,
@@ -1929,9 +1901,15 @@ class RiversidePracticeQA extends React.Component {
             {/* The question leaves the field as a bar travelling up to where
                 the heading is landing. A copied number takes the same line,
                 so nothing else has to move. */}
+            {/* The strip was reserved height with almost nothing in it. The
+                modes live here now: named, always visible, one click to arm.
+                The send bar and the "Copied" line are both under three seconds
+                and take the strip back while they run, so nothing is ever
+                stacked and the dock never changes height. */}
             <div className="riva-dock-strip" aria-live="polite">
-              {v.emitting && <span className="riva-dock-emit" />}
-              {v.hasCopied && <span style={s('font-size:14px;font-weight:600;color:#007f3b;')}>Copied {v.copiedNumber}</span>}
+              {v.emitting ? <span className="riva-dock-emit" />
+                : v.hasCopied ? <span style={s('font-size:14px;font-weight:600;color:#007f3b;')}>Copied {v.copiedNumber}</span>
+                  : <ModeSwitch mode={v.mode} onPick={v.onPickMode} />}
             </div>
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
@@ -1997,22 +1975,12 @@ class RiversidePracticeQA extends React.Component {
                   (lib/safety/patient-data.mjs). It is over in well under a
                   second, and a field that looked dead for even that long would
                   have somebody pressing Enter again. */}
-              {/* While the message is being screened the field belongs to the
-                  screen, so the mode button gives up its place to the spinner
-                  rather than sitting next to one. */}
-              {v.isScreening ? (
-                <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;z-index:3;')}>
-                  <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-                </span>
-              ) : (
-                <ModeSwitch
-                  mode={v.mode}
-                  open={v.modeOpen}
-                  onToggle={v.onToggleMode}
-                  onPick={v.onPickMode}
-                  place={v.modePlace} />
-              )}
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.mode ? ' riva-dock-field-mode' : '') + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
+              <span aria-hidden="true" style={s('position:absolute;left:24px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
+                {v.isScreening
+                  ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+                  : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
+              </span>
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
               <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
                 <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>

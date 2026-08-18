@@ -14,31 +14,35 @@ import { MODES } from '../../lib/commands.mjs';
  * rather than from a model. A feature nobody can see is a feature
  * nobody uses.
  *
- * WHERE IT SITS, AND WHY THERE. In the field, on the left, where a
- * magnifying glass already sat doing nothing. So it costs no height, no
- * second row, and nothing in the header or the footer — every one of
- * which is a thing to look at before the box you were going to type in
- * anyway. In its resting state it IS that magnifying glass, so the
- * opening screen looks as it did.
+ * WHY A ROW OF PILLS RATHER THAN A MENU. The first attempt put a chip
+ * in the field that opened a list. It cost no space, but at rest it was
+ * a grey magnifying glass with a small caret beside it — and a reader
+ * who was never told the modes exist will not read a caret as a menu any
+ * more than they read a blank field as a slash prompt. It solved the
+ * space problem and not the problem. Every mode is named here, with no
+ * click needed to find out they are there.
+ *
+ * WHERE IT SITS. In the strip directly above the field, which is
+ * ALREADY 32px tall and already reserved in --riva-dock-h, so nothing on
+ * the page moves to make room and the dock does not grow. It is part of
+ * the dock, not the header and not the footer. The strip's other two
+ * occupants — the send bar and the "Copied" line — are both under three
+ * seconds, and they take it back while they need it.
  *
  * IT LASTS ONE MESSAGE. The mode goes back to Q&A as soon as the
  * question is sent, and that is the whole safety of it. A switch that
- * stayed put would eventually be left on the wrong setting by somebody
- * halfway through a phone call, and an ordinary question answered out
- * of the referral-form list is worse than no answer — it is a confident
- * one. Typing "/form ..." has always applied to one message; the button
- * does the same thing, so the two cannot mean different things.
+ * stayed put would be left on the wrong setting by somebody halfway
+ * through a phone call. The failure modes are not symmetric: a wrong
+ * /form says honestly that the list has no such entry, while a wrong
+ * /accurx renders a confident triage card, with a destination and an
+ * urgency, for a question that was never about a patient. Re-arming is
+ * one click, which is what makes resetting affordable for a run of
+ * lookups.
  *
- * TYPING STILL WINS. A command typed into the box overrides whatever
- * the button says, because it is the more specific thing the reader
- * did, and because the typed command is what the muscle memory of
- * anyone already using them will reach for.
+ * TYPING STILL WINS. A command typed into the box overrides whatever is
+ * selected here: it is the more specific thing the reader just did.
  * ------------------------------------------------------------------ */
 
-// The words — every mode's label, summary and placeholder — live in
-// lib/commands.mjs beside the commands themselves, so the button and the typed
-// command cannot drift apart and the tests can read them. Only the pictures are
-// here, because only this file draws anything.
 const ICON = {
   '': Icons.search,
   accurx: Icons.stethoscope,
@@ -48,76 +52,33 @@ const ICON = {
   practice: Icons.book,
 };
 
-/**
- * The chip in the field, and the list it opens.
- *
- * Every mode is offered every time. A list that changes with what has been
- * typed is exactly the behaviour that made these hard to find in the first
- * place — the "/" menu only ever appeared to somebody who already knew to
- * type "/".
- */
-export default function ModeSwitch({ mode, open, onToggle, onPick, place = 'above' }) {
-  const active = MODES.find((m) => m.name === mode && m.name) || null;
-
+export default function ModeSwitch({ mode, onPick }) {
   return (
-    <>
-      <Hover
-        tag="button"
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open ? 'true' : 'false'}
-        aria-label={active ? `Answer kind: ${active.label}. Change it` : 'Choose the kind of answer'}
-        onClick={onToggle}
-        base={'position:absolute;left:11px;top:50%;transform:translateY(-50%);z-index:3;'
-          + 'display:flex;align-items:center;gap:6px;height:44px;padding:0 10px;border-radius:999px;'
-          + 'border:1px solid ' + (active ? '#bcd9f0' : 'transparent') + ';'
-          + 'background:' + (active ? '#e8f1f8' : 'transparent') + ';'
-          + 'color:' + (active ? '#005eb8' : '#8a99a3') + ';'
-          + 'font:inherit;font-size:14.5px;font-weight:700;letter-spacing:-0.01em;cursor:pointer;'
-          + 'transition:background .16s ease,color .16s ease,border-color .16s ease;'}
-        hover={'background:' + (active ? '#dbeaf6' : '#eef2f4') + ';color:#005eb8;'}>
-        <Svg w={20} sw={2.2}>{ICON[mode] || Icons.search}</Svg>
-        {active && <span>{active.label}</span>}
-        {/* The caret is what says this is a control rather than decoration, and
-            it is the only mark added to the resting field. Turned to point down
-            at the list it opens: the icon set has no downward chevron, and one
-            pointing right reads as "go to" rather than "there is more here". */}
-        <Svg w={12} sw={2.6} style={s('opacity:.75;transform:rotate(90deg);')}>{Icons.chevronRight}</Svg>
-      </Hover>
-
-      {open && (
-        <div
-          role="listbox"
-          aria-label="Kind of answer"
-          style={s('position:absolute;left:0;right:0;z-index:7;background:#fff;border:1px solid #dde4e7;'
-            + 'border-radius:14px;box-shadow:0 12px 34px rgba(33,43,50,.16);overflow:hidden;'
-            + (place === 'below' ? 'top:calc(100% + 10px);' : 'bottom:calc(100% + 10px);')
-            + 'animation:rivaPanelIn .18s cubic-bezier(.2,.7,.3,1) both;')}>
-          {MODES.map((row, i) => (
-            <Hover key={row.name || 'qa'} tag="button" type="button" role="option"
-              aria-selected={row.name === mode}
-              onClick={() => onPick(row.name)}
-              base={'display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:none;'
-                + (i ? 'border-top:1px solid #eef1f2;' : '')
-                + 'padding:11px 15px;font:inherit;cursor:pointer;transition:background .16s ease;'
-                + (row.name === mode ? 'background:#e8f1f8;' : 'background:#fff;')}
-              hover="background:#f0f6fb;">
-              <span style={s('flex:none;display:flex;color:' + (row.name === mode ? '#005eb8' : '#8a99a3') + ';')}>
-                <Svg w={18} sw={2.2}>{ICON[row.name] || Icons.search}</Svg>
-              </span>
-              <span style={s('flex:none;min-width:74px;font-size:15px;font-weight:700;color:#005eb8;')}>
-                {row.label}
-              </span>
-              <span style={s('flex:1;min-width:0;font-size:14px;color:#4c6272;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
-                {row.summary}
-              </span>
-              {row.name === mode && (
-                <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={16} sw={2.6}>{Icons.check}</Svg></span>
-              )}
-            </Hover>
-          ))}
-        </div>
-      )}
-    </>
+    <div className="riva-modes" role="radiogroup" aria-label="Kind of answer">
+      {MODES.map((row) => {
+        const on = row.name === mode;
+        return (
+          <Hover
+            key={row.name || 'qa'}
+            tag="button"
+            type="button"
+            role="radio"
+            aria-checked={on}
+            title={row.summary}
+            onClick={() => onPick(row.name)}
+            className="riva-mode"
+            base={'display:inline-flex;align-items:center;gap:5px;flex:none;height:26px;padding:0 10px;'
+              + 'border-radius:999px;font:inherit;font-size:13px;font-weight:700;letter-spacing:-0.01em;'
+              + 'cursor:pointer;white-space:nowrap;transition:background .16s ease,color .16s ease,border-color .16s ease;'
+              + (on
+                ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;'
+                : 'background:#fff;border:1px solid #d8dde0;color:#4c6272;')}
+            hover={on ? 'background:#003087;border-color:#003087;' : 'background:#eef4f8;border-color:#a9c6dd;color:#005eb8;'}>
+            <Svg w={14} sw={2.3}>{ICON[row.name] || Icons.search}</Svg>
+            <span>{row.label}</span>
+          </Hover>
+        );
+      })}
+    </div>
   );
 }

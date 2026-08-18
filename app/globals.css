@@ -529,15 +529,7 @@ body { overflow-x: hidden; }
 
 /* The Q&A field carries a search icon on the left and its ask button on the
  * right, both inside the pill, so its gutters are cut to fit around them. */
-/* The left inset clears the mode button, which replaced the magnifying glass
-   that used to sit here inert. It is wider than the glass was, because it
-   carries a caret saying it can be pressed — without the extra room the caret
-   sat on top of the first letter of the placeholder. */
-.riva-dock-field-search { padding: 0 70px 0 82px !important; }
-/* Room for the mode chip, which is wider than the magnifying glass it
-   replaces once it carries a word. Only while a mode is chosen, so the
-   resting field is the width it always was. */
-.riva-dock-field-mode { padding-left: 138px !important; }
+.riva-dock-field-search { padding: 0 70px 0 56px !important; }
 .riva-dock-send { transition: background-color .18s ease, box-shadow .18s ease; }
 .riva-dock-send:hover { box-shadow: 0 4px 14px rgba(0,94,184,.38); }
 
@@ -546,6 +538,16 @@ body { overflow-x: hidden; }
  * copied number. Its height is reserved so the dock never moves as they
  * come and go. */
 .riva-dock-strip { height: var(--riva-dock-strip-h); display: flex; align-items: center; overflow: hidden; }
+/* The modes. Six pills fit a desktop dock with room to spare; on a phone the
+   row scrolls sideways rather than wrapping, because wrapping would make the
+   strip taller and the strip's height is what the whole page reserves against. */
+.riva-modes {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none;
+}
+.riva-modes::-webkit-scrollbar { display: none; }
+.riva-mode:active { transform: translateY(1px); }
+.riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
 .riva-dock-emit {
   width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;
   transform-origin: left center;
@@ -615,8 +617,7 @@ body { overflow-x: hidden; }
   .riva-nav-btn { display: none !important; }
   .riva-dock-field { font-size: 17px !important; padding: 0 20px !important; }
   .riva-dock-field-icon { padding: 0 46px !important; }
-  .riva-dock-field-search { padding: 0 62px 0 74px !important; }
-  .riva-dock-field-mode { padding-left: 128px !important; }
+  .riva-dock-field-search { padding: 0 62px 0 48px !important; }
   .riva-dock-send { width: 44px !important; height: 44px !important; right: 8px !important; }
   /* The glow is a desktop pleasure; on a phone it eats the small margin
      between the dock and the edge of the screen. */
