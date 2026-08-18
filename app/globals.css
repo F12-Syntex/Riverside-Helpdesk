@@ -539,13 +539,13 @@ body { overflow-x: hidden; }
  * come and go. */
 .riva-dock-strip { height: var(--riva-dock-strip-h); display: flex; align-items: center; overflow: hidden; }
 /* The mode switch: the first control on the dock's own row, immediately left
-   of the field, and the list it opens. Everything about its box is the field's
-   — the height the page reserves against, the white, the border weight, the
-   lift — except the corners, which are square-shouldered rather than a second
-   pill on a row that already has one. */
+   of the field, and the list it opens. Its box is the field's box — the height
+   the page reserves against, the white, the border weight, the lift and the
+   same fully rounded ends — so the two read as one pair of controls rather
+   than as a control and something stuck beside it. */
 .riva-modes { position: relative; display: flex; flex: none; height: var(--riva-dock-field-h); }
 .riva-modes-btn {
-  border-radius: 18px;
+  border-radius: 999px;
   box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
 }
 .riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
@@ -566,7 +566,7 @@ body { overflow-x: hidden; }
    and keeps only the word — which is the part that has to be readable, being
    the one that says what the box is about to answer with. */
 @media (max-width: 600px) {
-  .riva-modes-btn { padding: 0 11px !important; gap: 0 !important; border-radius: 15px; }
+  .riva-modes-btn { padding: 0 14px !important; gap: 0 !important; }
   /* The caret carries its display inline, so it takes an !important to go. */
   .riva-modes-cap { display: none; }
   .riva-modes-caret { display: none !important; }

@@ -35,10 +35,11 @@ import { MODES } from '../../lib/commands.mjs';
  * and the dock's height is unchanged, because the control is beside the
  * field rather than above it.
  *
- * IT IS A BLOCK, NOT A PILL. The field is the pill on this row — one of
- * them, and it is the thing everybody came to use. The mode reads as the
- * square-shouldered control in front of it, the way a select does, so the
- * eye can tell at a glance which of the two is the box you type in.
+ * ITS CORNERS ARE THE FIELD'S CORNERS. Fully rounded, like the box beside
+ * it: two controls of the same height on the same row, ending the same
+ * way, read as one pair. A squarer radius was tried here first and did the
+ * opposite — it made the mode look like something bolted on beside the
+ * dock rather than part of it.
  *
  * IT STILL SAYS WHAT IS ARMED WITHOUT BEING OPENED. The button carries a
  * "Mode" caption above the mode's own name, and turns blue-on-pale-blue
@@ -139,7 +140,7 @@ export default function ModeSwitch({ mode, onPick }) {
         title={current.summary}
         onClick={() => (open ? setOpen(false) : show())}
         className="riva-modes-btn"
-        base={'display:flex;align-items:center;gap:10px;height:100%;padding:0 16px;font:inherit;'
+        base={'display:flex;align-items:center;gap:10px;height:100%;padding:0 18px 0 22px;font:inherit;'
           + 'cursor:pointer;white-space:nowrap;text-align:left;'
           + 'transition:background .16s ease,border-color .16s ease,box-shadow .22s ease;'
           + (armed

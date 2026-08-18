@@ -209,9 +209,9 @@ clickable sources they can open in-browser.
   field about to answer out of the referral list cannot look like a field about
   to answer a question. It stands at the field's own height
   (`--riva-dock-field-h`) on the field's own row, with the same white, the same
-  border weight and the same lift, and square shoulders rather than a second pill
-  on a row that already has one — it used to float above the box at its own size
-  and its own radius, which read as clutter beside a dock made of one large pill.
+  border weight, the same lift and the same fully rounded ends, so the two read as
+  one pair of controls — it used to float above the box at its own size and its
+  own radius, which read as clutter beside a dock made of one large pill.
   The list is out of the flow, above the button, so opening it moves nothing.
   Arrow keys walk it, Enter takes a mode, Escape closes it. On a phone the button
   keeps only the mode's name, because every pixel it takes comes off the field.
