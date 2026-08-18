@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.7.12` | 2026-08-18 | style | `d1914c1` | style: the modes are four pills under the box |
+| `5.7.11` | 2026-08-18 | docs | `897cf0f` | docs: record 5.7.10 in the versions table |
 | `5.7.10` | 2026-08-18 | style | `f367c41` | style: the mode button shows one word on one line |
 | `5.7.9` | 2026-08-18 | docs | `2ded738` | docs: record 5.7.8 in the versions table |
 | `5.7.8` | 2026-08-18 | style | `820cebf` | style: the mode switch takes the field's rounded ends |
