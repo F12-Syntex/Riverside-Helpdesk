@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.7.2` | 2026-08-18 | fix | `263bafa` | fix: a template shortlist shows the template that matched |
+| `5.7.1` | 2026-08-18 | docs | `0c49cd8` | docs: record 5.7.0 in the versions table |
 | `5.7.0` | 2026-08-18 | feat | `f97a189` | feat: a four-position switch, and two commands hidden |
 | `5.6.7` | 2026-08-18 | docs | `70b595b` | docs: record 5.6.6 in the versions table |
 | `5.6.6` | 2026-08-18 | style | `5405ad6` | style: the modes are one control, not six chips |
