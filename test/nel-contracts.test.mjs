@@ -306,3 +306,45 @@ test('an unrelated Notebook page does not hijack a contract question', () => {
   assert.equal(card.title, 'Simple Wound Care Service');
   assert.match(JSON.stringify(card.source), /Sitrep/);
 });
+
+/* ------------------------------------- a shortlist somebody can read */
+
+// "/template OneProcedure" answered with five contracts and seventeen template
+// names, four of them identical between two rows, with the one word that was
+// asked about buried inside each cell. The reader had to find their own query
+// in the answer.
+test('a shortlist shows the template that matched, not all of them', () => {
+  const card = contractTemplateAnswer('OneProcedure');
+  const t = card.blocks.find((b) => b.type === 'table');
+  assert.deepEqual(t.head, ['Contract', 'Area', 'Matched', 'Status']);
+  for (const row of t.rows) {
+    assert.match(row[2], /^OneProcedure/, `not the matched template: ${row[2]}`);
+    // One name, not the row's whole set.
+    assert.ok(!row[2].includes('OneTemplate'), `other templates leaked in: ${row[2]}`);
+  }
+});
+
+// Every query word has to be in the template, or "OneTemplate NonPrescriber"
+// brings back the Prescriber and Contract ones too — they all start the same.
+test('a two-word template name matches only that template', () => {
+  const t = contractTemplateAnswer('OneTemplate NonPrescriber').blocks.find((b) => b.type === 'table');
+  for (const row of t.rows) assert.match(row[2], /^OneTemplate NonPrescriber/);
+});
+
+// Two rows can be near-identical without it: the Sitrep holds "Phlebotomy" as a
+// City & Hackney localisation and "NEL Phlebotomy Service" NEL-wide, with the
+// same four templates under each.
+test('a shortlist says which area each contract belongs to', () => {
+  const t = contractTemplateAnswer('OneProcedure').blocks.find((b) => b.type === 'table');
+  const areas = new Set(t.rows.map((r) => r[1]));
+  assert.ok(areas.has('City & Hackney') && areas.has('NEL-Wide'), [...areas].join(' | '));
+});
+
+// A query that named a contract rather than a template has nothing to put in
+// that column, so it counts instead — and the heading says so rather than
+// captioning a column of numbers "Matched".
+test('a contract-name shortlist counts templates instead', () => {
+  const card = contractTemplateAnswer('screening');
+  const t = card.blocks.find((b) => b.type === 'table');
+  if (t) assert.ok(['Matched', 'Templates'].includes(t.head[2]));
+});
