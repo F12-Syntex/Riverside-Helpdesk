@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.6.6` | 2026-08-18 | style | `5405ad6` | style: the modes are one control, not six chips |
+| `5.6.5` | 2026-08-18 | docs | `5aa8105` | docs: record 5.6.4 in the versions table |
 | `5.6.4` | 2026-08-18 | docs | `b43ca25` | docs: describe the mode pills and the one-message rule |
 | `5.6.3` | 2026-08-18 | docs | `5dddf4f` | docs: record 5.6.2 in the versions table |
 | `5.6.2` | 2026-08-18 | fix | `019f9dd` | fix: the contract lookup can reach the practice's own notes |
