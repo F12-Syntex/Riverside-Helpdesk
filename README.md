@@ -26,36 +26,19 @@ clickable sources they can open in-browser.
   records how it used to work and why. Parts of this file and of
   `ARCHITECTURE.md` still describe the loop and have not been rewritten yet —
   where the two disagree, `app/api/agent/route.js` is what runs.
-- **Every tool takes a list.** Three wordings of a search, or four files to
-  read, go in one call: the loop is capped at six steps, and a step spent
-  asking for something already decided on is a step not spent reading.
-- **A contact question is answered with a contact.** `find_contact` tries the
-  practice directory, then the CQC register, then reads the actual web pages and
-  lifts the number off them. What it finds is shown in the contacts card as
-  structured data, with a line saying where it came from — never retyped through
-  the model's prose, where an unverified number is stripped out.
-- **The model chooses the files.** Nothing is pre-selected for it by embedding
-  similarity: `list_practice_sources` shows every Notebook page, document and
-  guide with a summary, `outline_practice_sources` shows a document's headings
-  without its text so the wrong part is never paid for, and
-  `open_practice_sources` reads the ones it picks — several at a time.
-  Notebook pages come back whole; documents come back a part at a time with an
-  outline of the rest, and the parsed file is cached between calls, so reading
-  a long policy costs the parts that were needed rather than the whole file.
-- Every tool call is **streamed to the browser as it happens** (newline-delimited
-  JSON), so the chat shows which search ran and what it returned instead of a
-  silent spinner. The timeline collapses to one line once the answer arrives.
-- **The same question is not researched twice.** An answered question is kept in
-  Postgres (`answer_cache`) and served again in milliseconds — matched exactly
-  when the wording only differs in case, punctuation or politeness, and by
-  embedding similarity when it is genuinely reworded, so "what's the process for
-  reporting a significant event" finds the answer given to "how do I report a
-  significant event". The card says **"Answered from cache"** with when it was
-  saved and, when the wording differed, the question it was written for; a
-  **Reload** button on the card asks it again for real. Answers are only ever
-  served while the Notebook they were written from and the model that wrote them
-  are unchanged (see `lib/answer-cache/`), and follow-ups, messages with images,
-  triage, filing titles and "I could not find anything" are never cached.
+- **A contact question is answered with a contact.** The practice directory and
+  the CQC register are matched in code (`lib/contacts.fuzzy.mjs`,
+  `lib/lookup/`), and what they hold is shown in the contacts card as structured
+  data — never retyped through the model's prose, where an unverified number is
+  stripped out.
+- **The turn is streamed to the browser as it happens** (newline-delimited JSON),
+  so the field says which step is running instead of showing a silent spinner.
+- **The answer cache is deliberately unwired, not deleted** (`lib/answer-cache/`).
+  With the answer now assembled in code from a page and a template rather than
+  researched, there is very little left to cache. **Every turn is written down**
+  instead: the question, the answer as text, the template that built it and the
+  model that ran are recorded in `question_log` (`lib/questions/log.js`) and read
+  back at `/stats`.
 - **A message that asks for five things gets five things acknowledged.** The
   selection call returns exactly one template, which is why an eConsult listing
   a knee, a hoarse voice, a repeat prescription, a fit note and a question about
@@ -385,7 +368,7 @@ clickable sources they can open in-browser.
   number is found for something neither the directory nor the register holds.
   The web search picks the pages; the pages are then **fetched and read**, and
   their `tel:`/`mailto:` links and visible numbers are pulled out verbatim
-  (`/api/lookup-web`, and the agent's `find_contact`). Runs that are not numbers
+  (`/api/lookup-web`). Runs that are not numbers
   to ring — a charity registration, an NHS number, a date — are rejected by
   shape and by the words around them. No digit anywhere on this path is written
   by a model, so the guarantee is the same as for the committed directory.
@@ -476,14 +459,14 @@ clickable sources they can open in-browser.
 
 The assistant keeps each source type predictable:
 
-- **Documents:** chosen by the agent, not by a vector. PostgreSQL full-text
-  (`GIN`) search points it at a title; the catalogue lists every document with a
-  summary; `open_practice_sources` serves one ~6k-character part at a time with
-  an outline of the rest, from a cache keyed on the document's revision.
+- **Documents:** found by PostgreSQL full-text (`GIN`) search rather than by a
+  vector, and served by `/practice`, which shows the passages themselves with no
+  model in the path (`lib/templates/practice.mjs`).
 - **Notebook:** every non-empty page is loaded fresh from the live Notebook
-  tables on every request and is never chunked or shortened. The agent searches
-  those whole pages lexically and can pull any of them into the answer in full
-  via `open_practice_sources`, so a long process is never truncated to a snippet.
+  tables on every request and is never chunked or shortened. The model is given
+  the page TITLES and returns one; the page is then rendered from the database
+  as the practice wrote it, so a long process is never truncated to a snippet
+  and never paraphrased.
 - **Contacts:** the one remaining embedded corpus, because a caller asks for
   "the district nurses" rather than a title. A full-text + semantic search
   retrieves matching

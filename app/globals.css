@@ -542,11 +542,13 @@ body { overflow-x: hidden; }
    row scrolls sideways rather than wrapping, because wrapping would make the
    strip taller and the strip's height is what the whole page reserves against. */
 .riva-modes {
-  display: flex; align-items: center; gap: 6px; width: 100%;
+  display: inline-flex; align-items: center; gap: 2px; max-width: 100%;
+  padding: 3px; border-radius: 999px;
+  background: rgba(255,255,255,.72); border: 1px solid #dde4e7;
   overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none;
 }
 .riva-modes::-webkit-scrollbar { display: none; }
-.riva-mode:active { transform: translateY(1px); }
+.riva-mode:hover:not(.riva-mode-on) { background: rgba(0,94,184,.07) !important; }
 .riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
 .riva-dock-emit {
   width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;

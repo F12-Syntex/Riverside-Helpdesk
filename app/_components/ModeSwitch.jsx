@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { s, Hover, Svg, Icons } from './ui';
+import { Hover } from './ui';
 import { MODES } from '../../lib/commands.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -14,13 +14,20 @@ import { MODES } from '../../lib/commands.mjs';
  * rather than from a model. A feature nobody can see is a feature
  * nobody uses.
  *
- * WHY A ROW OF PILLS RATHER THAN A MENU. The first attempt put a chip
+ * WHY ONE CONTROL RATHER THAN A MENU. The first attempt put a chip
  * in the field that opened a list. It cost no space, but at rest it was
  * a grey magnifying glass with a small caret beside it — and a reader
  * who was never told the modes exist will not read a caret as a menu any
  * more than they read a blank field as a slash prompt. It solved the
  * space problem and not the problem. Every mode is named here, with no
  * click needed to find out they are there.
+ *
+ * IT IS ONE OBJECT, NOT SIX. An earlier pass gave each mode its own
+ * bordered chip with an icon, and six outlined things floating over the
+ * page read as clutter rather than as a control. They share one quiet
+ * track now, the way a segmented control does: only the chosen one is
+ * filled, the rest are plain text, and there is a single edge around the
+ * set. Nothing is drawn that is not a word somebody needs to read.
  *
  * WHERE IT SITS. In the strip directly above the field, which is
  * ALREADY 32px tall and already reserved in --riva-dock-h, so nothing on
@@ -43,15 +50,6 @@ import { MODES } from '../../lib/commands.mjs';
  * selected here: it is the more specific thing the reader just did.
  * ------------------------------------------------------------------ */
 
-const ICON = {
-  '': Icons.search,
-  accurx: Icons.stethoscope,
-  document: Icons.fileLines,
-  form: Icons.file,
-  template: Icons.folder,
-  practice: Icons.book,
-};
-
 export default function ModeSwitch({ mode, onPick }) {
   return (
     <div className="riva-modes" role="radiogroup" aria-label="Kind of answer">
@@ -66,16 +64,14 @@ export default function ModeSwitch({ mode, onPick }) {
             aria-checked={on}
             title={row.summary}
             onClick={() => onPick(row.name)}
-            className="riva-mode"
-            base={'display:inline-flex;align-items:center;gap:5px;flex:none;height:26px;padding:0 10px;'
-              + 'border-radius:999px;font:inherit;font-size:13px;font-weight:700;letter-spacing:-0.01em;'
-              + 'cursor:pointer;white-space:nowrap;transition:background .16s ease,color .16s ease,border-color .16s ease;'
-              + (on
-                ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;'
-                : 'background:#fff;border:1px solid #d8dde0;color:#4c6272;')}
-            hover={on ? 'background:#003087;border-color:#003087;' : 'background:#eef4f8;border-color:#a9c6dd;color:#005eb8;'}>
-            <Svg w={14} sw={2.3}>{ICON[row.name] || Icons.search}</Svg>
-            <span>{row.label}</span>
+            className={'riva-mode' + (on ? ' riva-mode-on' : '')}
+            base={'display:inline-flex;align-items:center;flex:none;height:24px;padding:0 12px;'
+              + 'border:none;border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;'
+              + 'letter-spacing:0;cursor:pointer;white-space:nowrap;'
+              + 'transition:background .16s ease,color .16s ease;'
+              + (on ? 'background:#005eb8;color:#fff;' : 'background:transparent;color:#5b7183;')}
+            hover={on ? '' : 'color:#00437f;'}>
+            {row.label}
           </Hover>
         );
       })}
