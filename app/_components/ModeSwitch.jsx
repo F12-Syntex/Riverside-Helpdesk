@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Hover } from './ui';
+import { s, Hover, Svg, Icons } from './ui';
 import { MODES } from '../../lib/commands.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -14,27 +14,30 @@ import { MODES } from '../../lib/commands.mjs';
  * rather than from a model. A feature nobody can see is a feature
  * nobody uses.
  *
- * WHY ONE CONTROL RATHER THAN A MENU. The first attempt put a chip
- * in the field that opened a list. It cost no space, but at rest it was
- * a grey magnifying glass with a small caret beside it — and a reader
- * who was never told the modes exist will not read a caret as a menu any
- * more than they read a blank field as a slash prompt. It solved the
- * space problem and not the problem. Every mode is named here, with no
- * click needed to find out they are there.
+ * IT IS ONE CONTROL AT THE LEFT, NOT FOUR POSITIONS OF A TRACK. The
+ * segmented pill named every mode at rest, which is what solved the
+ * discovery problem — but four filled columns is a wide, busy thing to
+ * hang over the page for a choice that is left alone almost every time,
+ * and the sliding thumb kept saying "something is happening here" when
+ * nothing was. What is left is one quiet button at the left edge of the
+ * strip, reading the mode that is armed, that opens the list when it is
+ * clicked. Closed, it is four words wide; open, every mode is named with
+ * the line that says what it does — which the pill never had room for.
  *
- * IT IS ONE SWITCH, NOT A ROW OF BUTTONS. An earlier pass gave each mode its own
- * bordered chip with an icon, and six outlined things floating over the
- * page read as clutter rather than as a control. They share one quiet
- * track now, the way a segmented control does: only the chosen one is
- * filled, the rest are plain text, and there is a single edge around the
- * set. Nothing is drawn that is not a word somebody needs to read.
+ * IT STILL SAYS WHAT IS ARMED WITHOUT BEING OPENED. That is the part
+ * worth keeping from the pill: the button carries the mode's own label,
+ * and reads blue and filled whenever it is anything other than Q&A, so a
+ * field that is about to answer out of the referral list cannot look
+ * like a field that is about to answer a question.
  *
  * WHERE IT SITS. In the strip directly above the field, which is
  * ALREADY 32px tall and already reserved in --riva-dock-h, so nothing on
- * the page moves to make room and the dock does not grow. It is part of
- * the dock, not the header and not the footer. The strip's other two
- * occupants — the send bar and the "Copied" line — are both under three
- * seconds, and they take it back while they need it.
+ * the page moves to make room and the dock does not grow. The list is
+ * absolutely positioned above the button, out of the flow for the same
+ * reason the telephone panel is: the dock stays put while it is open.
+ * The strip's other two occupants — the send bar and the "Copied" line —
+ * are both under three seconds, and they take the strip back while they
+ * need it.
  *
  * IT LASTS ONE MESSAGE. The mode goes back to Q&A as soon as the
  * question is sent, and that is the whole safety of it. A switch that
@@ -43,48 +46,149 @@ import { MODES } from '../../lib/commands.mjs';
  * /form says honestly that the list has no such entry, while a wrong
  * /accurx renders a confident triage card, with a destination and an
  * urgency, for a question that was never about a patient. Re-arming is
- * one click, which is what makes resetting affordable for a run of
- * lookups.
+ * two clicks, which is still affordable for a run of lookups.
  *
  * TYPING STILL WINS. A command typed into the box overrides whatever is
  * selected here: it is the more specific thing the reader just did.
  * ------------------------------------------------------------------ */
 
 export default function ModeSwitch({ mode, onPick }) {
-  const at = Math.max(0, MODES.findIndex((m) => m.name === mode));
+  const [open, setOpen] = React.useState(false);
+  // Which row the keyboard is on. Only meaningful while the list is open,
+  // and it starts on the armed mode rather than at the top, so the first
+  // arrow key moves away from where you already are.
+  const [at, setAt] = React.useState(0);
+  const wrapRef = React.useRef(null);
+  // The trigger, found rather than held: Hover renders the button for us and
+  // React 18 does not pass a ref through a plain function component.
+  const focusBtn = () => {
+    const el = wrapRef.current && wrapRef.current.querySelector('.riva-modes-btn');
+    if (el) el.focus();
+  };
+
+  const current = MODES.find((m) => m.name === mode) || MODES[0];
+  const armed = Boolean(current.name);
+
+  // A click anywhere else closes it. Pointerdown rather than click, so the
+  // list is gone before whatever was clicked reacts to being clicked.
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+
+  const show = () => {
+    setAt(Math.max(0, MODES.findIndex((m) => m.name === mode)));
+    setOpen(true);
+  };
+
+  const choose = (name) => {
+    setOpen(false);
+    onPick(name);
+  };
+
+  // The keyboard row is the focused row, not a highlight drawn beside one:
+  // an arrow key moves focus, so Enter can only ever take the row somebody is
+  // looking at, and a screen reader reads the move without being told to.
+  React.useEffect(() => {
+    if (!open || !wrapRef.current) return;
+    const rows = wrapRef.current.querySelectorAll('.riva-mode');
+    if (rows[at]) rows[at].focus();
+  }, [open, at]);
+
+  // Escape closes the list and leaves the mode alone — the field's own
+  // Escape is what backs out of the mode itself, one step at a time.
+  const onKey = (e) => {
+    if (e.key === 'Escape' && open) {
+      e.stopPropagation();
+      setOpen(false);
+      focusBtn();
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) { show(); return; }
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setAt((i) => (i + step + MODES.length) % MODES.length);
+      return;
+    }
+    if (open && (e.key === 'Tab')) setOpen(false);
+  };
+
   return (
     <div
-      className="riva-modes"
-      role="radiogroup"
-      aria-label="Kind of answer"
-      style={{ '--riva-mode-i': at, '--riva-mode-n': MODES.length }}>
-      {/* The thumb. One element that slides, rather than a fill that jumps from
-          one label to the next: the movement is what says these are positions of
-          one switch and not five separate buttons. Behind the labels, and hidden
-          from assistive technology, which reads the radio group instead. */}
-      <span className="riva-modes-thumb" aria-hidden="true" />
-      {MODES.map((row) => {
-        const on = row.name === mode;
-        return (
-          <Hover
-            key={row.name || 'qa'}
-            tag="button"
-            type="button"
-            role="radio"
-            aria-checked={on}
-            title={row.summary}
-            onClick={() => onPick(row.name)}
-            className={'riva-mode' + (on ? ' riva-mode-on' : '')}
-            base={'position:relative;z-index:1;display:inline-flex;align-items:center;'
-              + 'justify-content:center;height:24px;padding:0 14px;border:none;background:transparent;'
-              + 'border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;'
-              + 'white-space:nowrap;transition:color .16s ease;'
-              + (on ? 'color:#fff;' : 'color:#5b7183;')}
-            hover={on ? '' : 'color:#00437f;'}>
-            {row.label}
-          </Hover>
-        );
-      })}
+      ref={wrapRef}
+      className={'riva-modes' + (open ? ' riva-modes-open' : '')}
+      onKeyDown={onKey}>
+      <Hover
+        tag="button"
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={'Kind of answer: ' + current.label}
+        title={current.summary}
+        onClick={() => (open ? setOpen(false) : show())}
+        className="riva-modes-btn"
+        base={'display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px 0 12px;'
+          + 'border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;'
+          + 'white-space:nowrap;transition:background .16s ease,border-color .16s ease,color .16s ease;'
+          + (armed
+            ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;'
+            : 'background:rgba(255,255,255,.78);border:1px solid #dde4e7;color:#4c6272;')}
+        hover={armed ? 'background:#00437f;border-color:#00437f;' : 'border-color:#005eb8;color:#00437f;'}>
+        <span>{current.label}</span>
+        {/* One chevron, pointing up at the list it will open and turning over
+            once it is open, so the button says which way it is going rather
+            than only what it holds. Turned in CSS (.riva-modes-caret). */}
+        <span className="riva-modes-caret" aria-hidden="true" style={s('display:flex;opacity:.8;')}>
+          <Svg w={12} sw={2.4}>{Icons.chevronRight}</Svg>
+        </span>
+      </Hover>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Kind of answer"
+          className="riva-modes-list">
+          {MODES.map((row, i) => {
+            const on = row.name === mode;
+            return (
+              <Hover
+                key={row.name || 'qa'}
+                tag="button"
+                type="button"
+                role="menuitemradio"
+                aria-checked={on}
+                title={row.summary}
+                onClick={() => choose(row.name)}
+                className="riva-mode"
+                base={'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;'
+                  + (i ? 'border-top:1px solid #eef1f2;' : '')
+                  + 'padding:9px 14px;font:inherit;cursor:pointer;transition:background .14s ease;'
+                  + (i === at ? 'background:#f0f6fb;' : 'background:#fff;')}
+                hover="background:#f0f6fb;">
+                {/* The tick is the only mark in the row, and it holds its
+                    column whether or not it is drawn, so the labels line up
+                    down the list instead of stepping in on the armed one. */}
+                <span style={s('flex:none;display:flex;width:14px;color:#005eb8;')}>
+                  {on ? <Svg w={14} sw={3}>{Icons.check}</Svg> : null}
+                </span>
+                <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
+                  <span style={s('font-size:13.5px;font-weight:700;color:' + (on ? '#005eb8' : '#212b32') + ';')}>
+                    {row.label}
+                  </span>
+                  <span style={s('font-size:12px;color:#5b7183;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+                    {row.summary}
+                  </span>
+                </span>
+              </Hover>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

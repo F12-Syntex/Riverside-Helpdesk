@@ -538,40 +538,37 @@ body { overflow-x: hidden; }
  * copied number. Its height is reserved so the dock never moves as they
  * come and go. */
 .riva-dock-strip { height: var(--riva-dock-strip-h); display: flex; align-items: center; overflow: hidden; }
-/* The modes. Six pills fit a desktop dock with room to spare; on a phone the
-   row scrolls sideways rather than wrapping, because wrapping would make the
-   strip taller and the strip's height is what the whole page reserves against. */
-/* The mode switch. Equal columns by construction, so the thumb's position is
-   one number — the index — rather than a measurement taken from the DOM. */
-.riva-modes {
-  position: relative;
-  display: inline-grid;
-  grid-template-columns: repeat(var(--riva-mode-n, 4), 1fr);
-  align-items: center;
-  padding: 3px; border-radius: 999px;
-  background: rgba(255,255,255,.72); border: 1px solid #dde4e7;
+/* The mode switch: one button at the left of the strip, and the list it
+   opens. The button is the only part that takes room in the strip — the list
+   is out of the flow, above it, so opening the modes never moves the dock. */
+.riva-modes { position: relative; display: inline-flex; }
+/* The strip clips its contents so the send bar disappears at the top edge on
+   its way up. While the list is open there is no send bar — the two are never
+   on screen together — so the clip is lifted for exactly that moment, which is
+   what lets the list stand above a 32px strip at all. */
+.riva-dock-strip:has(.riva-modes-open) { overflow: visible; }
+.riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
+/* The chevron points the way the list will go — up, because it opens above the
+   button — and turns over to point back down once it is open. */
+.riva-modes-caret { transform: rotate(-90deg); transition: transform .18s cubic-bezier(.2,.7,.3,1); }
+.riva-modes-open .riva-modes-caret { transform: rotate(90deg); }
+.riva-modes-list {
+  position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 7;
+  min-width: 268px; max-width: min(340px, calc(100vw - 48px));
+  background: #fff; border: 1px solid #dde4e7; border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(33,43,50,.16); overflow: hidden;
+  animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
 }
-.riva-modes-thumb {
-  position: absolute; top: 3px; bottom: 3px; left: 3px;
-  width: calc((100% - 6px) / var(--riva-mode-n, 4));
-  border-radius: 999px; background: #005eb8;
-  transform: translateX(calc(var(--riva-mode-i, 0) * 100%));
-  transition: transform .24s cubic-bezier(.2,.7,.3,1);
-}
-.riva-mode:hover:not(.riva-mode-on) { background: rgba(0,94,184,.07) !important; }
-.riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
-/* The slide is the point, but it is decoration: without it the thumb still
-   lands in the right place, it just gets there at once. */
-@media (prefers-reduced-motion: reduce) { .riva-modes-thumb { transition: none; } }
-/* On a narrow screen the switch goes back to being a scrolling row: four thumb
-   positions across 390px would be too tight to hit, and the strip cannot grow
-   because its height is what the rest of the page reserves against. */
+.riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: -2px; }
+/* The strip is 26px on a phone, so the button loses the 2px it can spare and
+   the list stops just short of the screen edges. */
 @media (max-width: 600px) {
-  .riva-modes { display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; max-width: 100%; scrollbar-width: none; -ms-overflow-style: none; }
-  .riva-modes::-webkit-scrollbar { display: none; }
-  .riva-modes-thumb { display: none; }
-  .riva-mode { flex: none; }
-  .riva-mode-on { background: #005eb8 !important; color: #fff !important; }
+  .riva-modes-btn { height: 24px !important; }
+  .riva-modes-list { min-width: 240px; max-width: calc(100vw - 32px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .riva-modes-caret { transition: none; }
+  .riva-modes-list { animation: none; }
 }
 .riva-dock-emit {
   width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;

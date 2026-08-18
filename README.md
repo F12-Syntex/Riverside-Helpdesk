@@ -200,23 +200,28 @@ clickable sources they can open in-browser.
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
-- **The kind of answer is chosen above the box, not typed.** A four-position
-  switch — Q&A, Form, Template, Practice — sits in the strip directly above the
-  field (`app/_components/ModeSwitch.jsx`), with a thumb that slides to whichever
-  is armed. On a phone it becomes a scrolling row instead, because four thumb
-  positions across 390px are too tight to hit. **`/accurx` and `/document` are
+- **The kind of answer is chosen above the box, not typed.** One button at the
+  left of the strip directly above the field
+  (`app/_components/ModeSwitch.jsx`) reads whichever mode is armed and opens the
+  list of them — Q&A, Form, Template, Practice — when it is clicked. Each mode is
+  named there with the line that says what it does, which the four-position pill
+  it replaced had no room for, and the button turns blue and filled whenever it
+  is anything other than Q&A, so a field about to answer out of the referral list
+  cannot look like a field about to answer a question. The list is out of the
+  flow, above the button, so opening it moves nothing. Arrow keys walk it, Enter
+  takes a mode, Escape closes it. **`/accurx` and `/document` are
   hidden rather than withdrawn**: they are not offered by the switch or by the
   "/" list, and typing either in full still works exactly as it did, because both
   are everyday answers used by habit. That strip was already 32px
   tall and already counted in the dock's height, so nothing on the page moves and
   nothing was added to the header or the footer. Typing "/" still works and still
-  wins over the pills, being the more specific thing the reader just did. **The
+  wins over the switch, being the more specific thing the reader just did. **The
   choice lasts exactly one message**: a switch left armed on a shared reception PC
   would eventually answer an ordinary question out of the referral-form list, and
   the failure modes are not symmetric — a wrong `/form` says honestly that the
   list has no such entry, while a wrong `/accurx` renders a confident triage card
   with a destination and an urgency for a question that was never about a patient.
-  A question asked with a pill carries **"Asked as Form"** in the transcript,
+  A question asked with a mode carries **"Asked as Form"** in the transcript,
   because `/form knee` typed into the box stays in the reader's own words for ever
   and choosing the mode with a button would otherwise leave nothing on screen
   explaining which list the answer came from.
