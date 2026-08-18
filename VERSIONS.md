@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.8.2` | 2026-08-18 | style | `ed9ce72` | style: /practice reads like a document, not like output |
+| `5.8.1` | 2026-08-18 | docs | `e465026` | docs: record 5.7.14 in the versions table |
 | `5.8.0` | 2026-08-18 | feat | `e579c1c` | feat: the mode pills arrive with the cursor |
 | `5.7.13` | 2026-08-18 | docs | `bf7ff33` | docs: record 5.7.12 in the versions table |
 | `5.7.12` | 2026-08-18 | style | `d1914c1` | style: the modes are four pills under the box |
