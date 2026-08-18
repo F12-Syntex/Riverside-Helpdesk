@@ -200,38 +200,36 @@ clickable sources they can open in-browser.
   than kept as half-answers beside it. A described symptom typed without any
   command still reaches the same triage card: that path never went through
   `/triage`.
-- **The kind of answer is chosen under the box, not typed.** Four pills sit
-  directly under the field — Q&A, Form, Template, Practice
-  (`app/_components/ModeSwitch.jsx`) — each a word that can be read without
-  opening anything and armed with one click, with the armed one filled. **They
-  arrive with the cursor**: the opening screen is a heading and a box, and the
-  pills appear when the box is touched and fade when it is let go, because
-  "what kind of answer" is not a question anybody has until they are about to
-  ask something. The room they take is reserved either way, so the dock never
-  moves as they come and go, and an armed mode other than Q&A keeps them on
-  screen whatever the focus is doing. Q&A is
-  one of the four rather than an absence, so the row reads as a setting rather
-  than as three switches that might all be off. Two earlier controls are gone:
-  a segmented track with a sliding thumb, which was machinery for a choice
-  that is left alone almost every time, and a button-and-menu beside the field,
-  which hid three of the four modes behind a click and took width off a
-  placeholder that needs it. The row's height is declared once
-  (`--riva-dock-extras`), which the dock's height, the room the page leaves at
-  its foot and the opening screen's lift are all worked out from, so nothing
-  had to be measured twice to make room for it.
+- **The kind of answer is chosen from the search icon, not typed.** The
+  magnifying glass at the left of the field carries a disc behind it and is a
+  button (`app/_components/ModeSwitch.jsx`): pressing it opens the list of modes
+  over the box — Q&A, Form, Template, Practice — each named with the line saying
+  what it does, and the armed one ticked. **Nothing was added to the page to make
+  room for it**: the glass had always sat there costing 48px of the field and
+  doing nothing when it was pressed, and the disc is what says a thing can be
+  pressed. It is the same size as the ask button opposite, so the field is a box
+  with a control at each end. The disc **fills blue with a white glass whenever
+  anything other than Q&A is armed**, so a field about to answer out of the
+  referral list cannot look like a field about to answer a question, and the
+  spinner shown while a message is screened for patient details takes the glass's
+  place inside it. Arrow keys walk the list, Enter takes a mode, Escape closes it.
+  Two earlier controls are gone: a row of pills under the field, which was four
+  buttons hanging off the dock for a choice left alone almost every time and had
+  to appear and disappear with the cursor to stay out of the way, and before that
+  a segmented track with a sliding thumb.
   **`/accurx` and `/document` are
-  hidden rather than withdrawn**: they are not offered by the pills or by the
-  "/" list, and typing either in full still works exactly as it did, because both
+  hidden rather than withdrawn**: they are not offered by the list or by the
+  "/" list typed into the box, and typing either in full still works exactly as it did, because both
   are everyday answers used by habit. The strip above the field carries only the
   send bar and the "Copied" line, and nothing was added to the header or the
-  footer. Typing "/" still works and still wins over the pills, being the more
+  footer. Typing "/" still works and still wins over the disc, being the more
   specific thing the reader just did. **The
   choice lasts exactly one message**: a mode left armed on a shared reception PC
   would eventually answer an ordinary question out of the referral-form list, and
   the failure modes are not symmetric — a wrong `/form` says honestly that the
   list has no such entry, while a wrong `/accurx` renders a confident triage card
   with a destination and an urgency for a question that was never about a patient.
-  A question asked with a pill carries **"Asked as Form"** in the transcript,
+  A question asked with a mode carries **"Asked as Form"** in the transcript,
   because `/form knee` typed into the box stays in the reader's own words for ever
   and choosing the mode with a button would otherwise leave nothing on screen
   explaining which list the answer came from.

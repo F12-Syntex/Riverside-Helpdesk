@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Hover } from './ui';
+import { s, Hover, Svg, Icons } from './ui';
 import { MODES } from '../../lib/commands.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -14,32 +14,32 @@ import { MODES } from '../../lib/commands.mjs';
  * rather than from a model. A feature nobody can see is a feature
  * nobody uses.
  *
- * FOUR PILLS UNDER THE BOX, AND NOTHING ELSE. Every mode is a word you
- * can read without opening anything and arm with one click. The two
- * controls this replaced both got in their own way: a segmented track
- * with a sliding thumb was a piece of machinery for a choice that is
- * left alone almost every time, and the button-and-menu that followed it
- * hid three of the four modes behind a click and still had to explain
- * itself with a caption. A row of words needs neither.
+ * IT IS THE SEARCH ICON, AND IT IS A BUTTON. The magnifying glass has
+ * always sat at the left of the field. It was decoration: a picture of
+ * what the box does, costing 48px of the box and doing nothing when it
+ * was pressed. It now carries a disc behind it, which is what says a
+ * thing can be pressed, and pressing it opens the list of modes over the
+ * field. Nothing new was added to the page to make room for this — the
+ * one control that was already there stopped being ornamental.
  *
- * THEY COME WITH THE CURSOR. At rest the opening screen is a heading and
- * a box; the pills arrive when the box is touched and fade when it is let
- * go, because "what kind of answer" is not a question anybody has until
- * they are about to ask something. THE ROOM THEY TAKE IS RESERVED EITHER
- * WAY (--riva-dock-extras), so the dock never moves as they come and go —
- * a control that shoves the box it belongs to is worse than one that is
- * always there. Two things keep them up regardless: focus anywhere in the
- * row itself, and any armed mode other than Q&A, because a field about to
- * answer out of the referral list has to say so on screen.
+ * WHY NOT THE ROW OF PILLS IT REPLACED. Four named pills under the box
+ * were the plainest thing to read, but they were four buttons hanging
+ * off the dock for a choice that is left alone almost every time, and
+ * the row had to appear and disappear with the cursor to stay out of the
+ * way — which is its own kind of movement. A disc that is already part
+ * of the field costs nothing when it is not being used.
  *
- * UNDER THE FIELD, NOT BESIDE IT AND NOT ABOVE IT. Beside it, the
- * control was competing with the box for the row and taking width off a
- * placeholder that needs it — badly on a phone. Above it, it shared the
- * strip with the send bar. Under the box it is out of the field's way
- * entirely, and it is read in the order it is used: the question first,
- * the kind of answer second. The room it takes is declared once, in
- * --riva-dock-extras, which every other measurement on the page is
- * already worked out from, so the hero above still clears the dock.
+ * THE ARMED MODE IS THE DISC'S COLOUR. Filled blue with a white glass
+ * whenever anything other than Q&A is armed, quiet grey otherwise, so a
+ * field about to answer out of the referral list cannot look like a
+ * field about to answer a question. The placeholder says the same thing
+ * in words, and the transcript carries "Asked as Form" afterwards.
+ *
+ * IT STILL SAYS WHEN IT IS BUSY. The spinner that used to replace the
+ * glass while a message is screened for patient details replaces it
+ * inside the disc instead, in the same place, for the same reason: a
+ * field that looks dead for even half a second has somebody pressing
+ * Enter again.
  *
  * IT LASTS ONE MESSAGE. The mode goes back to Q&A as soon as the
  * question is sent, and that is the whole safety of it. A switch that
@@ -47,60 +47,137 @@ import { MODES } from '../../lib/commands.mjs';
  * through a phone call. The failure modes are not symmetric: a wrong
  * /form says honestly that the list has no such entry, while a wrong
  * /accurx renders a confident triage card, with a destination and an
- * urgency, for a question that was never about a patient. Re-arming is
- * one click, which is what makes resetting affordable for a run of
- * lookups.
- *
- * Q&A IS A PILL LIKE THE REST. It is what almost every message is, and
- * showing it as one of the four is what says the row is a choice with a
- * setting rather than three switches that might all be off.
+ * urgency, for a question that was never about a patient.
  *
  * TYPING STILL WINS. A command typed into the box overrides whatever is
  * armed here: it is the more specific thing the reader just did.
  * ------------------------------------------------------------------ */
 
-export default function ModeSwitch({ mode, onPick, shown = true, onFocus, onBlur }) {
+export default function ModeSwitch({ mode, onPick, busy = false }) {
+  const [open, setOpen] = React.useState(false);
+  // Which row the keyboard is on. It starts on the armed mode rather than at
+  // the top, so the first arrow key moves away from where you already are.
+  const [at, setAt] = React.useState(0);
+  const wrapRef = React.useRef(null);
+
+  const current = MODES.find((m) => m.name === mode) || MODES[0];
+  const armed = Boolean(current.name);
+
+  // The trigger, found rather than held: Hover renders the button for us and
+  // React 18 does not pass a ref through a plain function component.
+  const focusBtn = () => {
+    const el = wrapRef.current && wrapRef.current.querySelector('.riva-modes-btn');
+    if (el) el.focus();
+  };
+
+  // A click anywhere else closes it. Pointerdown rather than click, so the
+  // list is gone before whatever was clicked reacts to being clicked.
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+
+  // The keyboard row is the focused row, not a highlight drawn beside one: an
+  // arrow key moves focus, so Enter can only ever take the row somebody is
+  // looking at, and a screen reader reads the move without being told to.
+  React.useEffect(() => {
+    if (!open || !wrapRef.current) return;
+    const rows = wrapRef.current.querySelectorAll('.riva-mode');
+    if (rows[at]) rows[at].focus();
+  }, [open, at]);
+
+  const show = () => {
+    setAt(Math.max(0, MODES.findIndex((m) => m.name === mode)));
+    setOpen(true);
+  };
+
+  const choose = (name) => {
+    setOpen(false);
+    onPick(name);
+  };
+
+  // Escape closes the list and leaves the mode alone — the field's own Escape
+  // is what backs out of the mode itself, one step at a time.
+  const onKey = (e) => {
+    if (e.key === 'Escape' && open) {
+      e.stopPropagation();
+      setOpen(false);
+      focusBtn();
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) { show(); return; }
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setAt((i) => (i + step + MODES.length) % MODES.length);
+      return;
+    }
+    if (open && e.key === 'Tab') setOpen(false);
+  };
+
   return (
-    <div
-      className={'riva-modes' + (shown ? '' : ' riva-modes-away')}
-      role="group"
-      aria-label="Kind of answer"
-      /* Focus moving from the field into a pill is the same session, so the
-         row hears about both and keeps itself up. */
-      onFocus={onFocus}
-      onBlur={onBlur}>
-      {MODES.map((row) => {
-        const on = row.name === mode;
-        return (
-          <Hover
-            key={row.name || 'qa'}
-            tag="button"
-            type="button"
-            /* The click must not cost the field its cursor: somebody arming a
-               mode is mid-question, and a box that loses focus (and, on a
-               phone, its keyboard) to a mode change is a box you have to tap
-               twice. The mousedown never reaches the field, and pickMode puts
-               the cursor back for the keyboard path. */
-            onMouseDown={(e) => e.preventDefault()}
-            /* Toggle buttons rather than radios: every pill stays an ordinary
-               tab stop that way, and "pressed" is exactly what the filled one
-               is. The group's label says what the set is for. */
-            aria-pressed={on}
-            title={row.summary}
-            onClick={() => onPick(row.name)}
-            className={'riva-mode' + (on ? ' riva-mode-on' : '')}
-            base={'display:inline-flex;align-items:center;height:32px;padding:0 15px;'
-              + 'border-radius:999px;font:inherit;font-size:13.5px;font-weight:600;'
-              + 'cursor:pointer;white-space:nowrap;'
-              + 'transition:background .16s ease,border-color .16s ease,color .16s ease;'
-              + (on
-                ? 'background:#005eb8;border:1px solid #005eb8;color:#fff;'
-                : 'background:rgba(255,255,255,.72);border:1px solid #dde4e7;color:#4c6272;')}
-            hover={on ? 'background:#00437f;border-color:#00437f;' : 'border-color:#005eb8;color:#00437f;'}>
-            {row.label}
-          </Hover>
-        );
-      })}
+    <div ref={wrapRef} className={'riva-modes' + (open ? ' riva-modes-open' : '')} onKeyDown={onKey}>
+      <Hover
+        tag="button"
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={'Kind of answer: ' + current.label}
+        title={current.summary}
+        onClick={() => (open ? setOpen(false) : show())}
+        className="riva-modes-btn"
+        base={'display:flex;align-items:center;justify-content:center;width:100%;height:100%;'
+          + 'border:none;border-radius:50%;padding:0;cursor:pointer;'
+          + 'transition:background .16s ease,color .16s ease;'
+          + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eaeff1;color:#4c6272;')}
+        hover={armed ? 'background:#00437f;' : 'background:#dbe3e7;color:#005eb8;'}>
+        {busy
+          ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+          : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
+      </Hover>
+
+      {open && (
+        <div role="menu" aria-label="Kind of answer" className="riva-modes-list">
+          {MODES.map((row, i) => {
+            const on = row.name === mode;
+            return (
+              <Hover
+                key={row.name || 'qa'}
+                tag="button"
+                type="button"
+                role="menuitemradio"
+                aria-checked={on}
+                title={row.summary}
+                onClick={() => choose(row.name)}
+                className="riva-mode"
+                base={'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;'
+                  + (i ? 'border-top:1px solid #eef1f2;' : '')
+                  + 'padding:10px 15px;font:inherit;cursor:pointer;background:#fff;'
+                  + 'transition:background .14s ease;'}
+                hover="background:#f0f6fb;">
+                {/* The tick holds its column whether or not it is drawn, so the
+                    names line up down the list instead of stepping in on the
+                    armed one. */}
+                <span style={s('flex:none;display:flex;width:14px;color:#005eb8;')}>
+                  {on ? <Svg w={14} sw={3}>{Icons.check}</Svg> : null}
+                </span>
+                <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
+                  <span style={s('font-size:14px;font-weight:700;color:' + (on ? '#005eb8' : '#212b32') + ';')}>
+                    {row.label}
+                  </span>
+                  <span style={s('font-size:12.5px;color:#5b7183;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+                    {row.summary}
+                  </span>
+                </span>
+              </Hover>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
