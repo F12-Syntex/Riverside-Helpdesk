@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.11.2` | 2026-08-19 | fix | `afa3a72` | fix: /form threw before it read a word of the query |
+| `5.11.1` | 2026-08-19 | docs | `879ebac` | docs: record 5.10.0 and 5.11.0 in the versions table |
 | `5.11.0` | 2026-08-19 | feat | `82db504` | feat: search the lists by what was asked for, and cross between them |
 | `5.10.0` | 2026-08-19 | feat | `20f09bb` | feat: the disc wears the mode, and the mode stays put |
 | `5.9.1` | 2026-08-18 | docs | `5b01421` | docs: record 5.9.0 in the versions table |
