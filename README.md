@@ -267,6 +267,25 @@ clickable sources they can open in-browser.
   "referral") before either list is searched or judged. It never drops anything
   clinical, and it can only lower the bar, so a query that found its row before
   still finds it.
+- **A contract nobody named is still a contract somebody meant.** Reception ask
+  in the words of the job — "B12 injection", "dressing change" — and none of
+  those is written on the specifications, so the string match says no contract by
+  that name while the service that pays for the work sits on the page. So a
+  **miss, and only a miss**, runs a web search on how the task is commissioned in
+  North East London and asks a model to pick one row off the document
+  (`lib/agent/contract-intent.mjs`). The model **picks a row; it never writes
+  one**: the card is rendered from the row exactly as every other contract card
+  is, and the pick is thrown away unless the specification is a row of the
+  document character for character, and the template one of that row's templates.
+  A model that half-remembers "OneTemplate Nurse (B12 page)" produces no page,
+  not a wrong one. The card leads with a line saying the contract was **worked
+  out rather than named**, what page to open, and which pages that was based on.
+  Two more things make it hold up: when the model will not choose, the **names
+  the search itself used** are run back through the document's own matcher —
+  "Wound care service" from the ICB's page reaches "Simple Wound Care Service" —
+  and when nothing on the document covers the task at all, the card names
+  **Primary Care IT's own pages** about it, which is how "B12 injection" ends at
+  their "Injection: B12 Template" article instead of at a shrug.
 - **One document each, named in the mode.** `lib/templates/lookup-command.mjs`
   is the whole scope of both commands and states it once:
   **Referral form** reads Primary Care IT's *NEL Referral Tree introduction &
@@ -274,7 +293,9 @@ clickable sources they can open in-browser.
   *NEL Local Contract Specifications*. Neither reads the practice's Notebook,
   neither falls through to the other's document, and neither calls a model. A
   miss is reported as a miss, on a card that names the document searched and the
-  day it was captured. The modes are named for their documents rather than for
+  day it was captured — the one exception being the intent lookup above, which
+  reads the web to pick a row of the SAME document rather than to answer from
+  somewhere else. The modes are named for their documents rather than for
   the thing being looked for — "Form" and "Template" told a reader nothing about
   where an answer would come from, and both were quietly reading more than they
   said: Contract template answered out of the Notebook, Referral form out of the

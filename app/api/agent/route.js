@@ -55,6 +55,12 @@ import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import { formCommandAnswer, templateCommandAnswer } from '@/lib/templates/lookup-command.mjs';
+import { contractNotFound, contractReasonedAnswer } from '@/lib/templates/contracts.mjs';
+import { findContracts, nelContracts } from '@/lib/referrals/nel-contracts.mjs';
+import {
+  CONTRACT_INTENT_SCHEMA, INTENT_TIMEOUT_MS, contractFromWeb, contractIntentPrompt, contractRoster,
+  pcitPages, resolvePick, searchForContract, sourceLines,
+} from '@/lib/agent/contract-intent.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
@@ -490,6 +496,110 @@ export async function POST(request) {
             commandAnswer = command === 'referralForm'
               ? formCommandAnswer({ query: question })
               : templateCommandAnswer({ query: question });
+
+            // A CONTRACT NOBODY NAMED IS STILL A CONTRACT SOMEBODY MEANT.
+            //
+            // The string match above is right and stays first, and for the
+            // questions it answers this whole block never runs. But reception do
+            // not ask in the document's words: "B12 injection" is not the name
+            // of any of the 42 contracts and appears nowhere on the page, so the
+            // match says no contract by that name — while the service it is
+            // recorded under is sitting on the list, along with the template and
+            // the page to open. That is a question about meaning, and the string
+            // match cannot answer it by design.
+            //
+            // So a MISS — and only a miss — searches the web for how this is
+            // commissioned in North East London, then asks a model to pick one
+            // row off the document. The model picks; it never writes. Everything
+            // on the card is copied out of the row it chose, the choice is
+            // thrown away unless the name matches a row character for character
+            // (lib/agent/contract-intent.mjs), and the card says outright that
+            // the contract was worked out rather than named.
+            //
+            // A failure of either call leaves the honest "no contract by that
+            // name" card exactly as it was.
+            const missed = command === 'contractTemplate'
+              && /no contract by that name/i.test(String(commandAnswer?.title || ''));
+            if (missed && apiKey) {
+              try {
+                send({ type: 'status', text: 'Working out which contract this belongs under' });
+                send({
+                  type: 'tool-start',
+                  id: 'intent',
+                  tool: 'search_web',
+                  label: 'Searching for what covers this in North East London',
+                  detail: question.slice(0, 120),
+                });
+                const contracts = nelContracts().contracts;
+                const web = await withTimeout(
+                  searchForContract({ asked: question, apiKey, model: roles.web.model }),
+                  INTENT_TIMEOUT_MS,
+                ).catch(() => ({ ok: false, summary: '', results: [] }));
+                if (web?.usage) {
+                  recordUsage({ turnId, role: 'web', phase: 'contractIntent', model: roles.web.model, usage: web.usage });
+                }
+                const picked = await withTimeout(generateObject({
+                  model: openrouter(model),
+                  schema: CONTRACT_INTENT_SCHEMA,
+                  temperature: 0,
+                  prompt: contractIntentPrompt({
+                    asked: question,
+                    roster: contractRoster(contracts),
+                    web: web && web.ok ? web.summary : '',
+                  }),
+                }), INTENT_TIMEOUT_MS);
+                recordUsage({ turnId, role: 'fast', phase: 'contractIntent', model, usage: picked.usage });
+                // THE MODEL FIRST, THEN THE WEB'S OWN WORDS. A model that will
+                // not choose is not the same as a document with nothing on it:
+                // "dressing change" came back as no contract while "Simple
+                // Wound Care Service" sat in the list it had just read, and the
+                // search had returned a page titled "Wound care service — NHS
+                // North East London". So the names the SEARCH used are run back
+                // through the document's own matcher, which is the same string
+                // match the command starts with and answers with a row or with
+                // nothing. Nothing is generated on this path at all.
+                const resolved = resolvePick({ pick: picked.object, contracts })
+                  || (() => {
+                    const bridged = contractFromWeb({
+                      web,
+                      lookup: (candidate) => findContracts(candidate),
+                    });
+                    return bridged ? {
+                      contract: bridged.contract,
+                      template: '',
+                      confident: false,
+                      // Composed in code out of two verbatim strings — what the
+                      // web called it, and what the document calls it.
+                      why: `The web names this service "${bridged.named}", which is on the document as `
+                        + `"${bridged.contract.specification}".`,
+                    } : null;
+                  })();
+                const reasoned = resolved && contractReasonedAnswer({
+                  ...resolved,
+                  sources: sourceLines(web && web.results),
+                });
+                send({
+                  type: 'tool-result',
+                  id: 'intent',
+                  tool: 'search_web',
+                  summary: reasoned ? resolved.contract.specification : 'No contract covers it',
+                  items: (web && web.results ? web.results : []).slice(0, 4)
+                    .map((r) => ({ title: r.title, url: r.url })),
+                });
+                // Still nothing? The miss card stands, and carries whatever
+                // Primary Care IT themselves publish about it: the contract list
+                // is 42 rows, and their knowledge base is far wider than that.
+                if (reasoned) commandAnswer = reasoned;
+                else {
+                  const pcit = pcitPages(web && web.results);
+                  if (pcit.length) commandAnswer = contractNotFound(question, { pcit });
+                }
+              } catch (e) {
+                // The miss card is already built and is a true answer. A failed
+                // search or a failed pick leaves it standing.
+                console.warn('[agent] contract intent lookup failed:', String(e).slice(0, 160));
+              }
+            }
           } else {
             // A long /accurx is decomposed on the same call, exactly as an
             // ordinary message is. A short one is not, so "/accurx pt has a sore
