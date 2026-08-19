@@ -342,6 +342,42 @@ export async function POST(request) {
         ...extra,
       });
 
+      // THE NOTEBOOK, FETCHED ONCE, WHEREVER IT IS FIRST NEEDED.
+      //
+      // It used to be one `let notebookPages = []` beside the model call, two
+      // hundred lines below the two list commands that also read it — so /form
+      // and /template threw `Cannot access 'notebookPages' before
+      // initialization` on every single call, ended the turn, and the reader
+      // got nothing. A `let` in the same function body is not undefined before
+      // its line: it is a ReferenceError, and the branch above it was written
+      // as though it were.
+      //
+      // So it is a function, declared before anything that could want it, and
+      // the read happens at most once per turn no matter how many callers ask.
+      // A Notebook that cannot be read leaves the templates working rather than
+      // failing the turn — the same best-effort it always had.
+      //
+      // WHY A LIST COMMAND WANTS IT AT ALL, given /form and /template answer
+      // from PCIT's two files: because the practice's own written procedure
+      // outranks a published list about the same service. A dozen referrals go
+      // by email with this practice's own form and address, and the tree will
+      // happily answer those with somebody else's — "district nurse" is
+      // Islington's service on the tree and RP ACN 2022 here. It is one
+      // database read, no model and no tokens, and it is the step that stops
+      // the command being the one path that talks somebody out of their own
+      // practice's process.
+      let notebookRead = null;
+      const notebook = async () => {
+        if (notebookRead) return notebookRead;
+        try {
+          notebookRead = await fullNotebookContext();
+        } catch (e) {
+          console.warn('[agent] notebook unavailable:', String(e).slice(0, 160));
+          notebookRead = [];
+        }
+        return notebookRead;
+      };
+
       // What the reader saw, as text, for the log: the bands above the card and
       // the card itself. A band is part of the answer, not decoration around
       // it, and a log that omitted it would not show what was on screen.
@@ -449,9 +485,10 @@ export async function POST(request) {
             // model — and the card names the list it came from. The ordering
             // lives in lib/templates/lookup-command.mjs so both doors to the
             // same judgement cannot drift apart, and so it can be tested.
+            const pages = await notebook();
             commandAnswer = command === 'referralForm'
-              ? formCommandAnswer({ query: question, pages: notebookPages })
-              : templateCommandAnswer({ query: question, pages: notebookPages });
+              ? formCommandAnswer({ query: question, pages })
+              : templateCommandAnswer({ query: question, pages });
           } else {
             // A long /accurx is decomposed on the same call, exactly as an
             // ordinary message is. A short one is not, so "/accurx pt has a sore
@@ -611,13 +648,10 @@ export async function POST(request) {
         //
         // Best-effort: a Notebook that cannot be read leaves the templates
         // working rather than failing the turn. The prompt says so, and the
-        // model falls back to the shapes it can still fill.
-        let notebookPages = [];
-        try {
-          notebookPages = await fullNotebookContext();
-        } catch (e) {
-          console.warn('[agent] notebook unavailable:', String(e).slice(0, 160));
-        }
+        // model falls back to the shapes it can still fill. Read through the
+        // memoised `notebook()` declared at the top of this stream, so a turn
+        // that already loaded it for a list command does not load it twice.
+        const notebookPages = await notebook();
         const notebookText = notebookPages.length ? notebookCatalogue(notebookPages) : '';
 
         let templateAnswer = null;
