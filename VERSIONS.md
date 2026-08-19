@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.11.0` | 2026-08-19 | feat | `82db504` | feat: search the lists by what was asked for, and cross between them |
+| `5.10.0` | 2026-08-19 | feat | `20f09bb` | feat: the disc wears the mode, and the mode stays put |
+| `5.9.1` | 2026-08-18 | docs | `5b01421` | docs: record 5.9.0 in the versions table |
 | `5.9.0` | 2026-08-18 | feat | `c870817` | feat: AccurX is offered again, in the list and the "/" menu |
 | `5.8.5` | 2026-08-18 | docs | `2643d01` | docs: record 5.8.4 in the versions table |
 | `5.8.4` | 2026-08-18 | style | `2b3f15c` | style: the modes open from the search icon |
