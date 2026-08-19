@@ -307,7 +307,14 @@ clickable sources they can open in-browser.
   the build status and the capture date only that document can give — and the page
   specifications **second**, which answer with the page, the template carrying it,
   the launcher that opens it (the F12 button) and, where PCIT wrote one, the line
-  saying what the page records. Naming a template answers with its whole page
+  saying what the page records. **The heading comes with it**: PCIT nest their
+  lists, so "Injections" is not a page — it is an entry on the *Treatment Room*
+  page of OneTemplate NonPrescriber — and the card gives the whole route (press
+  this launcher, open that template, then that page) rather than a template name
+  to go scrolling through. The contract card gets the same treatment: the page in
+  its brackets ("OneTemplate NonPrescriber (Treatment Room page)") is resolved
+  against the page lists and the card shows what is on that page, so the reader
+  can see the thing they came to record before they open anything. Naming a template answers with its whole page
   list. **The page card carries no status and no contract area**, because a page
   list says what exists, not whether the work is paid for or how far a build has
   got — claiming either from the wrong document is exactly the blur this splits

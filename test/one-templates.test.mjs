@@ -5,6 +5,7 @@ import {
 } from '../lib/referrals/one-templates.mjs';
 import { templatePageAnswer } from '../lib/templates/template-pages.mjs';
 import { templateCommandAnswer } from '../lib/templates/lookup-command.mjs';
+import { contractReasonedAnswer, splitTemplateName } from '../lib/templates/contracts.mjs';
 
 const flat = (card) => JSON.stringify(card);
 
@@ -149,4 +150,63 @@ test('the page lookup is still PCIT only', () => {
   const card = flat(templateCommandAnswer({ query: 'wound care' }));
   assert.doesNotMatch(card, /Referral Tree/);
   assert.doesNotMatch(card, /From the Notebook/);
+});
+
+/* --------------------------------------------------- where to find it */
+
+// The complaint this answers: being handed a template name and left to scroll.
+// PCIT nest their lists — "Injections" is not a page, it is an entry on the
+// Treatment Room page — and the card has to say so or the reader is no better
+// off than with the template name alone.
+test('an entry names the page it is on, not just the template', () => {
+  const found = findTemplatePages('injections');
+  assert.equal(found.matches[0].page, 'Injections');
+  assert.equal(found.matches[0].heading, 'Treatment Room');
+  assert.equal(found.matches[0].template, 'OneTemplate NonPrescriber');
+
+  const card = templatePageAnswer('injections');
+  assert.match(card.subtitle, /Treatment Room page of OneTemplate NonPrescriber/);
+  const where = card.blocks.find((b) => b.type === 'fields');
+  assert.equal(where.title, 'Where to find it');
+  assert.deepEqual(where.items.slice(0, 4).map((i) => [i.label, i.value]), [
+    ['Press', 'OneLauncher NonPrescriber'],
+    ['Then open', 'OneTemplate NonPrescriber'],
+    ['The page', 'Treatment Room'],
+    ['On that page', 'Injections'],
+  ]);
+  assert.match(flat(card), /then the Treatment Room page/);
+});
+
+test('a page of its own says so rather than inventing a heading', () => {
+  const card = templatePageAnswer('firearms request');
+  assert.match(card.subtitle, /^A page on OneTemplate Admin/);
+  const where = card.blocks.find((b) => b.type === 'fields');
+  assert.deepEqual(where.items.slice(0, 3).map((i) => i.value),
+    ['OneLauncher Admin', 'OneTemplate Admin', 'Firearm Requests']);
+  assert.doesNotMatch(flat(card), /On that page/);
+});
+
+// The contract card names a template with the page in brackets. That bracket is
+// now resolved against the page specifications, so the reader is told the
+// launcher, the page and what is on it.
+test('a contract card says where on the template, and what is listed there', () => {
+  const card = contractReasonedAnswer({
+    template: 'OneTemplate NonPrescriber (Treatment Room page)',
+    why: 'B12 injection is a nurse-administered injection in the treatment room.',
+  });
+  const where = card.blocks.find((b) => b.type === 'fields' && /Where to find it/.test(b.title || ''));
+  assert.ok(where, 'the card does not say where on the template');
+  assert.deepEqual(where.items.map((i) => i.value),
+    ['OneLauncher NonPrescriber', 'OneTemplate NonPrescriber', 'Treatment Room']);
+  const listed = card.blocks.find((b) => b.type === 'bullets' && /Listed on the Treatment Room page/.test(b.title || ''));
+  assert.ok(listed.items.includes('Injections'), 'the entries on that page are missing');
+});
+
+test('a template or page PCIT do not list says nothing rather than guessing', () => {
+  const card = contractReasonedAnswer({ template: 'NEL Housebound Winter Vacs (Nonsense page)' });
+  assert.ok(!card.blocks.some((b) => /Where to find it/.test(b.title || '')));
+  assert.deepEqual(splitTemplateName('OneTemplate NonPrescriber (Wound Care page)'),
+    { template: 'OneTemplate NonPrescriber', page: 'Wound Care' });
+  assert.deepEqual(splitTemplateName('NEL Housebound Winter Vacs'),
+    { template: 'NEL Housebound Winter Vacs', page: '' });
 });

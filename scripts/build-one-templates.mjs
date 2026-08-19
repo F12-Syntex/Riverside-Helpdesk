@@ -20,10 +20,17 @@
 //
 // HOW THEY ARE READ. Word stores a paragraph's text in <w:t> runs and its
 // formatting beside it, so the paragraphs are walked in document order and each
-// is tagged with two facts that matter: whether it is bold or underlined (PCIT
-// use both for the headings that name a template or a group) and whether it is
-// a list item. Nothing is inferred from indentation or spacing, which these
-// four documents do not use consistently.
+// is tagged with three facts that matter: whether it is bold or underlined
+// (PCIT use both for the headings that name a template or a group), whether it
+// is a list item, and its list LEVEL. Nothing is inferred from indentation or
+// spacing, which these four documents do not use consistently.
+//
+// THE LEVEL IS WHAT MAKES AN ANSWER FINDABLE. PCIT nest their lists: level 0 is
+// a page of the template, level 1 is what is on that page. "Injections" is not a
+// page — it is an entry on the Treatment Room page of OneTemplate NonPrescriber
+// — and being told the template alone leaves a reader opening it and scrolling.
+// So a level-1 line carries the level-0 line above it as its heading, and the
+// card can say where to find it rather than only which template it is in.
 //
 // THE HEADINGS ARE MAPPED BY HAND, ON PURPOSE. Every bold/underlined heading in
 // every document is listed in SOURCES below, against the template or group it
@@ -150,7 +157,13 @@ async function paragraphs(file) {
         .replace(/&quot;/g, '"').replace(/&apos;/g, "'"),
     ).replace(IMAGE_ANCHOR, '').trim();
     if (!text) continue;
-    out.push({ text, strong: chunk.includes('<w:b/>') || chunk.includes('<w:u '), list: chunk.includes('<w:numPr>') });
+    const level = /<w:ilvl w:val="(\d+)"/.exec(chunk);
+    out.push({
+      text,
+      strong: chunk.includes('<w:b/>') || chunk.includes('<w:u '),
+      list: chunk.includes('<w:numPr>'),
+      level: level ? Number(level[1]) : -1,
+    });
   }
   return out;
 }
@@ -210,6 +223,7 @@ async function main() {
     const seen = new Set();
     let current = [];        // the templates lines are being filed against
     let group = '';          // the group heading in force, if any
+    let heading = '';        // the page a nested line sits on
     let namesOnly = false;   // under "More OneTemplates": a list of template names
 
     for (const para of paras) {
@@ -229,8 +243,10 @@ async function main() {
         if (rule.templates) {
           current = rule.templates.map((t) => record(t, source.document));
           group = rule.group || '';
+          heading = '';
         } else if (rule.group) {
           group = rule.group;
+          heading = '';
         }
         continue;
       }
@@ -250,13 +266,14 @@ async function main() {
         // naming a template switches to it, and anything after it belongs to
         // that template rather than to the one before the heading.
         const named = byName(para.text);
-        if (named) { current = [record(named, source.document)]; group = ''; continue; }
+        if (named) { current = [record(named, source.document)]; group = ''; heading = ''; continue; }
         // A name PCIT list without a page list of their own. Recorded as a
         // template with no pages, which is what the document actually says —
         // better than filing its name under whatever came before it.
         if (/^one\b/i.test(para.text)) {
           current = [record({ name: para.text, launcher: '', audience: '' }, source.document)];
           group = '';
+          heading = '';
           continue;
         }
         // A line under a named template that starts mid-sentence is PCIT saying
@@ -270,7 +287,28 @@ async function main() {
 
       if (!current.length) continue;
       const { name, detail } = splitEntry(para.text);
-      for (const row of current) row.pages.push({ name, detail, group, document: source.document });
+
+      // Level 0 is a page; deeper is something ON that page, which keeps the
+      // page as its heading. A level-0 line named after the template itself is
+      // the document repeating its own title, so its children hang off nothing.
+      if (para.level <= 0) {
+        heading = key(name) === key(current[0].name) ? '' : name;
+        for (const row of current) row.pages.push({ name, detail, heading: '', group, document: source.document });
+        continue;
+      }
+
+      // A nested line that starts mid-sentence is describing the page above it,
+      // not naming an entry on it ("shows all contract elements that are
+      // relevant to your patient"). It becomes that page's description.
+      if (/^[a-z]/.test(para.text) && heading) {
+        for (const row of current) {
+          const page = [...row.pages].reverse().find((p) => p.name === heading && !p.heading);
+          if (page && !page.detail) page.detail = para.text;
+        }
+        continue;
+      }
+
+      for (const row of current) row.pages.push({ name, detail, heading, group, document: source.document });
     }
 
     for (const heading of Object.keys(source.headings)) {
@@ -287,16 +325,18 @@ async function main() {
   for (const row of templates.values()) {
     const merged = new Map();
     for (const page of row.pages) {
-      const k = key(page.name);
-      // A page named after its own template is the document repeating its
-      // heading ("One Template Coding" under Coding Resources), not a page.
-      if (!k || k === key(row.name)) continue;
+      // Keyed on the heading too: "Vaccinations" is a page of its own AND an
+      // entry on the OneProcedure list, and they are two different places to
+      // look.
+      const k = `${key(page.heading)}>${key(page.name)}`;
+      if (!key(page.name) || key(page.name) === key(row.name)) continue;
       const prev = merged.get(k);
       if (!prev) { merged.set(k, { ...page, documents: [page.document] }); continue; }
       if (!prev.documents.includes(page.document)) prev.documents.push(page.document);
       if (page.name.length > prev.name.length) prev.name = page.name;
       if (!prev.detail && page.detail) prev.detail = page.detail;
       if (!prev.group && page.group) prev.group = page.group;
+      if (!prev.heading && page.heading) prev.heading = page.heading;
     }
     row.pages = [...merged.values()].map(({ document, ...page }) => page);
   }
