@@ -6,17 +6,18 @@ import { findContracts } from '../lib/referrals/nel-contracts.mjs';
 import { formCommandAnswer, templateCommandAnswer } from '../lib/templates/lookup-command.mjs';
 import { MODES, isMode, modeIcon } from '../lib/commands.mjs';
 
-// Two things are guarded here, and both are about a reader who asked in English
-// rather than in list-speak.
+// Two things are guarded here.
 //
 // One: the words that did the asking must not count towards the bar an answer
 // has to clear. Both lookups raise that bar with every word typed, which is what
 // stops a weak match becoming a confident wrong form — and it was counting
-// "which", "do I use" and "template" as though they named something.
+// "which", "do I use" and "template" as though they named something, so "which
+// template for ADHD" was answered "no contract by that name".
 //
-// Two: a command names the list to search FIRST, not the list to refuse. The
-// report that produced this file was "retinal screening template — no contract
-// by that name", when the referral tree has the form and always did.
+// Two: each command has ONE document and reads nothing else. Referral form is
+// PCIT's "NEL Referral Tree introduction & document list (EMIS Web)"; Contract
+// template is PCIT's "NEL Local Contract Specifications". Not the practice's
+// Notebook, not each other's document, and no model.
 
 /* ------------------------------------------------- the asking, separated */
 
@@ -75,58 +76,80 @@ test('a form named outright is still one form, not a shortlist of two', () => {
   assert.ok(forms.matches.length >= 2);
 });
 
-/* ------------------------------------------------------ crossing the two */
+/* ------------------------------------------------- one document each */
 
+// Referral form reads PCIT's "NEL Referral Tree introduction & document list
+// (EMIS Web)". Contract template reads PCIT's "NEL Local Contract
+// Specifications". Neither reads the practice's Notebook, neither reads the
+// other's document, and neither calls a model — so a miss is reported as a
+// miss, on a card naming the document that was searched and the day it was
+// captured.
+
+const NL = String.fromCharCode(10);
+const sourceOf = (card) => JSON.stringify(card.source || []);
 const leadNote = (card) => (card.blocks[0] && card.blocks[0].type === 'note' ? card.blocks[0].text : '');
 
-test('/template answers from the referral tree when no contract has the name', () => {
-  const card = templateCommandAnswer({ query: 'retinal screening template' });
-  assert.match(JSON.stringify(card), /retinal-eye screening/);
-  assert.match(leadNote(card), /No NEL contract by that name/);
-  assert.match(leadNote(card), /form to open in EMIS/);
+test('Referral form answers only out of the NEL Referral Tree', () => {
+  for (const query of ['suspected skin cancer', 'tongue tie', 'printer toner', '']) {
+    const card = formCommandAnswer({ query });
+    assert.match(sourceOf(card), /NEL Referral Tree introduction & document list \(EMIS Web\)/,
+      `"${query}" did not name the referral tree`);
+    assert.doesNotMatch(sourceOf(card), /Local Contract Specifications/);
+  }
 });
 
-test('/form answers from the contract list when the tree has nothing', () => {
-  const card = formCommandAnswer({ query: 'housebound winter vacs' });
-  assert.match(JSON.stringify(card), /Housebound Check and Winter Vaccination/);
-  assert.match(leadNote(card), /Nothing on the NEL Referral Tree matches/);
-  assert.match(leadNote(card), /not a referral form/);
+test('Contract template answers only out of the NEL Local Contract Specifications', () => {
+  for (const query of ['simple wound care', 'adhd shared pathway', 'printer toner', '']) {
+    const card = templateCommandAnswer({ query });
+    assert.match(sourceOf(card), /NEL Local Contract Specifications/,
+      `"${query}" did not name the contract specifications`);
+    assert.doesNotMatch(sourceOf(card), /Referral Tree/);
+  }
 });
 
-test('a list that answers outright is not crossed and says nothing about the other', () => {
-  assert.equal(leadNote(formCommandAnswer({ query: 'suspected skin cancer' })), '');
-  assert.equal(leadNote(templateCommandAnswer({ query: 'simple wound care' })), '');
+test('a document that has nothing says so, and does not try the other one', () => {
+  // "Retinal screening" is on the referral tree and is not a contract; "wound
+  // care" is a contract and is not on the tree. Each command reports its own
+  // document's miss rather than answering out of the other's.
+  const template = templateCommandAnswer({ query: 'retinal screening' });
+  assert.match(template.title, /no contract by that name/);
+  assert.doesNotMatch(JSON.stringify(template), /retinal-eye screening/);
+
+  const form = formCommandAnswer({ query: 'housebound winter vacs' });
+  assert.match(form.title, /no form by that name/);
+  assert.doesNotMatch(JSON.stringify(form), /Housebound Check and Winter Vaccination/);
 });
 
-test('/template never answers out of the Notebook', () => {
-  // A page the practice wrote about diabetic eye screening came back under
-  // Template, headed "From the Notebook", for a question about which EMIS
-  // template records a contract. /template answers from PCIT's Sitrep, then
-  // from the referral tree, and from nothing else.
-  const pages = [{
-    docTitle: 'Diabetic eye screening referral',
-    text: '- Screening referrals go by email to a local service',
-  }];
-  const card = templateCommandAnswer({ query: 'diabetic eye screening', pages });
-  assert.doesNotMatch(String(card.subtitle || ''), /Notebook/);
-  assert.match(leadNote(card), /No NEL contract by that name/);
-  assert.match(JSON.stringify(card), /Referral Tree/);
+test('neither command reads the practice Notebook', () => {
+  // Contract template returned a page the practice wrote about diabetic eye
+  // screening, headed "From the Notebook", for a question about which EMIS
+  // template records a contract. Referral form did the same with the
+  // emailed-referrals page. Pages are passed here and must be ignored.
+  const pages = [
+    { docTitle: 'Diabetic eye screening referral', text: '- Screening referrals go by email' },
+    { docTitle: 'Referrals sent by email', text: ['These go by email:', '- District nurse'].join(NL) },
+  ];
+  const template = templateCommandAnswer({ query: 'diabetic eye screening', pages });
+  assert.doesNotMatch(JSON.stringify(template), /Notebook/);
+  assert.match(sourceOf(template), /NEL Local Contract Specifications/);
+
+  const form = formCommandAnswer({ query: 'district nurse', pages });
+  assert.doesNotMatch(JSON.stringify(form), /Notebook/);
+  assert.match(sourceOf(form), /NEL Referral Tree introduction/);
 });
 
-test('this practice own row beats another borough row on the other list', () => {
-  // The tree has a phlebotomy form for Waltham Forest and none for City &
-  // Hackney; the contract list has this practice's own phlebotomy row.
-  const card = formCommandAnswer({ query: 'phlebotomy' });
-  assert.match(leadNote(card), /Nothing on the NEL Referral Tree matches/);
-  assert.doesNotMatch(card.title, /not on this practice/);
+test('the card that says nothing was found names what was searched', () => {
+  assert.match(leadNote(formCommandAnswer({ query: 'printer toner' })),
+    /NEL Referral Tree introduction & document list \(EMIS Web\)/);
+  assert.match(leadNote(formCommandAnswer({ query: 'printer toner' })), /this document and no other/);
+  assert.match(leadNote(templateCommandAnswer({ query: 'printer toner' })),
+    /NEL Local Contract Specifications/);
+  assert.match(leadNote(templateCommandAnswer({ query: 'printer toner' })), /this document and no other/);
 });
 
-test('a query neither list has still ends at a card that says so', () => {
-  assert.match(formCommandAnswer({ query: 'printer toner' }).title, /no form by that name/);
-  assert.match(templateCommandAnswer({ query: 'printer toner' }).title, /no contract by that name/);
-  // And an empty query cannot reach either list.
+test('an empty query cannot reach either document', () => {
   assert.match(formCommandAnswer({ query: '' }).title, /no form by that name/);
-  assert.match(templateCommandAnswer({ query: '' }).title, /no contract by that name/);
+  assert.match(templateCommandAnswer({ query: '   ' }).title, /no contract by that name/);
 });
 
 /* ------------------------------------------------------- the mode picker */

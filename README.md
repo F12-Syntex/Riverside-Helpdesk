@@ -171,8 +171,11 @@ clickable sources they can open in-browser.
   Waltham Forest and nothing in the text says so.
 - **Which EMIS template records a contract is answered with the date it was true
   on.** PCIT name a contract one way and the template that records it another, and
-  there are 42 of them (`lib/referrals/nel-contracts.data.json`, from the PCCIF
-  mobilisation Sitrep). So "which template for the ADHD shared pathway" gets the
+  there are 42 of them — the **NEL Local Contract Specifications**
+  (`lib/referrals/nel-contracts.data.json`, the table lifted out of PCIT's PCCIF
+  mobilisation Sitrep; cards name the specifications, which is what staff would
+  recognise, not the bulletin). So "which template for the ADHD shared pathway"
+  gets the
   template name verbatim, to copy. The build status beside it is the part that
   rots — it came off a **daily** bulletin which says of itself that the position
   changes through the week — so every card leads with **"as at 28 July 2026"**, a
@@ -260,39 +263,24 @@ clickable sources they can open in-browser.
   ADHD" is four words about one, and the three that name nothing put the bar at
   200 for the one real answer, worth 108, so the card said no contract had that
   name. `lib/referrals/ask.mjs` drops the asking words ("which", "do I use",
-  "please") and the words naming the list itself ("form", "template",
+  "please") and the words naming the document itself ("form", "template",
   "referral") before either list is searched or judged. It never drops anything
   clinical, and it can only lower the bar, so a query that found its row before
   still finds it.
-- **A command answers from its own documents and from nothing else.**
-  `/template` answers from PCIT's contract Sitrep — "NEL PCCIF Contract
-  Mobilisation, Previous Day Sitrep", 42 specifications captured 28 July 2026,
-  in `lib/referrals/nel-contracts.data.json` — and, on a miss, from the referral
-  tree. It does **not** read the Notebook, and it used to: a page the practice
-  wrote about diabetic eye screening came back under **Template**, headed "From
-  the Notebook", for a question asking which EMIS template records a contract.
-  The practice's own material outranking a published list is right on the routed
-  path, where the assistant decided what the question was; it is wrong when the
-  reader has just named the document they want searched. `/form` keeps exactly
-  one practice page — the emailed-referrals page, which is this practice's own
-  referral process and the thing `/form` was asked about.
-- **A miss on one list is offered to the other before it is reported as a miss.**
-  A reader at the desk does not know which of the two Primary Care IT lists the
-  words in their head belong to: "retinal screening template" was answered "no
-  contract by that name", which was true and useless — the referral tree has
-  "NEL diabetes retinal-eye screening", which is plainly what was wanted. The
-  command says which list to search **first**, not which list to refuse
-  (`lib/templates/lookup-command.mjs`). Crossing over is still a lookup, never a
-  model, and the card **leads with a line naming the list it came from**, because
-  a template name is not a form to open. A row of this practice's own on the
-  other list also beats another borough's row on this one.
-- **A command answers from one of the two lists or says it cannot.** Neither ever
-  falls through to prose. `/form fit note` says neither list has a form by that
-  name, names what it searched and how old it is, and points at asking without
-  the command — which is the path that also checks the practice's own notes. A model writing
-  plausibly about a form that is not on PCIT's list is the exact failure typing
-  the command is meant to rule out. Asking in ordinary words is unchanged and
-  still goes through the router, where falling through to prose is right.
+- **One document each, named in the mode.** `lib/templates/lookup-command.mjs`
+  is the whole scope of both commands and states it once:
+  **Referral form** reads Primary Care IT's *NEL Referral Tree introduction &
+  document list (EMIS Web)*, and **Contract template** reads Primary Care IT's
+  *NEL Local Contract Specifications*. Neither reads the practice's Notebook,
+  neither falls through to the other's document, and neither calls a model. A
+  miss is reported as a miss, on a card that names the document searched and the
+  day it was captured. The modes are named for their documents rather than for
+  the thing being looked for — "Form" and "Template" told a reader nothing about
+  where an answer would come from, and both were quietly reading more than they
+  said: Contract template answered out of the Notebook, Referral form out of the
+  practice's emailed-referrals page. A referral question asked in **ordinary
+  words** still reads the practice's own material first, exactly as it always
+  did — that is the router's path, and it is where the Notebook belongs.
 - **`/accurx` answers both halves of an AccurX request on one card**
   (`lib/templates/accurx.mjs`): where the patient goes, and the reason line to
   copy into what gets booked. Reception reads the request once and needs both,

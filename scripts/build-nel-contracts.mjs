@@ -193,6 +193,11 @@ async function main() {
 
   const data = {
     source: 'PCIT NEL PCCIF Contract Mobilisation — Previous Day Sitrep',
+    // WHAT THE CARDS CALL IT. The Sitrep is the bulletin this table was lifted
+    // out of; the table itself is the NEL Local Contract Specifications, and
+    // that is the name staff would recognise and the name every card names. The
+    // bulletin is still recorded above, because that is where it came from.
+    document: 'NEL Local Contract Specifications',
     publisher: 'Primary Care IT',
     // The Sitrep's own date. Everything below is true as at this day and the card
     // says so before it says anything else.

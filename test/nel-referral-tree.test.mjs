@@ -5,8 +5,9 @@ import {
   isConfident, nelTree, rankForms,
 } from '../lib/referrals/nel-tree.mjs';
 import {
-  nelFormNotFound, nelReferralFormAnswer, referralAnswer, referralFormCommandAnswer,
+  nelFormNotFound, nelReferralFormAnswer, referralAnswer,
 } from '../lib/templates/referrals.mjs';
+import { formCommandAnswer } from '../lib/templates/lookup-command.mjs';
 import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
 import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
 
@@ -222,7 +223,7 @@ test('the card names the form verbatim and offers it to copy', () => {
   // The five steps are the document's, shown rather than described.
   assert.equal(card.blocks.find((b) => b.type === 'steps').items.length, 5);
   // And the card says how old the list is.
-  assert.deepEqual(card.source, ['NEL Referral Tree (Primary Care IT), as of 18 June 2026']);
+  assert.deepEqual(card.source, ['NEL Referral Tree introduction & document list (EMIS Web) — Primary Care IT, as at 18 June 2026']);
 });
 
 test('a shortlist card lists every match verbatim', () => {
@@ -272,9 +273,10 @@ test('a miss on /form is answered by the tree, not by prose', () => {
   assert.match(card.title, /no form by that name/);
   assert.match(card.subtitle, /City & Hackney/);
   // It says which list it searched, and how old that list is.
-  assert.deepEqual(card.source, ['NEL Referral Tree (Primary Care IT), as of 18 June 2026']);
-  // And points at the path that DOES check the practice's own notes.
-  assert.match(JSON.stringify(card.blocks), /without the command/);
+  assert.deepEqual(card.source, ['NEL Referral Tree introduction & document list (EMIS Web) — Primary Care IT, as at 18 June 2026']);
+  // And points at the path that DOES check the practice's own notes: asking in
+  // ordinary words, which is the only path that reads them now.
+  assert.match(JSON.stringify(card.blocks), /ask in ordinary words/);
 });
 
 /* -------------------------------------------------------- the precedence */
@@ -403,30 +405,34 @@ test('every found form says the practice may email it instead', () => {
   }
 });
 
-/* --------------------------------------------- the order /form decides in */
+/* ------------------------------------------ the scope Referral form has */
 
-// /form says "search the tree", and the tree will answer a referral this
-// practice sends by email with somebody else's form: "district nurse" is
-// Islington's service, while this practice emails RP ACN 2022. A command must
-// not be the one path that talks staff out of their own practice's process.
-test('/form puts the practice’s own emailed route first', () => {
+// ONE DOCUMENT. Choosing Referral form searches PCIT's "NEL Referral Tree
+// introduction & document list (EMIS Web)" and searches nothing else — not the
+// practice's Notebook, not the contract specifications, and no model. It used to
+// put the practice's own emailed-referrals page first, on the argument that the
+// tree answers "district nurse" with Islington's service while this practice
+// emails RP ACN 2022. That argument still holds for a referral question asked in
+// ordinary words, and referralAnswer still acts on it; a command that names a
+// document must answer from that document.
+test('the command reads the tree and not the practice pages', () => {
   const pages = [{
     docTitle: 'Referrals sent by email',
-    text: 'These go by email rather than e-RS:\n- District nurse\n- Wheelchair service\n',
+    text: ['These go by email rather than e-RS:', '- District nurse', '- Wheelchair service'].join('\n'),
   }];
-  const card = referralFormCommandAnswer({ query: 'district nurse', pages });
-  assert.match(card.subtitle, /email/i);
-  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
+  const card = formCommandAnswer({ query: 'district nurse', pages });
+  assert.match(JSON.stringify(card.source), /Referral Tree introduction/);
+  assert.doesNotMatch(String(card.subtitle || ''), /email/i);
 });
 
-test('/form falls to the tree when the practice lists nothing', () => {
-  const card = referralFormCommandAnswer({ query: 'tongue tie', pages: [] });
+test('the tree answers when it has the form', () => {
+  const card = formCommandAnswer({ query: 'tongue tie' });
   assert.equal(card.title, 'Tongue Tie Referral Form 2021 CH');
 });
 
 test('/form never returns null, so the turn can never reach prose', () => {
   for (const q of ['printer toner', '', '   ']) {
-    const card = referralFormCommandAnswer({ query: q, pages: [] });
+    const card = formCommandAnswer({ query: q });
     assert.ok(card && card.title, `"${q}" produced no card`);
     assert.match(JSON.stringify(card.source), /Referral Tree/);
   }

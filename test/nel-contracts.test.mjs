@@ -160,7 +160,7 @@ test('the ranking works over invented rows', () => {
 test('every card leads with the date the Sitrep was written', () => {
   const card = contractTemplateAnswer('simple wound care');
   assert.match(card.subtitle, /as at 28 July 2026/);
-  assert.deepEqual(card.source, ['PCIT NEL PCCIF Contract Mobilisation Sitrep, 28 July 2026']);
+  assert.deepEqual(card.source, ['NEL Local Contract Specifications (Primary Care IT), as at 28 July 2026']);
 });
 
 // Each template gets its own row, each separately copyable, because each one is
@@ -246,7 +246,7 @@ test('a miss on /template is answered by the Sitrep, not by prose', () => {
   assert.match(card.title, /printer toner/);
   assert.match(card.title, /no contract by that name/);
   assert.match(card.subtitle, /28 July 2026/);
-  assert.deepEqual(card.source, ['PCIT NEL PCCIF Contract Mobilisation Sitrep, 28 July 2026']);
+  assert.deepEqual(card.source, ['NEL Local Contract Specifications (Primary Care IT), as at 28 July 2026']);
   // It says what the list does and does not cover, and that it is dated.
   assert.match(JSON.stringify(card.blocks), /not every service the practice runs/);
   assert.match(JSON.stringify(card.blocks), /support@primarycareit\.co\.uk/);
@@ -297,14 +297,15 @@ test('the practice’s own page beats PCIT’s row about the same contract', () 
   }];
   const card = contractTemplateAnswer('simple wound care', { pages });
   assert.match(JSON.stringify(card), /treatment room/);
-  assert.ok(!/Sitrep/.test(JSON.stringify(card.source)), 'the Sitrep answered over the practice');
+  assert.ok(!/Local Contract Specifications/.test(JSON.stringify(card.source)),
+    'the specifications answered over the practice');
 });
 
 test('an unrelated Notebook page does not hijack a contract question', () => {
   const pages = [{ docTitle: 'Notebook: Reception / Car parking', text: 'Staff permits.' }];
   const card = contractTemplateAnswer('simple wound care', { pages });
   assert.equal(card.title, 'Simple Wound Care Service');
-  assert.match(JSON.stringify(card.source), /Sitrep/);
+  assert.match(JSON.stringify(card.source), /Local Contract Specifications/);
 });
 
 /* ------------------------------------- a shortlist somebody can read */

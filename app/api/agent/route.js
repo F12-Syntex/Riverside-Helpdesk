@@ -405,8 +405,10 @@ export async function POST(request) {
         // The two list lookups. Named here rather than described as "filling in
         // the card", which is what the model-filled commands do and would be a
         // lie about a path no model is on.
-        const lookingUp = command === 'referralForm' ? 'the NEL Referral Tree'
-          : command === 'contractTemplate' ? 'Primary Care IT’s contract list'
+        // NAMED, NOT DESCRIBED. The reader chose a document; the line that says
+        // what is happening says which document, in the words printed on it.
+        const lookingUp = command === 'referralForm' ? 'the NEL Referral Tree (EMIS Web)'
+          : command === 'contractTemplate' ? 'the NEL Local Contract Specifications'
             : '';
         const said = searching ? 'Searching the practice documents'
           : lookingUp ? `Looking it up in ${lookingUp}`
@@ -477,18 +479,17 @@ export async function POST(request) {
             // that is not on PCIT's list is precisely what typing /form is meant
             // to rule out.
             //
-            // A MISS TRIES THE OTHER LIST FIRST. The command says which list to
-            // search first, not which list to refuse: "retinal screening
-            // template" is a referral form asked for in contract words, and the
-            // card that said no contract had that name was true and useless.
-            // The crossing is still a lookup — the other published list, not a
-            // model — and the card names the list it came from. The ordering
-            // lives in lib/templates/lookup-command.mjs so both doors to the
-            // same judgement cannot drift apart, and so it can be tested.
-            const pages = await notebook();
+            // ONE DOCUMENT EACH, AND NO NOTEBOOK. Referral form reads PCIT's
+            // "NEL Referral Tree introduction & document list (EMIS Web)";
+            // Contract template reads PCIT's NEL Local Contract Specifications.
+            // Neither reads the practice's own pages, and neither falls through
+            // to the other's document: a miss is a miss, named as one, with the
+            // document and its capture date on the card. The scope is stated
+            // once, in lib/templates/lookup-command.mjs, so it cannot become a
+            // property of whichever branch a caller happened to reach.
             commandAnswer = command === 'referralForm'
-              ? formCommandAnswer({ query: question, pages })
-              : templateCommandAnswer({ query: question, pages });
+              ? formCommandAnswer({ query: question })
+              : templateCommandAnswer({ query: question });
           } else {
             // A long /accurx is decomposed on the same call, exactly as an
             // ordinary message is. A short one is not, so "/accurx pt has a sore

@@ -14,6 +14,13 @@ import { MODES } from '../../lib/commands.mjs';
  * rather than from a model. A feature nobody can see is a feature
  * nobody uses.
  *
+ * EACH MODE IS NAMED FOR THE DOCUMENT IT READS. "Form" and "Template" were
+ * the names of the things being looked for, which said nothing about where the
+ * answer would come from; they are "Referral form — Search the NEL Referral
+ * Tree (EMIS Web)" and "Contract template — Search the NEL Local Contract
+ * Specifications" now, because the row in this list is the only place a reader
+ * is told what a mode will read before they use it.
+ *
  * IT IS THE SEARCH ICON, AND IT IS A BUTTON. The magnifying glass has
  * always sat at the left of the field. It was decoration: a picture of
  * what the box does, costing 48px of the box and doing nothing when it
@@ -37,7 +44,8 @@ import { MODES } from '../../lib/commands.mjs';
  * the question somebody glancing at the field actually has. The same
  * glyph is drawn beside the name in the list, so what was chosen and
  * what is showing are visibly the same thing. The placeholder still says
- * it in words, and the transcript carries "Asked as Form" afterwards.
+ * it in words, and the transcript carries "Asked as Referral form"
+ * afterwards.
  *
  * IT STILL SAYS WHEN IT IS BUSY. The spinner that used to replace the
  * glass while a message is screened for patient details replaces it
@@ -63,8 +71,8 @@ import { MODES } from '../../lib/commands.mjs';
  *     armed mode is legible at a glance rather than inferrable;
  *   - the placeholder is that mode's own wording;
  *   - Escape in the field drops the mode in one key (QaApp.onInputKey);
- *   - every message sent under one is labelled "Asked as Form" in the
- *     transcript, so a wrong answer says how it was asked for.
+ *   - every message sent under one is labelled "Asked as Referral form" in
+ *     the transcript, so a wrong answer says how it was asked for.
  *
  * TYPING STILL WINS. A command typed into the box overrides whatever is
  * armed here: it is the more specific thing the reader just did.

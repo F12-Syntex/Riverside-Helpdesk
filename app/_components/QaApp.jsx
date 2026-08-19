@@ -782,7 +782,7 @@ class RiversidePracticeQA extends React.Component {
     // `askedAs` is the kind of answer this question was sent as, and it is
     // recorded because the button erased the only trace there used to be.
     // "/form knee" typed into the box stays in the reader's own message for
-    // ever; choosing Form and typing "knee" leaves "knee", so the one artefact
+    // ever; choosing Referral form and typing "knee" leaves "knee", so the one artefact
     // that would explain a confidently wrong answer had been deleted by moving
     // from typing to a button. Empty for an ordinary question, and for a typed
     // command, which still says so itself.
