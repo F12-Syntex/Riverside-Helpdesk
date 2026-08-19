@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.14.2` | 2026-08-19 | fix | `5685fd1` | fix: the two NEL lists are read only by the modes that name them |
+| `5.14.1` | 2026-08-19 | docs | `cd0eb32` | docs: record 5.14.0 in the versions table |
 | `5.14.0` | 2026-08-19 | feat | `63b9a53` | feat: answer Contract template with the template, not the contract |
 | `5.13.1` | 2026-08-19 | docs | `cd916ad` | docs: record 5.13.0 in the versions table |
 | `5.13.0` | 2026-08-19 | feat | `96faac9` | feat: Contract template works out which contract a task belongs under |
