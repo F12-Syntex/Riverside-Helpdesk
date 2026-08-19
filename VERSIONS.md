@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.11.4` | 2026-08-19 | fix | `9c7bcea` | fix: /template answers from the Sitrep, never from the Notebook |
+| `5.11.3` | 2026-08-19 | docs | `d58d320` | docs: record 5.11.2 in the versions table |
 | `5.11.2` | 2026-08-19 | fix | `afa3a72` | fix: /form threw before it read a word of the query |
 | `5.11.1` | 2026-08-19 | docs | `879ebac` | docs: record 5.10.0 and 5.11.0 in the versions table |
 | `5.11.0` | 2026-08-19 | feat | `82db504` | feat: search the lists by what was asked for, and cross between them |
