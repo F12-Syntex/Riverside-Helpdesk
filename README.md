@@ -267,25 +267,29 @@ clickable sources they can open in-browser.
   "referral") before either list is searched or judged. It never drops anything
   clinical, and it can only lower the bar, so a query that found its row before
   still finds it.
-- **A contract nobody named is still a contract somebody meant.** Reception ask
-  in the words of the job — "B12 injection", "dressing change" — and none of
-  those is written on the specifications, so the string match says no contract by
-  that name while the service that pays for the work sits on the page. So a
-  **miss, and only a miss**, runs a web search on how the task is commissioned in
-  North East London and asks a model to pick one row off the document
-  (`lib/agent/contract-intent.mjs`). The model **picks a row; it never writes
-  one**: the card is rendered from the row exactly as every other contract card
-  is, and the pick is thrown away unless the specification is a row of the
-  document character for character, and the template one of that row's templates.
-  A model that half-remembers "OneTemplate Nurse (B12 page)" produces no page,
-  not a wrong one. The card leads with a line saying the contract was **worked
-  out rather than named**, what page to open, and which pages that was based on.
-  Two more things make it hold up: when the model will not choose, the **names
-  the search itself used** are run back through the document's own matcher —
-  "Wound care service" from the ICB's page reaches "Simple Wound Care Service" —
-  and when nothing on the document covers the task at all, the card names
-  **Primary Care IT's own pages** about it, which is how "B12 injection" ends at
-  their "Injection: B12 Template" article instead of at a shrug.
+- **The answer is a template, and a template holds dozens of things.** Reception
+  ask in the words of the job — "B12 injection", "dressing change", "ear
+  syringing" — and none of those is written on the specifications, because a
+  template is a page set, not a form: the job is *inside* one of them. So a
+  **miss, and only a miss**, runs a web search on how the task is done in North
+  East London and asks a model which of the **37 templates** the document names
+  is the one to open (`lib/agent/contract-intent.mjs`). "B12 injection" comes
+  back as **OneTemplate NonPrescriber (Treatment Room page)**, with what that
+  template records underneath it as the evidence.
+  The model **picks a name; it never writes one**: the pick is thrown away unless
+  the template is on the document character for character, and the contract, if
+  it named one, is one that template actually records — so a half-remembered
+  "OneTemplate Nurse (B12 page)" yields no template rather than a wrong one, and
+  a right template under a wrong contract loses the contract, not the template.
+  "TBC" and "N/A" are how the document says there is no template, so neither is
+  ever offered as one to open. The card leads with the fact that it was **worked
+  out rather than looked up** — open it and check the entry is there — and lists
+  the pages that were read.
+  Two more things make it hold up. When the model will not choose, the **names
+  the search itself used** go back through the document's own matcher, so "Wound
+  care service" off the ICB's page reaches "Simple Wound Care Service" and that
+  row's own template, with no model in the path. And when nothing on the document
+  fits at all, the card names **Primary Care IT's own pages** about the task.
 - **One document each, named in the mode.** `lib/templates/lookup-command.mjs`
   is the whole scope of both commands and states it once:
   **Referral form** reads Primary Care IT's *NEL Referral Tree introduction &

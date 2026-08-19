@@ -58,8 +58,9 @@ import { formCommandAnswer, templateCommandAnswer } from '@/lib/templates/lookup
 import { contractNotFound, contractReasonedAnswer } from '@/lib/templates/contracts.mjs';
 import { findContracts, nelContracts } from '@/lib/referrals/nel-contracts.mjs';
 import {
-  CONTRACT_INTENT_SCHEMA, INTENT_TIMEOUT_MS, contractFromWeb, contractIntentPrompt, contractRoster,
-  pcitPages, resolvePick, searchForContract, sourceLines,
+  CONTRACT_INTENT_SCHEMA, INTENT_TIMEOUT_MS, contractFromWeb, contractIntentPrompt,
+  contractsForTemplate, pcitPages, resolvePick, searchForContract, sourceLines, templateRoster,
+  templatesOf,
 } from '@/lib/agent/contract-intent.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
@@ -544,35 +545,44 @@ export async function POST(request) {
                   temperature: 0,
                   prompt: contractIntentPrompt({
                     asked: question,
-                    roster: contractRoster(contracts),
+                    roster: templateRoster(contracts),
                     web: web && web.ok ? web.summary : '',
                   }),
                 }), INTENT_TIMEOUT_MS);
                 recordUsage({ turnId, role: 'fast', phase: 'contractIntent', model, usage: picked.usage });
-                // THE MODEL FIRST, THEN THE WEB'S OWN WORDS. A model that will
-                // not choose is not the same as a document with nothing on it:
-                // "dressing change" came back as no contract while "Simple
-                // Wound Care Service" sat in the list it had just read, and the
-                // search had returned a page titled "Wound care service — NHS
-                // North East London". So the names the SEARCH used are run back
-                // through the document's own matcher, which is the same string
-                // match the command starts with and answers with a row or with
-                // nothing. Nothing is generated on this path at all.
+                // THE ANSWER IS A TEMPLATE, NOT A CONTRACT. The reader has a
+                // job in front of them and wants to know what to open; a
+                // template is a page set holding dozens of entries, so their
+                // job is INSIDE one of the 37 templates rather than named on
+                // the list of 42 contracts. The model chooses the template; the
+                // contracts it records come off the document and are what let a
+                // reader check the choice.
+                //
+                // A MODEL THAT WILL NOT CHOOSE IS NOT A DOCUMENT WITH NOTHING
+                // ON IT. When the pick is empty or is a name nobody published,
+                // the names the SEARCH used are run back through the document's
+                // own matcher — "Wound care service" off the ICB's page reaches
+                // "Simple Wound Care Service" — and that row's own templates
+                // are the answer, with no model in the path at all.
                 const resolved = resolvePick({ pick: picked.object, contracts })
                   || (() => {
                     const bridged = contractFromWeb({
                       web,
                       lookup: (candidate) => findContracts(candidate),
                     });
-                    return bridged ? {
+                    if (!bridged) return null;
+                    const named = templatesOf(bridged.contract);
+                    if (!named.length) return null;
+                    return {
+                      template: named[0],
+                      records: contractsForTemplate(named[0], contracts),
                       contract: bridged.contract,
-                      template: '',
                       confident: false,
-                      // Composed in code out of two verbatim strings — what the
-                      // web called it, and what the document calls it.
-                      why: `The web names this service "${bridged.named}", which is on the document as `
-                        + `"${bridged.contract.specification}".`,
-                    } : null;
+                      // Composed in code out of verbatim strings — what the web
+                      // called the service, and what the document calls it.
+                      why: `The web names this service "${bridged.named}", which the document records `
+                        + `under "${bridged.contract.specification}".`,
+                    };
                   })();
                 const reasoned = resolved && contractReasonedAnswer({
                   ...resolved,
@@ -582,7 +592,7 @@ export async function POST(request) {
                   type: 'tool-result',
                   id: 'intent',
                   tool: 'search_web',
-                  summary: reasoned ? resolved.contract.specification : 'No contract covers it',
+                  summary: reasoned ? resolved.template : 'No template on the document records this',
                   items: (web && web.results ? web.results : []).slice(0, 4)
                     .map((r) => ({ title: r.title, url: r.url })),
                 });
