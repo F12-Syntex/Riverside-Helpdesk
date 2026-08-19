@@ -302,9 +302,24 @@ test('a referral the Notebook lists beats the tree', () => {
   assert.match(JSON.stringify(card.blocks), /Wheelchair service/);
 });
 
-test('a referral nobody has recorded now reaches the tree', () => {
+// THE TREE IS THE REFERRAL FORM MODE'S DOCUMENT AND NOBODY ELSE'S. It used to
+// be the last step of the ordinary referral card, which meant PCIT's list — a
+// list of what exists in North East London, not of how THIS practice sends
+// anything — answered questions nobody had pointed at it. A question asked in
+// ordinary words is now answered from the practice's own material or not at
+// all, and the honest card names the mode that does search the tree.
+test('a referral nobody has recorded does NOT reach the tree', () => {
   const card = referralAnswer({ question: 'tongue tie referral', name: 'tongue tie', pages: [] });
-  assert.equal(card.title, 'Tongue Tie Referral Form 2021 CH');
+  assert.notEqual(card.title, 'Tongue Tie Referral Form 2021 CH');
+  assert.match(card.subtitle, /Not recorded/);
+  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
+  // The dead end names the way on.
+  assert.match(JSON.stringify(card.blocks), /choose Referral form/);
+});
+
+// The command still reads it, which is the whole point of restricting it.
+test('the same name still answers when Referral form is the one asking', () => {
+  assert.equal(nelReferralFormAnswer('tongue tie').title, 'Tongue Tie Referral Form 2021 CH');
 });
 
 test('a referral nobody has recorded and the tree lacks is still honest', () => {

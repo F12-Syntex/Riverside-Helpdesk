@@ -4,7 +4,7 @@ import {
   PRACTICE_AREAS, buildContractIndex, findContracts, nelContracts, rankContracts,
 } from '../lib/referrals/nel-contracts.mjs';
 import { contractNotFound, contractTemplateAnswer } from '../lib/templates/contracts.mjs';
-import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
+import { commandByName, forcedTemplate, parseCommand } from '../lib/commands.mjs';
 import { SELECTION_SCHEMA, selectionPrompt } from '../lib/templates/route.mjs';
 import { referralAnswer } from '../lib/templates/referrals.mjs';
 
@@ -237,8 +237,14 @@ test('/template is a command, and it claims the contract template', () => {
 
 // Unlike /form's template, this one IS on the router's list as well: "which
 // template records the wound care service" is a sensible thing to ask in words.
-test('the contract template is reachable both by command and by the router', () => {
-  assert.ok(SELECTION_SCHEMA.shape.template._def.values.includes('contractTemplate'));
+// THE SPECIFICATIONS ARE THE CONTRACT TEMPLATE MODE'S DOCUMENT AND NOBODY
+// ELSE'S. The router used to be able to choose contractTemplate for a question
+// asked in ordinary words, which meant PCIT's list answered a question nobody
+// had pointed at it. It is a mode's document now: reachable by arming Contract
+// template (or typing /template) and by nothing else.
+test('the contract template is reachable by the command and NOT by the router', () => {
+  assert.ok(!SELECTION_SCHEMA.shape.template._def.values.includes('contractTemplate'));
+  assert.equal(commandByName('template').template, 'contractTemplate');
 });
 
 test('a miss on /template is answered by the Sitrep, not by prose', () => {
@@ -262,20 +268,21 @@ test('a miss on /template is answered by the Sitrep, not by prose', () => {
 // Notebook page the reader wanted. The prompt has to say so out loud, because
 // nothing in the code can catch it — by the time a template is chosen, the
 // choice has been made.
-test('the prompt keeps the Notebook ahead of the contract lookup', () => {
+test('the prompt puts both NEL lists out of the router\'s reach', () => {
   const prompt = selectionPrompt({ question: 'anything', notebook: 'Some page\n' });
-  assert.match(prompt, /THE NOTEBOOK OUTRANKS IT/);
+  assert.match(prompt, /THE TWO NEL LISTS ARE NOT ON THIS PATH/);
   // The examples matter more than the rule: they are what a model actually
   // pattern-matches against.
-  assert.match(prompt, /How do we do wound care/);
+  assert.match(prompt, /Which template for the ADHD shared pathway/);
   assert.match(prompt, /choose "notebook"/);
-  assert.match(prompt, /Naming a NEL contract is not enough on its own/);
+  // And it must not still be offering the template it can no longer render.
+  assert.doesNotMatch(prompt, /"contractTemplate"/);
 });
 
 // The other half of the same guard, on the referral side. That one IS enforced
 // in code — referralAnswer reads the Notebook before it reaches the tree — so
 // this pins the behaviour rather than the wording.
-test('the Notebook still beats the tree in code, not just in the prompt', () => {
+test('the practice\'s own page answers, and the tree is not read at all', () => {
   const pages = [{
     docTitle: 'Referrals sent by email',
     text: 'These go by email rather than e-RS:\n- Wheelchair service\n',

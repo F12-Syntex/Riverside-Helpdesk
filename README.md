@@ -148,14 +148,19 @@ clickable sources they can open in-browser.
   found and cites the page. A referral the practice adds to its own page is
   answerable the moment they save it. A recorded e-RS pairing still wins over
   list membership, being the more specific fact.
-- **Which form to open comes from PCIT's NEL Referral Tree, verbatim.** The
-  practice's own material answers how a referral is *sent*; the tree answers
-  *which form*. It is the protocol inside EMIS Web holding every referral form in
-  North East London — 533 of them, of which 247 are on a City & Hackney practice's
-  tree — and it has no search beyond Ctrl+F, so "which form for suspected skin
-  cancer" was previously answered "not recorded in the practice's notes" for four
-  hundred-odd forms the practice can in fact see. Now the model names what is
-  being referred for and **code looks the form up** in
+- **Which form to open comes from PCIT's NEL Referral Tree, verbatim — in the
+  Referral form mode, and nowhere else.** The practice's own material answers how
+  a referral is *sent*; the tree answers *which form*. It is the protocol inside
+  EMIS Web holding every referral form in North East London — 533 of them, of
+  which 247 are on a City & Hackney practice's tree — and it has no search beyond
+  Ctrl+F. **Ordinary Q&A does not read it**: the referral card answers from the
+  practice's own recorded pairings and its emailed-referrals page, and where those
+  have nothing it says "not recorded in the practice's notes" and names the mode
+  that searches the tree. That is a real cost, stated plainly — the tree is what
+  turned four hundred-odd such cards into the name of a form — and it buys one
+  thing: an answer is either from a document the reader chose or from the
+  practice's own writing, never from a document that was merely to hand. In the
+  mode, code looks the form up in
   `lib/referrals/nel-tree.data.json`, generated from PCIT's published article by
   `npm run data:nel-tree`. The form name is shown exactly as the tree lists it, and
   offered to copy, because it is a string somebody retypes into Ctrl+F and a name
@@ -163,15 +168,16 @@ clickable sources they can open in-browser.
   than resolved to one — "dermatology" genuinely is three forms. A form ticked for
   another borough only is *named as another borough's*, which beats silence: the
   alternative is somebody scrolling a menu for a button that was never there. The
-  practice's own recorded pairings and Notebook page both still win, and a form
-  the tree has nothing for still gets the honest "not recorded" card.
+  A form the tree has nothing for gets the honest "no form by that name" card,
+  naming the document searched and the day it was captured.
   **Availability is read by tick column, not by counting ticks** — the flattened
   text of the source PDF gives ticks in order but not which of the five columns
   each sat in, so "Wider determinants of health questionnaire NEL" is Newham and
   Waltham Forest and nothing in the text says so.
 - **Which EMIS template records a contract is answered with the date it was true
-  on.** PCIT name a contract one way and the template that records it another, and
-  there are 42 of them — the **NEL Local Contract Specifications**
+  on — in the Contract template mode, and nowhere else.** PCIT name a contract one
+  way and the template that records it another, and there are 42 of them — the
+  **NEL Local Contract Specifications**
   (`lib/referrals/nel-contracts.data.json`, the table lifted out of PCIT's PCCIF
   mobilisation Sitrep; cards name the specifications, which is what staff would
   recognise, not the bulletin). So "which template for the ADHD shared pathway"
@@ -304,8 +310,19 @@ clickable sources they can open in-browser.
   where an answer would come from, and both were quietly reading more than they
   said: Contract template answered out of the Notebook, Referral form out of the
   practice's emailed-referrals page. A referral question asked in **ordinary
-  words** still reads the practice's own material first, exactly as it always
-  did — that is the router's path, and it is where the Notebook belongs.
+  words** reads the practice's own material and *only* the practice's own
+  material — that is the router's path, and it is where the Notebook belongs.
+- **And the scope runs both ways.** "One document each" says what the two modes
+  may read; it now also says who may read those two documents — **nobody but
+  those two modes**. Ordinary Q&A used to have its own way into both: the
+  referral card fell through to the tree when the practice had recorded nothing,
+  and the router could choose a `contractTemplate` template of its own that
+  searched the specifications. Both are gone — the template is out of the
+  selection schema entirely, so the model cannot ask for a document it is not
+  allowed to read, and the prompt says which mode does hold it. The two lists
+  answer North East London's questions (what forms exist, what the ICB
+  commissions), which are not this practice's questions, and blending the two
+  behind an ordinary question is what made an answer impossible to place.
 - **`/accurx` answers both halves of an AccurX request on one card**
   (`lib/templates/accurx.mjs`): where the patient goes, and the reason line to
   copy into what gets booked. Reception reads the request once and needs both,
