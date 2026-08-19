@@ -296,6 +296,23 @@ clickable sources they can open in-browser.
   care service" off the ICB's page reaches "Simple Wound Care Service" and that
   row's own template, with no model in the path. And when nothing on the document
   fits at all, the card names **Primary Care IT's own pages** about the task.
+- **What is ON each template, from PCIT's four OneTemplate page specifications**
+  (`lib/referrals/one-templates.data.json`, built by `npm run data:one-templates`
+  from the documents in `rag/sources/`). The contract list answers for 42
+  commissioned specifications and nothing else, which is a small part of a day: a
+  firearms request, an ambulance, a loaned crutch, a sick note, a smear, hay fever
+  — none is a contract, all are pages Primary Care IT publish, and every one of
+  them used to come back "no contract by that name". Contract template now
+  searches the contract list **first** — where a contract answers, the reader gets
+  the build status and the capture date only that document can give — and the page
+  specifications **second**, which answer with the page, the template carrying it,
+  the launcher that opens it (the F12 button) and, where PCIT wrote one, the line
+  saying what the page records. Naming a template answers with its whole page
+  list. **The page card carries no status and no contract area**, because a page
+  list says what exists, not whether the work is paid for or how far a build has
+  got — claiming either from the wrong document is exactly the blur this splits
+  apart. 12 templates, 320 pages, and the same date-stamped honesty as the
+  contract card.
 - **One document each, named in the mode.** `lib/templates/lookup-command.mjs`
   is the whole scope of both commands and states it once:
   **Referral form** reads Primary Care IT's *NEL Referral Tree introduction &

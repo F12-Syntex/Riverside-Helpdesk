@@ -1,0 +1,2754 @@
+{
+ "source": "Primary Care IT OneTemplate page specifications",
+ "publisher": "Primary Care IT",
+ "clinicalSystem": "EMIS Web",
+ "capturedAt": "2026-08-19",
+ "documents": [
+  {
+   "title": "EMIS OneTemplate Pages (DT003 v1.1)",
+   "file": "PCIT DT003 EMIS OneTemplate Pages v1.1.docx"
+  },
+  {
+   "title": "Admin Templates",
+   "file": "PCIT OneTemplate Admin Templates.docx"
+  },
+  {
+   "title": "Non Prescriber Templates",
+   "file": "PCIT OneTemplate Non Prescriber Templates.docx"
+  },
+  {
+   "title": "ARRS Templates",
+   "file": "PCIT OneTemplate ARRS Templates.docx"
+  }
+ ],
+ "templates": [
+  {
+   "name": "One Launcher Suspected Cancer",
+   "launcher": "",
+   "audience": "",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)"
+   ],
+   "pages": []
+  },
+  {
+   "name": "One Launcher Treatment Room",
+   "launcher": "",
+   "audience": "",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)"
+   ],
+   "pages": []
+  },
+  {
+   "name": "OneCalculator",
+   "launcher": "OneLauncher",
+   "audience": "Anyone scoring a patient",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Non Prescriber Templates"
+   ],
+   "pages": [
+    {
+     "name": "Code various scores including QRisk3",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneContract",
+   "launcher": "OneLauncher",
+   "audience": "Anyone recording contract activity",
+   "about": "",
+   "documents": [
+    "Non Prescriber Templates",
+    "ARRS Templates"
+   ],
+   "pages": []
+  },
+  {
+   "name": "OneProcedure",
+   "launcher": "OneLauncher",
+   "audience": "Anyone running a procedure clinic",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Non Prescriber Templates",
+    "ARRS Templates"
+   ],
+   "pages": [
+    {
+     "name": "Minor Surgery",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates",
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Spirometry",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates",
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Non Oral Contraception",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates",
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Vaccinations",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates",
+      "ARRS Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTemplate Acute",
+   "launcher": "OneLauncher Prescriber or NonPrescriber",
+   "audience": "Anyone in an acute consultation",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Non Prescriber Templates"
+   ],
+   "pages": [
+    {
+     "name": "Quick Generic",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Cough",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Indigestion",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Abdo pain",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "D & V",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Mental Health",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Asthma Exacerbation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Earache",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Minor Injury",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Back pain",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Eyes",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Rash",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Breathlessness",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Emergency Contraception",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Sore Throat",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Chest Pain",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Febrile Child",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "TATT",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "COPD Exacerbation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Hay fever",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "UTIs",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "This will show common reasons for acute consultations.",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTemplate Additional Roles",
+   "launcher": "OneLauncher Additional Roles",
+   "audience": "Additional roles team (ARRS)",
+   "about": "to be used by your additional roles team members to record activity and information",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Non Prescriber Templates",
+    "ARRS Templates"
+   ],
+   "pages": [
+    {
+     "name": "Introduction",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Record Chaperone",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Living in a care home",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Proactive Care",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Consent and Shared Decision Making",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Everything",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Religion and gender",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Multimorbidity",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Ethnic Origin",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Who is involved with the patient",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Frailty assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "eFI",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "FRAT tool",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Consent",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Care planning",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Social information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Carer information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Patient Priorities",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Function assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Lifestyle",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Personal Care",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Skin Assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Bone Health",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Nutritional status",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Driving Status",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Technical Review",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Therapeutic Review",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Signposting",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Agreed goals and Responsibilities",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Common tasks and scores",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "PHQ9",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "GAD7",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Quick Referral to ARRS",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Falls and Frailty",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "FRAT score",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Falls assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Mobility",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Osteoporosis Assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Care Homes",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Care home visit information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "People Involved",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Who is involved in the care",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Carer Details",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Ethnicity",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Sexuality and relationships",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Religion",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Vision",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Hearing",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Language",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Communication needs",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Driving information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Social Isolation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Activities of daily living",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Housing",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Alcohol screening",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Substance misuse",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Pets",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Social prescribing",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Referral and Signposting",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "ONS4",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Depression/Anxiety",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "PHQ9 and GAD score",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Mental Health",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "DIALOG treatment and satisfaction score",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Core Assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Safeguarding",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Care Plan",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Dietician",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Treatment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "General History",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Dietetic examination, formulation, management and plans",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Pharm Review",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Frailty and falls assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Height/weight/BMI",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Physical activity",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Medication review",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Pharm Reconciliation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Reconciliation and actions",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "DOACs",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "CHA2DS2-VASc calculator",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "BP",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "CrCl (Cockcroft Gault Formula)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Diet",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "DOAC Therapy",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Estimated Creatinine Clearance",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "DOAC counselling",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "ACB medications",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Physiotherapy",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Appointment details",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Body Maps",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Referrals",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Interventions",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "CGA",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Brief CGA assessment",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "About the patient",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Formulation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Palliative care",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Resuscitation discussions and decisions",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Follow Up",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Includes care plans for",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Asthma (Child, Adult, AIR and MART.",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "COPD Dementia",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Diabetes",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    },
+    {
+     "name": "Learning Disabilties",
+     "detail": "",
+     "group": "Care plans",
+     "documents": [
+      "ARRS Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTemplate Admin",
+   "launcher": "OneLauncher Admin",
+   "audience": "Admin and reception",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Admin Templates"
+   ],
+   "pages": [
+    {
+     "name": "Important Information",
+     "detail": "to record administrative information about the patient. It can also be used as a new patient registration page.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Firearm Requests",
+     "detail": "to update information about a firearms certificate request and also highlights if anything in the patient record that means a more detailed review should be taken.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Results",
+     "detail": "record when results are given out.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Searches Admin (Contract & CQC)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Home Visit Request",
+     "detail": "to record a home visit request and who has requested it.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "SAR Admin",
+     "detail": "Record request and step by step process.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Ambulance",
+     "detail": "document that an ambulance has been requested.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Loan Equipment",
+     "detail": "to record what equipment has been loaned out and if a deposit taken, then to record when returned.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Sick Note Requests",
+     "detail": "to record information needed for a sick note.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Appointments Collections",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Payment Admin",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Travel Admin",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Communications",
+     "detail": "Document, letter or email received.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Prescription Admin",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "UTIs",
+     "detail": "Record details for when a urine specimen is dropped off for dipping.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Deaths",
+     "detail": "Record the death of a patient (when a relative calls to report)",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Prevalence Improvement Admin",
+     "detail": "if doing work on the prevalence search and actions taken.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Vaccinations",
+     "detail": "Recording declines and if given by other healthcare providers.",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Searches Admin (Contract)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Weekly/monthly searches",
+     "detail": "action taken from the GPcontract 004B searches for monitoring and actioning.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Searches Admin (CQC)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Appointments",
+     "detail": "Record an appointment has been booked (Mainly for QOF data)",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Collection",
+     "detail": "document that a FIT test has been collected from admin",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Payment admin general",
+     "detail": "record when payment have been taken.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Payment admin Insurance",
+     "detail": "to record information about a life assurance form.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Payment admin Letter Request",
+     "detail": "to record information about a letter request.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Payment admin Medical Report",
+     "detail": "an audit trail for where the medical report is in the system.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Payment admin Solicitors Report",
+     "detail": "an audit trail for where the solicitors report is in the system.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "To check if patients are eligible for the following vaccinations.",
+     "detail": "",
+     "group": "Eligibility checkers",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Pneumo",
+     "detail": "",
+     "group": "Eligibility checkers",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Shingles",
+     "detail": "",
+     "group": "Eligibility checkers",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Flu",
+     "detail": "",
+     "group": "Eligibility checkers",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "RSV",
+     "detail": "",
+     "group": "Eligibility checkers",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "NHS Healthcheck",
+     "detail": "",
+     "group": "Eligibility checkers",
+     "documents": [
+      "Admin Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTemplate Coding",
+   "launcher": "OneLauncher Admin",
+   "audience": "Anyone coding a letter",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Admin Templates"
+   ],
+   "pages": [
+    {
+     "name": "Details",
+     "detail": "record letters received - 111 outcomes - Cancelled or DNA Appointments",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Observations",
+     "detail": "Record Smoking - Alcohol - height - Weight - BMI (Good for New Registrations)",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Actions",
+     "detail": "actions required of the practice.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Allergies and adverse Reactions",
+     "detail": "to record food and substance allergies and food intolerance.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Cancer",
+     "detail": "To record outcome of fast track referral letters and cancer treatment being received.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Screening",
+     "detail": "to record screening programmes relevant to the patient ie. Smears and diabetic retinopathy etc.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Procedures",
+     "detail": "coding Operations and results of procedures",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Common Scores",
+     "detail": "coding letters for PHQ & GAD scores",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Results",
+     "detail": "Coding letters for PSA, Scans and X-Rays etc.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Fracture",
+     "detail": "Coding letters for fractures.",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "QoF and IIF",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "To record data for QoF and IIF, unlike other templates not all sections will be hidden by rules that check the registers, this is so relevant pre-diagnosis coded can be added",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Find a slot to book an appointment.",
+     "detail": "",
+     "group": "Shortcuts",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Send a task.",
+     "detail": "",
+     "group": "Shortcuts",
+     "documents": [
+      "Admin Templates"
+     ]
+    },
+    {
+     "name": "Contact us",
+     "detail": "",
+     "group": "Shortcuts",
+     "documents": [
+      "Admin Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTemplate NonPrescriber",
+   "launcher": "OneLauncher NonPrescriber",
+   "audience": "Nursing team",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Non Prescriber Templates"
+   ],
+   "pages": [
+    {
+     "name": "Introduction",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Delivery",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Mental Health",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Relevant Contracts",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Dementia",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "NDH/Pre-diabetes",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Contracts Outstanding",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Depression",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "New Baby 6 Week Check",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Blood Pressure",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Diabetes",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Non-Delivery Outcome",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Smoking Status",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Eating Disorders",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Oral Contraceptive",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Epilepsy",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Other Contraceptive",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Asthma",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Gout",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Osteoporosis",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Atrial Fibrillation",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Heart Failure/LVSD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "PAD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Cancer",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "High Risk Drugs",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Palliative Care",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "CHD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Homeless or Refugee",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Post Natal 6 Week Check",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Child Vaccinations",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Hypertension",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Pregnant",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "CKD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Hypersplenism",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Registration Admin",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Coeliac",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Learning Disabilities",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Rheumatoid Arthritis",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "COPD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Menopause & GSM",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Stroke",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Treatment Room",
+     "detail": "",
+     "group": "NonPrescriber extras",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "General Information",
+     "detail": "",
+     "group": "NonPrescriber extras",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Vaccinations > 5y",
+     "detail": "",
+     "group": "NonPrescriber extras",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Wound Care",
+     "detail": "",
+     "group": "NonPrescriber extras",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)",
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "If the patient has a Reasonable Adjustment Flag it can be reviewed here",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "To record Proactive Care",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Record Chaperone",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Record Living in a care home",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Record Medication review",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "General Info",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Record consent for Summary Care Record",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Record named Doctor",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Communication Needs",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Occupation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Ethnic Origin",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Housebound information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "To record if any 3rd party information has been entered.",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Social information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Carer details",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Lifestyle & Exam",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Height/Weight/BMI",
+     "detail": "Referral to weight management",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Diet and Exercice",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Smoking information",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Allergies",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Risk Scores",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Alcohol screening",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Audt-C and referral on if needed",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "shows all contract elements that are relevant to your patient (whether they have been completed or not), this includes QOF, IIF, and Local contracts that are disease related",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "shows all contract elements that are outstanding for the current contract year, including QOF, IIF and Local contracts (if PCIT have been commissioned to do this for your) that are disease related.",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "This will update all templates.",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "ABPI",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "All relevant long-term conditions that are relevant to the patient are then listed.",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Learning Disabilities (if patient on the LD register)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "NHS Health check (if patient is eligible)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Bloods",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Urine Dip",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Injections",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Smear details and smear taken template (if relevant to the patient)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Vaginal examination (if relevant to the patient)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Vaginal pessary (if relevant to the patient)",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Ambulatory or home BP reading",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "ECG",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Ear Irrigation",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Samples taken",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Urine pregnancy test",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Vaccinations",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Disease review panels",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "If the patient has COPD, Diabetes or Stroke it will give you an overview of their history, when diagnosed etc.",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Launch care plans",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Includes care plans for",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Asthma (Child, Adult, AIR and MART.",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Care Homes",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "COPD Dementia",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Learning Disabilties",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "PSD",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    },
+    {
+     "name": "Several PSDs that can be used in practice",
+     "detail": "",
+     "group": "Resources page",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTemplate Prescriber",
+   "launcher": "OneLauncher Prescriber",
+   "audience": "Prescribing clinicians",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)"
+   ],
+   "pages": [
+    {
+     "name": "Introduction",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Delivery",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Mental Health",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Relevant Contracts",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Dementia",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "NDH/Pre-diabetes",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Contract Outstanding",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Depression",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "New Baby 6 Week Check",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Blood Pressure",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Diabetes",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Non-Delivery Outcome",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Smoking Status",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Eating Disorders",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Oral Contraceptive",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Epilepsy",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Other Contraceptive",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Asthma",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Gout",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Osteoporosis",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Atrial Fibrillation",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Heart Failure/LVSD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "PAD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Cancer",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "High Risk Drugs",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Palliative Care",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "CHD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Homeless or Refugee",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Post Natal 6 Week Check",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Child Vaccinations",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Hypertension",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Pregnant",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "CKD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Hypersplenism",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Registration Admin",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Coeliac",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Learning Disabilities",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Rheumatoid Arthritis",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "COPD",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Menopause & GSM",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    },
+    {
+     "name": "Stroke",
+     "detail": "",
+     "group": "Long-term conditions",
+     "documents": [
+      "EMIS OneTemplate Pages (DT003 v1.1)"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "OneTravel",
+   "launcher": "OneLauncher",
+   "audience": "Travel clinic",
+   "about": "",
+   "documents": [
+    "EMIS OneTemplate Pages (DT003 v1.1)",
+    "Non Prescriber Templates"
+   ],
+   "pages": [
+    {
+     "name": "Travel clinic vaccinations",
+     "detail": "",
+     "group": "",
+     "documents": [
+      "Non Prescriber Templates"
+     ]
+    }
+   ]
+  }
+ ]
+}

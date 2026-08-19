@@ -415,7 +415,7 @@ export async function POST(request) {
         // NAMED, NOT DESCRIBED. The reader chose a document; the line that says
         // what is happening says which document, in the words printed on it.
         const lookingUp = command === 'referralForm' ? 'the NEL Referral Tree (EMIS Web)'
-          : command === 'contractTemplate' ? 'the NEL Local Contract Specifications'
+          : command === 'contractTemplate' ? 'Primary Care IT’s contract and OneTemplate documents'
             : '';
         const said = searching ? 'Searching the practice documents'
           : lookingUp ? `Looking it up in ${lookingUp}`
@@ -519,6 +519,8 @@ export async function POST(request) {
             //
             // A failure of either call leaves the honest "no contract by that
             // name" card exactly as it was.
+            // Both of PCIT's documents came back with nothing — the contract
+            // list has no such row and no template carries a page by that name.
             const missed = command === 'contractTemplate'
               && /no contract by that name/i.test(String(commandAnswer?.title || ''));
             if (missed && apiKey) {

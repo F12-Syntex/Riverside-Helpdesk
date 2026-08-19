@@ -142,9 +142,15 @@ test('the card that says nothing was found names what was searched', () => {
   assert.match(leadNote(formCommandAnswer({ query: 'printer toner' })),
     /NEL Referral Tree introduction & document list \(EMIS Web\)/);
   assert.match(leadNote(formCommandAnswer({ query: 'printer toner' })), /this document and no other/);
+  // Contract template reads two of Primary Care IT's documents now — the
+  // contract list and the OneTemplate page specifications — so its card names
+  // both, and still says that nothing outside PCIT was searched.
   assert.match(leadNote(templateCommandAnswer({ query: 'printer toner' })),
     /NEL Local Contract Specifications/);
-  assert.match(leadNote(templateCommandAnswer({ query: 'printer toner' })), /this document and no other/);
+  assert.match(leadNote(templateCommandAnswer({ query: 'printer toner' })),
+    /OneTemplate page specifications/);
+  assert.match(leadNote(templateCommandAnswer({ query: 'printer toner' })),
+    /Primary Care IT’s documents and no others/);
 });
 
 test('an empty query cannot reach either document', () => {
