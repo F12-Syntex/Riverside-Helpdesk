@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.12.0` | 2026-08-19 | feat | `444cff5` | feat: one document per mode, and each mode named for its document |
+| `5.11.5` | 2026-08-19 | docs | `7dd0826` | docs: record 5.11.4 in the versions table |
 | `5.11.4` | 2026-08-19 | fix | `9c7bcea` | fix: /template answers from the Sitrep, never from the Notebook |
 | `5.11.3` | 2026-08-19 | docs | `d58d320` | docs: record 5.11.2 in the versions table |
 | `5.11.2` | 2026-08-19 | fix | `afa3a72` | fix: /form threw before it read a word of the query |
