@@ -98,6 +98,21 @@ test('a list that answers outright is not crossed and says nothing about the oth
   assert.equal(leadNote(templateCommandAnswer({ query: 'simple wound care' })), '');
 });
 
+test('/template never answers out of the Notebook', () => {
+  // A page the practice wrote about diabetic eye screening came back under
+  // Template, headed "From the Notebook", for a question about which EMIS
+  // template records a contract. /template answers from PCIT's Sitrep, then
+  // from the referral tree, and from nothing else.
+  const pages = [{
+    docTitle: 'Diabetic eye screening referral',
+    text: '- Screening referrals go by email to a local service',
+  }];
+  const card = templateCommandAnswer({ query: 'diabetic eye screening', pages });
+  assert.doesNotMatch(String(card.subtitle || ''), /Notebook/);
+  assert.match(leadNote(card), /No NEL contract by that name/);
+  assert.match(JSON.stringify(card), /Referral Tree/);
+});
+
 test('this practice own row beats another borough row on the other list', () => {
   // The tree has a phlebotomy form for Waltham Forest and none for City &
   // Hackney; the contract list has this practice's own phlebotomy row.

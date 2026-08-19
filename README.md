@@ -264,6 +264,18 @@ clickable sources they can open in-browser.
   "referral") before either list is searched or judged. It never drops anything
   clinical, and it can only lower the bar, so a query that found its row before
   still finds it.
+- **A command answers from its own documents and from nothing else.**
+  `/template` answers from PCIT's contract Sitrep — "NEL PCCIF Contract
+  Mobilisation, Previous Day Sitrep", 42 specifications captured 28 July 2026,
+  in `lib/referrals/nel-contracts.data.json` — and, on a miss, from the referral
+  tree. It does **not** read the Notebook, and it used to: a page the practice
+  wrote about diabetic eye screening came back under **Template**, headed "From
+  the Notebook", for a question asking which EMIS template records a contract.
+  The practice's own material outranking a published list is right on the routed
+  path, where the assistant decided what the question was; it is wrong when the
+  reader has just named the document they want searched. `/form` keeps exactly
+  one practice page — the emailed-referrals page, which is this practice's own
+  referral process and the thing `/form` was asked about.
 - **A miss on one list is offered to the other before it is reported as a miss.**
   A reader at the desk does not know which of the two Primary Care IT lists the
   words in their head belong to: "retinal screening template" was answered "no
