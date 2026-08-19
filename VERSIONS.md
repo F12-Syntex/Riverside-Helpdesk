@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.14.0` | 2026-08-19 | feat | `63b9a53` | feat: answer Contract template with the template, not the contract |
+| `5.13.1` | 2026-08-19 | docs | `cd916ad` | docs: record 5.13.0 in the versions table |
 | `5.13.0` | 2026-08-19 | feat | `96faac9` | feat: Contract template works out which contract a task belongs under |
 | `5.12.1` | 2026-08-19 | docs | `0f8060e` | docs: record 5.12.0 in the versions table |
 | `5.12.0` | 2026-08-19 | feat | `444cff5` | feat: one document per mode, and each mode named for its document |
