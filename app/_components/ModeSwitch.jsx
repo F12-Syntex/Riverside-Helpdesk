@@ -29,11 +29,15 @@ import { MODES } from '../../lib/commands.mjs';
  * way — which is its own kind of movement. A disc that is already part
  * of the field costs nothing when it is not being used.
  *
- * THE ARMED MODE IS THE DISC'S COLOUR. Filled blue with a white glass
- * whenever anything other than Q&A is armed, quiet grey otherwise, so a
- * field about to answer out of the referral list cannot look like a
- * field about to answer a question. The placeholder says the same thing
- * in words, and the transcript carries "Asked as Form" afterwards.
+ * THE ARMED MODE IS THE DISC'S COLOUR AND THE DISC'S GLYPH. Filled blue
+ * whenever anything other than Q&A is armed, quiet grey otherwise — and
+ * the glass is replaced by that mode's own icon: a sheet of lines for
+ * Form, two sheets for Template, a speech bubble for AccurX, a book for
+ * Practice. The colour said A mode is on; the glyph says WHICH, which is
+ * the question somebody glancing at the field actually has. The same
+ * glyph is drawn beside the name in the list, so what was chosen and
+ * what is showing are visibly the same thing. The placeholder still says
+ * it in words, and the transcript carries "Asked as Form" afterwards.
  *
  * IT STILL SAYS WHEN IT IS BUSY. The spinner that used to replace the
  * glass while a message is screened for patient details replaces it
@@ -41,15 +45,26 @@ import { MODES } from '../../lib/commands.mjs';
  * field that looks dead for even half a second has somebody pressing
  * Enter again.
  *
- * IT LASTS ONE MESSAGE. The mode goes back to Q&A as soon as the
- * question is sent, and that is the whole safety of it. A switch that
- * stayed put would be left on the wrong setting by somebody halfway
- * through a phone call. The failure modes are not symmetric: a wrong
- * /form says honestly that the list has no such entry, while a wrong
+ * IT LASTS UNTIL IT IS CHANGED. It used to go back to Q&A the moment a
+ * question was sent, on the argument that a switch left on the wrong
+ * setting is worse than one that has to be set every time. That was the
+ * wrong trade for how the modes are actually used: looking up three
+ * referral forms means three questions, and re-arming the picker between
+ * each one is exactly the friction the picker was added to remove. So
+ * the mode is now kept, and kept across a reload too.
+ *
+ * WHAT PAYS FOR THAT. The failure modes are not symmetric — a wrong
+ * /form says honestly that no list has such an entry, while a wrong
  * /accurx renders a confident triage card, with a destination and an
- * urgency, for a question that was never about a patient. AccurX is on
- * this list — it is the answer the practice reaches for most — so that
- * one-message rule is now load-bearing rather than a precaution.
+ * urgency, for a question that was never about a patient — so a mode
+ * that stays put has to be impossible to miss and trivial to drop:
+ *
+ *   - the disc wears the mode's own icon, not just a colour, so the
+ *     armed mode is legible at a glance rather than inferrable;
+ *   - the placeholder is that mode's own wording;
+ *   - Escape in the field drops the mode in one key (QaApp.onInputKey);
+ *   - every message sent under one is labelled "Asked as Form" in the
+ *     transcript, so a wrong answer says how it was asked for.
  *
  * TYPING STILL WINS. A command typed into the box overrides whatever is
  * armed here: it is the more specific thing the reader just did.
@@ -139,7 +154,7 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
         hover={armed ? 'background:#00437f;' : 'background:#dbe3e7;color:#005eb8;'}>
         {busy
           ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-          : <Svg w={20} sw={2.2}>{Icons.search}</Svg>}
+          : <Svg w={20} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
       </Hover>
 
       {open && (
@@ -166,6 +181,12 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
                     armed one. */}
                 <span style={s('flex:none;display:flex;width:14px;color:#005eb8;')}>
                   {on ? <Svg w={14} sw={3}>{Icons.check}</Svg> : null}
+                </span>
+                {/* The same glyph the disc wears while this mode is armed, so
+                    the picture in the field is the picture that was picked and
+                    not a second thing to learn. */}
+                <span style={s('flex:none;display:flex;color:' + (on ? '#005eb8' : '#6b7f8d') + ';')}>
+                  <Svg w={16} sw={2.1}>{Icons[row.icon] || Icons.search}</Svg>
                 </span>
                 <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
                   <span style={s('font-size:14px;font-weight:700;color:' + (on ? '#005eb8' : '#212b32') + ';')}>

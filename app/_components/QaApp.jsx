@@ -4,7 +4,7 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, matchCommands, modePlaceholder, parseCommand } from '../../lib/commands.mjs';
+import { commandByName, isMode, matchCommands, modePlaceholder, parseCommand } from '../../lib/commands.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -39,6 +39,13 @@ const MAX_IMAGES = 4;
 // Documents dropped onto one question. Reception attaches a letter, sometimes a
 // letter and the form that came with it; more than this is a knowledge-base job.
 const MAX_DOCUMENTS = 4;
+
+// Where the armed mode is kept. The transcript is deliberately NOT kept — it is
+// practice questions typed at a shared reception machine and it is cleared on
+// every load — but the kind of answer the field is set to carries no question
+// and no patient in it, and having to re-arm it after every reload is the
+// friction the picker was added to remove.
+const MODE_KEY = 'riva-mode-v1';
 
 // Whether what is being dragged is a file at all. Dragging selected text or a
 // link over the page must not put the whole window into "drop a document here".
@@ -179,9 +186,13 @@ class RiversidePracticeQA extends React.Component {
       // text" asks it rather than re-picking the command.
       cmdSel: -1,
       // The kind of answer chosen from the disc in the field, as a command
-      // name — '' is Q&A, which is what almost every message is. It lasts ONE
-      // message: see app/_components/ModeSwitch.jsx for why a switch that
-      // stayed put would be a hazard rather than a convenience.
+      // name — '' is Q&A, which is what almost every message is. It LASTS
+      // UNTIL IT IS CHANGED, including across a reload: three referral forms
+      // are three questions, and re-arming the picker between each one is the
+      // friction the picker exists to remove. See app/_components/ModeSwitch.jsx
+      // for what pays for a mode that stays put. Restored in componentDidMount
+      // rather than here, because localStorage does not exist on the server and
+      // the first render has to match the one the server sent.
       mode: '',
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
@@ -221,6 +232,17 @@ class RiversidePracticeQA extends React.Component {
     try {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [] });
+    } catch (e) {}
+    // The kind of answer the field was left on. Read after the first render,
+    // never during it: this component is server-rendered, and a state that
+    // depends on localStorage before hydration is a mismatch.
+    //
+    // `isMode` guards it. What comes back out of storage is a string somebody
+    // could have edited, and a mode name reaches the server as the template to
+    // force — a name no command claims is dropped rather than carried.
+    try {
+      const kept = localStorage.getItem(MODE_KEY) || '';
+      if (kept && isMode(kept)) this.setState({ mode: kept });
     } catch (e) {}
     // Arrived with a question already chosen in ?ask=. It is asked here,
     // through the ordinary path, so a link is a way in rather than a page
@@ -373,11 +395,28 @@ class RiversidePracticeQA extends React.Component {
   // The same choice, made with the button in the field rather than by typing.
   // It sets a mode rather than writing "/form " into the box, so the reader
   // types their question and nothing else — and the box stays readable.
+  //
+  // Every route into or out of a mode goes through here, so there is one place
+  // that writes it down: the picker, Escape in the field, and the Q&A row in
+  // the list, which is how a mode is dropped with the mouse.
   pickMode(name) {
-    this.setState({ mode: name || '' }, () => {
+    const mode = name || '';
+    this.rememberMode(mode);
+    this.setState({ mode }, () => {
       const field = this.inputRef && this.inputRef.current;
       if (field) field.focus();
     });
+  }
+
+  // The armed mode, kept for the next page as well as the next message. Q&A is
+  // stored as the absence of the key rather than as an empty string, so a
+  // browser that has never been in a mode and one that has just left one look
+  // the same on the way back in.
+  rememberMode(mode) {
+    try {
+      if (mode) localStorage.setItem(MODE_KEY, mode);
+      else localStorage.removeItem(MODE_KEY);
+    } catch (e) {}
   }
 
   // Arrow keys move into the list; Enter only takes a number once someone
@@ -391,7 +430,7 @@ class RiversidePracticeQA extends React.Component {
     // Escape backs out of a mode without reaching for the mouse.
     if (e.key === 'Escape' && this.state.mode) {
       e.preventDefault();
-      this.setState({ mode: '' });
+      this.pickMode('');
       return;
     }
     const commands = matchCommands(this.state.input);
@@ -772,10 +811,11 @@ class RiversidePracticeQA extends React.Component {
     // interface. What they typed is on screen the moment they press Enter, with
     // the loading card under it, and a message the screen refuses is taken back
     // off again below.
-    // `mode: ''` is the important one. The kind of answer lasts exactly one
-    // message, so the box cannot be left set to the referral-form list by
-    // somebody who walked away mid-call.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1, mode: '' }, async () => {
+    // `mode` IS NOT CLEARED HERE, and it used to be. The kind of answer lasted
+    // exactly one message; it now lasts until it is changed, because looking
+    // something up is rarely a thing done once — see app/_components/ModeSwitch.jsx
+    // for what makes a mode that stays put safe to leave armed.
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, async () => {
       this.save();
 
       // Only the TYPED message is screened. A dropped document is the reader's

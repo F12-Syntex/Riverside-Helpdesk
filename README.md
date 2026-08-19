@@ -226,12 +226,20 @@ clickable sources they can open in-browser.
   because filing a letter is an everyday answer used by habit. The strip above
   the field carries only the send bar and the "Copied" line, and nothing was
   added to the header or the footer. Typing "/" still works and still wins over
-  the disc, being the more specific thing the reader just did. **The
-  choice lasts exactly one message**: a mode left armed on a shared reception PC
-  would eventually answer an ordinary question out of the referral-form list, and
-  the failure modes are not symmetric — a wrong `/form` says honestly that the
-  list has no such entry, while a wrong `/accurx` renders a confident triage card
-  with a destination and an urgency for a question that was never about a patient.
+  the disc, being the more specific thing the reader just did. **The disc wears
+  the armed mode's own icon** — a sheet of lines for Form, two sheets for
+  Template, a speech bubble for AccurX, a book for Practice, the magnifying glass
+  for Q&A — and the same glyph is drawn beside each name in the list, so which
+  mode is armed is legible at a glance rather than inferred from the disc turning
+  blue. **The choice lasts until it is changed**, across a reload as well as
+  across a message (`riva-mode-v1`). It used to last exactly one message; three
+  referral forms are three questions, and re-arming the picker between each one
+  was the friction the picker existed to remove. The failure modes are not
+  symmetric — a wrong `/form` says honestly that no list has such an entry, while
+  a wrong `/accurx` renders a confident triage card with a destination and an
+  urgency for a question that was never about a patient — so what pays for a mode
+  that stays put is that it cannot be missed and takes one key to drop: the icon
+  on the disc, that mode's own placeholder wording, and **Escape in the field**.
   A question asked with a mode carries **"Asked as Form"** in the transcript,
   because `/form knee` typed into the box stays in the reader's own words for ever
   and choosing the mode with a button would otherwise leave nothing on screen
@@ -245,10 +253,31 @@ clickable sources they can open in-browser.
   it sits under, which is the direction staff need — the template name is what is
   written on the task, and the specification is what the contract is called in
   every other conversation about it.
-- **A command answers from its own list or says it cannot.** Neither ever falls
-  through to prose. `/form fit note` says the tree has no form by that name, names
-  the list it searched and how old it is, and points at asking without the command
-  — which is the path that also checks the practice's own notes. A model writing
+- **The lists are searched by what was asked for, not by how it was asked.**
+  Both lookups raise the bar every word has to clear as more words are typed —
+  which is what stops one weak token dragging back a confident wrong form — and
+  that rule was counting the words doing the ASKING too. "Which template for
+  ADHD" is four words about one, and the three that name nothing put the bar at
+  200 for the one real answer, worth 108, so the card said no contract had that
+  name. `lib/referrals/ask.mjs` drops the asking words ("which", "do I use",
+  "please") and the words naming the list itself ("form", "template",
+  "referral") before either list is searched or judged. It never drops anything
+  clinical, and it can only lower the bar, so a query that found its row before
+  still finds it.
+- **A miss on one list is offered to the other before it is reported as a miss.**
+  A reader at the desk does not know which of the two Primary Care IT lists the
+  words in their head belong to: "retinal screening template" was answered "no
+  contract by that name", which was true and useless — the referral tree has
+  "NEL diabetes retinal-eye screening", which is plainly what was wanted. The
+  command says which list to search **first**, not which list to refuse
+  (`lib/templates/lookup-command.mjs`). Crossing over is still a lookup, never a
+  model, and the card **leads with a line naming the list it came from**, because
+  a template name is not a form to open. A row of this practice's own on the
+  other list also beats another borough's row on this one.
+- **A command answers from one of the two lists or says it cannot.** Neither ever
+  falls through to prose. `/form fit note` says neither list has a form by that
+  name, names what it searched and how old it is, and points at asking without
+  the command — which is the path that also checks the practice's own notes. A model writing
   plausibly about a form that is not on PCIT's list is the exact failure typing
   the command is meant to rule out. Asking in ordinary words is unchanged and
   still goes through the router, where falling through to prose is right.
