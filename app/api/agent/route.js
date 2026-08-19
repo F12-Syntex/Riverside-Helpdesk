@@ -54,8 +54,7 @@ import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
-import { referralFormCommandAnswer } from '@/lib/templates/referrals.mjs';
-import { contractNotFound, contractTemplateAnswer } from '@/lib/templates/contracts.mjs';
+import { formCommandAnswer, templateCommandAnswer } from '@/lib/templates/lookup-command.mjs';
 import { searchKnowledge } from '@/lib/knowledge';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
@@ -437,18 +436,22 @@ export async function POST(request) {
             // takes to rank a few hundred strings.
             //
             // The reader named the list by typing the command, so a miss is
-            // answered by that list saying it has nothing, NOT by falling through
-            // to prose about it. `nelReferralFormAnswer` and
-            // `contractTemplateAnswer` return null on a miss, which is right on
-            // the routed path where something else answers; here there is nothing
-            // else, and a model writing plausibly about a form that is not on
-            // PCIT's list is precisely what typing /form is meant to rule out.
-            // The ordering lives in lib/templates/referrals.mjs beside
-            // referralAnswer's, so the two doors to the same judgement cannot
-            // drift apart — and so it can be tested.
+            // answered by a published list saying it has nothing, NOT by falling
+            // through to prose about it — a model writing plausibly about a form
+            // that is not on PCIT's list is precisely what typing /form is meant
+            // to rule out.
+            //
+            // A MISS TRIES THE OTHER LIST FIRST. The command says which list to
+            // search first, not which list to refuse: "retinal screening
+            // template" is a referral form asked for in contract words, and the
+            // card that said no contract had that name was true and useless.
+            // The crossing is still a lookup — the other published list, not a
+            // model — and the card names the list it came from. The ordering
+            // lives in lib/templates/lookup-command.mjs so both doors to the
+            // same judgement cannot drift apart, and so it can be tested.
             commandAnswer = command === 'referralForm'
-              ? referralFormCommandAnswer({ query: question, pages: notebookPages })
-              : (contractTemplateAnswer(question) || contractNotFound(question));
+              ? formCommandAnswer({ query: question, pages: notebookPages })
+              : templateCommandAnswer({ query: question, pages: notebookPages });
           } else {
             // A long /accurx is decomposed on the same call, exactly as an
             // ordinary message is. A short one is not, so "/accurx pt has a sore
