@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.16.0` | 2026-08-19 | feat | `42c1df8` | feat: the template answer says which page, not just which template |
+| `5.15.1` | 2026-08-19 | docs | `1f4b6a6` | docs: record 5.15.0 in the versions table |
 | `5.15.0` | 2026-08-19 | feat | `9c6351e` | feat: Contract template knows what is on each template |
 | `5.14.3` | 2026-08-19 | docs | `fe5553c` | docs: record 5.14.2 in the versions table |
 | `5.14.2` | 2026-08-19 | fix | `5685fd1` | fix: the two NEL lists are read only by the modes that name them |
