@@ -517,7 +517,7 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **reasoning** | `ai_model` | Researches the question **and writes every answer**. | `DEFAULT_AI_MODEL = google/gemini-3.5-flash-lite` |
 | **fast** | `ai_model_fast` | Short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
-| **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes and writes the reason line and booking notes. | `OPENROUTER_ACCURX_MODEL` → **fast** |
+| **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes, writes the reason line and booking notes, and says whether the message reports somebody having already dealt with it. | `OPENROUTER_ACCURX_MODEL` → **fast** |
 | **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
 
 **The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
@@ -782,6 +782,19 @@ action" risk.
     Two prompt rules were adopted and then reverted on the strength of single
     passes before that was noticed. The token and latency figures are stable and
     can be read from one pass; the routes cannot.
+- **Earlier contact is a booking answer on the `/accurx` card, never a routing
+  one** (`lib/templates/accurx.mjs`; the rules are `CONTINUITY_RULES` in
+  `lib/templates/writing.mjs`, and the reading returns `seenBefore`). Where the
+  message says somebody has already dealt with this problem, the card adds a
+  panel — who, when, what came of it, and "book with" — under the reason line
+  and shaped like it. The reading is asked for it *after* it has named a
+  destination, and the card builds its routing panel before the panel exists, so
+  it cannot move where the request goes. A "book with" row is offered only when
+  there is an appointment to book (never on a card that means now) and the
+  earlier contact was this practice's; anything else is named as history. The
+  quote goes through `spanWithin` like the routing evidence, and a panel that
+  cannot prove its words keeps the panel and loses the quote. Nothing found
+  renders nothing.
 - **A nurse clinic is a note on the `/accurx` card, never its destination.** The
   practice nurse and the diabetic nurse rank below a doctor, and the patterns
   send anything they do not recognise to a doctor, so their answer would

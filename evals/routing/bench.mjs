@@ -42,7 +42,7 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 import { ACCURX_READ_SCHEMA, accurxReadPrompt } from '../../lib/templates/accurx-route.mjs';
-import { BOOKING_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
+import { BOOKING_RULES, CONTINUITY_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
 
 // .env.local, read the way next reads it, because this runs outside next.
 function loadEnv() {
@@ -97,6 +97,7 @@ async function once(n, expected) {
         notebook: NOTEBOOK,
         reasonRules: REASON_RULES,
         bookingRules: BOOKING_RULES,
+        continuityRules: CONTINUITY_RULES,
       }),
     });
     const u = res.usage || {};

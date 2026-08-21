@@ -364,6 +364,28 @@ clickable sources they can open in-browser.
   the two it is comes from `endsInAnEmergency` in `lib/templates/triage.mjs`,
   next to the branches that produce those cards, so the two cannot drift apart.
   It decomposes a long message and runs the second pass over each request.
+- **`/accurx` also says who to book it with, when the message says somebody has
+  already dealt with it** (`lib/templates/accurx.mjs`, rules in
+  `lib/templates/writing.mjs`). Patients say this themselves and say it in
+  passing — "I saw Dr Okafor about this in July", "the nurse gave me cream last
+  month", "I was told to come back if it did not settle" — and it was going
+  nowhere: the reason line drops it as narrative and the booking notes are about
+  slots. The same problem twice is one consultation continued, and the
+  appointment that helps is the one with the clinician who saw it last. So the
+  card carries a third panel, laid out exactly like the reason line above it:
+  who dealt with it, when, what came of it, and — where there is an appointment
+  to book and it was somebody here — book it back with them. **It never moves
+  the destination**, which is why the reading is asked for it after naming one:
+  continuity is *who*, never *where*. A follow-up about the same knee still goes
+  to the physio; it goes to the physio who saw the knee. The quote is checked
+  with `spanWithin` like every other quote on the card, a panel whose words are
+  not in the message keeps the panel and loses the quote, contact somewhere else
+  (a hospital, a walk-in centre, 111) is named as history rather than as a
+  booking, and the note says outright that this is what the **message** claims —
+  nothing here has read the record. Nothing found renders nothing at all: an
+  empty finding printed as "nothing says this has been dealt with before" is a
+  negative nobody checked, which is the mistake the booking notes already made
+  once.
 - **`/accurx` is read as well as matched** (`lib/templates/accurx-route.mjs`). A
   patient wrote in after a recent miscarriage: severe daily headaches, swelling
   and pain in **both** legs, shoulder pain, dizziness, bloods awaited. It came

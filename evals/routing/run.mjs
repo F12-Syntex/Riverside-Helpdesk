@@ -29,7 +29,7 @@ import { ACCURX_READ_SCHEMA, accurxReadPrompt, readingVerdict } from '../../lib/
 import { renderCommand } from '../../lib/templates/route.mjs';
 import { triagePatientAnswer } from '../../lib/templates/triage.mjs';
 import { answerToText } from '../../lib/questions/flatten.mjs';
-import { BOOKING_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
+import { BOOKING_RULES, CONTINUITY_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
 import { safetyScan } from '../../lib/safety/scan.mjs';
 import { looksMultiIntent } from '../../lib/safety/requests.mjs';
 
@@ -63,6 +63,7 @@ async function readMessage(message, decompose) {
       question: message,
       reasonRules: REASON_RULES,
       bookingRules: BOOKING_RULES,
+      continuityRules: CONTINUITY_RULES,
     }),
   });
   return { model, values: out.object };

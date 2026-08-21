@@ -305,15 +305,22 @@ test('/accurx demotes an eye emergency but not an ordinary eye request', () => {
 });
 
 test('/accurx keeps the wording rules out of the middle of the routing', () => {
-  // Two disclosures about house style, sitting between "where this goes" and
-  // the steps for booking it, are two disclosures in the way of somebody doing
-  // the thing. They go last, whichever order the rest of the card is in.
+  // Three disclosures about house style, sitting between "where this goes" and
+  // the steps for booking it, are three disclosures in the way of somebody doing
+  // the thing. They go last, whichever order the rest of the card is in — and
+  // the third arrived with the panel that says who to book it with, which is
+  // house style in exactly the same sense as the other two.
   for (const card of [
     renderCommand('accurxTriage', { condition: 'sore throat', reason: 'sore throat 3/7' }, 'pt sore throat since Friday'),
     renderCommand('accurxTriage', { condition: 'chest pain', reason: 'chest pain since this morning' }, 'crushing chest pain since this morning, short of breath'),
   ]) {
-    const last = card.blocks.slice(-3).map((b) => b.label || b.type);
-    assert.deepEqual(last, ['How the reason was written', 'What belongs in a booking note', 'note']);
+    const last = card.blocks.slice(-4).map((b) => b.label || b.type);
+    assert.deepEqual(last, [
+      'How the reason was written',
+      'What belongs in a booking note',
+      'How earlier contact was looked for',
+      'note',
+    ]);
   }
 });
 

@@ -7,6 +7,7 @@ import {
 import { accurxAnswer } from '../lib/templates/accurx.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { resolveRoles, ROLE_KEYS, ROLE_SETTING_KEY } from '../lib/settings.js';
+import { CONTINUITY_RULES } from '../lib/templates/writing.mjs';
 
 // The message that made this necessary, as it was pasted in. A patient after a
 // recent miscarriage: headaches, both legs swollen and painful, shoulder pain,
@@ -650,4 +651,146 @@ test('the one call returns the wording as well as the destination', () => {
   assert.deepEqual(parsed.booking, ['telephone after 2pm']);
   assert.deepEqual(parsed.details, [], 'and the lists default to empty rather than missing');
   assert.deepEqual(parsed.nurseClinics, []);
+});
+
+/* ------------------------------------- has it already been dealt with, and by whom */
+
+const KNEE = 'My knee is playing up again. I saw Dr Okafor about it in July, she gave me '
+  + 'exercises and said to come back if it did not settle. It has not settled.';
+
+const seenPanel = (card) => flat(card.blocks)
+  .find((b) => b.type === 'fields' && String(b.title).startsWith('Already been dealt with')) || null;
+const rowOf = (panel, label) => ((panel && panel.items) || []).find((i) => i.label === label) || null;
+
+test('the reading is asked whether somebody has already dealt with this', () => {
+  // The third question the card asks, after where it goes and what the line
+  // says: who the appointment should be WITH. It is asked of the same call and
+  // the rules it is asked under are the ones the card discloses.
+  const prompt = accurxReadPrompt({ question: KNEE, continuityRules: CONTINUITY_RULES });
+  assert.match(prompt, /HAS IT BEEN DEALT WITH BEFORE/);
+  for (const rule of CONTINUITY_RULES) assert.ok(prompt.includes(rule), rule.slice(0, 40));
+  // And it may not answer the routing question a second time.
+  assert.match(prompt, /Do not let it move the destination/);
+});
+
+test('what the reading said about earlier contact survives into the verdict', () => {
+  const verdict = readingVerdict({
+    destination: 'fcp',
+    seenBefore: {
+      who: 'Dr Okafor', when: 'in July', what: 'given exercises, told to come back',
+      here: true, evidence: 'I saw Dr Okafor about it in July',
+    },
+  });
+  assert.deepEqual(verdict.seenBefore, {
+    who: 'Dr Okafor',
+    when: 'in July',
+    what: 'given exercises, told to come back',
+    here: true,
+    evidence: 'I saw Dr Okafor about it in July',
+  });
+  // A reading that said nothing about it says nothing about it. Every value is
+  // still present, so nothing downstream has to guess at the shape.
+  assert.deepEqual(readingVerdict({ destination: 'fcp' }).seenBefore, {
+    who: '', when: '', what: '', here: false, evidence: '',
+  });
+});
+
+test('the card names who dealt with it, and says to book it back with them', () => {
+  const card = accurxAnswer({
+    condition: 'knee pain', text: KNEE, reason: 'knee pain recurring, exercises not settled',
+    route: readingVerdict({
+      destination: 'fcp',
+      seenBefore: {
+        who: 'Dr Okafor', when: 'in July', what: 'given exercises, told to come back',
+        here: true, evidence: 'I saw Dr Okafor about it in July',
+      },
+    }),
+  });
+  const panel = seenPanel(card);
+  assert.ok(panel, 'the panel is on the card');
+  assert.equal(rowOf(panel, 'Dealt with before').value, 'Dr Okafor — in July');
+  assert.match(rowOf(panel, 'Book with').value, /Dr Okafor/);
+  assert.match(words(card), /I saw Dr Okafor about it in July/, 'quoted from the message');
+  // AND IT HAS NOT ROUTED ANYTHING. Where it goes is still what the reading
+  // named; a follow-up about the same knee goes to the same service, it just
+  // goes to the person who saw the knee.
+  assert.equal(sentTo(card), destinationLabel('fcp'));
+});
+
+test('nothing found is silence, not a finding', () => {
+  // The rule the booking notes learned the hard way. "Nothing says this has been
+  // dealt with before" reads as a negative somebody established, under a card
+  // where the model was simply told to leave the field empty.
+  const card = accurxAnswer({
+    condition: 'sore throat', text: 'sore throat since friday', reason: 'sore throat 3/7',
+    route: readingVerdict({ destination: 'pharmacy' }),
+  });
+  assert.equal(seenPanel(card), null);
+  assert.doesNotMatch(words(card), /dealt with before/i);
+});
+
+test('a quote the message does not contain is dropped, and the panel stands', () => {
+  // Exactly what applyRoute does with an escalation it cannot evidence: the
+  // finding survives, the sentence claiming the patient wrote something they
+  // did not does not.
+  const card = accurxAnswer({
+    condition: 'rash', text: 'rash again, i was seen about it last month', reason: 'rash recurring',
+    route: readingVerdict({
+      destination: 'gp',
+      seenBefore: { who: '', when: 'last month', what: '', here: true, evidence: 'I saw Dr Nobody in March' },
+    }),
+  });
+  const panel = seenPanel(card);
+  assert.ok(panel);
+  assert.equal(rowOf(panel, 'Dealt with before').value, 'not said who — last month');
+  assert.match(rowOf(panel, 'Book with').value, /check the record/);
+  assert.doesNotMatch(words(card), /Dr Nobody/, 'the unprovable quote never reaches the reader');
+});
+
+test('nobody books off an emergency card, and nobody books elsewhere either', () => {
+  // Two cards that must not carry a "Book with" row, for two different reasons:
+  // one because there is no appointment, one because the earlier contact was not
+  // this practice's to book against.
+  const urgent = accurxAnswer({
+    condition: 'chest pain',
+    text: 'Crushing chest pain since this morning. I saw Dr Okafor about chest pain in July.',
+    reason: 'chest pain since this morning',
+    route: readingVerdict({
+      destination: 'dutyInterrupt',
+      seenBefore: { who: 'Dr Okafor', when: 'in July', what: 'ecg done', here: true, evidence: 'I saw Dr Okafor about chest pain in July' },
+    }),
+  });
+  const onTheDay = seenPanel(urgent);
+  assert.ok(onTheDay);
+  assert.match(onTheDay.title, /handover/, 'named for what it now is');
+  assert.equal(rowOf(onTheDay, 'Book with'), null);
+
+  const elsewhere = accurxAnswer({
+    condition: 'ankle pain',
+    text: 'Ankle again. The hospital saw it in June and said come back to my GP if sore.',
+    reason: 'ankle pain recurring',
+    route: readingVerdict({
+      destination: 'gp',
+      seenBefore: { who: 'the hospital', when: 'in June', what: 'told to see GP if sore', here: false, evidence: 'The hospital saw it in June' },
+    }),
+  });
+  const outside = seenPanel(elsewhere);
+  assert.ok(outside);
+  assert.equal(rowOf(outside, 'Book with'), null, 'reception cannot book somebody into the hospital');
+  assert.match(words(elsewhere), /not this practice/i);
+});
+
+test('the card says it has read the message and not the record', () => {
+  // The one thing this panel must not be mistaken for. It is the patient's own
+  // account of their earlier contact, which is worth acting on and is not the
+  // same thing as a consultation somebody has looked up.
+  const card = accurxAnswer({
+    condition: 'knee pain', text: KNEE, reason: 'knee pain recurring',
+    route: readingVerdict({
+      destination: 'fcp',
+      seenBefore: { who: 'Dr Okafor', when: 'in July', what: '', here: true, evidence: 'I saw Dr Okafor about it in July' },
+    }),
+  });
+  assert.match(words(card), /nothing here has read the record/i);
+  assert.match(words(card), /Find that consultation in the record before you book/i);
 });
