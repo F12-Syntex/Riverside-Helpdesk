@@ -94,7 +94,16 @@ clickable sources they can open in-browser.
     not a character more. And it **fails open** — no key, a timeout, an
     unreadable answer, and the message goes as it always did. A guard that fails
     closed is a guard that shuts the desk down when OpenRouter has a bad
-    minute, with a patient standing at it.
+    minute, with a patient standing at it. **It does not run on the Coding
+    mode** (`screened: false` in `lib/commands.mjs`). A discharge summary carries
+    a date of birth and a hospital number because that is what a discharge
+    summary is, so on the one mode whose input is a pasted letter the screen
+    refuses the exact thing being asked for — which is already why an *attached*
+    document is not screened, and a letter pasted into the box is the same
+    letter. What is switched off is the model call that holds the send, not the
+    guard that edits the words: the redaction above still runs, in the browser
+    and again on the server, and the filing title never carries a name, an NHS
+    number or a date of birth either (`DOC_CODING_RULES`).
   - **Assertions are span-local and fail toward silence.** A card may only claim
     something about the complaint it is about, and only from words inside that
     complaint's own text. The knee card claimed "over-the-counter treatment has
@@ -201,7 +210,7 @@ clickable sources they can open in-browser.
   (`lib/referrals/scope.mjs`).
 - **Slash commands say which card you want** rather than leaving it to be worked
   out (`lib/commands.mjs`): `/accurx` (where the patient goes and the reason
-  line, from one paste), `/document` (a filing title), `/practice` (search the
+  line, from one paste), `/coding` (a filing title), `/practice` (search the
   documents, no model at all), `/form` (a NEL referral form) and `/template`
   (the EMIS template that records a NEL contract). There used to be two more — `/triage`, which said
   where a patient went, and `/appt`, which wrote the reason line and the booking
@@ -212,7 +221,8 @@ clickable sources they can open in-browser.
 - **The kind of answer is chosen from the search icon, not typed.** The
   magnifying glass at the left of the field carries a disc behind it and is a
   button (`app/_components/ModeSwitch.jsx`): pressing it opens the list of modes
-  over the box — Q&A, Form, Template, Practice — each named with the line saying
+  over the box — Q&A, AccurX, Coding, Referral form, Contract template, Practice
+  documents — each named with the line saying
   what it does, and the armed one ticked. **Nothing was added to the page to make
   room for it**: the glass had always sat there costing 48px of the field and
   doing nothing when it was pressed, and the disc is what says a thing can be
@@ -230,15 +240,21 @@ clickable sources they can open in-browser.
   reaches for most — a pasted AccurX request answered with the route, the urgency
   and the reason line on one card — and hiding the command somebody new to the
   desk would most benefit from finding was the wrong trade for a shorter list.
-  **`/document` is hidden rather than withdrawn**: it is offered by neither the
-  list nor the "/" menu, and typing it in full still works exactly as it did,
-  because filing a letter is an everyday answer used by habit. The strip above
+  **Coding is offered too, and was `/document`.** It was hidden on the argument
+  that the people who file letters do it by habit and a habit needs no
+  advertising, which quietly meant an everyday answer was reachable only by
+  somebody who had already been told it existed. It is a mode now, named for the
+  helper that does the same job at `/coding`, and the old spelling still
+  resolves: typing `/document` reaches it, is offered under the Coding row while
+  it is being typed, and is rewritten to `/coding ` in the field, so the habit
+  teaches the new name instead of being broken by it. It is also **the one mode
+  the patient-data screen does not run on** — see the screening bullet above. The strip above
   the field carries only the send bar and the "Copied" line, and nothing was
   added to the header or the footer. Typing "/" still works and still wins over
   the disc, being the more specific thing the reader just did. **The disc wears
   the armed mode's own icon** — a sheet of lines for Form, two sheets for
-  Template, a speech bubble for AccurX, a book for Practice, the magnifying glass
-  for Q&A — and the same glyph is drawn beside each name in the list, so which
+  Template, a speech bubble for AccurX, a folder for Coding, a book for Practice,
+  the magnifying glass for Q&A — and the same glyph is drawn beside each name in the list, so which
   mode is armed is legible at a glance rather than inferred from the disc turning
   blue. **The choice lasts until it is changed**, across a reload as well as
   across a message (`riva-mode-v1`). It used to last exactly one message; three

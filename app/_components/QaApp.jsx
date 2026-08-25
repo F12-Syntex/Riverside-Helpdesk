@@ -4,7 +4,7 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, isMode, matchCommands, modePlaceholder, parseCommand } from '../../lib/commands.mjs';
+import { commandByName, isMode, matchCommands, modePlaceholder, parseCommand, screensPatientData } from '../../lib/commands.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -768,9 +768,12 @@ class RiversidePracticeQA extends React.Component {
     // transcript — a message that is refused was never asked, so it must not
     // appear to have been.
     //
-    // Only the TYPED message is screened. A dropped document is the reader's
-    // own material and is very often a letter about a patient by definition;
-    // screening it would refuse /document the one thing /document is for.
+    // Only the TYPED message is screened, and not even that under Coding. A
+    // dropped document is the reader's own material and is very often a letter
+    // about a patient by definition; screening it would refuse the one thing
+    // the coding card is for. A letter PASTED into the box is the same letter,
+    // so the mode that asks for one says so itself — see `screened` in
+    // lib/commands.mjs.
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
@@ -818,10 +821,14 @@ class RiversidePracticeQA extends React.Component {
     this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, async () => {
       this.save();
 
-      // Only the TYPED message is screened. A dropped document is the reader's
-      // own material and is very often a letter about a patient by definition;
-      // screening it would refuse /document the one thing /document is for.
-      if (t) {
+      // Only the TYPED message is screened, and only when the command it was
+      // sent under is screened at all. A dropped document is the reader's own
+      // material and is very often a letter about a patient by definition, and
+      // under Coding so is the pasted text: a discharge summary carries a date
+      // of birth and a hospital number because that is what a discharge summary
+      // is, and a screen that refuses it refuses the mode. The redaction above
+      // still ran, on the same words, before any of this.
+      if (t && screensPatientData(command)) {
         this.setState({ screening: true });
         const verdict = await this.screen(t);
         this.setState({ screening: false });

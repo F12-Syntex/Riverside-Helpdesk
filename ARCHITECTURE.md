@@ -35,7 +35,7 @@ It provides:
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
 | Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/accurx` command, which puts that line, and the booking notes reception needs, on the same card as where the patient goes. |
-| Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. |
+| Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. Also available in the assistant as the **Coding** mode (the `/coding` command), which is the one mode the patient-data screen does not run on. |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |
 | Staff rota | `/rota` | Builds and balances a week's rota from staff records. |
@@ -486,7 +486,7 @@ somewhere else (email, Accurx).
 
 | Flow | Endpoint | What leaves the practice | Stored |
 | --- | --- | --- | --- |
-| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
+| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. **Not on the Coding mode** (`screened: false` in `lib/commands.mjs`): a discharge summary identifies a patient by definition, so screening it would refuse the one thing that mode is for — the same reason an attached document is not screened either. The redaction still runs on it. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
 | Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the practice's destinations (`lib/triage/destinations.mjs`), to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
 | Document coding | `POST /api/docfile` (and the `docfile` branch of `/api/ask`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
@@ -853,7 +853,9 @@ should record explicitly:
     withdrawn, and keeps the retention decision as an open measure.
 12. **No automatic screening for patient data** in questions or notes. This is the
     single control that would move the patient-data risks off "High", and it is
-    listed as "to do".
+    listed as "to do". The screen that does exist (`POST /api/screen`) does not
+    run on the assistant's **Coding** mode, where a pasted letter about a patient
+    is the input the mode asks for; the name-and-address redaction still does.
 13. **The safety scanners are patterns, and patterns miss paraphrase.** "My
     voice sounds rough" does not match "hoarse". Recall has not been measured;
     the material for measuring it is now in `question_log` (real questions, the

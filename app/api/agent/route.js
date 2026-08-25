@@ -416,7 +416,7 @@ export async function POST(request) {
         //
         // Only when no template fits does the turn fall through to prose.
         //
-        // A COMMAND SKIPS THE CHOOSING. /accurx and /document have already said
+        // A COMMAND SKIPS THE CHOOSING. /accurx and /coding have already said
         // what the message is, so the model is asked for that one template's
         // values and nothing else: no Notebook catalogue to read, a schema with
         // one field in it, and no way for the turn to end up somewhere else.

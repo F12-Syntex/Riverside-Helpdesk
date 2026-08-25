@@ -39,9 +39,10 @@ import { MODES } from '../../lib/commands.mjs';
  * THE ARMED MODE IS THE DISC'S COLOUR AND THE DISC'S GLYPH. Filled blue
  * whenever anything other than Q&A is armed, quiet grey otherwise — and
  * the glass is replaced by that mode's own icon: a sheet of lines for
- * Form, two sheets for Template, a speech bubble for AccurX, a book for
- * Practice. The colour said A mode is on; the glyph says WHICH, which is
- * the question somebody glancing at the field actually has. The same
+ * Form, two sheets for Template, a speech bubble for AccurX, a folder
+ * for Coding, a book for Practice. The colour said A mode is on; the
+ * glyph says WHICH, which is the question somebody glancing at the field
+ * actually has. The same
  * glyph is drawn beside the name in the list, so what was chosen and
  * what is showing are visibly the same thing. The placeholder still says
  * it in words, and the transcript carries "Asked as Referral form"
@@ -51,7 +52,9 @@ import { MODES } from '../../lib/commands.mjs';
  * glass while a message is screened for patient details replaces it
  * inside the disc instead, in the same place, for the same reason: a
  * field that looks dead for even half a second has somebody pressing
- * Enter again.
+ * Enter again. It never appears under Coding: that screen does not run on
+ * a mode whose whole input is a letter about a patient — see `screened`
+ * in lib/commands.mjs.
  *
  * IT LASTS UNTIL IT IS CHANGED. It used to go back to Q&A the moment a
  * question was sent, on the argument that a switch left on the wrong
