@@ -7,7 +7,7 @@ import test from 'node:test';
 
 import {
   COMMANDS, MODES, QA_MODE, awaitingArguments, commandByName, commandByTemplate, forcedTemplate,
-  matchCommands, modePlaceholder, parseCommand, screensPatientData,
+  matchCommands, modePlaceholder, parseCommand, checksPatientData,
 } from '../lib/commands.mjs';
 import { renderCommand } from '../lib/templates/route.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
@@ -518,21 +518,30 @@ test('every command is offered, by both surfaces at once', () => {
   assert.equal(awaitingArguments('/accurx').name, 'accurx');
 });
 
-/* ------------------------------------------- the screen, and its one hole */
+/* ------------------------------------ the guards, and their one exception */
 
-// The patient-data screen refuses a message identifying a particular patient
-// (lib/safety/patient-data.mjs). A discharge summary is one by definition, so
-// Coding is the single command it does not run on — otherwise the mode refuses
-// the only thing it is for. Everything else is screened, and a command that
-// forgot to say either way is screened.
-test('only Coding is exempt from the patient-data screen', () => {
+// Two guards read a message for patient data: the name-and-address redaction
+// (lib/safety/identifiers.mjs), which edits it, and the screen
+// (lib/safety/patient-data.mjs), which refuses to send it. Coding is handed a
+// letter about a patient — that is its input — so BOTH are off there and
+// neither is off anywhere else. One flag answers for both, on purpose: half a
+// guard would edit the reader's letter without being any use against what the
+// letter was always going to carry.
+test('only Coding is exempt, and it is exempt from both guards', () => {
   for (const c of COMMANDS) {
-    assert.equal(screensPatientData(c), c.name !== 'coding', `${c.name} is screened wrongly`);
+    assert.equal(checksPatientData(c), c.name !== 'coding', `${c.name} is guarded wrongly`);
   }
-  // An ordinary question — no command at all — is screened.
-  assert.equal(screensPatientData(null), true);
-  assert.equal(screensPatientData(undefined), true);
-  // Typed or armed, it is the same command and therefore the same answer.
-  assert.equal(screensPatientData(parseCommand('/coding Discharge summary').command), false);
-  assert.equal(screensPatientData(commandByName('document')), false);
+  assert.deepEqual(COMMANDS.filter((c) => c.checked === false).map((c) => c.name), ['coding']);
+  // An ordinary question — no command at all — is checked, and so is anything
+  // that arrives claiming a template no command owns.
+  assert.equal(checksPatientData(null), true);
+  assert.equal(checksPatientData(undefined), true);
+  assert.equal(checksPatientData(commandByTemplate('documentCoding')), false);
+  assert.equal(checksPatientData(commandByTemplate('practiceSearch')), true);
+  assert.equal(checksPatientData(commandByTemplate('notebook')), true);
+  // Typed, armed or resolved from the template at the endpoint, it is the same
+  // command and therefore the same answer — a guard that ran on one side of the
+  // wire only would edit the letter without protecting anything.
+  assert.equal(checksPatientData(parseCommand('/coding Discharge summary').command), false);
+  assert.equal(checksPatientData(commandByName('document')), false);
 });

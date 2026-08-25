@@ -486,7 +486,7 @@ somewhere else (email, Accurx).
 
 | Flow | Endpoint | What leaves the practice | Stored |
 | --- | --- | --- | --- |
-| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. **Not on the Coding mode** (`screened: false` in `lib/commands.mjs`): a discharge summary identifies a patient by definition, so screening it would refuse the one thing that mode is for — the same reason an attached document is not screened either. The redaction still runs on it. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
+| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. **Not on the Coding mode** (`checked: false` in `lib/commands.mjs`): a discharge summary identifies a patient by definition, so screening it would refuse the one thing that mode is for — the same reason an attached document is not screened either. **The name-and-address redaction does not run on it either**, in the browser or at `/api/agent`: one flag answers for both guards, so a letter pasted into that mode reaches the model as it was pasted. Like the standalone reception helpers, that paste carries the duty to remove identifiers first. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
 | Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the practice's destinations (`lib/triage/destinations.mjs`), to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
 | Document coding | `POST /api/docfile` (and the `docfile` branch of `/api/ask`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
@@ -853,9 +853,17 @@ should record explicitly:
     withdrawn, and keeps the retention decision as an open measure.
 12. **No automatic screening for patient data** in questions or notes. This is the
     single control that would move the patient-data risks off "High", and it is
-    listed as "to do". The screen that does exist (`POST /api/screen`) does not
-    run on the assistant's **Coding** mode, where a pasted letter about a patient
-    is the input the mode asks for; the name-and-address redaction still does.
+    listed as "to do". Neither guard that does exist — the name-and-address
+    redaction (`lib/safety/identifiers.mjs`) nor the screen (`POST /api/screen`)
+    — runs on the assistant's **Coding** mode, where a pasted letter about a
+    patient is the input the mode asks for. That mode is therefore in the same
+    position as the standalone reception helpers (`/coding`, `/signpost`,
+    `/reason`): what is pasted reaches the provider as pasted, and removing
+    identifiers first is the reader's job. Recorded in `lib/dpia.js`, under the
+    pasted-text risk and its measures. One thing differs from those helpers and
+    is recorded with it: a Coding turn goes through `/api/agent`, so the paste
+    is written to `question_log` (and truncated to the audit log) as pasted,
+    unless logging is switched off for that computer at `/settings`.
 13. **The safety scanners are patterns, and patterns miss paraphrase.** "My
     voice sounds rough" does not match "hoarse". Recall has not been measured;
     the material for measuring it is now in `question_log` (real questions, the

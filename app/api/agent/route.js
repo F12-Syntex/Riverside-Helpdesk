@@ -52,7 +52,7 @@ import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
-import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
+import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import {
   PRACTICE_ANSWER_SCHEMA, groundPracticeAnswer, practiceAnswerPrompt, practiceSources,
@@ -262,13 +262,26 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   const asked = typeof body?.question === 'string' && body.question.trim() ? body.question : 'Please look at the attached image.';
+  // A slash command names the template outright, so nothing is chosen here. Only
+  // a template a command claims is honoured (lib/commands.mjs); anything else
+  // sent in this field is ignored and the message is answered the ordinary way.
+  const command = forcedTemplate(body?.template);
   // The same local name-and-address check the browser ran before sending
   // (lib/safety/identifiers.mjs), run again here. In the ordinary case this
   // changes nothing — the text arrived already redacted — and that is the
   // point: the guard is a property of the endpoint, not of the page, so a
   // message posted to /api/agent by anything else is held to it too. It runs
   // before the model sees the question and before question_log stores it.
-  const question = redactIdentifiers(asked, { allow: getDirectory() }).text;
+  //
+  // EXCEPT ON THE ONE TEMPLATE THAT IS NOT CHECKED. Coding is handed a letter
+  // about a patient — that is its input — so the browser sends it unredacted
+  // and the endpoint must not redact it either: a guard that runs on only one
+  // side of the wire edits the letter without protecting anything, and files it
+  // under [name removed]. `checksPatientData` answers for both sides off the
+  // same flag (lib/commands.mjs), and a template no command claims is redacted
+  // as everything else is.
+  const checked = checksPatientData(commandByTemplate(command));
+  const question = checked ? redactIdentifiers(asked, { allow: getDirectory() }).text : asked;
   const history = typeof body?.history === 'string' ? body.history : '';
   const images = Array.isArray(body?.images)
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)
@@ -277,10 +290,8 @@ export async function POST(request) {
   // /api/attach. The reader's own material: context for the model, never stored.
   const attachments = sanitiseAttachments(body?.attachments);
   const attached = attachmentsBlock(attachments);
-  // A slash command names the template outright, so nothing is chosen here. Only
-  // a template a command claims is honoured (lib/commands.mjs); anything else
-  // sent in this field is ignored and the message is answered the ordinary way.
-  const command = forcedTemplate(body?.template);
+  // `command` is resolved above the redaction now, because it is what decides
+  // whether the redaction runs at all.
 
   const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
   const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

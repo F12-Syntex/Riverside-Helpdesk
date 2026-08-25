@@ -4,7 +4,7 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, isMode, matchCommands, modePlaceholder, parseCommand, screensPatientData } from '../../lib/commands.mjs';
+import { commandByName, isMode, matchCommands, modePlaceholder, parseCommand, checksPatientData } from '../../lib/commands.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -719,6 +719,28 @@ class RiversidePracticeQA extends React.Component {
     // the same words twice — once past the screen and once around it.
     if (this.state.screening || this.state.blocked) return;
 
+    // WHICH COMMAND THIS IS, BEFORE A WORD OF IT IS EDITED. It used to be read
+    // off the redacted text, which was harmless while every message was
+    // redacted and is not now: Coding is not checked at all, and a guard cannot
+    // decide whether to run by looking at what it has already done. The command
+    // token is "/coding" or nothing, so nothing the redactor does could change
+    // this answer — it is the ORDER that matters, not the input.
+    //
+    // A slash command says which card to render, so the message goes up without
+    // it and the template goes up beside it. "/accurx" with nothing after it is
+    // a command still being written, not a question — the field keeps it.
+    const raw = (text || '').trim();
+    const parsed = parseCommand(raw);
+    if (parsed && !parsed.rest) {
+      this.setState({ input: '/' + parsed.command.name + ' ', cmdSel: -1 });
+      return;
+    }
+    // A TYPED COMMAND BEATS THE BUTTON. It is the more specific thing the
+    // reader just did, and it is what the muscle memory of anyone already
+    // using the commands reaches for. The button only decides the kind of
+    // answer when nothing was typed to decide it.
+    const command = parsed ? parsed.command : (commandByName(this.state.mode) || null);
+
     // NAMES AND ADDRESSES DO NOT LEAVE THIS MACHINE. The check is local and
     // deterministic (lib/safety/identifiers.mjs) and it runs here, before the
     // request is built, before the message is written to the transcript and
@@ -733,25 +755,24 @@ class RiversidePracticeQA extends React.Component {
     // The directory goes in as the allow list: "what is the number for Alison
     // Wade" is a lookup of a colleague the practice has written down, and a
     // check that eats that question is a check that gets ignored.
-    const guard = redactIdentifiers((text || '').trim(), { allow: this.state.directory });
+    //
+    // ON CODING IT DOES NOT RUN, and neither does the screen below. What is
+    // pasted there is a letter about a patient by definition, and both guards
+    // are switched off together — see `checked` in lib/commands.mjs for why
+    // half of one would be worse than neither.
+    const guard = checksPatientData(command)
+      ? redactIdentifiers(raw, { allow: this.state.directory })
+      : { text: raw, changed: false, findings: [] };
     if (guard.changed) {
       notify(identifierWarning(guard.findings), { type: 'warn', duration: 11000 });
     }
+    // The whole message as typed, redacted or not: what the transcript shows,
+    // command word and all. The message the ASSISTANT is asked is that minus
+    // the command, read back off the same string — nothing the redactor does
+    // can touch a leading "/coding", so this parses exactly as `parsed` did.
     const typed = guard.text;
-    // A slash command says which card to render, so the message goes up without
-    // it and the template goes up beside it. "/accurx" with nothing after it is
-    // a command still being written, not a question — the field keeps it.
-    const parsed = parseCommand(typed);
-    if (parsed && !parsed.rest) {
-      this.setState({ input: '/' + parsed.command.name + ' ', cmdSel: -1 });
-      return;
-    }
-    // A TYPED COMMAND BEATS THE BUTTON. It is the more specific thing the
-    // reader just did, and it is what the muscle memory of anyone already
-    // using the commands reaches for. The button only decides the kind of
-    // answer when nothing was typed to decide it.
-    const command = parsed ? parsed.command : (commandByName(this.state.mode) || null);
-    const t = parsed ? parsed.rest : typed;
+    const sent = parseCommand(typed);
+    const t = sent ? sent.rest : typed;
     const images = this.state.pendingImages.map((im) => im.dataUrl);
     // Only documents that finished reading go up. One still being read, or one
     // that could not be read, keeps its row in the dock and is not sent.
@@ -772,8 +793,8 @@ class RiversidePracticeQA extends React.Component {
     // dropped document is the reader's own material and is very often a letter
     // about a patient by definition; screening it would refuse the one thing
     // the coding card is for. A letter PASTED into the box is the same letter,
-    // so the mode that asks for one says so itself — see `screened` in
-    // lib/commands.mjs.
+    // so the mode that asks for one is exempt from both guards — see `checked`
+    // in lib/commands.mjs.
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
@@ -822,13 +843,14 @@ class RiversidePracticeQA extends React.Component {
       this.save();
 
       // Only the TYPED message is screened, and only when the command it was
-      // sent under is screened at all. A dropped document is the reader's own
+      // sent under is checked at all. A dropped document is the reader's own
       // material and is very often a letter about a patient by definition, and
       // under Coding so is the pasted text: a discharge summary carries a date
       // of birth and a hospital number because that is what a discharge summary
-      // is, and a screen that refuses it refuses the mode. The redaction above
-      // still ran, on the same words, before any of this.
-      if (t && screensPatientData(command)) {
+      // is, and a screen that refuses it refuses the mode. The same flag turned
+      // the redaction above off, so on that path nothing has read the message
+      // for patient data and nothing will.
+      if (t && checksPatientData(command)) {
         this.setState({ screening: true });
         const verdict = await this.screen(t);
         this.setState({ screening: false });

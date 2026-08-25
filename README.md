@@ -75,7 +75,9 @@ clickable sources they can open in-browser.
     the send: making somebody retype a sentence in a hurry does not get the
     name out of the world. `Dr`, `Nurse` and `Matron` introduce a colleague, so
     those names stay, as do names in the practice directory — "which days is Dr
-    Ahmed in" and "the number for Alison Wade" are the job.
+    Ahmed in" and "the number for Alison Wade" are the job. **It does not run on
+    the Coding mode**, in the browser or at the endpoint — see the two
+    paragraphs below.
   - **What cannot be redacted is refused instead** (`lib/safety/patient-data.mjs`,
     `POST /api/screen`). The local check catches the shapes it knows, and it
     knows them because they can be recognised *and removed*. An NHS number is
@@ -94,16 +96,29 @@ clickable sources they can open in-browser.
     not a character more. And it **fails open** — no key, a timeout, an
     unreadable answer, and the message goes as it always did. A guard that fails
     closed is a guard that shuts the desk down when OpenRouter has a bad
-    minute, with a patient standing at it. **It does not run on the Coding
-    mode** (`screened: false` in `lib/commands.mjs`). A discharge summary carries
-    a date of birth and a hospital number because that is what a discharge
-    summary is, so on the one mode whose input is a pasted letter the screen
-    refuses the exact thing being asked for — which is already why an *attached*
-    document is not screened, and a letter pasted into the box is the same
-    letter. What is switched off is the model call that holds the send, not the
-    guard that edits the words: the redaction above still runs, in the browser
-    and again on the server, and the filing title never carries a name, an NHS
-    number or a date of birth either (`DOC_CODING_RULES`).
+    minute, with a patient standing at it.
+  - **Nothing checks the Coding mode, and that is the whole of the exception**
+    (`checked: false` in `lib/commands.mjs`). Both guards above are off there —
+    the redaction and the screen — in the browser and at the endpoint, so a
+    letter pasted into that mode reaches the model exactly as it was pasted.
+    Coding is handed a document about a patient; that is its input, not an
+    accident of one. A discharge summary carries a name, a date of birth and a
+    hospital number because that is what a discharge summary is, so the screen
+    refused the exact thing being asked for and the redactor ate the words the
+    answer is built from — the site and the department are proper nouns, and a
+    letter filed under `[name removed]` is filed nowhere. The same reasoning
+    already exempted an *attached* document from both; a letter pasted into the
+    box is the same letter, and was treated differently only because of how it
+    arrived. **One flag answers for both guards** so that neither can be
+    switched off alone: half a guard edits the reader's letter without being any
+    use against what the letter was always going to carry. What still holds is
+    the answer itself — the filing title never carries a name, an NHS number or
+    a date of birth, because `DOC_CODING_RULES` says so and the prompt is built
+    from that list. Like the standalone helpers at `/coding`, `/signpost` and
+    `/reason`, which have never redacted what is pasted into them, **it is the
+    paste that carries the duty to take identifiers out first** — recorded as
+    exactly that in the DPIA, under "Identifiers left in text pasted into the
+    reception helpers".
   - **Assertions are span-local and fail toward silence.** A card may only claim
     something about the complaint it is about, and only from words inside that
     complaint's own text. The knee card claimed "over-the-counter treatment has
@@ -247,8 +262,10 @@ clickable sources they can open in-browser.
   helper that does the same job at `/coding`, and the old spelling still
   resolves: typing `/document` reaches it, is offered under the Coding row while
   it is being typed, and is rewritten to `/coding ` in the field, so the habit
-  teaches the new name instead of being broken by it. It is also **the one mode
-  the patient-data screen does not run on** — see the screening bullet above. The strip above
+  teaches the new name instead of being broken by it. It is also **the one mode nothing
+  checks for patient data** — neither the redaction nor the screen — because
+  what is pasted into it is a letter about a patient by definition. See the
+  guards above. The strip above
   the field carries only the send bar and the "Copied" line, and nothing was
   added to the header or the footer. Typing "/" still works and still wins over
   the disc, being the more specific thing the reader just did. **The disc wears
