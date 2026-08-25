@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.20.0` | 2026-08-25 | feat | `861bd37` | feat: a computer can be told not to log its questions |
+| `5.19.0` | 2026-08-25 | feat | `db2e0bd` | feat: the practice-documents answer is written, not printed |
+| `5.18.1` | 2026-08-25 | docs | `a045620` | docs: record 5.18.0 in the versions table |
 | `5.18.0` | 2026-08-25 | feat | `8270a8b` | feat: answer "what is the number for the practice?" from the directory |
 | `5.17.1` | 2026-08-21 | docs | `a79ec08` | docs: record 5.17.0 in the versions table |
 | `5.17.0` | 2026-08-21 | feat | `f2152ac` | feat: /accurx says who to book it back with |
