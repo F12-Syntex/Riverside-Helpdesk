@@ -56,6 +56,7 @@ import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import { formCommandAnswer, templateCommandAnswer } from '@/lib/templates/lookup-command.mjs';
 import { contractNotFound, contractReasonedAnswer } from '@/lib/templates/contracts.mjs';
+import { directoryAnswerIn } from '@/lib/templates/directory.mjs';
 import { findContracts, nelContracts } from '@/lib/referrals/nel-contracts.mjs';
 import {
   CONTRACT_INTENT_SCHEMA, INTENT_TIMEOUT_MS, contractFromWeb, contractIntentPrompt,
@@ -435,6 +436,54 @@ export async function POST(request) {
         // fails before that point still carries its safety findings.
         let scan = safetyScan({ message: question });
         let stage2 = '';
+
+        // THE DIRECTORY IS ASKED BEFORE THE MODEL IS.
+        //
+        // "What is the number for the Riverside Practice?" fitted no template,
+        // so it fell through to prose — and the prose path is told it cannot see
+        // the practice's own material, so the assistant answered "ask the
+        // practice manager" about a number sitting in this repository. The sheet
+        // was never consulted, because nothing on that path consulted it.
+        //
+        // A message that is asking for a contact detail, and names something the
+        // directory holds, is now answered from the directory: the row, verbatim
+        // from structured data, no model, no tokens and nothing to mis-type. A
+        // message that is not asking for one, or names something the directory
+        // does not hold, returns null here and the turn goes on exactly as
+        // before — the check costs a few string comparisons.
+        const directoryCard = command ? null : directoryAnswerIn(getDirectory(), question);
+        if (directoryCard) {
+          send({
+            type: 'tool-result',
+            id: 'select',
+            tool: 'pick_template',
+            summary: 'Found in the practice directory',
+            items: [],
+          });
+          // The bands still apply. A red flag in the same message as a request
+          // for a number is still a red flag.
+          const directorySafety = safetyOutput(scan, { cardScans: false });
+          send({
+            type: 'answer',
+            payload: payload({
+              template: directoryCard,
+              alerts: directorySafety.alerts,
+              panel: directorySafety.panel,
+            }),
+          });
+          const writtenDirectory = logTurn({
+            outcome: 'template',
+            template: 'directory',
+            source: (directoryCard.source || []).join(' · '),
+            answer: shownText(directorySafety.alerts, directoryCard),
+            // Nothing was asked of a model, and the log should not name one.
+            model: '',
+            provenance: buildProvenance({ scan, card: directoryCard }),
+          });
+          controller.close();
+          await writtenDirectory;
+          return;
+        }
 
         if (command) {
           let commandAnswer = null;
