@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.22.0` | 2026-08-25 | feat | `c2d7601` | feat: nothing reads a Coding paste for patient data |
+| `5.21.1` | 2026-08-25 | docs | `03cb8ce` | docs: record 5.20.1 and 5.21.0 in the versions table |
 | `5.21.0` | 2026-08-25 | feat | `70a28ce` | feat: a Coding mode in the picker, and the one screen it skips |
 | `5.20.1` | 2026-08-25 | docs | `c54314f` | docs: record 5.19.0 and 5.20.0 in the versions table |
 | `5.20.0` | 2026-08-25 | feat | `861bd37` | feat: a computer can be told not to log its questions |
