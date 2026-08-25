@@ -54,6 +54,9 @@ import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
+import {
+  PRACTICE_ANSWER_SCHEMA, groundPracticeAnswer, practiceAnswerPrompt, practiceSources,
+} from '@/lib/agent/practice-answer.mjs';
 import { formCommandAnswer, templateCommandAnswer } from '@/lib/templates/lookup-command.mjs';
 import { contractNotFound, contractReasonedAnswer } from '@/lib/templates/contracts.mjs';
 import { directoryAnswerIn } from '@/lib/templates/directory.mjs';
@@ -501,29 +504,119 @@ export async function POST(request) {
           const reading = command === 'accurxTriage';
 
           if (command === 'practiceSearch') {
-            // NO MODEL AT ALL. The practice's documents are searched and the
-            // passages are shown as they are written — see
-            // lib/templates/practice.mjs for why a policy is quoted rather than
-            // summarised. Costs nothing and comes back at once.
-            let passages = [];
+            // THE DOCUMENTS, ANSWERED — NOT PRINTED.
+            //
+            // This branch used to run no model at all: the passages search
+            // found were shown word for word, five of them, each cut at 700
+            // characters and finished with an ellipsis. The words were exact and
+            // the answer was unreadable — most of what arrived was about
+            // something the reader had not asked, and the part that was about
+            // their question stopped halfway through a sentence.
+            //
+            // So the documents are read and the question is answered, in the
+            // same shape as every other answer: prose, with a chip under each
+            // part naming the document it stands on and opening it at the exact
+            // words. Nothing is lost — the verbatim text is one tap away,
+            // instead of in front of everybody.
+            //
+            // The guarantee moved rather than went: every part quotes its
+            // Source, the quote is checked against the retrieved passage here on
+            // the server, and a part whose words are not found is deleted before
+            // the reader sees it (lib/agent/practice-answer.mjs). What survives
+            // is what the documents were found to say.
+            let chunks = [];
             try {
               const hits = await searchKnowledge(question, 12, { kind: 'document', semantic: true });
-              passages = hits.map(knowledgeHitToDocumentChunk).map((chunk) => ({
-                docTitle: chunk.docTitle,
-                docId: chunk.docId,
-                section: chunk.section,
-                text: chunk.text,
-                url: chunk.view && chunk.view.url ? chunk.view.url : '',
-                // The rendered pages of the document this passage sits on, for
-                // the forms and posters whose point is what they look like.
-                images: (chunk.images || []).map((src) => '/' + String(src).replace(/^\//, '')),
-              }));
+              chunks = hits.map(knowledgeHitToDocumentChunk);
             } catch (e) {
               // A search that cannot run says so, rather than answering the
               // question some other way — /practice means these documents.
               console.warn('[agent] practice search failed:', String(e).slice(0, 160));
             }
+            // The old card, for the two cases the written answer cannot cover:
+            // nothing was retrieved, or nothing that was written could be
+            // verified. Showing the passages is a worse answer than a written
+            // one and a far better answer than none.
+            const passages = chunks.map((chunk) => ({
+              docTitle: chunk.docTitle,
+              docId: chunk.docId,
+              section: chunk.section,
+              text: chunk.text,
+              url: chunk.view && chunk.view.url ? chunk.view.url : '',
+              // The rendered pages of the document this passage sits on, for
+              // the forms and posters whose point is what they look like.
+              images: (chunk.images || []).map((src) => '/' + String(src).replace(/^\//, '')),
+            }));
             commandAnswer = practiceSearchAnswer({ query: question, passages });
+
+            const { refMap, extracts } = practiceSources(chunks);
+            if (extracts.length && apiKey) {
+              try {
+                send({ type: 'status', text: 'Reading the documents' });
+                // WRITTEN BY THE REASONING MODEL, like every other answer in
+                // this app. Reading and searching are taken off it; the writing
+                // never is.
+                const written = await generateObject({
+                  model: openrouter(roles.reasoning.model),
+                  schema: PRACTICE_ANSWER_SCHEMA,
+                  temperature: 0.2,
+                  prompt: practiceAnswerPrompt({ question, extracts }),
+                });
+                recordUsage({ turnId, role: 'reasoning', phase: 'practice', model: roles.reasoning.model, usage: written.usage });
+                const grounded = written.object.answerable
+                  ? groundPracticeAnswer({
+                    written: written.object,
+                    refMap,
+                    redact: (t) => redactUnverifiedNumbers(t, verifiedNumbers([question, history, attached])),
+                  })
+                  : { intro: '', sections: [], citations: [] };
+                if (grounded.sections.length) {
+                  send({
+                    type: 'tool-result',
+                    id: 'select',
+                    tool: 'search_documents',
+                    summary: grounded.citations.map((c) => c.docTitle).join(' · ') || 'The practice documents',
+                    items: [],
+                  });
+                  const practiceSafety = safetyOutput(scan, { cardScans: false });
+                  send({
+                    type: 'answer',
+                    payload: payload({
+                      intro: grounded.intro,
+                      sections: grounded.sections,
+                      citations: grounded.citations,
+                      alerts: practiceSafety.alerts,
+                      panel: practiceSafety.panel,
+                    }),
+                  });
+                  const writtenPractice = logTurn({
+                    // Built out of the practice's own documents, which is what
+                    // 'template' means in the log — the outcomes are the three
+                    // things a reader of /stats has to tell apart, and this is
+                    // not the model writing from general knowledge.
+                    outcome: 'template',
+                    template: command,
+                    source: grounded.citations.map((c) => c.docTitle).join(' · '),
+                    answer: shownText(practiceSafety.alerts, null) + '
+
+'
+                      + [grounded.intro, ...grounded.sections.map((sec) => sec.markdown)].filter(Boolean).join('
+
+'),
+                    model: roles.reasoning.model,
+                    provenance: buildProvenance({ scan }),
+                  });
+                  controller.close();
+                  await writtenPractice;
+                  return;
+                }
+              } catch (e) {
+                // The passages card is already built and is a true answer. A
+                // failed call, or an answer none of which could be verified,
+                // leaves it standing.
+                console.warn('[agent] practice answer failed:', String(e).slice(0, 160));
+              }
+            }
           } else if (command === 'referralForm' || command === 'contractTemplate') {
             // NO MODEL AT ALL, and no network either — both lists are files in
             // this repository, so the card is built and returned in the time it
