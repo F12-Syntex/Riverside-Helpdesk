@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.18.0` | 2026-08-25 | feat | `8270a8b` | feat: answer "what is the number for the practice?" from the directory |
+| `5.17.1` | 2026-08-21 | docs | `a79ec08` | docs: record 5.17.0 in the versions table |
 | `5.17.0` | 2026-08-21 | feat | `f2152ac` | feat: /accurx says who to book it back with |
 | `5.16.1` | 2026-08-19 | docs | `967fc51` | docs: record 5.16.0 in the versions table |
 | `5.16.0` | 2026-08-19 | feat | `42c1df8` | feat: the template answer says which page, not just which template |
