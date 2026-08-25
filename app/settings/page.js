@@ -17,6 +17,7 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { isModelSlug } from '@/lib/model-id.mjs';
+import { NO_LOG_COOKIE, NO_LOG_STORE_KEY } from '@/lib/questions/opt-out.mjs';
 import { estimateQueryCost, summariseModelCosts, formatCost } from '@/lib/ai/usage-cost.mjs';
 
 const LIST_LIMIT = 40;
@@ -148,6 +149,23 @@ export default function SettingsPage() {
   const [saving, setSaving] = React.useState(false);
   const [note, setNote] = React.useState('');
   const [error, setError] = React.useState('');
+  // Whether questions asked AT THIS COMPUTER are written to the question log.
+  // Not a practice setting and not saved on the server: it belongs to the
+  // machine it is set at, so switching it off here leaves the front desk
+  // logging exactly as it was. Starts null so the switch does not flash the
+  // wrong way round before the cookie has been read.
+  const [logging, setLogging] = React.useState(null);
+
+  React.useEffect(() => {
+    const cookie = document.cookie.split('; ').find((row) => row.startsWith(NO_LOG_COOKIE + '='));
+    const fromCookie = cookie ? decodeURIComponent(cookie.slice(NO_LOG_COOKIE.length + 1)) : '';
+    let fromStore = '';
+    try { fromStore = window.localStorage.getItem(NO_LOG_STORE_KEY) || ''; } catch (e) { /* private mode */ }
+    // Either one saying "off" is enough: clearing cookies must not quietly turn
+    // the recording back on for somebody who switched it off.
+    const off = ['1', 'true', 'off'].includes(String(fromCookie || fromStore).trim().toLowerCase());
+    setLogging(!off);
+  }, []);
 
   React.useEffect(() => {
     let live = true;
@@ -174,6 +192,19 @@ export default function SettingsPage() {
     () => buildIndex(models.map((m) => ({ label: m.name, aliases: [m.id, m.id.replace(/[/:-]/g, ' ')], model: m }))),
     [models],
   );
+
+  // Written to both places the machine remembers things, for a year, the same
+  // way the machine id is held (lib/audit/client.js).
+  function setLoggingHere(on) {
+    const value = on ? '' : '1';
+    const year = 365 * 24 * 60 * 60;
+    document.cookie = NO_LOG_COOKIE + '=' + value + '; Max-Age=' + (on ? 0 : year) + '; Path=/; SameSite=Lax';
+    try {
+      if (on) window.localStorage.removeItem(NO_LOG_STORE_KEY);
+      else window.localStorage.setItem(NO_LOG_STORE_KEY, '1');
+    } catch (e) { /* private mode — the cookie still carries it */ }
+    setLogging(on);
+  }
 
   const roleValue = (key) => String(roles[key] || '');
   const setRole = (key, value) => { setRoles((cur) => ({ ...cur, [key]: value })); setNote(''); };
@@ -370,6 +401,39 @@ export default function SettingsPage() {
           {error && (
             <p style={s('margin:12px 0 0;font-size:14px;color:#d5281b;font-weight:600;')}>{error}</p>
           )}
+        </section>
+
+        {/* THIS COMPUTER, NOT THE PRACTICE. Everything above is saved on the
+            server and applies everywhere; this one is a cookie on the machine
+            it is set at, takes effect on the next question, and needs no Save.
+            It is a switch rather than a promise: what it turns off is the row
+            being written at all. */}
+        <h2 style={s('font-size:22px;margin:34px 0 4px;letter-spacing:-0.02em;')}>This computer</h2>
+        <p style={s('font-size:15px;color:#4c6272;margin:0 0 16px;')}>
+          Applies to this machine only, and takes effect on the next question.
+        </p>
+
+        <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:18px 20px;')}>
+          <div style={s('display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between;')}>
+            <span style={s('flex:1 1 260px;min-width:0;')}>
+              <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>Log questions from this computer</span>
+              <span style={s('display:block;font-size:13.5px;color:#4c6272;margin-top:3px;line-height:1.45;')}>
+                {logging === false
+                  ? 'Off. Questions asked here are answered as usual but no record of them is kept, so they do not appear in the statistics.'
+                  : 'On. What is asked here, and the answer given, are recorded so they can be read back in the statistics.'}
+              </span>
+              <span style={s('display:block;font-size:12.5px;color:#768692;margin-top:6px;line-height:1.45;')}>
+                The activity log — which pages were opened — is a separate record and is not affected.
+              </span>
+            </span>
+            <Hover tag="button" type="button" disabled={logging === null}
+              onClick={() => setLoggingHere(logging === false)}
+              base={'flex:none;border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:2px solid '
+                + (logging === false ? '#d5281b;color:#d5281b;background:#fff;' : '#007f3b;color:#fff;background:#007f3b;')}
+              hover={logging === false ? 'background:#fdf4f3;' : 'background:#00662f;border-color:#00662f;'}>
+              {logging === false ? 'Logging off' : 'Logging on'}
+            </Hover>
+          </div>
         </section>
       </main>
     </div>

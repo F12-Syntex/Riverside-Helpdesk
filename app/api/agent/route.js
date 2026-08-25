@@ -76,6 +76,7 @@ import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
 import { recordQuestion } from '@/lib/questions/log';
+import { loggingOffIn } from '@/lib/questions/opt-out.mjs';
 import { answerToText } from '@/lib/questions/flatten.mjs';
 
 export const runtime = 'nodejs';
@@ -285,6 +286,9 @@ export async function POST(request) {
   const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const startedAt = Date.now();
   const machineId = machineFromCookie(request);
+  // This machine's own answer to "record what I ask here?". Set at /settings,
+  // held in a cookie on the computer it was set at, and read once per turn.
+  const logging = !loggingOffIn(request.headers.get('cookie') || '');
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -300,6 +304,10 @@ export async function POST(request) {
       // its own errors — and on Vercel it is handed to waitUntil so the row is
       // still written after the response has been closed.
       const logTurn = (turn) => {
+        // Switched off at this desk: no row, and nothing else about the turn
+        // changes. The caller still awaits something, so every path that ends a
+        // turn reads the same whether the log is on or off.
+        if (!logging) return Promise.resolve();
         const writing = recordQuestion({
           turnId,
           machineId,
@@ -597,12 +605,11 @@ export async function POST(request) {
                     outcome: 'template',
                     template: command,
                     source: grounded.citations.map((c) => c.docTitle).join(' · '),
-                    answer: shownText(practiceSafety.alerts, null) + '
-
-'
-                      + [grounded.intro, ...grounded.sections.map((sec) => sec.markdown)].filter(Boolean).join('
-
-'),
+                    answer: [
+                      shownText(practiceSafety.alerts, null),
+                      grounded.intro,
+                      ...grounded.sections.map((sec) => sec.markdown),
+                    ].filter(Boolean).join('\n\n'),
                     model: roles.reasoning.model,
                     provenance: buildProvenance({ scan }),
                   });
