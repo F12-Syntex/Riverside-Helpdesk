@@ -782,6 +782,25 @@ action" risk.
     Two prompt rules were adopted and then reverted on the strength of single
     passes before that was noticed. The token and latency figures are stable and
     can be read from one pass; the routes cannot.
+- **Telephone or face-to-face is asked as a second question, on the two routes
+  that book a doctor** (`lib/templates/accurx.mjs`; the practice's own test is
+  `APPOINTMENT_MODE_TEST` and friends in `lib/triage/destinations.mjs`, and the
+  reading returns `appointment`). "A GP appointment here" is not one thing to
+  book — the guide calls it "a booked telephone or face-to-face appointment", and
+  the duty doctor page tells reception to decide which — so the card carries a
+  **Which kind of appointment** panel between where it goes and the reason line,
+  with the guide's test (*will the doctor need to look at, listen to, or feel
+  something?*) folded away underneath it. It renders only for `gp` and
+  `dutyDoctor` (`needsAppointmentMode`), never on a card nobody books from, and
+  never on a turn where the reading did not happen — a slot type under "the
+  message could not be read" would be a guess dressed as an answer. The reading
+  is asked for it *after* it has named a destination, for the reason `seenBefore`
+  is: what kind of slot must never be what chooses the clinician. **An `unsure`
+  answer books face-to-face and says on the card that nothing decided it**, which
+  is the guide's own tie-break — converting a room into a phone call is easier
+  than the reverse — so an unrecognised or missing value can never quietly become
+  a telephone slot. The chosen mode joins the pair in `question_log.provenance`
+  (`route.mode`).
 - **Earlier contact is a booking answer on the `/accurx` card, never a routing
   one** (`lib/templates/accurx.mjs`; the rules are `CONTINUITY_RULES` in
   `lib/templates/writing.mjs`, and the reading returns `seenBefore`). Where the

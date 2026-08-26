@@ -47,6 +47,7 @@ import {
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
+import { needsAppointmentMode } from '@/lib/triage/destinations.mjs';
 import { looksMultiIntent } from '@/lib/safety/requests.mjs';
 import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
@@ -909,7 +910,19 @@ export async function POST(request) {
               // Both halves: what the reading said, and where the card sent
               // them. A read that was overruled by the patterns is exactly the
               // thing worth being able to find later.
-              route: route ? { read: route.destination, card: (commandAnswer && commandAnswer.destination) || '' } : null,
+              // And, where the card booked an appointment with a doctor, which
+              // kind of one. Read off the card's own destination rather than the
+              // reading's, because a slot type decided for a destination the
+              // card did not settle on is not what anybody booked.
+              route: route
+                ? {
+                  read: route.destination,
+                  card: (commandAnswer && commandAnswer.destination) || '',
+                  mode: needsAppointmentMode((commandAnswer && commandAnswer.destination) || '')
+                    ? (route.appointment || {}).mode || ''
+                    : '',
+                }
+                : null,
             }),
           });
           controller.close();
