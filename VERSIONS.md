@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.23.0` | 2026-08-26 | feat | `ed9cdf3` | feat: /accurx says telephone or face-to-face on a doctor's appointment |
+| `5.22.1` | 2026-08-25 | docs | `8a14d5a` | docs: record 5.21.1 and 5.22.0 in the versions table |
 | `5.22.0` | 2026-08-25 | feat | `c2d7601` | feat: nothing reads a Coding paste for patient data |
 | `5.21.1` | 2026-08-25 | docs | `03cb8ce` | docs: record 5.20.1 and 5.21.0 in the versions table |
 | `5.21.0` | 2026-08-25 | feat | `70a28ce` | feat: a Coding mode in the picker, and the one screen it skips |
