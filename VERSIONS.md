@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.24.2` | 2026-09-02 | fix | `fae1da4` | fix: open the modes folder as its own page with a Back row |
+| `5.24.1` | 2026-09-02 | docs | `e88e46c` | docs: record 5.23.1 and 5.24.0 in the versions table |
 | `5.24.0` | 2026-09-02 | feat | `24b8f43` | feat: add a Consultation mode and fold the lookups behind one row |
 | `5.23.1` | 2026-08-26 | docs | `c8d3a88` | docs: record 5.22.1 and 5.23.0 in the versions table |
 | `5.23.0` | 2026-08-26 | feat | `ed9cdf3` | feat: /accurx says telephone or face-to-face on a doctor's appointment |
