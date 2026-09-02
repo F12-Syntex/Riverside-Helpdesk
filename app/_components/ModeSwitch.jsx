@@ -82,31 +82,35 @@ import { MODES, MODE_FOLDER, TOP_MODES, FOLDER_MODES } from '../../lib/commands.
  *
  * FOUR OF THE MODES ARE BEHIND A FOLDER. Q&A, AccurX and Consultation are
  * the list at rest; Coding, Referral form, Contract template and Practice
- * documents sit behind one "Documents & lookups" row that opens to reveal
- * them — see MODE_FOLDER in lib/commands.mjs for why those four. The
- * folder opens itself whenever one of its modes is the armed one, so the
- * tick is never hidden behind a closed row.
+ * documents sit behind one "Documents & lookups" row — see MODE_FOLDER in
+ * lib/commands.mjs for why those four. Opening the folder REPLACES the
+ * list with its four modes under a Back row, rather than growing the list
+ * under the folder: the panel stays the same height either way, and what
+ * is showing is always one short list rather than one list inside another.
+ * The folder page is what opens whenever one of its modes is the armed
+ * one, so the tick is never behind a closed row.
  * ------------------------------------------------------------------ */
 
-// Every row the keyboard can land on, in the order they are drawn: the top
-// modes, the folder row, then the folder's modes while it is open. The folder
-// row is a row like any other — it takes focus, Enter and the arrows — so the
-// keyboard walks one list rather than two.
-const FOLDER_ROW = { name: null, folder: true, label: MODE_FOLDER.label, icon: MODE_FOLDER.icon, summary: MODE_FOLDER.summary };
-const rowsFor = (unfolded) => TOP_MODES.concat([FOLDER_ROW], unfolded ? FOLDER_MODES : []);
+// The two pages the list can show, each as the rows the keyboard walks in the
+// order they are drawn. The folder row and the Back row are rows like any
+// other — they take focus, Enter and the arrows — so the keyboard walks one
+// list on each page rather than a list and a control.
+const FOLDER_ROW = { name: null, kind: 'folder', label: MODE_FOLDER.label, icon: MODE_FOLDER.icon, summary: MODE_FOLDER.summary };
+const BACK_ROW = { name: null, kind: 'back', label: 'Back', icon: 'arrowLeft', summary: 'All kinds of answer' };
+const rowsFor = (inFolder) => (inFolder ? [BACK_ROW, ...FOLDER_MODES] : [...TOP_MODES, FOLDER_ROW]);
 
 export default function ModeSwitch({ mode, onPick, busy = false }) {
   const [open, setOpen] = React.useState(false);
   // Which row the keyboard is on. It starts on the armed mode rather than at
   // the top, so the first arrow key moves away from where you already are.
   const [at, setAt] = React.useState(0);
-  // Whether the folder is showing its modes. Reset each time the list opens.
-  const [unfolded, setUnfolded] = React.useState(false);
+  // Which page the list is showing. Set each time the list opens.
+  const [inFolder, setInFolder] = React.useState(false);
   const wrapRef = React.useRef(null);
 
   const current = MODES.find((m) => m.name === mode) || MODES[0];
   const armed = Boolean(current.name);
-  const rows = rowsFor(unfolded);
+  const rows = rowsFor(inFolder);
 
   // The trigger, found rather than held: Hover renders the button for us and
   // React 18 does not pass a ref through a plain function component.
@@ -136,11 +140,11 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
   }, [open, at]);
 
   const show = () => {
-    // A foldered mode that is armed opens its folder, so the list opens on the
-    // row that is ticked rather than on a closed folder hiding it.
-    const inFolder = Boolean(current.folder);
-    const list = rowsFor(inFolder);
-    setUnfolded(inFolder);
+    // A foldered mode that is armed opens on the folder page, so the list
+    // opens on the row that is ticked rather than on a folder hiding it.
+    const folded = Boolean(current.folder);
+    const list = rowsFor(folded);
+    setInFolder(folded);
     setAt(Math.max(0, list.findIndex((m) => m.name === mode)));
     setOpen(true);
   };
@@ -150,14 +154,11 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
     onPick(name);
   };
 
-  // The folder row toggles rather than chooses. Closing it with the keyboard on
-  // one of its modes would leave focus on a row that is gone, so the keyboard
-  // comes back to the folder row itself.
-  const toggleFolder = () => {
-    const folderAt = TOP_MODES.length;
-    setUnfolded((u) => !u);
-    setAt(folderAt);
-  };
+  // Into the folder: the keyboard lands on its first mode, past the Back row,
+  // because Back is where it just came from. Out of it: back onto the folder
+  // row, which is the last row of the top page.
+  const enterFolder = () => { setInFolder(true); setAt(1); };
+  const leaveFolder = () => { setInFolder(false); setAt(TOP_MODES.length); };
 
   // Escape closes the list and leaves the mode alone — the field's own Escape
   // is what backs out of the mode itself, one step at a time.
@@ -175,23 +176,60 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
       setAt((i) => (i + step + rows.length) % rows.length);
       return;
     }
-    // Right opens the folder, Left closes it, when the keyboard is on it or
-    // inside it — the usual keys for a tree, and nothing else needs them here.
-    if (open && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
-      const onFolder = rows[at] && rows[at].folder;
-      if (e.key === 'ArrowRight' && onFolder && !unfolded) { e.preventDefault(); toggleFolder(); }
-      if (e.key === 'ArrowLeft' && onFolder && unfolded) { e.preventDefault(); toggleFolder(); }
+    // Right on the folder row goes into it; Left anywhere on the folder page
+    // comes back out — the usual keys for going down and up a level.
+    if (open && e.key === 'ArrowRight' && !inFolder && rows[at] === FOLDER_ROW) {
+      e.preventDefault();
+      enterFolder();
+      return;
+    }
+    if (open && e.key === 'ArrowLeft' && inFolder) {
+      e.preventDefault();
+      leaveFolder();
       return;
     }
     if (open && e.key === 'Tab') setOpen(false);
   };
 
-  const rowStyle = (i, on, inside) => (
+  const rowStyle = (i) => (
     'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;'
     + (i ? 'border-top:1px solid #eef1f2;' : '')
-    + 'padding:10px 15px' + (inside ? ' 10px 27px' : '') + ';font:inherit;cursor:pointer;'
-    + 'background:' + (inside ? '#f7f9fa' : '#fff') + ';'
+    + 'padding:10px 15px;font:inherit;cursor:pointer;background:#fff;'
     + 'transition:background .14s ease;'
+  );
+
+  // The folder row and the Back row: the same shape as a mode row, so the list
+  // reads as one thing, but neither is a mode — no tick, no radio role. The
+  // folder row's chevron points in; the Back row's arrow points out; and a
+  // folder holding the armed mode wears a dot in the tick's column so the tick
+  // has not simply vanished from the top page.
+  const controlRow = (row, i, onClick, { marked = false, trailing = null } = {}) => (
+    <Hover
+      key={row.kind}
+      tag="button"
+      type="button"
+      role="menuitem"
+      title={row.summary}
+      onClick={onClick}
+      className={'riva-mode riva-mode-' + row.kind}
+      base={rowStyle(i) + (row.kind === 'back' ? 'background:#f7f9fa;' : '')}
+      hover="background:#f0f6fb;">
+      <span style={s('flex:none;display:flex;width:14px;color:#005eb8;justify-content:center;')}>
+        {marked ? <span style={s('width:7px;height:7px;border-radius:50%;background:#005eb8;')} /> : null}
+      </span>
+      <span style={s('flex:none;display:flex;color:' + (marked ? '#005eb8' : '#6b7f8d') + ';')}>
+        <Svg w={16} sw={2.1}>{Icons[row.icon] || Icons.folder}</Svg>
+      </span>
+      <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
+        <span style={s('font-size:14px;font-weight:700;color:' + (marked ? '#005eb8' : '#212b32') + ';')}>
+          {row.label}
+        </span>
+        <span style={s('font-size:12.5px;color:#5b7183;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+          {row.summary}
+        </span>
+      </span>
+      {trailing}
+    </Hover>
   );
 
   return (
@@ -216,47 +254,19 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
       </Hover>
 
       {open && (
-        <div role="menu" aria-label="Kind of answer" className="riva-modes-list">
+        <div role="menu" aria-label={inFolder ? MODE_FOLDER.label : 'Kind of answer'} className="riva-modes-list">
           {rows.map((row, i) => {
-            if (row.name === null) {
-              // The folder row. It is not a mode, so no tick and no radio role;
-              // the chevron turns to say whether it is open, and a closed
-              // folder hiding the armed mode wears a dot so the tick is not
-              // simply gone from the list.
-              const hiding = !unfolded && Boolean(current.folder);
-              return (
-                <Hover
-                  key="folder"
-                  tag="button"
-                  type="button"
-                  role="menuitem"
-                  aria-expanded={unfolded}
-                  title={row.summary}
-                  onClick={toggleFolder}
-                  className="riva-mode riva-mode-folder"
-                  base={rowStyle(i, false, false)}
-                  hover="background:#f0f6fb;">
-                  <span style={s('flex:none;display:flex;width:14px;color:#005eb8;justify-content:center;')}>
-                    {hiding ? <span style={s('width:7px;height:7px;border-radius:50%;background:#005eb8;')} /> : null}
-                  </span>
-                  <span style={s('flex:none;display:flex;color:' + (hiding ? '#005eb8' : '#6b7f8d') + ';')}>
-                    <Svg w={16} sw={2.1}>{Icons[row.icon] || Icons.folder}</Svg>
-                  </span>
-                  <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
-                    <span style={s('font-size:14px;font-weight:700;color:' + (hiding ? '#005eb8' : '#212b32') + ';')}>
-                      {row.label}
-                    </span>
-                    <span style={s('font-size:12.5px;color:#5b7183;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
-                      {row.summary}
-                    </span>
-                  </span>
-                  <span style={s('flex:none;display:flex;color:#6b7f8d;transition:transform .16s ease;'
-                    + (unfolded ? 'transform:rotate(90deg);' : ''))}>
+            if (row.kind === 'folder') {
+              return controlRow(row, i, enterFolder, {
+                marked: Boolean(current.folder),
+                trailing: (
+                  <span style={s('flex:none;display:flex;color:#6b7f8d;')}>
                     <Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg>
                   </span>
-                </Hover>
-              );
+                ),
+              });
             }
+            if (row.kind === 'back') return controlRow(row, i, leaveFolder);
             const on = row.name === mode;
             return (
               <Hover
@@ -268,7 +278,7 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
                 title={row.summary}
                 onClick={() => choose(row.name)}
                 className="riva-mode"
-                base={rowStyle(i, on, Boolean(row.folder))}
+                base={rowStyle(i)}
                 hover="background:#f0f6fb;">
                 {/* The tick holds its column whether or not it is drawn, so the
                     names line up down the list instead of stepping in on the
