@@ -6,10 +6,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  COMMANDS, MODES, QA_MODE, awaitingArguments, commandByName, commandByTemplate, forcedTemplate,
-  matchCommands, modePlaceholder, parseCommand, checksPatientData,
+  COMMANDS, MODES, QA_MODE, TOP_MODES, FOLDER_MODES, awaitingArguments, commandByName, commandByTemplate,
+  forcedTemplate, matchCommands, modePlaceholder, parseCommand, checksPatientData,
 } from '../lib/commands.mjs';
-import { renderCommand } from '../lib/templates/route.mjs';
+import { commandPrompt, renderCommand } from '../lib/templates/route.mjs';
+import { consultationEntry } from '../lib/templates/writing.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
@@ -17,12 +18,14 @@ test('the list is offered while the name is being typed, and not after', () => {
   // Nothing is hidden now: every command is offered by both surfaces, /coding
   // included — filing a letter is an everyday answer that was reachable only by
   // somebody already told it existed.
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'consultation', 'coding', 'form', 'template', 'practice']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
   assert.deepEqual(matchCommands('/f').map((c) => c.name), ['form']);
   assert.deepEqual(matchCommands('/t').map((c) => c.name), ['template']);
   assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
-  assert.deepEqual(matchCommands('/c').map((c) => c.name), ['coding']);
+  assert.deepEqual(matchCommands('/c').map((c) => c.name), ['consultation', 'coding']);
+  assert.deepEqual(matchCommands('/cons').map((c) => c.name), ['consultation']);
+  assert.deepEqual(matchCommands('/cod').map((c) => c.name), ['coding']);
   assert.deepEqual(matchCommands('/accurx').map((c) => c.name), ['accurx']);
   // The old spelling is matched and shown under the new name, so somebody
   // halfway through the command they have always typed is not left looking at
@@ -66,6 +69,7 @@ test('a command with nothing after it is a command still being written', () => {
 test('the server honours only a template a command claims', () => {
   assert.equal(forcedTemplate('accurxTriage'), 'accurxTriage');
   assert.equal(forcedTemplate('documentCoding'), 'documentCoding');
+  assert.equal(forcedTemplate('consultationNote'), 'consultationNote');
   assert.equal(forcedTemplate('practiceSearch'), 'practiceSearch');
   // Anything else — including a real template no command offers — is ignored,
   // so the field cannot be used to force an arbitrary card. "triage" is one of
@@ -92,6 +96,49 @@ test('/coding falls back to the coding rules, never to prose', () => {
   // Nothing to build a title from: still the practice's own material.
   const nothing = renderCommand('documentCoding', {});
   assert.ok(nothing && nothing.title, 'the rules card answers instead');
+});
+
+// /consultation writes the one line that goes on the record. The line is
+// assembled in code from the parts, so its shape cannot drift; and when there
+// are no parts it falls back to the rules for writing one, never to prose.
+test('/consultation assembles the record entry from its parts, in order', () => {
+  const card = renderCommand('consultationNote', {
+    contact: 'tel c/w pt',
+    summary: 'sore throat 1/52, req abx',
+    actions: ['adv not prescribed without assessment', 'booked tel appt Dr Okafor 03-Sep pm'],
+    safetyNet: 'adv 111 if worse o/n',
+    unclear: [],
+  }, 'pt rang re sore throat');
+  assert.ok(card && card.title);
+  const entry = card.blocks.find((b) => b.type === 'fields').items[0];
+  assert.equal(entry.value, 'tel c/w pt: sore throat 1/52, req abx; adv not prescribed without assessment; booked tel appt Dr Okafor 03-Sep pm; adv 111 if worse o/n');
+  assert.equal(entry.copy, true, 'the entry carries its own Copy');
+  assert.equal(consultationEntry({ contact: 'pt attended desk' }), 'pt attended desk');
+  assert.equal(consultationEntry({ summary: 'req sick note' }), 'req sick note');
+  assert.equal(consultationEntry({}), '');
+
+  // What the note left open is said back, never filled in.
+  const open = renderCommand('consultationNote', {
+    contact: 'tel c/w pt', summary: 'chasing referral', actions: ['tasked secretaries'], unclear: ['which referral'],
+  });
+  assert.match(JSON.stringify(open.blocks.find((b) => b.type === 'note')), /which referral/);
+
+  // Nothing to build an entry from: still the practice's own material.
+  const nothing = renderCommand('consultationNote', {});
+  assert.ok(nothing && nothing.title, 'the rules card answers instead');
+  assert.notEqual(nothing.title, 'Record entry');
+});
+
+// The prompt for a written-up contact says the job and the rules, and puts
+// the note inside a fence rather than into the instructions.
+test('/consultation asks the model for parts and hands it the note fenced', () => {
+  const prompt = commandPrompt({ template: 'consultationNote', question: 'pt rang about """the""" thing' });
+  assert.match(prompt, /contact they have just had with a patient/);
+  assert.match(prompt, /NOT writing the answer/);
+  assert.match(prompt, /Never invent an action/);
+  assert.match(prompt, /THE MESSAGE:\n"""\npt rang about ""the"" thing\n"""$/);
+  // And says nothing about filing a document, which is the other prompt.
+  assert.doesNotMatch(prompt, /filing title/);
 });
 
 test('a template no command claims renders nothing', () => {
@@ -447,12 +494,21 @@ test('every command carries the words the picker needs', () => {
 });
 
 test('the modes are Q&A first, then every command, and nothing else', () => {
-  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'coding', 'form', 'template', 'practice']);
   assert.equal(MODES[0].label, 'Q&A');
   assert.equal(MODES[0].name, '', 'the resting mode is not a command');
   // Every mode but the first must be a real command, or the picker offers
   // something the server will not honour.
   for (const m of MODES.slice(1)) assert.ok(commandByName(m.name), `${m.name} is not a command`);
+});
+
+// The picker draws the writing modes at the top and the four lookups behind a
+// folder. Splitting the list must lose nothing: the two halves are the whole.
+test('the folder holds the lookups, and the two halves are every mode', () => {
+  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation']);
+  assert.deepEqual(FOLDER_MODES.map((m) => m.name), ['coding', 'form', 'template', 'practice']);
+  assert.deepEqual(TOP_MODES.concat(FOLDER_MODES).map((m) => m.name).sort(), MODES.map((m) => m.name).sort());
+  assert.equal(QA_MODE.folder, undefined, 'the resting mode is never behind the folder');
 });
 
 test('the field asks for the right thing in each mode', () => {
@@ -462,6 +518,7 @@ test('the field asks for the right thing in each mode', () => {
   assert.match(modePlaceholder('practice'), /practice documents/i);
   assert.match(modePlaceholder('accurx'), /AccurX/);
   assert.match(modePlaceholder('coding'), /letter|discharge summary/i);
+  assert.match(modePlaceholder('consultation'), /said and done/i);
   // An alias is resolved, never a mode of its own: the picker has one row per
   // command and the field is captioned by the name that row carries.
   assert.equal(modePlaceholder('document'), QA_MODE.placeholder);
