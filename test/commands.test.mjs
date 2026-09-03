@@ -18,13 +18,16 @@ test('the list is offered while the name is being typed, and not after', () => {
   // Nothing is hidden now: every command is offered by both surfaces, /coding
   // included — filing a letter is an everyday answer that was reachable only by
   // somebody already told it existed.
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'consultation', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
   assert.deepEqual(matchCommands('/f').map((c) => c.name), ['form']);
   assert.deepEqual(matchCommands('/t').map((c) => c.name), ['template']);
   assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
   assert.deepEqual(matchCommands('/c').map((c) => c.name), ['consultation', 'coding']);
   assert.deepEqual(matchCommands('/cons').map((c) => c.name), ['consultation']);
+  assert.deepEqual(matchCommands('/m').map((c) => c.name), ['medication']);
+  // "/meds" is what the desk says; it reaches the same row.
+  assert.deepEqual(matchCommands('/meds').map((c) => c.name), ['medication']);
   assert.deepEqual(matchCommands('/cod').map((c) => c.name), ['coding']);
   assert.deepEqual(matchCommands('/accurx').map((c) => c.name), ['accurx']);
   // The old spelling is matched and shown under the new name, so somebody
@@ -71,6 +74,7 @@ test('the server honours only a template a command claims', () => {
   assert.equal(forcedTemplate('documentCoding'), 'documentCoding');
   assert.equal(forcedTemplate('consultationNote'), 'consultationNote');
   assert.equal(forcedTemplate('practiceSearch'), 'practiceSearch');
+  assert.equal(forcedTemplate('repeatMedication'), 'repeatMedication');
   // Anything else — including a real template no command offers — is ignored,
   // so the field cannot be used to force an arbitrary card. "triage" is one of
   // those now: the router still chooses it, but no command claims it.
@@ -494,7 +498,7 @@ test('every command carries the words the picker needs', () => {
 });
 
 test('the modes are Q&A first, then every command, and nothing else', () => {
-  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
   assert.equal(MODES[0].label, 'Q&A');
   assert.equal(MODES[0].name, '', 'the resting mode is not a command');
   // Every mode but the first must be a real command, or the picker offers
@@ -505,7 +509,7 @@ test('the modes are Q&A first, then every command, and nothing else', () => {
 // The picker draws the writing modes at the top and the four lookups behind a
 // folder. Splitting the list must lose nothing: the two halves are the whole.
 test('the folder holds the lookups, and the two halves are every mode', () => {
-  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation']);
+  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication']);
   assert.deepEqual(FOLDER_MODES.map((m) => m.name), ['coding', 'form', 'template', 'practice']);
   assert.deepEqual(TOP_MODES.concat(FOLDER_MODES).map((m) => m.name).sort(), MODES.map((m) => m.name).sort());
   assert.equal(QA_MODE.folder, undefined, 'the resting mode is never behind the folder');
@@ -519,6 +523,7 @@ test('the field asks for the right thing in each mode', () => {
   assert.match(modePlaceholder('accurx'), /AccurX/);
   assert.match(modePlaceholder('coding'), /letter|discharge summary/i);
   assert.match(modePlaceholder('consultation'), /said and done/i);
+  assert.match(modePlaceholder('medication'), /screenshot/i);
   // An alias is resolved, never a mode of its own: the picker has one row per
   // command and the field is captioned by the name that row carries.
   assert.equal(modePlaceholder('document'), QA_MODE.placeholder);

@@ -459,7 +459,10 @@ export async function POST(request) {
             : '';
         const said = searching ? 'Searching the practice documents'
           : lookingUp ? `Looking it up in ${lookingUp}`
-            : command ? 'Filling in the card' : 'Working out what this is';
+            // A picture is read before anything is filled in, and the line
+            // says so: the wait on a screenshot is the model looking at it.
+            : seeing ? (images.length === 1 ? 'Reading the picture' : 'Reading the pictures')
+              : command ? 'Filling in the card' : 'Working out what this is';
         send({ type: 'status', text: said });
         send({
           type: 'tool-start',

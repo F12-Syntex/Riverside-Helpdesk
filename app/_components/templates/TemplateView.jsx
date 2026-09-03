@@ -98,7 +98,13 @@ function Fields({ title, items }) {
           <span style={s('flex:none;min-width:104px;font-size:13.5px;color:#4c6272;')}>{f.label}</span>
           {f.value ? (
             <>
-              <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#212b32;')}>{f.value}</span>
+              <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#212b32;')}>
+                {f.value}
+                {/* What goes with the value without being part of it — a
+                    medication's directions and quantity under the drug that
+                    gets copied. Quieter, and never inside the Copy. */}
+                {f.hint && <span style={s('display:block;font-size:13.5px;font-weight:400;color:#4c6272;margin-top:2px;')}>{f.hint}</span>}
+              </span>
               {/* Only on the values that get typed somewhere else. A Copy on
                   every row would be four buttons on a referral card and no
                   signal about which one the reader actually needs. */}
