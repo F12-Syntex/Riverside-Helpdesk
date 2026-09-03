@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.28.0` | 2026-09-03 | feat | `635f992` | feat: a medication screenshot is read in plain Q&A, and a picture that fails says so |
+| `5.27.1` | 2026-09-03 | docs | `80cdb88` | docs: record 5.25.0 to 5.27.0 in the versions table |
 | `5.27.0` | 2026-09-03 | feat | `6559917` | feat: a Contact mode, and the directory no longer pops up as you type |
 | `5.26.0` | 2026-09-03 | feat | `a01c354` | feat: /medication formats a repeat-medication screenshot for AccurX |
 | `5.25.0` | 2026-09-03 | feat | `8ccce89` | feat: an Images model role for any message with a picture on it |
