@@ -287,6 +287,20 @@ export async function POST(request) {
   const images = Array.isArray(body?.images)
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)
     : [];
+  // A MESSAGE WITH A PICTURE ON IT RUNS ON THE IMAGES ROLE, whichever path it
+  // takes below — a command, the template picker, or prose. The model chosen
+  // for reading and writing may not see pictures at all, and the one chosen
+  // for pictures is chosen for that alone (lib/settings.js). `seeing` is read
+  // wherever a model is named, so the choice is made once and cannot drift
+  // between the three paths.
+  const seeing = images.length > 0;
+  const imageModel = roles.images.model;
+  // The prompt as the one user message, with the pictures beside it when the
+  // message carries any. The AI SDK takes either `prompt` or `messages`, never
+  // both, so this returns whichever applies and the call spreads it in.
+  const withImages = (text) => (seeing
+    ? { messages: [{ role: 'user', content: [{ type: 'text', text }].concat(images.map((url) => ({ type: 'image', image: url }))) }] }
+    : { prompt: text });
   // A document dropped onto the question and already read into text by
   // /api/attach. The reader's own material: context for the model, never stored.
   const attachments = sanitiseAttachments(body?.attachments);
@@ -326,7 +340,9 @@ export async function POST(request) {
           // Logged as it was typed. A message sent with /accurx was a different
           // act from the same words typed plain, and the log should say so.
           question: command ? '/' + (commandByTemplate(command)?.name || '') + ' ' + question : question,
-          model,
+          // The model the pictures were read by, when there were any: the log
+          // should name what actually ran.
+          model: seeing ? imageModel : model,
           durationMs: Date.now() - startedAt,
           images: images.length,
           attachments: attachments.length,
@@ -796,7 +812,11 @@ export async function POST(request) {
             // because it is now the call that decides where somebody goes as
             // well as the one that writes the line — the practice can put a
             // better model on it without paying for one everywhere else.
-            const callModel = reading ? roles.accurx.model : model;
+            // A screenshot beats the rest: a command sent with a picture on it
+            // — a /medication screen, a /coding letter photographed — is read
+            // by the images role, because the others may not see it at all.
+            const callModel = seeing ? imageModel : reading ? roles.accurx.model : model;
+            const callRole = seeing ? 'images' : reading ? 'accurx' : 'fast';
 
             // THE NOTEBOOK DOES NOT GO INTO THE /accurx READ.
             //
@@ -817,11 +837,14 @@ export async function POST(request) {
                 model: openrouter(callModel),
                 schema: (decompose && MULTI_COMMAND_SCHEMAS[command]) || COMMAND_SCHEMAS[command],
                 temperature: 0,
-                prompt: commandPrompt({ template: command, question, attached, decompose }),
+                // The pictures go in beside the prompt. Until this, a command
+                // never saw an attached image at all: the prompt was text and
+                // the screenshot was dropped on the floor.
+                ...withImages(commandPrompt({ template: command, question, attached, decompose, images: images.length })),
               });
               recordUsage({
                 turnId,
-                role: reading ? 'accurx' : 'fast',
+                role: callRole,
                 phase: reading ? 'accurxRead' : 'command',
                 model: callModel,
                 usage: filled.usage,
@@ -902,7 +925,7 @@ export async function POST(request) {
             source: (commandAnswer?.source || []).join(' · '),
             answer: shownText(commandSafety.alerts, commandAnswer),
             // A search runs no model, and the log should not name one.
-            model: searching ? '' : model,
+            model: searching ? '' : seeing ? imageModel : model,
             provenance: buildProvenance({
               scan,
               card: commandAnswer,
@@ -967,13 +990,17 @@ export async function POST(request) {
         // existed, and costs exactly what it used to.
         const decompose = looksMultiIntent(question);
         try {
+          // With a picture attached the picker runs on the images role and is
+          // shown the picture, so a screenshot of a letter can be recognised
+          // as a document to file rather than read as an empty message.
+          const selectModel = seeing ? imageModel : model;
           const selection = await generateObject({
-            model: openrouter(model),
+            model: openrouter(selectModel),
             schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
             temperature: 0,
-            prompt: selectionPrompt({ question, attached, notebook: notebookText, decompose }),
+            ...withImages(selectionPrompt({ question, attached, notebook: notebookText, decompose })),
           });
-          recordUsage({ turnId, role: 'fast', phase: 'select', model, usage: selection.usage });
+          recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'select', model: selectModel, usage: selection.usage });
           picked = selection.object.template;
           scan = safetyScan({ message: question, requests: selection.object.requests });
           // A question back, when the message could mean two different things
@@ -1057,8 +1084,9 @@ export async function POST(request) {
           ? [{ type: 'text', text: question }].concat(images.map((url) => ({ type: 'image', image: url })))
           : question;
 
+        const proseModel = seeing ? imageModel : model;
         const generated = await generateText({
-          model: openrouter(model),
+          model: openrouter(proseModel),
           system: SYSTEM,
           messages: [
             ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
@@ -1069,7 +1097,7 @@ export async function POST(request) {
           ],
           temperature: 0.2,
         });
-        recordUsage({ turnId, role: 'fast', phase: 'answer', model, usage: generated.usage });
+        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: generated.usage });
 
         const markdown = String(generated.text || '').trim();
         if (!markdown) {

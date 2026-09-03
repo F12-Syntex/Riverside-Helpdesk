@@ -519,6 +519,7 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes, writes the reason line and booking notes, and says whether the message reports somebody having already dealt with it. | `OPENROUTER_ACCURX_MODEL` → **fast** |
 | **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
+| **images** | `ai_model_images` | Any message with a picture attached — a screenshot of the repeat-medication screen to format for AccurX, a photo of a letter — whichever path it takes: a command, the template picker, or prose. | `OPENROUTER_IMAGES_MODEL` → **its own default**, `DEFAULT_IMAGES_MODEL = mistralai/ministral-14b-2512` |
 
 **The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
 the only two that do, and for opposite reasons. `accurx` falls back to fast so
@@ -532,9 +533,13 @@ message anybody types. It is the only role a reader waits on with nothing on the
 screen yet, and it should be set to the quickest thing on the list rather than
 the cleverest.
 
-There is no separate vision role — whichever model is answering reads pasted
-images, so the selected model must be vision-capable (the document ingester also
-reads images with it rather than using an OCR engine).
+**The images role is the only one that does not inherit at all.** There
+used to be no vision role — whichever model was answering read pasted images —
+which meant a practice that chose a text-only model above could not paste a
+screenshot. A message carrying an image now runs on the images role on every
+path through `/api/agent` (and `/api/ask`), and an unset images role is a small
+vision model of its own rather than "whatever is answering". The document
+ingester still reads images with the reasoning model.
 
 **The answer is always written by the reasoning model.** That is architectural,
 not a tunable: writing is the one job that needs the whole context held at once.

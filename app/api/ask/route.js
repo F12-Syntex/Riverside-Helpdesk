@@ -25,7 +25,7 @@ import { prepareBundledKnowledge } from '@/lib/knowledge-bootstrap';
 import { fullNotebookContext } from '@/lib/notebook';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { resolveDocfileDate, docfileActiveItems, sanitizeDocfileNote } from '@/lib/ai/docfile.mjs';
-import { getAiModel } from '@/lib/settings';
+import { getAiModel, getModelRoles } from '@/lib/settings';
 import { chatRequest } from '@/lib/ai/openrouter.mjs';
 
 export const runtime = 'nodejs';
@@ -130,7 +130,9 @@ async function callModel(apiKey, model, content) {
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   // The model is a practice setting now, changed at /settings — see lib/settings.js.
-  const model = await getAiModel();
+  // A message with a picture on it is moved onto the images role further down,
+  // once the images have been read out of the body.
+  let model = await getAiModel();
 
   if (!apiKey) {
     return NextResponse.json(
@@ -152,6 +154,9 @@ export async function POST(request) {
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
+  // The images role sees pictures; the model above may not. Same rule as
+  // /api/agent: a message carrying an image runs on the role chosen for it.
+  if (images.length) model = (await getModelRoles()).images.model;
   if (!question.trim() && !images.length) {
     return NextResponse.json({ error: 'Empty question.' }, { status: 400 });
   }

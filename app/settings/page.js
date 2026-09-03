@@ -9,7 +9,9 @@
  * and use it as typed — including a routing variant like ":nitro", which is
  * part of the id rather than a setting of its own.
  *
- * Blank inherits: only the top row has to be set.
+ * Blank inherits: only the top row has to be set. The one exception is
+ * Images, which falls back to a vision model of its own rather than to the
+ * row above — the row above may not see pictures.
  * ------------------------------------------------------------------ */
 
 import React from 'react';
@@ -24,7 +26,7 @@ const LIST_LIMIT = 40;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed'];
+const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed', 'images'];
 
 // A model's advertised rate. Shown per row because it is the number people
 // compare models on — but it is not what a question costs, which is why the
@@ -226,6 +228,10 @@ export default function SettingsPage() {
     web: roleValue('web') || model,
     accurx: roleValue('accurx') || fastModel,
     superSpeed: roleValue('superSpeed') || fastModel,
+    // Images falls back to its own default rather than to any row above: the
+    // model above may not see pictures at all. The default comes from the
+    // server, so an empty box is captioned with what it actually resolves to.
+    images: roleValue('images') || (setting ? setting.defaultImagesModel : ''),
   };
   const priceOf = (id) => models.find((m) => m.id === id) || models.find((m) => m.id === String(id).split(':')[0]) || null;
   const prices = React.useMemo(() => Object.fromEntries(models.map((m) => [m.id, m])), [models]);
@@ -324,6 +330,17 @@ export default function SettingsPage() {
             <ModelField
               label="Super speed model" value={roleValue('superSpeed')} models={models} index={index}
               placeholder={fastModel || 'inherit'} onChange={(v) => setRole('superSpeed', v)}
+            />
+          </Row>
+          {/* The one row that does not inherit. A message with a picture on it
+              — a screenshot of the repeat-medication screen, a photo of a
+              letter — is read by this model whichever path it takes, because
+              the model above may be text-only. Blank is a small vision model
+              chosen for exactly this, named in the box. */}
+          <Row name="Images" job="Reads any message with a picture attached" rate={rateLine(priceOf(resolved.images))} used={usedLine('images')}>
+            <ModelField
+              label="Images model" value={roleValue('images')} models={models} index={index}
+              placeholder={(setting && setting.defaultImagesModel) || 'vendor/model'} onChange={(v) => setRole('images', v)}
             />
           </Row>
 
