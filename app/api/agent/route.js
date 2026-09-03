@@ -39,7 +39,7 @@
 // behind it is unchanged, so it is stored at the moment it is given.
 import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { generateObject, generateText } from 'ai';
+import { generateObject, generateText, zodSchema } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
@@ -301,6 +301,36 @@ export async function POST(request) {
   const withImages = (text) => (seeing
     ? { messages: [{ role: 'user', content: [{ type: 'text', text }].concat(images.map((url) => ({ type: 'image', image: url }))) }] }
     : { prompt: text });
+
+  // STRUCTURED OUTPUT, WITH A WAY ROUND A PROVIDER THAT REFUSES IT.
+  //
+  // generateObject asks the provider for JSON that fits the schema, and not
+  // every endpoint honours that — least of all a small vision model handed a
+  // picture, which is exactly the call this app most needs to succeed. When it
+  // fails, the same request is made again as plain text asking for the JSON
+  // by hand, the first {...} in the reply is parsed and checked against the
+  // schema, and only if THAT fails does the caller see an error. The reader
+  // gets the card either way; the log says which way it came.
+  const readValues = async ({ model: id, schema, text, role, phase }) => {
+    try {
+      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, ...withImages(text) });
+      recordUsage({ turnId, role, phase, model: id, usage: out.usage });
+      return out.object;
+    } catch (first) {
+      console.warn(`[agent] structured ${phase} failed on ${id}, retrying as text:`, String(first).slice(0, 200));
+      const loose = await generateText({
+        model: openrouter(id),
+        temperature: 0,
+        ...withImages(text + '\n\nReply with ONE JSON object and nothing else — no prose, no code fence — matching this JSON Schema:\n' + JSON.stringify(zodSchema(schema).jsonSchema)),
+      });
+      recordUsage({ turnId, role, phase: phase + 'Text', model: id, usage: loose.usage });
+      const raw = String(loose.text || '');
+      const a = raw.indexOf('{');
+      const b = raw.lastIndexOf('}');
+      if (a === -1 || b === -1) throw first;
+      return schema.parse(JSON.parse(raw.slice(a, b + 1)));
+    }
+  };
   // A document dropped onto the question and already read into text by
   // /api/attach. The reader's own material: context for the model, never stored.
   const attachments = sanitiseAttachments(body?.attachments);
@@ -836,22 +866,18 @@ export async function POST(request) {
             if (reading) send({ type: 'status', text: 'Reading where it goes' });
 
             try {
-              const filled = await generateObject({
-                model: openrouter(callModel),
-                schema: (decompose && MULTI_COMMAND_SCHEMAS[command]) || COMMAND_SCHEMAS[command],
-                temperature: 0,
-                // The pictures go in beside the prompt. Until this, a command
-                // never saw an attached image at all: the prompt was text and
-                // the screenshot was dropped on the floor.
-                ...withImages(commandPrompt({ template: command, question, attached, decompose, images: images.length })),
-              });
-              recordUsage({
-                turnId,
-                role: callRole,
-                phase: reading ? 'accurxRead' : 'command',
-                model: callModel,
-                usage: filled.usage,
-              });
+              // The pictures go in beside the prompt (readValues). Until
+              // this, a command never saw an attached image at all: the
+              // prompt was text and the screenshot was dropped on the floor.
+              const filled = {
+                object: await readValues({
+                  model: callModel,
+                  schema: (decompose && MULTI_COMMAND_SCHEMAS[command]) || COMMAND_SCHEMAS[command],
+                  text: commandPrompt({ template: command, question, attached, decompose, images: images.length }),
+                  role: callRole,
+                  phase: reading ? 'accurxRead' : 'command',
+                }),
+              };
               // THE CLINICAL SCANNERS DO NOT RUN ON /accurx ANY MORE.
               //
               // They banded a message by matching words, and no amount of having
@@ -894,7 +920,9 @@ export async function POST(request) {
               // so nothing raises it — which is exactly what not asking means.
               console.warn('[agent] command values failed:', String(e).slice(0, 160));
               route = null;
-              commandAnswer = renderCommand(command, {}, question);
+              // A picture that was sent and not read is said on the card
+              // rather than answered with "paste a screenshot".
+              commandAnswer = renderCommand(command, {}, question, { images: images.length, failed: String(e && e.message ? e.message : e).slice(0, 120) });
             }
             if (route) stage2 = stage2 ? stage2 + '+accurxRoute' : 'accurxRoute';
           }
@@ -997,13 +1025,15 @@ export async function POST(request) {
           // shown the picture, so a screenshot of a letter can be recognised
           // as a document to file rather than read as an empty message.
           const selectModel = seeing ? imageModel : model;
-          const selection = await generateObject({
-            model: openrouter(selectModel),
-            schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
-            temperature: 0,
-            ...withImages(selectionPrompt({ question, attached, notebook: notebookText, decompose })),
-          });
-          recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'select', model: selectModel, usage: selection.usage });
+          const selection = {
+            object: await readValues({
+              model: selectModel,
+              schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
+              text: selectionPrompt({ question, attached, notebook: notebookText, decompose, images: images.length }),
+              role: seeing ? 'images' : 'fast',
+              phase: 'select',
+            }),
+          };
           picked = selection.object.template;
           scan = safetyScan({ message: question, requests: selection.object.requests });
           // A question back, when the message could mean two different things
