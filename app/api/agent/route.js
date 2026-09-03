@@ -85,6 +85,12 @@ export const dynamic = 'force-dynamic';
 // One model call. The five minutes the research loop needed are not needed here.
 export const maxDuration = 120;
 
+// Output caps — see readValues for why every call names one. The values read
+// back for a card are small; a prose answer a receptionist reads is shorter
+// than this.
+const READ_MAX_TOKENS = 2000;
+const PROSE_MAX_TOKENS = 1500;
+
 const SYSTEM = [
   'You are the reception assistant for The Riverside Practice, a UK GP surgery. You are answering a member of practice staff — reception, admin, nursing, clinical or management.',
   '',
@@ -311,9 +317,17 @@ export async function POST(request) {
   // by hand, the first {...} in the reply is parsed and checked against the
   // schema, and only if THAT fails does the caller see an error. The reader
   // gets the card either way; the log says which way it came.
+  //
+  // EVERY CALL HERE NAMES ITS OUTPUT CAP. Left unset, OpenRouter reserves the
+  // model's whole output window — 65,536 tokens on some — before the call is
+  // made, and refuses the request outright when the account cannot cover that
+  // reservation: "You requested up to 65536 tokens, but can only afford
+  // 1104." The values being read back are a few hundred tokens; a screen of
+  // thirty medications is under two thousand. So the cap is that, and a call
+  // costs what it uses rather than what the model could have written.
   const readValues = async ({ model: id, schema, text, role, phase }) => {
     try {
-      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, ...withImages(text) });
+      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, ...withImages(text) });
       recordUsage({ turnId, role, phase, model: id, usage: out.usage });
       return out.object;
     } catch (first) {
@@ -321,6 +335,7 @@ export async function POST(request) {
       const loose = await generateText({
         model: openrouter(id),
         temperature: 0,
+        maxOutputTokens: READ_MAX_TOKENS,
         ...withImages(text + '\n\nReply with ONE JSON object and nothing else — no prose, no code fence — matching this JSON Schema:\n' + JSON.stringify(zodSchema(schema).jsonSchema)),
       });
       recordUsage({ turnId, role, phase: phase + 'Text', model: id, usage: loose.usage });
@@ -1121,6 +1136,9 @@ export async function POST(request) {
         const generated = await generateText({
           model: openrouter(proseModel),
           system: SYSTEM,
+          // Capped for the same reason as readValues: an uncapped call reserves
+          // the model's whole window and is refused when the balance is low.
+          maxOutputTokens: PROSE_MAX_TOKENS,
           messages: [
             ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
             // The dropped document goes in before the question, as the context
