@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  COMMANDS, MODES, QA_MODE, TOP_MODES, FOLDER_MODES, awaitingArguments, commandByName, commandByTemplate,
-  forcedTemplate, matchCommands, modePlaceholder, parseCommand, checksPatientData,
+  COMMANDS, COMMAND_TEMPLATES, MODES, QA_MODE, TOP_MODES, FOLDER_MODES, awaitingArguments, commandByName, commandByTemplate,
+  forcedTemplate, isLocalCommand, matchCommands, modePlaceholder, parseCommand, checksPatientData,
 } from '../lib/commands.mjs';
 import { commandPrompt, renderCommand } from '../lib/templates/route.mjs';
 import { consultationEntry } from '../lib/templates/writing.mjs';
@@ -18,12 +18,15 @@ test('the list is offered while the name is being typed, and not after', () => {
   // Nothing is hidden now: every command is offered by both surfaces, /coding
   // included — filing a letter is an everyday answer that was reachable only by
   // somebody already told it existed.
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(matchCommands('/').map((c) => c.name), ['contact', 'accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
   assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
   assert.deepEqual(matchCommands('/f').map((c) => c.name), ['form']);
   assert.deepEqual(matchCommands('/t').map((c) => c.name), ['template']);
   assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
-  assert.deepEqual(matchCommands('/c').map((c) => c.name), ['consultation', 'coding']);
+  assert.deepEqual(matchCommands('/c').map((c) => c.name), ['contact', 'consultation', 'coding']);
+  assert.deepEqual(matchCommands('/cont').map((c) => c.name), ['contact']);
+  // "/number" is how the question is asked at the desk; it reaches the same row.
+  assert.deepEqual(matchCommands('/num').map((c) => c.name), ['contact']);
   assert.deepEqual(matchCommands('/cons').map((c) => c.name), ['consultation']);
   assert.deepEqual(matchCommands('/m').map((c) => c.name), ['medication']);
   // "/meds" is what the desk says; it reaches the same row.
@@ -75,6 +78,9 @@ test('the server honours only a template a command claims', () => {
   assert.equal(forcedTemplate('consultationNote'), 'consultationNote');
   assert.equal(forcedTemplate('practiceSearch'), 'practiceSearch');
   assert.equal(forcedTemplate('repeatMedication'), 'repeatMedication');
+  // Contact is answered in the browser and has no card on the server, so its
+  // template is not honoured: sent up anyway, the message is answered plainly.
+  assert.equal(forcedTemplate('contactSearch'), '');
   // Anything else — including a real template no command offers — is ignored,
   // so the field cannot be used to force an arbitrary card. "triage" is one of
   // those now: the router still chooses it, but no command claims it.
@@ -498,7 +504,7 @@ test('every command carries the words the picker needs', () => {
 });
 
 test('the modes are Q&A first, then every command, and nothing else', () => {
-  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'contact', 'accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
   assert.equal(MODES[0].label, 'Q&A');
   assert.equal(MODES[0].name, '', 'the resting mode is not a command');
   // Every mode but the first must be a real command, or the picker offers
@@ -509,7 +515,7 @@ test('the modes are Q&A first, then every command, and nothing else', () => {
 // The picker draws the writing modes at the top and the four lookups behind a
 // folder. Splitting the list must lose nothing: the two halves are the whole.
 test('the folder holds the lookups, and the two halves are every mode', () => {
-  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication']);
+  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'contact', 'accurx', 'consultation', 'medication']);
   assert.deepEqual(FOLDER_MODES.map((m) => m.name), ['coding', 'form', 'template', 'practice']);
   assert.deepEqual(TOP_MODES.concat(FOLDER_MODES).map((m) => m.name).sort(), MODES.map((m) => m.name).sort());
   assert.equal(QA_MODE.folder, undefined, 'the resting mode is never behind the folder');
@@ -524,6 +530,7 @@ test('the field asks for the right thing in each mode', () => {
   assert.match(modePlaceholder('coding'), /letter|discharge summary/i);
   assert.match(modePlaceholder('consultation'), /said and done/i);
   assert.match(modePlaceholder('medication'), /screenshot/i);
+  assert.match(modePlaceholder('contact'), /name|number/i);
   // An alias is resolved, never a mode of its own: the picker has one row per
   // command and the field is captioned by the name that row carries.
   assert.equal(modePlaceholder('document'), QA_MODE.placeholder);
@@ -538,8 +545,33 @@ test('picking a mode and typing its command mean the same thing', () => {
   for (const m of MODES.slice(1)) {
     const typed = parseCommand(`/${m.name} something`);
     assert.equal(typed.command.template, commandByName(m.name).template);
-    assert.equal(forcedTemplate(typed.command.template), typed.command.template);
+    // A local command never reaches the server, so there is no template for
+    // it to honour; every other mode's template is the one the server renders.
+    if (isLocalCommand(typed.command)) assert.equal(forcedTemplate(typed.command.template), '');
+    else assert.equal(forcedTemplate(typed.command.template), typed.command.template);
   }
+});
+
+/* ------------------------------------------------ the one local command */
+
+// Contact is a search, not a question: it is matched in the browser and
+// nothing is sent. What this protects is that it is offered like any other
+// mode, and that the server can never be asked to render it.
+test('/contact is a mode that stays in the browser', () => {
+  const contact = commandByName('contact');
+  assert.equal(contact.local, true);
+  assert.equal(isLocalCommand(contact), true);
+  assert.equal(contact.icon, 'phone');
+  assert.equal(commandByName('contacts').name, 'contact');
+  assert.equal(commandByName('number').name, 'contact');
+  assert.equal(parseCommand('/contact homerton').rest, 'homerton');
+  // Every other command is not local, and the server honours every one of
+  // their templates.
+  for (const c of COMMANDS.filter((x) => x.name !== 'contact')) {
+    assert.equal(isLocalCommand(c), false, c.name);
+    assert.equal(forcedTemplate(c.template), c.template, c.name);
+  }
+  assert.ok(!COMMAND_TEMPLATES.includes('contactSearch'));
 });
 
 

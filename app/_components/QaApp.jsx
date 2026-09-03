@@ -4,7 +4,8 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, isMode, matchCommands, modePlaceholder, parseCommand, checksPatientData } from '../../lib/commands.mjs';
+import { commandByName, isLocalCommand, isMode, matchCommands, modePlaceholder, parseCommand, checksPatientData } from '../../lib/commands.mjs';
+import { prepareContacts, searchPrepared } from '../../lib/contacts.fuzzy.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -18,7 +19,6 @@ import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
-import DirectoryPanel from './DirectoryPanel';
 import GradientBackground from './GradientBackground';
 import CommandMenu from './CommandMenu';
 import ModeSwitch from './ModeSwitch';
@@ -165,22 +165,26 @@ class RiversidePracticeQA extends React.Component {
       // True for the moment after asking, while the bar above the dock
       // carries the question up out of the field.
       emitting: false,
-      // The practice's own telephone list, matched against what is being
-      // typed and offered above the dock. dirSel is -1 until someone moves
-      // into the list with the arrow keys, so Enter still asks the question.
+      // The practice's own telephone list. It is the allow list for the
+      // identifier redaction (a colleague's name is not a patient's), it is
+      // listed under Sources, and under Contact mode it is what the field
+      // searches. `prepared` is the same list in the shape the fuzzy matcher
+      // reads (lib/contacts.fuzzy.mjs), built once when it arrives.
       directory: [],
+      prepared: [],
       notes: [],          // the notebook's notes, listed under Sources
-      // The query the directory is matched against settles behind the box:
-      // it is only updated once typing pauses, so the panel does not flicker
-      // in and out on the way through a sentence.
-      dirQuery: '',
       // The CQC register — every service registered in England — searched on
-      // the server for the same settled query. Far too large to hold here, so
-      // the browser asks for the top matches and shows them under the
-      // practice's own numbers.
+      // the server for what is typed under Contact mode. Far too large to
+      // hold here, so the browser asks for the top matches and shows them
+      // under the practice's own numbers. `cqcFor` is the query the rows
+      // answer, so a slow reply for an earlier query is never shown against
+      // a later one.
       cqc: [],
+      cqcFor: '',
+      cqcLoading: false,
+      // Which contact row the arrow keys are on under Contact mode. -1 until
+      // somebody moves into the list, when Enter takes the top match.
       dirSel: -1,
-      dirClosed: false,
       // The slash commands, offered while a command name is being typed. -1
       // until the arrow keys move into the list, so Enter on "/accurx some
       // text" asks it rather than re-picking the command.
@@ -264,7 +268,7 @@ class RiversidePracticeQA extends React.Component {
     // matched in the browser as someone types.
     fetch('/api/directory')
       .then((r) => r.json())
-      .then((d) => { if (d && Array.isArray(d.entries)) this.setState({ directory: d.entries }); })
+      .then((d) => { if (d && Array.isArray(d.entries)) this.setState({ directory: d.entries, prepared: prepareContacts(d.entries) }); })
       .catch(() => {});
     // The notebook's own notes are part of what an answer can be built from,
     // so they are listed under Sources alongside the documents.
@@ -284,100 +288,89 @@ class RiversidePracticeQA extends React.Component {
     this.mockTimers.forEach(clearTimeout);
   }
 
-  /* --------------------------- Directory --------------------------- *
-   * Reception's most common question is "what's the number for…", and
-   * it should not need a second page. The practice's own list is
-   * matched against whatever is in the box and offered above the dock.
-   * Numbers are shown verbatim from the directory — nothing here is
-   * written by a model.
+  /* ---------------------------- Contact mode ---------------------------- *
+   * Reception's most common question is "what's the number for…", and it
+   * should not need a second page. With Contact chosen on the disc, the
+   * field is a search: the practice's own list is matched fuzzily as
+   * each letter goes in (lib/contacts.fuzzy.mjs) and the results are the
+   * page, with the CQC register beneath them. Numbers are shown verbatim
+   * from the directory — nothing here is written by a model, and nothing
+   * typed under this mode leaves the browser except the register query.
+   *
+   * IT USED TO BE A PANEL THAT APPEARED ON ITS OWN, over the field, as
+   * soon as a few letters that "looked like a lookup" were typed. The
+   * guess was wrong both ways, and a panel that opens uninvited is a
+   * panel somebody is always closing. Now the list only appears because
+   * the reader said that is what they are typing for — see `contact` in
+   * lib/commands.mjs.
    * ----------------------------------------------------------------- */
 
-  // Someone writing a sentence is not looking for a number, and the panel
-  // appearing under every third word is worse than not having it. A query
-  // only reaches the directory once it stops looking like a question.
-  looksLikeLookup(text) {
-    const t = (text || '').trim();
-    if (t.length < 3) return false;
-    if (t.includes('?')) return false;
-    if (t.split(/\s+/).length > 4) return false;
-    return !/^(how|what|where|when|why|who|which|can|could|do|does|did|is|are|was|should|would|will|shall|may|might|please|tell|explain|i|we|my)\b/i.test(t);
+  inContactMode() {
+    return this.state.mode === 'contact';
   }
 
-  matchDirectory() {
-    const q = (this.state.dirQuery || '').trim().toLowerCase();
-    if (this.state.dirClosed || !this.looksLikeLookup(q)) return [];
-    const digits = q.replace(/\D/g, '');
-    const scored = [];
-    for (const e of this.state.directory) {
-      const hay = [e.label, e.category, e.note, (e.aliases || []).join(' ')].join(' ').toLowerCase();
-      // Digits only, from whatever the entry calls its number. Searching
-      // against the formatted text would fail the moment someone typed a
-      // number without the spaces the directory happens to have used.
-      const tels = phoneDigits(e);
-      let score = 0;
-      if (hay.startsWith(q)) score = 3;
-      else if (hay.includes(q)) score = 2;
-      else if (digits.length >= 3 && tels.includes(digits)) score = 1;
-      if (score) scored.push({ e, score });
-    }
-    scored.sort((a, b) => b.score - a.score || String(a.e.label).localeCompare(String(b.e.label)));
-    return scored.slice(0, 10).map((x) => x.e);
-  }
-
-  // The practice's own list is matched on the keystroke itself. It is a few
-  // dozen rows already in memory, so waiting for typing to stop bought
-  // nothing but a quarter-second of the panel not being there yet — and the
-  // person typing "podiatry" wants the number before they finish the word.
-  // Only the register waits, and only long enough to not send a request per
-  // keystroke; looksLikeLookup() already keeps the panel shut for anything
-  // that reads as a sentence, which is what stops it flickering.
+  // Every keystroke matches the practice's own list — it is a few dozen rows
+  // already in memory — and asks the register once the typing settles.
   onInput(value) {
-    this.setState({ input: value, dirQuery: value, dirSel: -1, dirClosed: false, cmdSel: -1 });
+    this.setState({ input: value, dirSel: -1, cmdSel: -1 });
     clearTimeout(this.dirTimer);
     this.dirTimer = setTimeout(() => this.searchCqc(value), 110);
   }
 
-  // The register is ~57k services, so it is searched on the server. Replies
-  // are stamped with the query they answer: a slow one for an earlier query
-  // can arrive after a fast one for the current query, and must not replace it.
+  // The register is ~57k services, so it is searched on the server, and only
+  // under Contact mode: nowhere else shows it. Replies are stamped with the
+  // query they answer: a slow one for an earlier query can arrive after a fast
+  // one for the current query, and must not replace it.
   searchCqc(value) {
     const q = String(value || '').trim();
-    if (!this.looksLikeLookup(q)) { this.setState({ cqc: [] }); return; }
+    if (!this.inContactMode() || q.length < 2) {
+      this.cqcToken = '';
+      if (this.state.cqc.length || this.state.cqcLoading) this.setState({ cqc: [], cqcFor: '', cqcLoading: false });
+      return;
+    }
     this.cqcToken = q;
+    this.setState({ cqcLoading: true });
     fetch('/api/cqc?q=' + encodeURIComponent(q), { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (this.cqcToken !== q) return;
-        this.setState({ cqc: Array.isArray(d.entries) ? d.entries.slice(0, 12) : [] });
+        this.setState({ cqc: Array.isArray(d.entries) ? d.entries.slice(0, 12) : [], cqcFor: q, cqcLoading: false });
       })
-      .catch(() => { if (this.cqcToken === q) this.setState({ cqc: [] }); });
+      .catch(() => { if (this.cqcToken === q) this.setState({ cqc: [], cqcFor: q, cqcLoading: false }); });
   }
 
   // The practice's own list first — it is what the practice actually uses —
   // and the register beneath it, marked as what it is. A service already in
   // the practice's list is not repeated from the register. Built here rather
-  // than in the view model so the keyboard and the panel walk the same rows.
-  directoryRows() {
-    // A command line is not a name. Once the field starts with "/" the reader is
-    // choosing a command or writing its message, and telephone numbers matched
-    // against that text are noise — two panels over one field, and the arrow
-    // keys owned by whichever opened last.
+  // than in the view model so the keyboard and the page walk the same rows.
+  //
+  // An empty query is the whole directory, alphabetically: the mode was just
+  // chosen and the list is the page, so it shows what can be searched.
+  contactRows() {
+    if (!this.inContactMode()) return [];
+    // A command line is not a name. "/accurx …" typed under Contact is the
+    // reader choosing a different command, and matching numbers against it
+    // is noise.
     if (/^\s*\//.test(this.state.input)) return [];
-    const practice = this.matchDirectory();
-    const seen = new Set(practice.map((e) => phoneDigits(e)).filter(Boolean));
-    const register = (this.state.dirClosed || !this.looksLikeLookup(this.state.dirQuery) ? [] : this.state.cqc)
+    const q = String(this.state.input || '').trim();
+    const practice = searchPrepared(this.state.prepared, q)
+      .filter((r) => phoneParts(r.entry).length);
+    const seen = new Set(practice.map((r) => phoneDigits(r.entry)).filter(Boolean));
+    const register = (q && this.state.cqcFor === q ? this.state.cqc : [])
       .filter((e) => phoneParts(e).length && !seen.has(phoneDigits(e)));
-    return practice.slice(0, 8)
-      .map((e) => ({ entry: e, group: 'Practice directory' }))
-      .concat(register.map((e) => ({ entry: e, group: 'CQC register' })));
+    return practice
+      .map((r) => ({ entry: r.entry, indices: r.indices, group: 'Practice directory' }))
+      .concat(register.map((e) => ({ entry: e, indices: [], group: 'CQC register' })));
   }
 
-  copyContact(entry) {
-    const phone = phoneParts(entry)[0] || null;
-    const shown = phone ? (phone.display || phone.tel) : '';
+  // One number onto the clipboard, and the row and the dock both say so. The
+  // first number of the entry unless a particular one was pressed.
+  copyContact(entry, phone = null) {
+    const chosen = phone || phoneParts(entry)[0] || null;
+    const shown = chosen ? (chosen.display || chosen.tel) : '';
     if (!shown) return;
-    try { navigator.clipboard.writeText(phone.tel || shown); } catch (e) {}
-    this.setState({ copiedNumber: shown, dirSel: -1 });
+    try { navigator.clipboard.writeText(chosen.tel || shown); } catch (e) {}
+    this.setState({ copiedNumber: shown });
     clearTimeout(this.copyTimer);
     this.copyTimer = setTimeout(() => this.setState({ copiedNumber: '' }), 2400);
   }
@@ -386,7 +379,7 @@ class RiversidePracticeQA extends React.Component {
   // the next keystroke is the message. Focus goes back to the field: the list
   // is usually walked with the keyboard, and a click should not end there.
   pickCommand(name) {
-    this.setState({ input: '/' + name + ' ', cmdSel: -1, dirQuery: '', dirSel: -1 }, () => {
+    this.setState({ input: '/' + name + ' ', cmdSel: -1, dirSel: -1 }, () => {
       const field = this.inputRef && this.inputRef.current;
       if (field) field.focus();
     });
@@ -402,7 +395,11 @@ class RiversidePracticeQA extends React.Component {
   pickMode(name) {
     const mode = name || '';
     this.rememberMode(mode);
-    this.setState({ mode }, () => {
+    // Into Contact mode: whatever is already in the field is the first search,
+    // so the register is asked for it straight away. Out of it: the register's
+    // rows are dropped, because nothing else shows them.
+    this.setState({ mode, dirSel: -1 }, () => {
+      this.searchCqc(this.state.input);
       const field = this.inputRef && this.inputRef.current;
       if (field) field.focus();
     });
@@ -459,7 +456,10 @@ class RiversidePracticeQA extends React.Component {
       }
     }
 
-    const matches = this.directoryRows();
+    // Under Contact mode the arrow keys walk the results on the page, and
+    // Enter copies the row they are on — or the top match, when they have not
+    // moved. Escape has already left the mode above.
+    const matches = this.contactRows();
     if (!matches.length) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -467,11 +467,9 @@ class RiversidePracticeQA extends React.Component {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       this.setState((st) => ({ dirSel: (st.dirSel <= 0 ? matches.length : st.dirSel) - 1 }));
-    } else if (e.key === 'Escape') {
-      this.setState({ dirClosed: true, dirSel: -1 });
-    } else if (e.key === 'Enter' && this.state.dirSel >= 0) {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      this.copyContact(matches[Math.min(this.state.dirSel, matches.length - 1)].entry);
+      this.copyContact(matches[Math.min(Math.max(0, this.state.dirSel), matches.length - 1)].entry);
     }
   }
 
@@ -741,6 +739,21 @@ class RiversidePracticeQA extends React.Component {
     // answer when nothing was typed to decide it.
     const command = parsed ? parsed.command : (commandByName(this.state.mode) || null);
 
+    // A LOCAL COMMAND IS ANSWERED HERE AND SENT NOWHERE. "/contact homerton"
+    // arms Contact mode with "homerton" as the search; Enter under the mode
+    // copies the top match. Either way no request is built, nothing is
+    // screened, and nothing goes on the transcript — it was a lookup.
+    if (isLocalCommand(command)) {
+      if (parsed) {
+        this.pickMode(command.name);
+        this.onInput(parsed.rest);
+        return;
+      }
+      const rows = this.contactRows();
+      if (rows.length) this.copyContact(rows[Math.min(Math.max(0, this.state.dirSel), rows.length - 1)].entry);
+      return;
+    }
+
     // NAMES AND ADDRESSES DO NOT LEAVE THIS MACHINE. The check is local and
     // deterministic (lib/safety/identifiers.mjs) and it runs here, before the
     // request is built, before the message is written to the transcript and
@@ -839,7 +852,7 @@ class RiversidePracticeQA extends React.Component {
     // exactly one message; it now lasts until it is changed, because looking
     // something up is rarely a thing done once — see app/_components/ModeSwitch.jsx
     // for what makes a mode that stays put safe to leave armed.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirQuery: '', dirSel: -1, cmdSel: -1 }, async () => {
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirSel: -1, cmdSel: -1 }, async () => {
       this.save();
 
       // Only the TYPED message is screened, and only when the command it was
@@ -1716,7 +1729,15 @@ class RiversidePracticeQA extends React.Component {
       }))
       .filter((t) => t.key !== activeTurn);
 
-    const dirMatches = this.directoryRows();
+    const contactMode = this.inContactMode();
+
+    const contactQuery = contactMode ? String(this.state.input || '').trim() : '';
+
+    const contactRows = this.contactRows();
+
+    const practiceCount = contactRows.filter((r) => r.group === 'Practice directory').length;
+
+    const registerCount = contactRows.length - practiceCount;
 
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
@@ -1763,8 +1784,10 @@ class RiversidePracticeQA extends React.Component {
       kbMatchCount,
       onKbSearch: (e) => self.setState({ kbQuery: e.target.value }),
       onSetView: (vw) => self.setView(vw),
-      isEmpty: this.state.messages.length === 0,
-      notEmpty: this.state.messages.length > 0,
+      // Under Contact mode the page is never "empty": the dock drops to the
+      // foot so the list has the page above it, exactly as an answer would.
+      isEmpty: this.state.messages.length === 0 && !contactMode,
+      notEmpty: this.state.messages.length > 0 || contactMode,
       input: this.state.input,
       pendingImages: this.state.pendingImages.map((im, i) => ({
         name: im.name,
@@ -1802,22 +1825,36 @@ class RiversidePracticeQA extends React.Component {
       isGenerating: this.state.messages.some((m) => m.status === 'loading'),
       copiedNumber: this.state.copiedNumber,
       hasCopied: !!this.state.copiedNumber,
-      // The practice directory, matched live against the box above the dock.
-      directory: dirMatches.map((row, i) => ({
+      // Contact mode: the directory, searched with what is in the field, as
+      // the page. See app/_components/ContactResults.jsx.
+      isContactMode: contactMode,
+      contactQuery: contactQuery,
+      contactSelected: this.state.dirSel,
+      contactRegisterSearching: contactMode && this.state.cqcLoading,
+      contactSummary: contactMode
+        ? (practiceCount + (practiceCount === 1 ? ' contact' : ' contacts') + (contactQuery ? ' here' : '')
+          + (registerCount ? ' · ' + registerCount + ' on the register' : '')
+          + ' · ↑↓ to choose, Enter to copy, Esc to leave')
+        : '',
+      contacts: contactRows.map((row, i) => ({
         key: (row.entry.id || row.entry.label) + ':' + i,
         group: row.group,
+        label: row.entry.label,
+        indices: row.indices || [],
         // The register's rows carry an address, which is what tells one branch
         // from another; the practice's own carry the area they sit under.
-        label: row.entry.label,
         detail: row.group === 'CQC register'
           ? (row.entry.note || '')
           : [row.entry.category, row.entry.note].filter(Boolean).join(' · '),
-        number: (phoneParts(row.entry)[0] || {}).display || '',
+        phones: phoneParts(row.entry).map((p) => ({
+          display: p.display || p.tel,
+          tel: p.tel || p.display,
+          isCopied: self.state.copiedNumber === (p.display || p.tel),
+          onCopy: () => self.copyContact(row.entry, p),
+        })),
+        emails: (row.entry.emails || []).map((e) => String(e)),
         isSelected: i === self.state.dirSel,
-        onPick: () => self.copyContact(row.entry),
-      })).filter((r) => r.number),
-      hasDirectory: dirMatches.length > 0,
-      directoryCount: dirMatches.length + (dirMatches.length === 1 ? ' match' : ' matches'),
+      })),
       onInputKey: (e) => self.onInputKey(e),
       // The commands, while a command name is being typed and no longer.
       commands: matchCommands(this.state.input).map((c, i) => ({
@@ -2026,15 +2063,12 @@ class RiversidePracticeQA extends React.Component {
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
             <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
-              {/* The telephone list hangs off the field — under it on the
-                  opening screen, where anything above would cover the
-                  heading, and over it once the page has an answer on it.
-                  Either way it is out of the flow, so the dock stays put
-                  and nothing on the page moves to make room. */}
-              <DirectoryPanel v={v} place={v.isEmpty ? 'below' : 'above'} />
-
-              {/* The commands take the same place as the telephone list; only
-                  one of the two can be open, because "/" is not a name. */}
+              {/* The commands hang off the field — under it on the opening
+                  screen, where anything above would cover the heading, and
+                  over it once the page has an answer on it. Either way it is
+                  out of the flow, so the dock stays put and nothing on the
+                  page moves to make room. The telephone list used to float
+                  here too; it is a mode now, and the page itself. */}
               <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
 
               {/* The disc at the left of the field: the search glass, on a

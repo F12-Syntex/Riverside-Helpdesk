@@ -38,8 +38,9 @@ const CQC_DEBOUNCE_MS = 180;
 const CQC_MIN_CHARS = 2;
 
 // The label with the characters the search matched picked out, so it is
-// obvious why an entry is in the list.
-function Label({ text, indices }) {
+// obvious why an entry is in the list. Shared with the Contact mode's page
+// (app/_components/ContactResults.jsx), which shows the same search.
+export function Label({ text, indices }) {
   if (!indices || !indices.length) return <>{text}</>;
   const hit = new Set(indices);
   const parts = [];

@@ -7,6 +7,7 @@ import SuggestBubble from './chat/SuggestBubble';
 import AiAnswer from './chat/AiAnswer';
 import TriageAnswer from './chat/TriageAnswer';
 import DocFileAnswer from './chat/DocFileAnswer';
+import ContactResults from './ContactResults';
 
 /* ------------------------------------------------------------------ *
  * One question at a time.
@@ -84,6 +85,16 @@ function TurnQuestion({ question }) {
 }
 
 export default function ChatView({ v }) {
+  // Contact mode: the directory is the page. The conversation is still held
+  // and comes straight back when the mode is dropped.
+  if (v.isContactMode) {
+    return (
+      <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
+        <ContactResults v={v} />
+      </div>
+    );
+  }
+
   return (
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
 
