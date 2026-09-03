@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.28.2` | 2026-09-03 | fix | `e3629db` | fix: cap the output tokens on every reading and prose call |
+| `5.28.1` | 2026-09-03 | docs | `5c1fb0b` | docs: record 5.27.1 and 5.28.0 in the versions table |
 | `5.28.0` | 2026-09-03 | feat | `635f992` | feat: a medication screenshot is read in plain Q&A, and a picture that fails says so |
 | `5.27.1` | 2026-09-03 | docs | `80cdb88` | docs: record 5.25.0 to 5.27.0 in the versions table |
 | `5.27.0` | 2026-09-03 | feat | `6559917` | feat: a Contact mode, and the directory no longer pops up as you type |
