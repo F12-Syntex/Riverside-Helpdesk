@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.27.0` | 2026-09-03 | feat | `6559917` | feat: a Contact mode, and the directory no longer pops up as you type |
+| `5.26.0` | 2026-09-03 | feat | `a01c354` | feat: /medication formats a repeat-medication screenshot for AccurX |
+| `5.25.0` | 2026-09-03 | feat | `8ccce89` | feat: an Images model role for any message with a picture on it |
+| `5.24.3` | 2026-09-02 | docs | `6f86392` | docs: record 5.24.1 and 5.24.2 in the versions table |
 | `5.24.2` | 2026-09-02 | fix | `fae1da4` | fix: open the modes folder as its own page with a Back row |
 | `5.24.1` | 2026-09-02 | docs | `e88e46c` | docs: record 5.23.1 and 5.24.0 in the versions table |
 | `5.24.0` | 2026-09-02 | feat | `24b8f43` | feat: add a Consultation mode and fold the lookups behind one row |
