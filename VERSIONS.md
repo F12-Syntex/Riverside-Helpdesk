@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.29.3` | 2026-09-04 | fix | `1b4ff10` | fix: a command whose model call failed says so instead of teaching house style |
+| `5.29.2` | 2026-09-04 | refactor | `f9f0639` | refactor: drop the worked examples and the two lists from the consultation card |
+| `5.29.1` | 2026-09-04 | docs | `b0852ca` | docs: record 5.28.3 and 5.29.0 in the versions table |
 | `5.29.0` | 2026-09-04 | feat | `82ed67f` | feat: /consultation keeps every detail and reads back in plain words |
 | `5.28.3` | 2026-09-03 | docs | `48aac35` | docs: record 5.28.1 and 5.28.2 in the versions table |
 | `5.28.2` | 2026-09-03 | fix | `e3629db` | fix: cap the output tokens on every reading and prose call |
