@@ -1,0 +1,18 @@
+{
+  "name": "riverside-practice-extension",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Chrome extension for The Riverside Practice — built here, signed in CI, updated over the practice's shared drive.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:release": "node build.mjs --minify",
+    "icons": "node tools/make-icons.mjs",
+    "id": "node tools/extension-id.mjs",
+    "pack": "node tools/pack-crx.mjs",
+    "check": "node build.mjs && node --test ../test/extension-crx.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

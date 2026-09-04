@@ -1,0 +1,80 @@
+/* The popup is deliberately plain: this build exists to prove the pipeline,
+   so everything on screen is something worth reading during a test — the
+   version that landed, and a control that proves the page is alive. */
+:root {
+  color-scheme: light dark;
+  --ink: #10243e;
+  --muted: #5b6b7f;
+  --line: #d8e0ea;
+  --paper: #ffffff;
+  --accent: #005eb8; /* NHS blue */
+  --accent-ink: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e8eef5;
+    --muted: #9fb0c2;
+    --line: #2a3746;
+    --paper: #131a22;
+    --accent: #4c9aff;
+    --accent-ink: #0b1219;
+  }
+}
+
+body {
+  margin: 0;
+  width: 260px;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.card { padding: 16px; }
+
+h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tagline {
+  margin: 2px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+button {
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover { filter: brightness(1.08); }
+button:active { transform: translateY(1px); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.label { text-transform: uppercase; letter-spacing: 0.06em; }
+
+.version {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--ink);
+}

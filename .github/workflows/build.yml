@@ -1,0 +1,115 @@
+# Builds, signs and publishes the Chrome extension.
+#
+# The release is a pickup point, not a distribution channel: a sync step on the
+# practice's network downloads the two files onto the shared drive, and Chrome
+# updates itself from there. Nothing is ever published to the Chrome Web Store.
+#
+# Needs one secret and one variable, both set once (see extension/README.md):
+#
+#   secrets.CRX_PRIVATE_KEY   the RSA key the .crx is signed with. It fixes the
+#                             extension's id for life — losing it means every
+#                             machine has to reinstall by hand.
+#   vars.EXT_UPDATE_BASE      where the shared drive is mounted, as Chrome sees
+#                             it, e.g. file:///Z:/RiversideExtension
+name: Extension build
+
+on:
+  push:
+    branches: [main]
+    # Only when the extension itself changed. The web app shares this
+    # repository and is pushed to main many times a day; without this, every
+    # one of those would cut an extension release that differs from the last
+    # by nothing but its version number.
+    paths:
+      - 'extension/**'
+      - 'test/extension-crx.test.mjs'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write # creates the ext-v tag and the release
+
+# One release at a time: the version comes from the tags that already exist, so
+# two runs in parallel would both compute the same next version.
+concurrency:
+  group: extension-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history, so `git tag --list ext-v*` sees every release
+          # that has ever been cut. A shallow clone would restart the numbering.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Check the signing key is present
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: |
+          if [ -z "$CRX_PRIVATE_KEY" ]; then
+            echo "::error::The CRX_PRIVATE_KEY secret is not set, so the .crx cannot be signed."
+            echo "::error::Generate a key and add it under Settings → Secrets and variables → Actions."
+            echo "::error::See extension/README.md, 'The signing key'."
+            exit 1
+          fi
+
+      - name: Install
+        working-directory: extension
+        run: npm ci
+
+      - name: Work out the version
+        id: version
+        working-directory: extension
+        run: node tools/next-version.mjs
+
+      - name: Build
+        working-directory: extension
+        env:
+          EXT_UPDATE_BASE: ${{ vars.EXT_UPDATE_BASE }}
+        run: node build.mjs --minify --version "${{ steps.version.outputs.version }}"
+
+      - name: Test the packer
+        run: node --test test/extension-crx.test.mjs
+
+      - name: Sign
+        id: pack
+        working-directory: extension
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: node tools/pack-crx.mjs --out ../release/extension.crx
+
+      - name: Write updates.xml
+        working-directory: extension
+        env:
+          EXT_UPDATE_BASE: ${{ vars.EXT_UPDATE_BASE }}
+        run: |
+          node tools/make-updates-xml.mjs \
+            --id "${{ steps.pack.outputs.id }}" \
+            --version "${{ steps.version.outputs.version }}" \
+            --out ../release/updates.xml
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          EXTENSION_ID: ${{ steps.pack.outputs.id }}
+        run: |
+          cat release/updates.xml
+          gh release create "ext-v$VERSION" \
+            release/extension.crx release/updates.xml \
+            --target "$GITHUB_SHA" \
+            --title "Extension $VERSION" \
+            --latest \
+            --notes "Extension id \`$EXTENSION_ID\`, built from \`${GITHUB_SHA:0:7}\`.
+
+          Not for public distribution. Sync onto the practice shared drive with
+          \`extension/sync/sync-extension.ps1\`; Chrome picks it up from there."

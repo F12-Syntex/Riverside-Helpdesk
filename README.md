@@ -625,6 +625,12 @@ clickable sources they can open in-browser.
   text. Stored in `audit_machines` / `audit_events`; `/stats` is deliberately
   not linked from the tools page or the menu.
 - **`public/assets/`** — logos, EMIS screenshots, and served document copies.
+- **`extension/`** — the practice's Chrome extension, which shares this
+  repository but nothing else: its own build, its own versions, and its own
+  workflow (`.github/workflows/build.yml`, which only runs when `extension/`
+  changed). It is never published to the Chrome Web Store — GitHub Actions
+  signs a `.crx`, one script copies it onto the practice shared drive, and
+  Chrome updates itself from there. See `extension/README.md`.
 
 ## Knowledge paths
 
