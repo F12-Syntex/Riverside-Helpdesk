@@ -10,7 +10,7 @@ import {
   forcedTemplate, isLocalCommand, matchCommands, modePlaceholder, parseCommand, checksPatientData,
 } from '../lib/commands.mjs';
 import { commandPrompt, renderCommand } from '../lib/templates/route.mjs';
-import { consultationEntry } from '../lib/templates/writing.mjs';
+import { consultationEntry, plainEnglish } from '../lib/templates/writing.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
@@ -137,6 +137,63 @@ test('/consultation assembles the record entry from its parts, in order', () => 
   const nothing = renderCommand('consultationNote', {});
   assert.ok(nothing && nothing.title, 'the rules card answers instead');
   assert.notEqual(nothing.title, 'Record entry');
+});
+
+// The card is checked by the person who just wrote the note, and what they are
+// checking is that everything they said is in the entry. A line of shorthand is
+// the worst place to notice something missing, so the card takes the entry apart
+// and reads it back in words.
+test('/consultation shows the entry in plain words and part by part', () => {
+  const card = renderCommand('consultationNote', {
+    contact: 'tel pt re appt, no answer',
+    summary: 'fever, cough w/ mucus, sore throat 1/52 unchanged, req abx',
+    actions: ['to book appt Fri'],
+    safetyNet: '',
+    unclear: [],
+  }, 'called the pt for an appt, no answer');
+
+  const [written, parts] = card.blocks.filter((b) => b.type === 'fields');
+  const entry = written.items[0];
+  assert.equal(entry.value, 'tel pt re appt, no answer: fever, cough w/ mucus, sore throat 1/52 unchanged, req abx; to book appt Fri');
+  // The reading sits under the entry as a hint, so it is never inside the Copy:
+  // what goes on the record is the shorthand.
+  assert.match(entry.hint, /telephone call to patient/i);
+  assert.match(entry.hint, /1 week unchanged/);
+  assert.match(entry.hint, /requests antibiotics/);
+  assert.equal(entry.copy, true);
+
+  assert.deepEqual(parts.items.map((f) => f.label), ['Contact', 'What it was about', 'What was done', 'Safety-netting']);
+  assert.equal(parts.items[1].value, 'fever, cough w/ mucus, sore throat 1/52 unchanged, req abx');
+  // An empty part is shown as missing rather than left off the card: none given
+  // is the finding, and it is why nothing was added.
+  assert.equal(parts.items[3].value, '');
+  assert.match(parts.items[3].missing, /none given/i);
+});
+
+// Only the abbreviations change. The two lines on the card say the same thing,
+// so the reading is done here rather than by a model that could reword it.
+test('the plain reading expands the shorthand and nothing else', () => {
+  assert.equal(
+    plainEnglish('tel c/w pt: sore throat 1/52, req abx; adv 111 if worse o/n'),
+    'Telephone call with patient: sore throat 1 week, requests antibiotics; advised 111 if worse overnight',
+  );
+  assert.equal(
+    plainEnglish('pt attended desk: req sick note 2/52 back pain; d/w Dr Okafor; s/n given'),
+    'Patient attended desk: requests sick note 2 weeks back pain; discussed with Dr Okafor; safety-netting given',
+  );
+  // Durations take the plural from their own number, and 3/7 is days not weeks.
+  assert.match(plainEnglish('cough 3/7 worsening'), /3 days worsening/);
+  assert.match(plainEnglish('r/v 1/12'), /Review 1 month/, 'the line reads as a sentence, so it starts with a capital');
+  assert.equal(plainEnglish(''), '');
+});
+
+// The rules the model is given, and the rules the card discloses, are one list.
+// This is the half of it that keeps a symptom from being dropped for brevity.
+test('/consultation is told to shorten by shorthand, never by leaving things out', () => {
+  const prompt = commandPrompt({ template: 'consultationNote', question: 'pt rang, fever, cough, mucus, sore throat 1 week unchanged, wants abx' });
+  assert.match(prompt, /NOTHING THE NOTE SAYS IS LEFT OUT/);
+  assert.match(prompt, /EVERY symptom the note names/);
+  assert.match(prompt, /Say how the contact ended where the patient was not reached/);
 });
 
 // The prompt for a written-up contact says the job and the rules, and puts
