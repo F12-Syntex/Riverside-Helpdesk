@@ -196,6 +196,40 @@ test('/consultation is told to shorten by shorthand, never by leaving things out
   assert.match(prompt, /Say how the contact ended where the patient was not reached/);
 });
 
+// A command always answers with its own card. When the call behind it did not
+// come back, the card that stands in for the answer has to SAY so — otherwise
+// the house style is indistinguishable from the answer, and a mode that could
+// not reach a model reads as a mode that does not work.
+test('a command whose model call failed says so on the card it falls back to', () => {
+  const credits = renderCommand('consultationNote', {}, 'pt rang re sore throat', {
+    failed: 'This request requires more credits, or fewer max_tokens. You requested up to 2000 tokens, but can only afford 626.',
+  });
+  const warn = credits.blocks.find((b) => b.type === 'note' && b.tone === 'warn');
+  assert.match(warn.text, /No entry was written from your note/);
+  // The provider's sentence is for whoever holds the account; the card says
+  // what it means for the person who just typed a note.
+  assert.match(warn.text, /out of credit/i);
+  assert.match(warn.text, /openrouter\.ai\/settings\/credits/);
+  assert.match(credits.subtitle, /No entry could be written/);
+
+  // Anything unrecognised keeps the provider's own words rather than being
+  // smoothed into "something went wrong".
+  const odd = renderCommand('consultationNote', {}, 'x', { failed: 'kaboom' });
+  assert.match(odd.blocks.find((b) => b.type === 'note' && b.tone === 'warn').text, /did not come back: kaboom/);
+
+  // The same card asked for on purpose is unchanged: no warning, and the
+  // subtitle it always had.
+  const asked = renderCommand('consultationNote', {}, 'how do I write up a call?');
+  assert.equal(asked.blocks.filter((b) => b.type === 'note' && b.tone === 'warn').length, 1, 'only the standing warning about what may go on a record');
+  assert.match(asked.subtitle, /shorthand it is read in/);
+  assert.doesNotMatch(JSON.stringify(asked), /out of credit/i);
+
+  // Filing a document falls the same way, for the same reason.
+  const coding = renderCommand('documentCoding', {}, 'a letter', { failed: 'rate limit exceeded (429)' });
+  assert.match(coding.blocks.find((b) => b.type === 'note' && b.tone === 'warn').text, /No filing title was built/);
+  assert.match(coding.blocks.find((b) => b.type === 'note' && b.tone === 'warn').text, /rate-limiting/);
+});
+
 // The prompt for a written-up contact says the job and the rules, and puts
 // the note inside a fence rather than into the instructions.
 test('/consultation asks the model for parts and hands it the note fenced', () => {
