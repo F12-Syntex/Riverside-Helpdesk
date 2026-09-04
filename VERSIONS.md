@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.30.0` | 2026-09-04 | feat | `9dc226a` | feat: a Chrome extension, signed in CI and updated over the shared drive |
+| `5.29.4` | 2026-09-04 | docs | `12040f8` | docs: record 5.29.1 to 5.29.3 in the versions table |
 | `5.29.3` | 2026-09-04 | fix | `1b4ff10` | fix: a command whose model call failed says so instead of teaching house style |
 | `5.29.2` | 2026-09-04 | refactor | `f9f0639` | refactor: drop the worked examples and the two lists from the consultation card |
 | `5.29.1` | 2026-09-04 | docs | `b0852ca` | docs: record 5.28.3 and 5.29.0 in the versions table |
