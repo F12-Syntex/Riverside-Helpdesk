@@ -56,7 +56,6 @@ const GROUPS = [
     label: 'Work',
     items: [
       { href: '/notebook', label: 'Notebook', icon: Icons.edit },
-      { href: '/coding', label: 'Coding', icon: Icons.stethoscope },
     ],
   },
   {
@@ -68,11 +67,21 @@ const GROUPS = [
   },
 ];
 
-/* Reachable, in the ⌘K list, and named by the crumb — but not worth a
- * permanent row.
+/* Settings is reachable and searchable but sits at the foot of the rail
+ * rather than in a group, so it is listed here to give ⌘K and the crumb
+ * bar its name.
  *
- * WHAT IS IN NEITHER LIST
- * -----------------------
+ * WHAT IS IN NEITHER LIST, AND WHY
+ * --------------------------------
+ * Signposting, the medication check, the templates, the staff rota, the
+ * tools index, the full index, the system map and the coder are off the
+ * navigation entirely — the rail AND the palette. A search that offered a
+ * tool the rail deliberately leaves out would be the rail's decision
+ * undone by the box next to it, and it would make ⌘K the place to
+ * rediscover exactly what had just been taken away. Their routes still
+ * answer, so a bookmarked address still works; nothing in the app links
+ * to them.
+ *
  * /knowledge is behind the knowledge-admin check in middleware.js, so
  * for nearly everyone a row for it would be a row that 404s.
  *
@@ -86,13 +95,6 @@ const GROUPS = [
  * it returns to the half-asked question (see AppHeader).
  */
 const EXTRA = [
-  { href: '/tools', label: 'All tools', group: 'Reference', icon: Icons.folder },
-  { href: '/templates', label: 'Templates', group: 'Work', icon: Icons.fileLines },
-  { href: '/rota', label: 'Staff rota', group: 'Work', icon: Icons.calendar },
-  { href: '/signpost', label: 'Signposting', group: 'Ask', icon: Icons.arrow },
-  { href: '/medications', label: 'Medication check', group: 'Ask', icon: Icons.pill },
-  { href: '/index', label: 'Full index', group: 'Reference', icon: Icons.sitemap },
-  { href: '/diagram', label: 'System map', group: 'Reference', icon: Icons.sitemap },
   { href: '/settings', label: 'Settings', group: 'Reference', icon: Icons.settings },
 ];
 
