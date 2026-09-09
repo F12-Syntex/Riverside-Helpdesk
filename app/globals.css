@@ -815,13 +815,20 @@ body { overflow-x: hidden; }
    whole of the screen plus the crumb. */
 .riva-shell-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
 
-/* The pages that build their own full-height layout measured the screen
-   before the shell existed. This is the one line that tells them what the
-   screen now is. */
-.riva-app-shell {
-  height: calc(100dvh - var(--rv-crumb-h)) !important;
-  min-height: calc(100dvh - var(--rv-crumb-h)) !important;
-}
+/* Every page measured the screen before the shell existed: fourteen of
+   them open with `min-height:100vh`, and the two that are whole app
+   layouts ask for `height:100vh` outright. Inside the shell the screen is
+   the crumb bar shorter than that, so all of them stood 50px taller than
+   the room they had and every page in the app carried a phantom scroll of
+   exactly that much — most visible on the notebook, where it made the
+   fixed sidebar drift and cut the Export/Import row off the bottom.
+
+   These two lines are what tells them what the screen now is. The pages
+   themselves keep saying 100vh, which stays right when one is opened
+   outside the shell. */
+.riva-shell-body > * { min-height: 100% !important; }
+.riva-app-shell,
+.riva-page-fill { height: 100% !important; min-height: 100% !important; }
 
 /* The dock is fixed to the viewport, so it has to be told the rail is
    there — otherwise it centres itself under it. */

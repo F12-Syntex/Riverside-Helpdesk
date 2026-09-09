@@ -908,7 +908,7 @@ export default function NotebookPage() {
   /* ------------------------------ Render ------------------------------- */
 
   return (
-    <div style={s('display:flex;flex-direction:column;height:100vh;min-height:100vh;background:' + C.bg + ';')}>
+    <div className="riva-page-fill" style={s('display:flex;flex-direction:column;height:100vh;min-height:100vh;background:' + C.bg + ';')}>
       {/* dangerouslySetInnerHTML: a plain {CSS} text child gets HTML-escaped
           on the server (> and ") but not on the client — hydration mismatch. */}
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
