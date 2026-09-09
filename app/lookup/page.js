@@ -155,6 +155,10 @@ export default function Page() {
   const [selIdx, setSelIdx] = React.useState(-1);
   const [flash, setFlash] = React.useState('');
   const [cqc, setCqc] = React.useState({ entries: [], total: 0, loading: false });
+  // The rows the page opens on: the practice's hospital shortlist, kept
+  // apart from the search results so a search never overwrites it and it
+  // is there again the moment the box is cleared.
+  const [suggested, setSuggested] = React.useState([]);
   // The web fallback is never automatic — it costs a model call, so it runs
   // only when the reader presses Enter, and only for the query they pressed it
   // on. `for` guards against the results of an old query lingering under a new
@@ -163,7 +167,10 @@ export default function Page() {
   const inputRef = React.useRef(null);
 
   const trimmed = query.trim();
-  const results = cqc.entries;
+  // What is on screen. Before anything is typed that is the shortlist, so
+  // the arrow keys and Enter-to-copy work on the opening screen exactly as
+  // they do on a search.
+  const results = trimmed ? cqc.entries : suggested;
   // A single character is never sent to the register, so it must not read as a
   // search in progress — that was a "Searching…" that could never finish.
   const tooShort = trimmed.length === 1;
@@ -195,12 +202,16 @@ export default function Page() {
     return () => { live = false; clearTimeout(timer); };
   }, [trimmed]);
 
-  // How many services are searchable, for the idle state. Cheap: the count
-  // rides along on every search response, so this only runs once.
+  // What the page opens on, and how many services are searchable behind
+  // it. One request, once — the same endpoint answers both, and the count
+  // rides along on every later search anyway.
   React.useEffect(() => {
     fetch('/api/cqc', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setCqc((c) => (c.total ? c : { ...c, total: d.total || 0 })))
+      .then((d) => {
+        if (Array.isArray(d.entries)) setSuggested(d.entries);
+        setCqc((c) => (c.total ? c : { ...c, total: d.total || 0 }));
+      })
       .catch(() => {});
   }, []);
 
@@ -256,16 +267,26 @@ export default function Page() {
       <AppHeader subtitle="Instant lookup" />
 
       <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:24px 24px 128px;')}>
-        {trimmed && results.length ? (
+        {results.length ? (
           <>
             <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 4px 8px;')}>
               <span style={s('font-size:13px;font-weight:700;color:#4c6272;')}>
-                {results.length} match{results.length === 1 ? '' : 'es'}
+                {trimmed
+                  ? results.length + ' match' + (results.length === 1 ? '' : 'es')
+                  : 'Hospitals and main switchboards'}
               </span>
               {/* The server returns the best 25. Saying so beats letting someone
                   scroll to the bottom and assume that is everything there is. */}
-              {results.length >= 25 ? (
+              {trimmed && results.length >= 25 ? (
                 <span style={s('font-size:12.5px;color:#8a99a3;')}>best 25 shown — add a town or postcode to narrow it</span>
+              ) : null}
+              {/* On the opening screen, what the box actually searches. The
+                  shortlist is fifteen rows; the register behind it is 57,000,
+                  and nobody would guess that from the rows on screen. */}
+              {!trimmed && cqc.total ? (
+                <span style={s('font-size:12.5px;color:#8a99a3;')}>
+                  or search all {cqc.total.toLocaleString('en-GB')} CQC-registered services
+                </span>
               ) : null}
             </div>
             <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
@@ -428,28 +449,27 @@ export default function Page() {
           </div>
         ) : null}
 
-        {/* Idle: say what is being searched, since a register of this size is
-            only useful if you know what you can ask it for — and show it, since
-            nobody learns "a postcode works too" from a placeholder. */}
+        {/* Under the opening list: what else the box takes, since nobody
+            learns "a postcode works too" from a placeholder, and how to
+            work the list from the keyboard. A footnote under real rows
+            rather than a card standing in place of them — this page used
+            to open on an explanation, which made it the only page in the
+            app that did. */}
         {!trimmed ? (
-          <EmptyState icon={Icons.search} title={cqc.total ? cqc.total.toLocaleString('en-GB') + ' services, searchable' : 'The CQC register of services in England'}>
-            <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#4c6272;')}>
-              Every service registered with the Care Quality Commission in England. Search by
-              name, town, postcode, service type or phone number.
+          <div style={s('margin:16px 4px 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;')}>
+            <span style={s('font-size:13px;color:#8a99a3;')}>Try</span>
+            {EXAMPLES.map((ex) => (
+              <Hover key={ex} tag="button" onClick={() => { setQuery(ex); if (inputRef.current) inputRef.current.focus(); }}
+                base="display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;border:1px solid #d8dde0;background:#fff;color:#005eb8;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;"
+                hover="border-color:#005eb8;background:#f7fbff;">
+                {ex}
+              </Hover>
+            ))}
+            <span style={s('flex-basis:100%;height:0;')} />
+            <p style={s('margin:6px 0 0;font-size:13px;line-height:1.5;color:#8a99a3;')}>
+              Use <Kbd>↑</Kbd> <Kbd>↓</Kbd> to move through the list and <Kbd>Enter</Kbd> to copy the number.
             </p>
-            <div style={s('display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px;')}>
-              {EXAMPLES.map((ex) => (
-                <Hover key={ex} tag="button" onClick={() => { setQuery(ex); if (inputRef.current) inputRef.current.focus(); }}
-                  base="display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;border:1px solid #d8dde0;background:#fff;color:#005eb8;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;"
-                  hover="border-color:#005eb8;background:#f7fbff;">
-                  {ex}
-                </Hover>
-              ))}
-            </div>
-            <p style={s('margin:20px auto 0;max-width:52ch;font-size:13px;line-height:1.5;color:#8a99a3;')}>
-              Use <Kbd>↑</Kbd> <Kbd>↓</Kbd> to move through matches and <Kbd>Enter</Kbd> to copy the number.
-            </p>
-          </EmptyState>
+          </div>
         ) : null}
       </main>
 
