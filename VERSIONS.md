@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.36.0` | 2026-09-09 | feat | `b9ac181` | feat: add the hospital and community numbers from correspondence |
+| `5.35.0` | 2026-09-09 | feat | `e676515` | feat: name every navigation row for what it does |
+| `5.34.1` | 2026-09-09 | docs | `7c1766d` | docs: record 5.32.2 through 5.34.0 in the versions table |
 | `5.34.0` | 2026-09-09 | feat | `ec17ae4` | feat: open Instant lookup on the practice's hospital shortlist |
 | `5.33.1` | 2026-09-09 | style | `a1629ad` | style: make the rail's foot a caption, not a card |
 | `5.33.0` | 2026-09-09 | feat | `b33cb0b` | feat: take the coder off the navigation, and the search list with it |
