@@ -264,19 +264,15 @@ export default function AppShell({ children }) {
           ))}
         </nav>
 
-        {/* The foot of the rail: which build this is. It exists for one
-            exchange — somebody is told a change is live, cannot see it,
-            and needs to say what they are actually looking at — so it is
-            a plain fact in a fixed place, with the commit in the tooltip
-            beside it. */}
+        {/* The foot of the rail: which practice, and which build. It
+            exists for one exchange — somebody is told a change is live,
+            cannot see it, and needs to say what they are actually looking
+            at — so it is a plain caption in a fixed place, with the commit
+            in the tooltip. */}
         <div className="riva-rail-foot">
           <div className="riva-rail-status" title={BUILD_LABEL}>
-            <div className="riva-rail-statusrow">
-              <span className="riva-rail-statustext">The Riverside Practice</span>
-              <span className="riva-rail-ver">{VERSION_LABEL}</span>
-            </div>
-            <div className="riva-rail-bar"><span /></div>
-            <div className="riva-rail-statusfoot">Answers from the practice’s own documents</div>
+            <span className="riva-rail-statustext">The Riverside Practice</span>
+            <span className="riva-rail-ver">{VERSION_LABEL}</span>
           </div>
           <NavRow item={{ href: '/settings', label: 'Settings', icon: Icons.settings }}
             active={pathname.startsWith('/settings')} onNavigate={() => setOpenMobile(false)} />

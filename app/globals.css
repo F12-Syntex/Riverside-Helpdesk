@@ -759,23 +759,17 @@ body { overflow-x: hidden; }
 .riva-rail-row:hover .riva-rail-ico { color: var(--rv-accent); }
 .riva-rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* The foot: which build this is, and the way to settings. */
-.riva-rail-foot { flex: none; padding-top: 14px; display: flex; flex-direction: column; gap: 4px; }
-.riva-rail-status {
-  border: 1px solid var(--rv-line); border-radius: var(--rv-radius);
-  background: var(--rv-page); padding: 9px 10px 10px; margin-bottom: 4px;
-}
-.riva-rail-statusrow { display: flex; align-items: baseline; gap: 8px; }
+/* The foot: which practice, which build, and the way to settings.
+   One line, not a card. A bordered panel around two short facts framed
+   them as a component with something to say; they are a caption, and a
+   caption does not need a box round it. */
+.riva-rail-foot { flex: none; padding-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+.riva-rail-status { display: flex; align-items: baseline; gap: 8px; padding: 4px 9px 8px; }
 .riva-rail-statustext {
   flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.riva-rail-ver { flex: none; font-size: 10.5px; font-weight: 600; color: var(--rv-ink-3); font-variant-numeric: tabular-nums; }
-/* A rule, not a gauge: it fades out, so it cannot be read as a meter of
-   something the app is not measuring. */
-.riva-rail-bar { height: 1px; margin: 9px 0 8px; overflow: hidden; }
-.riva-rail-bar > span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--rv-accent-line), rgba(0,94,184,0)); }
-.riva-rail-statusfoot { font-size: 10.5px; line-height: 1.35; color: var(--rv-ink-3); }
+.riva-rail-ver { flex: none; font-size: 11px; font-weight: 600; color: var(--rv-ink-3); font-variant-numeric: tabular-nums; }
 
 /* ---- the column to the right of it ------------------------------- */
 
