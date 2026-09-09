@@ -215,12 +215,12 @@ export default function PdfSourceView({ url, page = 1, quote = '', onResolve }) 
     return () => { clearTimeout(t); window.removeEventListener('resize', onResize); };
   }, [status, renderPage]);
 
-  const card = 'background:#fff;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;';
-  const navBtn = 'display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;background:#fff;border:1px solid #d8dde0;cursor:pointer;color:#005eb8;';
+  const card = 'background:#141416;border:1px solid #26262a;border-radius:8px;overflow:hidden;';
+  const navBtn = 'display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;background:#141416;border:1px solid #26262a;cursor:pointer;color:#e0554f;';
 
   if (status === 'error') {
     return (
-      <div style={s(card + 'padding:16px;font-size:14px;color:#4c6272;')}>
+      <div style={s(card + 'padding:16px;font-size:14px;color:#9a9aa3;')}>
         The PDF could not be rendered here. Use “Open full document” below to view it.
       </div>
     );
@@ -230,18 +230,18 @@ export default function PdfSourceView({ url, page = 1, quote = '', onResolve }) 
     <div>
       {numPages > 1 && (
         <div style={s('display:flex;align-items:center;gap:10px;margin:0 0 8px;')}>
-          <Hover tag="button" onClick={() => setPageNum((n) => Math.max(1, n - 1))} disabled={pageNum <= 1} aria-label="Previous page" base={navBtn} hover="border-color:#005eb8;background:#f7fbff;"><Svg w={16}>{Icons.chevronLeft}</Svg></Hover>
-          <span style={s('font-size:13px;color:#4c6272;font-weight:600;min-width:96px;text-align:center;')}>Page {pageNum} of {numPages}</span>
-          <Hover tag="button" onClick={() => setPageNum((n) => Math.min(numPages, n + 1))} disabled={pageNum >= numPages} aria-label="Next page" base={navBtn} hover="border-color:#005eb8;background:#f7fbff;"><Svg w={16}>{Icons.chevronRight}</Svg></Hover>
+          <Hover tag="button" onClick={() => setPageNum((n) => Math.max(1, n - 1))} disabled={pageNum <= 1} aria-label="Previous page" base={navBtn} hover="border-color:#e0554f;background:#151518;"><Svg w={16}>{Icons.chevronLeft}</Svg></Hover>
+          <span style={s('font-size:13px;color:#9a9aa3;font-weight:600;min-width:96px;text-align:center;')}>Page {pageNum} of {numPages}</span>
+          <Hover tag="button" onClick={() => setPageNum((n) => Math.min(numPages, n + 1))} disabled={pageNum >= numPages} aria-label="Next page" base={navBtn} hover="border-color:#e0554f;background:#151518;"><Svg w={16}>{Icons.chevronRight}</Svg></Hover>
           {pageNum !== page && (
-            <Hover tag="button" onClick={() => setPageNum(page)} base="font:inherit;font-size:13px;font-weight:600;color:#005eb8;background:none;border:none;cursor:pointer;text-decoration:underline;" hover="color:#003087;">Back to cited page</Hover>
+            <Hover tag="button" onClick={() => setPageNum(page)} base="font:inherit;font-size:13px;font-weight:600;color:#e0554f;background:none;border:none;cursor:pointer;text-decoration:underline;" hover="color:#f0817c;">Back to cited page</Hover>
           )}
         </div>
       )}
 
       <div ref={wrapRef} style={s(card + 'position:relative;line-height:0;')}>
         {status === 'loading' && (
-          <div style={s('padding:40px 16px;text-align:center;font-size:14px;color:#768692;line-height:1.5;')}>Rendering the document…</div>
+          <div style={s('padding:40px 16px;text-align:center;font-size:14px;color:#74747d;line-height:1.5;')}>Rendering the document…</div>
         )}
         <div style={s('position:relative;display:inline-block;width:100%;')}>
           <canvas ref={canvasRef} style={s('display:block;width:100%;height:auto;')} />
@@ -253,8 +253,8 @@ export default function PdfSourceView({ url, page = 1, quote = '', onResolve }) 
               top: (b.top / canvasH * 100) + '%',
               width: (b.width / canvasW * 100) + '%',
               height: (b.height / canvasH * 100) + '%',
-              background: 'rgba(255,214,0,.42)',
-              outline: '1.5px solid rgba(214,158,0,.85)',
+              background: 'rgba(217,164,65,.42)',
+              outline: '1.5px solid rgba(217,164,65,.85)',
               borderRadius: '2px',
               mixBlendMode: 'multiply',
               pointerEvents: 'none',

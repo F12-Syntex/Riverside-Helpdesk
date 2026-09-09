@@ -38,20 +38,20 @@ const TOOLS = [
 
 export default function Page() {
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Tools and guidance" />
 
       <main style={s('flex:1;width:100%;max-width:760px;margin:0 auto;padding:40px 24px 56px;')}>
         <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>Practice tools</h1>
-        <p style={s('font-size:17px;color:#4c6272;margin:0 0 28px;')}>Choose a tool to get started.</p>
+        <p style={s('font-size:17px;color:#9a9aa3;margin:0 0 28px;')}>Choose a tool to get started.</p>
 
         <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;')}>
           {TOOLS.map((t) => (
             <li key={t.href}>
               <Hover tag={Link} href={t.href}
-                base="display:flex;align-items:center;gap:14px;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;font-size:20px;font-weight:600;color:#212b32;text-decoration:none;"
-                hover="border-color:#005eb8;background:#f0f6fb;">
-                <Svg style={s('flex:none;color:#005eb8;')}>{t.icon}</Svg>
+                base="display:flex;align-items:center;gap:14px;padding:18px 20px;background:#141416;border-radius:12px;border:1px solid #26262a;font-size:20px;font-weight:600;color:#e9e9ec;text-decoration:none;"
+                hover="border-color:#e0554f;background:#1b1b1f;">
+                <Svg style={s('flex:none;color:#e0554f;')}>{t.icon}</Svg>
                 {t.title}
               </Hover>
             </li>

@@ -14,7 +14,7 @@ import DpiaView from '../_components/DpiaView';
 
 export default function Page() {
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Data protection" />
       <main style={s('flex:1;width:100%;')}>
         <DpiaView />

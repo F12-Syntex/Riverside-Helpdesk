@@ -27,10 +27,10 @@ import { s, Hover, Svg, Icons } from '../ui';
  * ------------------------------------------------------------------ */
 
 const STATUS = {
-  pending: { ring: 'background:#eef1f2;color:#8a99a3;', title: 'color:#8a99a3;font-weight:500;', dim: true },
-  active: { ring: 'background:#e8f1f8;color:#005eb8;', title: 'color:#212b32;font-weight:600;' },
-  success: { ring: 'background:#eef7ee;color:#007f3b;', title: 'color:#212b32;font-weight:500;' },
-  error: { ring: 'background:#fdf2f2;color:#d5281b;', title: 'color:#a5130b;font-weight:600;' },
+  pending: { ring: 'background:#1c1c1f;color:#63636c;', title: 'color:#63636c;font-weight:500;', dim: true },
+  active: { ring: 'background:#221a1a;color:#e0554f;', title: 'color:#e9e9ec;font-weight:600;' },
+  success: { ring: 'background:#12211a;color:#56c98a;', title: 'color:#e9e9ec;font-weight:500;' },
+  error: { ring: 'background:#261619;color:#ff7b72;', title: 'color:#ff9d96;font-weight:600;' },
 };
 
 const TOOL_ICON = {
@@ -100,8 +100,8 @@ function Findings({ step, status }) {
   // A failure explains itself in its own panel; a success lists its sources.
   if (status === 'error') {
     return (
-      <div style={s('margin-top:8px;border:1px solid #f4c7c3;background:#fdf2f2;border-radius:10px;padding:10px 12px;')}>
-        <div style={s('display:flex;gap:7px;align-items:flex-start;font-size:13px;line-height:1.45;color:#a5130b;')}>
+      <div style={s('margin-top:8px;border:1px solid #232327;background:#261619;border-radius:10px;padding:10px 12px;')}>
+        <div style={s('display:flex;gap:7px;align-items:flex-start;font-size:13px;line-height:1.45;color:#ff9d96;')}>
           <span style={s('flex:none;margin-top:2px;')}><Svg w={14} sw={2.2}>{Icons.alertCircle}</Svg></span>
           <span>{step.summary || 'This lookup could not be completed.'}</span>
         </div>
@@ -110,25 +110,25 @@ function Findings({ step, status }) {
   }
 
   return (
-    <div style={s('margin-top:8px;border:1px solid #e4e9eb;background:#fbfdfd;border-radius:10px;padding:10px 12px;')}>
+    <div style={s('margin-top:8px;border:1px solid #1d1d20;background:#131315;border-radius:10px;padding:10px 12px;')}>
       {step.summary ? (
-        <div style={s('font-size:12px;font-weight:600;color:#007f3b;letter-spacing:.01em;')}>{step.summary}</div>
+        <div style={s('font-size:12px;font-weight:600;color:#56c98a;letter-spacing:.01em;')}>{step.summary}</div>
       ) : null}
       {items.length ? (
         <ul style={s('margin:' + (step.summary ? '7px' : '0') + ' 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;')}>
           {items.slice(0, MAX_ITEMS).map((it, i) => (
-            <li key={i} style={s('display:flex;gap:7px;align-items:flex-start;font-size:13px;line-height:1.4;color:#4c6272;overflow-wrap:anywhere;')}>
-              <span style={s('flex:none;width:4px;height:4px;border-radius:50%;background:#a3aeb5;margin-top:7px;')} />
+            <li key={i} style={s('display:flex;gap:7px;align-items:flex-start;font-size:13px;line-height:1.4;color:#9a9aa3;overflow-wrap:anywhere;')}>
+              <span style={s('flex:none;width:4px;height:4px;border-radius:50%;background:#4b4b53;margin-top:7px;')} />
               <span style={s('min-width:0;')}>
                 {it.url
-                  ? <a href={it.url} target="_blank" rel="noreferrer" style={s('color:#005eb8;text-decoration:underline;')}>{it.label}</a>
-                  : <span style={s('color:#212b32;')}>{it.label}</span>}
-                {it.sub && !it.url ? <span style={s('color:#8a99a3;')}>{' — ' + it.sub}</span> : null}
+                  ? <a href={it.url} target="_blank" rel="noreferrer" style={s('color:#e0554f;text-decoration:underline;')}>{it.label}</a>
+                  : <span style={s('color:#e9e9ec;')}>{it.label}</span>}
+                {it.sub && !it.url ? <span style={s('color:#63636c;')}>{' — ' + it.sub}</span> : null}
               </span>
             </li>
           ))}
           {extra > 0 && (
-            <li style={s('font-size:12.5px;color:#8a99a3;padding-left:11px;')}>and {extra} more</li>
+            <li style={s('font-size:12.5px;color:#63636c;padding-left:11px;')}>and {extra} more</li>
           )}
         </ul>
       ) : null}
@@ -150,10 +150,10 @@ function Step({ step, index, last, open, onToggle }) {
       + (look.dim ? 'opacity:.55;' : '')
       + 'animation:rivaStepIn .35s ease both;animation-delay:' + (index * 60) + 'ms;')}>
       {/* The line joining one step to the next, behind the icons. */}
-      {!last && <span style={s('position:absolute;left:12px;top:26px;bottom:-6px;width:2px;background:#e4e9eb;')} />}
+      {!last && <span style={s('position:absolute;left:12px;top:26px;bottom:-6px;width:2px;background:#1d1d20;')} />}
 
       <div style={s('position:relative;flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
-        + 'box-shadow:0 0 0 4px #fff;' + look.ring)}>
+        + 'box-shadow:0 0 0 4px #141416;' + look.ring)}>
         <StepIcon status={status} tool={step.tool} />
       </div>
 
@@ -165,16 +165,16 @@ function Step({ step, index, last, open, onToggle }) {
           aria-expanded={openable ? (open ? 'true' : 'false') : undefined}
           base={'display:flex;align-items:center;gap:10px;width:100%;margin:-3px -6px 0;padding:3px 6px;border:none;background:none;font:inherit;text-align:left;border-radius:7px;'
             + (openable ? 'cursor:pointer;' : '')}
-          hover={openable ? 'background:#f0f4f5;' : ''}>
+          hover={openable ? 'background:#0b0b0c;' : ''}>
           <span style={s('flex:1;min-width:0;font-size:14px;line-height:1.4;letter-spacing:-.005em;' + look.title)}>
             {step.label}
-            {step.detail ? <span style={s('font-weight:400;color:#768692;')}>{' — ' + step.detail}</span> : null}
+            {step.detail ? <span style={s('font-weight:400;color:#74747d;')}>{' — ' + step.detail}</span> : null}
           </span>
           {step.duration ? (
-            <span style={s('flex:none;font-size:11.5px;color:#8a99a3;font-variant-numeric:tabular-nums;')}>{step.duration}</span>
+            <span style={s('flex:none;font-size:11.5px;color:#63636c;font-variant-numeric:tabular-nums;')}>{step.duration}</span>
           ) : null}
           {openable ? (
-            <span style={s('flex:none;display:flex;color:#a3aeb5;transform:rotate(' + (open ? '90deg' : '0deg') + ');transition:transform .2s;')}>
+            <span style={s('flex:none;display:flex;color:#4b4b53;transform:rotate(' + (open ? '90deg' : '0deg') + ');transition:transform .2s;')}>
               <Svg w={14} sw={2.2}>{Icons.chevronRight}</Svg>
             </span>
           ) : null}
@@ -218,24 +218,24 @@ export default function AgentPlanning({
     ? <Svg w={14} sw={2.3} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
     : hasError ? <Svg w={14} sw={2.3}>{Icons.triangle}</Svg>
       : <Svg w={14} sw={2.3}>{Icons.check}</Svg>;
-  const headTone = hasActive ? 'background:#e8f1f8;color:#005eb8;'
-    : hasError ? 'background:#fdf2f2;color:#d5281b;'
-      : 'background:#eef7ee;color:#007f3b;';
+  const headTone = hasActive ? 'background:#221a1a;color:#e0554f;'
+    : hasError ? 'background:#261619;color:#ff7b72;'
+      : 'background:#12211a;color:#56c98a;';
 
   return (
-    <div style={s('border:1px solid #e4e9eb;background:#fff;border-radius:12px;overflow:hidden;')}>
+    <div style={s('border:1px solid #1d1d20;background:#141416;border-radius:12px;overflow:hidden;')}>
       <Hover tag="button" type="button" onClick={() => setOpen(!open)} aria-expanded={open ? 'true' : 'false'}
         base={'display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:none;font:inherit;text-align:left;cursor:pointer;'
-          + (open ? 'background:#f7fafb;border-bottom:1px solid #e4e9eb;' : 'background:#fff;')}
-        hover="background:#f0f4f5;">
+          + (open ? 'background:#141416;border-bottom:1px solid #1d1d20;' : 'background:#141416;')}
+        hover="background:#0b0b0c;">
         <span style={s('flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;' + headTone)}>
           {headIcon}
         </span>
-        <span style={s('flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;color:#4c6272;')}>
-          <span style={s('font-weight:600;color:#212b32;')}>{title}</span>
-          {subtitle ? <span style={s('color:#8a99a3;')}>{' · ' + subtitle}</span> : null}
+        <span style={s('flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;color:#9a9aa3;')}>
+          <span style={s('font-weight:600;color:#e9e9ec;')}>{title}</span>
+          {subtitle ? <span style={s('color:#63636c;')}>{' · ' + subtitle}</span> : null}
         </span>
-        <span style={s('flex:none;display:flex;color:#8a99a3;transform:rotate(' + (open ? '90deg' : '0deg') + ');transition:transform .2s;')}>
+        <span style={s('flex:none;display:flex;color:#63636c;transform:rotate(' + (open ? '90deg' : '0deg') + ');transition:transform .2s;')}>
           <Svg w={15} sw={2.2}>{Icons.chevronRight}</Svg>
         </span>
       </Hover>

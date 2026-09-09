@@ -31,11 +31,11 @@ import { CARD, Ranked, Segmented, Tile, ago, dayHeading, dayKey, duration, numbe
  * icon and the word, never colour alone.
  * ---------------------------------------------------------------- */
 const KIND = {
-  pageview: { label: 'Page',    hue: '#005eb8', ink: '#00437e', tint: '#e8f1f8', edge: '#aac7e0' },
-  query:    { label: 'Question',hue: '#a4610a', ink: '#7a4708', tint: '#fdf3e7', edge: '#e4c69a' },
-  action:   { label: 'Action',  hue: '#00a499', ink: '#00625c', tint: '#e2f4f2', edge: '#9fd5d0' },
-  load:     { label: 'Routine', hue: '#768692', ink: '#4c6272', tint: '#f0f4f5', edge: '#d8dde0' },
-  error:    { label: 'Failed',  hue: '#d5281b', ink: '#8a1509', tint: '#fde8e9', edge: '#f0b8b3', icon: true },
+  pageview: { label: 'Page',    hue: '#e0554f', ink: '#ea6a64', tint: '#221a1a', edge: '#4a3330' },
+  query:    { label: 'Question',hue: '#e0b85f', ink: '#e8c47a', tint: '#231d14', edge: '#51442a' },
+  action:   { label: 'Action',  hue: '#4fd1c5', ink: '#4fd1c5', tint: '#1b1b1d', edge: '#3d3d44' },
+  load:     { label: 'Routine', hue: '#74747d', ink: '#9a9aa3', tint: '#0b0b0c', edge: '#26262a' },
+  error:    { label: 'Failed',  hue: '#ff7b72', ink: '#ffb3ad', tint: '#2c1719', edge: '#502624', icon: true },
 };
 
 const VIEWS = [
@@ -91,7 +91,7 @@ function MachineCard({ machine, selected, onSelect, onRename }) {
   const details = [machine.label, machine.screen, machine.timezone].filter(Boolean).join(' · ');
 
   return (
-    <div style={s(CARD + 'padding:15px 16px;' + (selected ? 'border-color:#005eb8;box-shadow:0 0 0 1px #005eb8;' : ''))}>
+    <div style={s(CARD + 'padding:15px 16px;' + (selected ? 'border-color:#e0554f;box-shadow:0 0 0 1px #e0554f;' : ''))}>
       <div style={s('display:flex;align-items:flex-start;gap:10px;')}>
         <div style={s('flex:1;min-width:0;')}>
           {editing ? (
@@ -103,36 +103,36 @@ function MachineCard({ machine, selected, onSelect, onRename }) {
                 maxLength={60}
                 placeholder="Reception PC 1"
                 aria-label="Name for this machine"
-                style={s('flex:1;min-width:0;font:inherit;font-size:15px;padding:6px 9px;border:2px solid #005eb8;border-radius:7px;')}
+                style={s('flex:1;min-width:0;font:inherit;font-size:15px;padding:6px 9px;border:2px solid #e0554f;border-radius:7px;')}
               />
               <Hover tag="button" type="submit" disabled={saving}
-                base="flex:none;border:none;border-radius:7px;padding:7px 12px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:#007f3b;cursor:pointer;"
-                hover="background:#00662f;">{saving ? 'Saving…' : 'Save'}</Hover>
+                base="flex:none;border:none;border-radius:7px;padding:7px 12px;font:inherit;font-size:14px;font-weight:600;color:#ffffff;background:#56c98a;cursor:pointer;"
+                hover="background:#7fdcaa;">{saving ? 'Saving…' : 'Save'}</Hover>
               <Hover tag="button" type="button" onClick={() => { setEditing(false); setDraft(machine.name || ''); }}
-                base="flex:none;background:none;border:none;padding:4px;font:inherit;font-size:14px;color:#4c6272;cursor:pointer;text-decoration:underline;"
-                hover="color:#212b32;">Cancel</Hover>
+                base="flex:none;background:none;border:none;padding:4px;font:inherit;font-size:14px;color:#9a9aa3;cursor:pointer;text-decoration:underline;"
+                hover="color:#e9e9ec;">Cancel</Hover>
             </form>
           ) : (
             <div style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;')}>
-              <span style={s('font-size:17px;font-weight:700;color:#212b32;')}>{machineName(machine)}</span>
+              <span style={s('font-size:17px;font-weight:700;color:#e9e9ec;')}>{machineName(machine)}</span>
               <Hover tag="button" type="button" onClick={() => setEditing(true)}
-                base="background:none;border:none;padding:0;font:inherit;font-size:13px;color:#005eb8;text-decoration:underline;cursor:pointer;"
-                hover="color:#003087;">{machine.name ? 'Rename' : 'Name this machine'}</Hover>
+                base="background:none;border:none;padding:0;font:inherit;font-size:13px;color:#e0554f;text-decoration:underline;cursor:pointer;"
+                hover="color:#f0817c;">{machine.name ? 'Rename' : 'Name this machine'}</Hover>
             </div>
           )}
-          <div style={s('font-size:13.5px;color:#4c6272;margin-top:3px;overflow-wrap:anywhere;')}>{details || 'Nothing recorded about this machine yet'}</div>
+          <div style={s('font-size:13.5px;color:#9a9aa3;margin-top:3px;overflow-wrap:anywhere;')}>{details || 'Nothing recorded about this machine yet'}</div>
         </div>
 
         <Hover tag="button" type="button" onClick={() => onSelect(selected ? '' : machine.id)}
           base={'flex:none;border-radius:8px;padding:6px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid ' +
-            (selected ? '#005eb8;background:#005eb8;color:#fff;' : '#d8dde0;background:#fff;color:#005eb8;')}
-          hover={selected ? 'background:#00437e;' : 'border-color:#005eb8;background:#f0f6fb;'}>
+            (selected ? '#e0554f;background:#e0554f;color:#ffffff;' : '#26262a;background:#141416;color:#e0554f;')}
+          hover={selected ? 'background:#ea6a64;' : 'border-color:#e0554f;background:#1b1b1f;'}>
           {selected ? 'Showing' : 'Show only'}
         </Hover>
       </div>
 
-      <div style={s('display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:11px;padding-top:11px;border-top:1px solid #eaeff1;font-size:13px;color:#4c6272;')}>
-        <span><strong style={s('color:#212b32;')}>{number(machine.events)}</strong> events</span>
+      <div style={s('display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:11px;padding-top:11px;border-top:1px solid #19191c;font-size:13px;color:#9a9aa3;')}>
+        <span><strong style={s('color:#e9e9ec;')}>{number(machine.events)}</strong> events</span>
         <span>Last used {ago(machine.lastSeen)}</span>
         <span>First seen {ago(machine.firstSeen)}</span>
         {machine.topTool && <span>Mostly {machine.topTool}</span>}
@@ -145,10 +145,10 @@ function MachineCard({ machine, selected, onSelect, onRename }) {
 function EventRow({ event, machine }) {
   const meta = KIND[event.kind] || KIND.action;
   return (
-    <li style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:10px 14px;border-top:1px solid #eaeff1;')}>
-      <span style={s('flex:none;font-variant-numeric:tabular-nums;font-size:13px;color:#768692;min-width:66px;')}>{timeOf(event.at)}</span>
+    <li style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:10px 14px;border-top:1px solid #19191c;')}>
+      <span style={s('flex:none;font-variant-numeric:tabular-nums;font-size:13px;color:#74747d;min-width:66px;')}>{timeOf(event.at)}</span>
       <KindChip kind={event.kind} />
-      <span style={s('flex:1;min-width:200px;font-size:15px;color:#212b32;overflow-wrap:anywhere;')}>
+      <span style={s('flex:1;min-width:200px;font-size:15px;color:#e9e9ec;overflow-wrap:anywhere;')}>
         {event.label}
         {event.detail && (
           <span style={s(`display:block;font-size:13.5px;color:${meta.ink};margin-top:2px;overflow-wrap:anywhere;`)}>
@@ -156,7 +156,7 @@ function EventRow({ event, machine }) {
           </span>
         )}
       </span>
-      <span style={s('flex:none;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:#768692;justify-content:flex-end;')}>
+      <span style={s('flex:none;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:#74747d;justify-content:flex-end;')}>
         {machine && <span>{machineName(machine)}</span>}
         <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;')}>
           {event.method ? event.method + ' ' : ''}{event.path}
@@ -282,12 +282,12 @@ export default function ActivityView({ range, machineId, onMachine }) {
 
   return (
     <>
-      <p style={s('font-size:16.5px;color:#4c6272;margin:0 0 6px;line-height:1.55;max-width:70ch;')}>
+      <p style={s('font-size:16.5px;color:#9a9aa3;margin:0 0 6px;line-height:1.55;max-width:70ch;')}>
         Every page opened, action taken and request that failed &mdash; grouped by the machine it was done on.
         Machines are identified by an id the browser generates and keeps, not by IP address, so a machine stays one
         machine when it moves between the surgery&rsquo;s network and a home one.
       </p>
-      <p style={s('font-size:14px;color:#768692;margin:0 0 20px;line-height:1.5;max-width:70ch;')}>
+      <p style={s('font-size:14px;color:#74747d;margin:0 0 20px;line-height:1.5;max-width:70ch;')}>
         Pasted consultations and document text are never recorded. For those tools the log stores that the tool was
         used and how much text was pasted &mdash; never the text itself.
       </p>
@@ -301,35 +301,35 @@ export default function ActivityView({ range, machineId, onMachine }) {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search the log…"
           aria-label="Search the log"
-          style={s('flex:1;min-width:180px;font:inherit;font-size:15px;padding:8px 12px;border:2px solid #4c6272;border-radius:9px;background:#fff;')}
+          style={s('flex:1;min-width:180px;font:inherit;font-size:15px;padding:8px 12px;border:2px solid #9a9aa3;border-radius:9px;background:#141416;')}
         />
 
         {view === 'all' && (
-          <label style={s('display:inline-flex;align-items:center;gap:7px;font-size:14px;color:#4c6272;cursor:pointer;')}>
+          <label style={s('display:inline-flex;align-items:center;gap:7px;font-size:14px;color:#9a9aa3;cursor:pointer;')}>
             <input type="checkbox" checked={includeLoads} onChange={(e) => setIncludeLoads(e.target.checked)} style={s('width:17px;height:17px;')} />
             Include routine data loads
           </label>
         )}
 
         <Hover tag="button" type="button" onClick={load} disabled={loading}
-          base="display:inline-flex;align-items:center;gap:7px;border:1px solid #d8dde0;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;background:#fff;color:#005eb8;cursor:pointer;"
-          hover="border-color:#005eb8;background:#f0f6fb;">
+          base="display:inline-flex;align-items:center;gap:7px;border:1px solid #26262a;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;background:#141416;color:#e0554f;cursor:pointer;"
+          hover="border-color:#e0554f;background:#1b1b1f;">
           <Svg w={15} sw={2.2}>{Icons.refresh}</Svg>{loading ? 'Reading…' : 'Refresh'}
         </Hover>
       </div>
 
       {selected && (
-        <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;padding:11px 15px;background:#e8f1f8;border:1px solid #aac7e0;border-radius:10px;font-size:15px;color:#00437e;')}>
+        <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;padding:11px 15px;background:#221a1a;border:1px solid #4a3330;border-radius:10px;font-size:15px;color:#ea6a64;')}>
           <span>Showing only <strong>{machineName(selected)}</strong>.</span>
           <Hover tag="button" type="button" onClick={() => onMachine('')}
-            base="background:none;border:none;padding:0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;text-decoration:underline;cursor:pointer;"
-            hover="color:#003087;">Show every machine</Hover>
+            base="background:none;border:none;padding:0;font:inherit;font-size:14.5px;font-weight:600;color:#e0554f;text-decoration:underline;cursor:pointer;"
+            hover="color:#f0817c;">Show every machine</Hover>
         </div>
       )}
 
       {error && (
-        <p style={s('display:flex;gap:8px;align-items:flex-start;margin:0 0 18px;padding:12px 15px;background:#fde8e9;border:1px solid #f0b8b3;border-radius:10px;font-size:15px;color:#8a1509;font-weight:600;')}>
-          <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={16} stroke="#d5281b" sw={2.4}>{Icons.alertCircle}</Svg></span>{error}
+        <p style={s('display:flex;gap:8px;align-items:flex-start;margin:0 0 18px;padding:12px 15px;background:#2c1719;border:1px solid #502624;border-radius:10px;font-size:15px;color:#ffb3ad;font-weight:600;')}>
+          <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={16} stroke="#ff7b72" sw={2.4}>{Icons.alertCircle}</Svg></span>{error}
         </p>
       )}
 
@@ -355,7 +355,7 @@ export default function ActivityView({ range, machineId, onMachine }) {
       </div>
 
       <h2 style={s('font-size:22px;margin:0 0 4px;letter-spacing:-0.01em;')}>Machines</h2>
-      <p style={s('font-size:15px;color:#4c6272;margin:0 0 14px;')}>
+      <p style={s('font-size:15px;color:#9a9aa3;margin:0 0 14px;')}>
         {machines.length
           ? 'Every machine the app has been opened on. Give one a name and it is used everywhere, including on the questions.'
           : 'No machine has used the app yet.'}
@@ -377,18 +377,18 @@ export default function ActivityView({ range, machineId, onMachine }) {
       </h2>
 
       {loading && !events.length ? (
-        <div style={s(CARD + 'padding:26px;font-size:15px;color:#4c6272;')}>Reading the log…</div>
+        <div style={s(CARD + 'padding:26px;font-size:15px;color:#9a9aa3;')}>Reading the log…</div>
       ) : !events.length ? (
-        <div style={s(CARD + 'padding:26px;font-size:15px;color:#4c6272;')}>
+        <div style={s(CARD + 'padding:26px;font-size:15px;color:#9a9aa3;')}>
           Nothing matches those filters. Try a longer time range, or turn on routine data loads.
         </div>
       ) : (
         <div style={s('display:flex;flex-direction:column;gap:16px;')}>
           {days.map((day) => (
             <section key={day.key} style={s(CARD + 'overflow:hidden;')}>
-              <h3 style={s('margin:0;padding:12px 16px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4c6272;background:#f7fafb;')}>
+              <h3 style={s('margin:0;padding:12px 16px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#9a9aa3;background:#141416;')}>
                 {dayHeading(day.key)}
-                <span style={s('float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#768692;')}>
+                <span style={s('float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#74747d;')}>
                   {number(day.events.length)}
                 </span>
               </h3>
@@ -402,8 +402,8 @@ export default function ActivityView({ range, machineId, onMachine }) {
 
           {hasMore && (
             <Hover tag="button" type="button" onClick={loadMore} disabled={loadingMore}
-              base="align-self:flex-start;border:1px solid #d8dde0;border-radius:10px;padding:11px 18px;font:inherit;font-size:15px;font-weight:600;background:#fff;color:#005eb8;cursor:pointer;"
-              hover="border-color:#005eb8;background:#f0f6fb;">
+              base="align-self:flex-start;border:1px solid #26262a;border-radius:10px;padding:11px 18px;font:inherit;font-size:15px;font-weight:600;background:#141416;color:#e0554f;cursor:pointer;"
+              hover="border-color:#e0554f;background:#1b1b1f;">
               {loadingMore ? 'Reading…' : 'Load older events'}
             </Hover>
           )}

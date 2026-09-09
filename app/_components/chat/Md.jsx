@@ -116,7 +116,7 @@ function itemContent(text, key) {
   const done = task[1] !== ' ';
   return (
     <>
-      <span aria-hidden style={{ color: done ? '#007f3b' : '#768692', fontWeight: 700, marginRight: 7 }}>
+      <span aria-hidden style={{ color: done ? '#56c98a' : '#74747d', fontWeight: 700, marginRight: 7 }}>
         {done ? '☑' : '☐'}
       </span>
       {renderInline(task[2], key)}

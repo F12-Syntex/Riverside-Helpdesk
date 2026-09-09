@@ -48,8 +48,9 @@ rewrites it from the git history and checks `package.json` agrees with the tip.
 The newest commit is always missing its own row until the next run, because the
 file is written before the commit containing it exists.
 
-The version is shown to staff in the bottom right of every page
-(`lib/version.mjs`), with the commit hash beside it in the tooltip.
+The version is shown to staff at the foot of the navigation rail on every
+page (`lib/version.mjs`, rendered by `app/_components/AppShell.jsx`), with
+the commit hash beside it in the tooltip.
 
 Never commit secrets. `.env.local` is git-ignored and must stay that way; use
 `.env.local.example` for documenting required variables.

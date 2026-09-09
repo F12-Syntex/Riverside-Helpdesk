@@ -6,12 +6,12 @@
 // spans. The markup is parsed into React elements (never injected as HTML);
 // anything outside this whitelist is stripped or shown as plain text.
 
-const COLOURS = new Set(['#d5281b', '#007f3b', '#005eb8']);
+const COLOURS = new Set(['#ff7b72', '#56c98a', '#e0554f']);
 
-const MARK_STYLE = { background: '#fff2ac', borderRadius: 2, padding: '0 2px' };
+const MARK_STYLE = { background: '#4d4318', borderRadius: 2, padding: '0 2px' };
 const KBD_STYLE = {
-  font: 'inherit', fontSize: '0.85em', fontWeight: 600, background: '#f0f4f5',
-  border: '1px solid #d8dde0', borderBottomWidth: 2, borderRadius: 4, padding: '0 5px',
+  font: 'inherit', fontSize: '0.85em', fontWeight: 600, background: '#0b0b0c',
+  border: '1px solid #26262a', borderBottomWidth: 2, borderRadius: 4, padding: '0 5px',
 };
 
 // Each pattern: regex (first capture = inner text unless innerIndex says

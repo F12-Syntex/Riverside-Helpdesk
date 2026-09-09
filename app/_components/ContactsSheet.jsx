@@ -59,7 +59,7 @@ export function Label({ text, indices }) {
   return (
     <>
       {parts.map((p, i) => (p.hit
-        ? <mark key={i} style={s('background:#fff2c9;color:inherit;border-radius:3px;padding:0 1px;')}>{p.text}</mark>
+        ? <mark key={i} style={s('background:#1e1e22;color:inherit;border-radius:3px;padding:0 1px;')}>{p.text}</mark>
         : <span key={i}>{p.text}</span>))}
     </>
   );
@@ -151,19 +151,19 @@ export default function ContactsSheet({ onClose }) {
   return createPortal(
     <div className="riva-modal-overlay" role="dialog" aria-modal="true" aria-label="Contacts" onMouseDown={onClose}>
       <div className="riva-sheet riva-contacts-sheet" style={{ maxWidth: '620px' }} onMouseDown={(e) => e.stopPropagation()}>
-        <div style={s('display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #e4eaec;')}>
-          <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={19} sw={2.2}>{Icons.phone}</Svg></span>
+        <div style={s('display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #1c1c1f;')}>
+          <span style={s('flex:none;display:flex;color:#e0554f;')}><Svg w={19} sw={2.2}>{Icons.phone}</Svg></span>
           <h2 style={s('flex:1;min-width:0;font-size:19px;margin:0;letter-spacing:-0.01em;')}>Contacts</h2>
           <Hover tag="button" type="button" onClick={onClose} aria-label="Close contacts"
-            base="flex:none;width:34px;height:34px;border-radius:50%;background:#f0f4f5;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4c6272;padding:0;"
-            hover="background:#e1e8ea;color:#212b32;">
+            base="flex:none;width:34px;height:34px;border-radius:50%;background:#0b0b0c;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9aa3;padding:0;"
+            hover="background:#1e1e21;color:#e9e9ec;">
             <Svg w={16} sw={2.4}>{Icons.close}</Svg>
           </Hover>
         </div>
 
         <div style={s('padding:14px 20px 10px;')}>
           <div style={s('position:relative;display:flex;')}>
-            <span aria-hidden="true" style={s('position:absolute;left:16px;top:50%;transform:translateY(-50%);display:flex;color:#8a99a3;pointer-events:none;')}>
+            <span aria-hidden="true" style={s('position:absolute;left:16px;top:50%;transform:translateY(-50%);display:flex;color:#63636c;pointer-events:none;')}>
               <Svg w={17} sw={2.2}>{Icons.search}</Svg>
             </span>
             <input
@@ -175,23 +175,23 @@ export default function ContactsSheet({ onClose }) {
               autoComplete="off"
               aria-label="Search contacts"
               placeholder="A name, a department, a town, a postcode, a number"
-              style={s('flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 44px;border:2px solid #d8dde0;border-radius:999px;background:#f8fafb;outline:none;color:#212b32;')} />
+              style={s('flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 44px;border:2px solid #26262a;border-radius:999px;background:#141416;outline:none;color:#e9e9ec;')} />
             {searching && (
               <Hover tag="button" type="button" onClick={() => { setQuery(''); if (field.current) field.current.focus(); }} aria-label="Clear search"
-                base="position:absolute;right:11px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:#e8edee;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4c6272;padding:0;"
-                hover="background:#d8dfe1;color:#212b32;">
+                base="position:absolute;right:11px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:#1b1b1d;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9aa3;padding:0;"
+                hover="background:#222226;color:#e9e9ec;">
                 <Svg w={13} sw={2.6}>{Icons.close}</Svg>
               </Hover>
             )}
           </div>
-          <div aria-live="polite" style={s('display:flex;align-items:center;gap:10px;min-height:20px;margin-top:8px;padding:0 6px;font-size:13px;color:#4c6272;')}>
+          <div aria-live="polite" style={s('display:flex;align-items:center;gap:10px;min-height:20px;margin-top:8px;padding:0 6px;font-size:13px;color:#9a9aa3;')}>
             <span>
               {results.length} {results.length === 1 ? 'contact' : 'contacts'}{searching ? ' here' : ''}
               {cqcRows.length ? ' · ' + cqcRows.length + ' on the register' : ''}
               {cqc.loading && searching ? ' · searching the register…' : ''}
             </span>
             {copied && (
-              <span style={s('display:inline-flex;align-items:center;gap:6px;font-weight:600;color:#007f3b;')}>
+              <span style={s('display:inline-flex;align-items:center;gap:6px;font-weight:600;color:#56c98a;')}>
                 <Svg w={13} sw={3}>{Icons.check}</Svg> Copied {copied}
               </span>
             )}
@@ -211,7 +211,7 @@ export default function ContactsSheet({ onClose }) {
           )}
 
           {results.length === 0 && (
-            <p style={s('margin:16px 4px 4px;font-size:14.5px;color:#4c6272;')}>
+            <p style={s('margin:16px 4px 4px;font-size:14.5px;color:#9a9aa3;')}>
               {searching
                 ? 'Nothing in the practice’s own list matches “' + trimmed + '”.'
                 : 'Type to search.'}
@@ -222,7 +222,7 @@ export default function ContactsSheet({ onClose }) {
               it is never mistaken for one of the practice's own numbers. */}
           {searching && (cqcRows.length > 0 || cqc.loading) && (
             <>
-              <div style={s('position:sticky;top:0;background:#fff;padding:14px 4px 6px;margin-top:6px;border-top:1px solid #eef1f2;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a99a3;')}>
+              <div style={s('position:sticky;top:0;background:#141416;padding:14px 4px 6px;margin-top:6px;border-top:1px solid #1c1c1f;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#63636c;')}>
                 CQC register
               </div>
               {cqcRows.length > 0 ? (
@@ -232,13 +232,13 @@ export default function ContactsSheet({ onClose }) {
                   ))}
                 </ul>
               ) : (
-                <p style={s('margin:6px 4px;font-size:14px;color:#8a99a3;')}>Searching…</p>
+                <p style={s('margin:6px 4px;font-size:14px;color:#63636c;')}>Searching…</p>
               )}
             </>
           )}
 
           {searching && !cqc.loading && cqcRows.length === 0 && trimmed.length >= CQC_MIN_CHARS && results.length === 0 && (
-            <p style={s('margin:6px 4px;font-size:14px;color:#4c6272;')}>
+            <p style={s('margin:6px 4px;font-size:14px;color:#9a9aa3;')}>
               Nothing on the register either. Try fewer words, or a town or postcode.
             </p>
           )}
@@ -257,22 +257,22 @@ function Row({ result, copied, onCopy, first }) {
   const emails = entry.emails || [];
 
   return (
-    <li className="riva-contact-row" style={s('display:flex;align-items:center;gap:14px;padding:11px 4px;' + (first ? '' : 'border-top:1px solid #eef1f2;'))}>
+    <li className="riva-contact-row" style={s('display:flex;align-items:center;gap:14px;padding:11px 4px;' + (first ? '' : 'border-top:1px solid #1c1c1f;'))}>
       <div style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;')}>
-        <span style={s('font-size:15.5px;font-weight:700;color:#212b32;')}>
+        <span style={s('font-size:15.5px;font-weight:700;color:#e9e9ec;')}>
           <Label text={entry.label} indices={indices} />
         </span>
         {/* A register entry carries its address: two branches of the same
             chain are the same name, and this is the line that tells them
             apart. */}
         {entry.note && (
-          <span style={s('font-size:13px;color:#4c6272;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{entry.note}</span>
+          <span style={s('font-size:13px;color:#9a9aa3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{entry.note}</span>
         )}
         {emails.length > 0 && (
           <span style={s('display:flex;flex-wrap:wrap;gap:4px 12px;')}>
             {emails.map((e) => (
               <Hover key={e} tag="a" href={'mailto:' + e}
-                base="font-size:13px;color:#005eb8;text-decoration:none;overflow-wrap:anywhere;"
+                base="font-size:13px;color:#e0554f;text-decoration:none;overflow-wrap:anywhere;"
                 hover="text-decoration:underline;">{e}</Hover>
             ))}
           </span>
@@ -288,15 +288,15 @@ function Row({ result, copied, onCopy, first }) {
               <Hover tag="button" type="button" onClick={() => onCopy(p.display)}
                 title={'Copy ' + p.display} aria-label={'Copy ' + p.display + ' for ' + entry.label}
                 base={'display:inline-flex;align-items:center;gap:7px;border-radius:999px 7px 7px 999px;padding:7px 10px 7px 13px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;border:1px solid '
-                  + (isCopied ? '#007f3b;background:#eaf5ee;color:#00602c;' : '#cfdde8;background:#f4f9fc;color:#005eb8;')}
-                hover="background:#e8f1f8;border-color:#005eb8;">
+                  + (isCopied ? '#56c98a;background:#12211a;color:#7fdcaa;' : '#2a2a2e;background:#151518;color:#e0554f;')}
+                hover="background:#221a1a;border-color:#e0554f;">
                 <span style={s('font-variant-numeric:tabular-nums;')}>{p.display}</span>
                 <Svg w={13} sw={2.2}>{isCopied ? Icons.check : Icons.copy}</Svg>
               </Hover>
               {/* And for anyone reading this on a phone, the handset dials it. */}
               <Hover tag="a" href={'tel:' + p.tel} title={'Call ' + p.display} aria-label={'Call ' + p.display}
-                base="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:7px 999px 999px 7px;border:1px solid #cfdde8;background:#f4f9fc;color:#005eb8;text-decoration:none;"
-                hover="background:#e8f1f8;border-color:#005eb8;">
+                base="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:7px 999px 999px 7px;border:1px solid #2a2a2e;background:#151518;color:#e0554f;text-decoration:none;"
+                hover="background:#221a1a;border-color:#e0554f;">
                 <Svg w={14} sw={2.2}>{Icons.phone}</Svg>
               </Hover>
             </span>

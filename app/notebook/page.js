@@ -37,9 +37,9 @@ import AppHeader from '../_components/AppHeader';
  * ------------------------------------------------------------------ */
 
 const C = {
-  ink: '#212b32', mut: '#4c6272', dim: '#768692', line: '#d8dde0',
-  soft: '#eef1f2', blue: '#005eb8', navy: '#003087', sel: '#e8f1f8',
-  bg: '#f0f4f5', red: '#d5281b', green: '#007f3b',
+  ink: '#e9e9ec', mut: '#9a9aa3', dim: '#74747d', line: '#26262a',
+  soft: '#1c1c1f', blue: '#e0554f', navy: '#f0817c', sel: '#221a1a',
+  bg: '#0b0b0c', red: '#ff7b72', green: '#56c98a',
 };
 
 // Hover-reveal row actions + the parent→child connector lines live in real
@@ -48,7 +48,7 @@ const C = {
 const CSS = `
 .nb-row .nb-actions{opacity:0;transition:opacity .12s;}
 .nb-row:hover .nb-actions,.nb-row:focus-within .nb-actions{opacity:1;}
-.nb-row:hover{background:#f7fbff;}
+.nb-row:hover{background:#151518;}
 .nb-kids{margin-left:13px;padding-left:6px;border-left:1.5px solid ${C.line};}
 .nb-kids>div>.nb-row{position:relative;}
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
@@ -66,7 +66,7 @@ const CSS = `
 .nb-prose{flex:1;outline:none;padding:22px 28px 140px;font-size:16px;line-height:1.65;color:${C.ink};caret-color:${C.blue};}
 /* The global NHS focus style (yellow bg on [tabindex]:focus-visible) is for
    buttons/controls — the editor is a writing surface, keep it white. */
-.nb-prose:focus-visible{background:#fff !important;color:${C.ink} !important;box-shadow:none !important;}
+.nb-prose:focus-visible{background:#141416 !important;color:${C.ink} !important;box-shadow:none !important;}
 .nb-prose>:first-child{margin-top:0;}
 .nb-prose p{margin:0 0 10px;}
 .nb-prose h1,.nb-prose h2,.nb-prose h3,.nb-prose h4{margin:22px 0 10px;font-weight:700;letter-spacing:-0.01em;color:${C.ink};}
@@ -91,7 +91,7 @@ const CSS = `
 .nb-prose code{font-family:Consolas,Menlo,monospace;font-size:.9em;background:${C.soft};border-radius:4px;padding:1px 5px;}
 .nb-prose pre{margin:0 0 12px;background:${C.soft};border-radius:8px;padding:12px 14px;overflow-x:auto;}
 .nb-prose pre code{background:none;padding:0;}
-.nb-prose mark{background:#fff6cc;border-radius:3px;padding:0 2px;}
+.nb-prose mark{background:#241f12;border-radius:3px;padding:0 2px;}
 .nb-prose kbd{font-family:Consolas,Menlo,monospace;font-size:.85em;background:${C.soft};border:1px solid ${C.line};border-bottom-width:2px;border-radius:5px;padding:1px 6px;}
 .nb-prose img{max-width:100%;height:auto;display:block;margin:6px 0 14px;border-radius:9px;border:1px solid ${C.soft};}
 .nb-prose img.ProseMirror-selectednode{outline:2.5px solid ${C.blue};outline-offset:1px;}
@@ -104,7 +104,7 @@ const CSS = `
 .nb-prose th,.nb-prose td{border:1px solid ${C.line};padding:8px 12px;font-size:15px;line-height:1.5;text-align:left;vertical-align:top;position:relative;min-width:48px;}
 .nb-prose th{background:${C.soft};font-weight:700;}
 .nb-prose th p,.nb-prose td p{margin:0;}
-.nb-prose .selectedCell::after{content:"";position:absolute;inset:0;background:rgba(0,94,184,.08);pointer-events:none;}
+.nb-prose .selectedCell::after{content:"";position:absolute;inset:0;background:rgba(224,85,79,.08);pointer-events:none;}
 .nb-prose p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:${C.dim};float:left;height:0;pointer-events:none;white-space:pre-wrap;}
 `;
 
@@ -144,9 +144,9 @@ const TIcons = {
 
 // Text-colour swatches for the toolbar (NHS palette).
 const TEXT_COLORS = [
-  { name: 'Red', hex: '#d5281b' },
-  { name: 'Green', hex: '#007f3b' },
-  { name: 'Blue', hex: '#005eb8' },
+  { name: 'Red', hex: '#ff7b72' },
+  { name: 'Green', hex: '#56c98a' },
+  { name: 'Blue', hex: '#e0554f' },
 ];
 
 /* --------------------------- Page editor ----------------------------- *
@@ -224,7 +224,7 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
     return () => onReady(null);
   }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;cursor:text;display:flex;flex-direction:column;')}
+    <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#141416;cursor:text;display:flex;flex-direction:column;')}
       onMouseDown={(e) => { if (e.target === e.currentTarget && editor) { e.preventDefault(); editor.chain().focus('end').run(); } }}>
       <EditorContent editor={editor} style={{ flex: 1, display: 'flex', flexDirection: 'column' }} />
     </div>
@@ -275,11 +275,11 @@ function ConfirmSheet({ confirm, onClose }) {
       </div>
       <div style={s('display:flex;align-items:center;gap:10px;padding:20px 26px 24px;')}>
         <Hover tag="button" onClick={confirm.onConfirm}
-          base="font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:#d5281b;border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #7a160d;"
+          base="font-family:inherit;font-size:16px;font-weight:700;color:#ffffff;background:#ff7b72;border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #ffb3ad;"
           active="transform:translateY(4px);box-shadow:none;">{confirm.confirmLabel || 'Delete'}</Hover>
         <Hover tag="button" onClick={onClose}
-          base="font-family:inherit;font-size:16px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;"
-          hover="color:#212b32;">Cancel</Hover>
+          base="font-family:inherit;font-size:16px;font-weight:600;color:#9a9aa3;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;"
+          hover="color:#e9e9ec;">Cancel</Hover>
       </div>
     </Sheet>
   );
@@ -329,7 +329,7 @@ function SideRow({ n, depth, ctx }) {
           moveNoteTo(dragId, n.id);
         }}
         style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
-        (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
+        (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#151518;' : ''))}>
         {kids.length > 0 ? (
           <Hover tag="button" onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} aria-label={open ? 'Collapse' : 'Expand'}
             base={actBtn + 'width:24px;height:24px;'} hover={'background:' + C.soft + ';'}>
@@ -916,12 +916,12 @@ export default function NotebookPage() {
       <div style={s('flex:1;min-height:0;display:flex;width:100%;')}>
 
       {/* --------------------------- Sidebar --------------------------- */}
-      <aside style={s('flex:none;width:290px;border-right:1px solid ' + C.line + ';background:#fff;display:flex;flex-direction:column;min-height:0;')}>
+      <aside style={s('flex:none;width:290px;border-right:1px solid ' + C.line + ';background:#141416;display:flex;flex-direction:column;min-height:0;')}>
         <div style={s('flex:none;padding:12px 14px 6px;display:flex;flex-direction:column;gap:10px;')}>
           <div style={s('display:flex;align-items:center;gap:8px;')}>
             <span style={s('flex:1;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + C.mut + ';')}>Sections</span>
             <Hover tag="button" onClick={() => newNote(null)} aria-label="New section" title="New section (with its first page)"
-              base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;'}
+              base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:' + C.blue + ';color:#ffffff;border:none;border-radius:8px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;'}
               hover={'background:' + C.navy + ';'}>
               <Svg w={14} sw={2.4}>{Icons.plus}</Svg>New
             </Hover>
@@ -957,12 +957,12 @@ export default function NotebookPage() {
           <div style={s('display:flex;align-items:center;gap:6px;')}>
             <input ref={importInput} type="file" accept=".json,application/json" style={s('display:none;')} onChange={onImportFile} />
             <Hover tag="button" onClick={() => { window.location.href = '/api/notebook/export'; }} title="Download all notes as a JSON backup"
-              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
+              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#141416;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
               hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
               <Svg w={13} sw={2.2}>{Icons.external}</Svg>Export
             </Hover>
             <Hover tag="button" onClick={() => importInput.current && importInput.current.click()} title="Restore notes from a JSON backup (added alongside existing notes)"
-              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
+              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#141416;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
               hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
               <Svg w={13} sw={2.2}>{Icons.refresh}</Svg>Import
             </Hover>
@@ -973,7 +973,7 @@ export default function NotebookPage() {
       {/* ------------------------- Notes area --------------------------- */}
       <main style={s('flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;')} {...dropHandlers}>
         {/* Notes header — breadcrumb, save state and actions for the open note. */}
-        <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:#fff;border-bottom:1px solid ' + C.line + ';padding:10px 22px;min-height:56px;')}>
+        <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:#141416;border-bottom:1px solid ' + C.line + ';padding:10px 22px;min-height:56px;')}>
           <div style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:14px;color:' + C.mut + ';overflow:hidden;white-space:nowrap;')}>
             {!selected && <span>Notebook</span>}
             {selected && (
@@ -1004,8 +1004,8 @@ export default function NotebookPage() {
           </span>
           {selected && canOrganize(selected) && (
             <Hover tag="button" onClick={() => runAiOrganize()} aria-label="AI organise" title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)"
-              base={'flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:' + C.blue + ';' + (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') ? 'opacity:.55;' : '')}
-              hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
+              base={'flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid ' + C.line + ';background:#141416;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:' + C.blue + ';' + (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') ? 'opacity:.55;' : '')}
+              hover={'border-color:' + C.blue + ';background:#151518;'}>
               <Svg w={15} sw={2}>{Icons.sparkle}</Svg>AI organise
             </Hover>
           )}
@@ -1013,7 +1013,7 @@ export default function NotebookPage() {
             <>
               <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
               <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the page)"
-                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
+                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#141416;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
                 hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
                 <Svg w={16} sw={2}>{Icons.paperclip}</Svg>
               </Hover>
@@ -1021,7 +1021,7 @@ export default function NotebookPage() {
           )}
           {selected && (
             <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label={isSection ? 'Delete section' : 'Delete page'} title={isSection ? 'Delete section' : 'Delete page'}
-              base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
+              base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#141416;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
               hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
               <Svg w={16} sw={2}>{Icons.trash}</Svg>
             </Hover>
@@ -1031,7 +1031,7 @@ export default function NotebookPage() {
         {!selected && (
           <div style={s('flex:1;display:flex;align-items:center;justify-content:center;color:' + C.dim + ';font-size:16px;text-align:center;padding:24px;')}>
             <div>
-              <div style={s('margin-bottom:8px;')}><Svg w={30} stroke="#a3b1ba" sw={1.8}>{Icons.book}</Svg></div>
+              <div style={s('margin-bottom:8px;')}><Svg w={30} stroke="#484850" sw={1.8}>{Icons.book}</Svg></div>
               Select a note, or create one to get started.
             </div>
           </div>
@@ -1046,7 +1046,7 @@ export default function NotebookPage() {
 
             {/* AI organise — status banner and, when ready, the reviewable plan. */}
             {aiOrg && (
-              <div style={s('margin:0 0 20px;border:1px solid ' + C.line + ';border-radius:12px;background:#fff;overflow:hidden;')}>
+              <div style={s('margin:0 0 20px;border:1px solid ' + C.line + ';border-radius:12px;background:#141416;overflow:hidden;')}>
                 <div style={s('display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:10px 16px;')}>
                   <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
                   <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
@@ -1061,8 +1061,8 @@ export default function NotebookPage() {
                   </span>
                   {aiOrg.status === 'ready' && (
                     <Hover tag="button" onClick={applyAiOrganize}
-                      base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
-                      hover="background:#00542b;">Apply plan</Hover>
+                      base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#ffffff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
+                      hover="background:#8ce0b3;">Apply plan</Hover>
                   )}
                   {(aiOrg.status === 'ready' || aiOrg.status === 'error' || aiOrg.status === 'done') && (
                     <Hover tag="button" onClick={() => setAiOrg(null)}
@@ -1092,7 +1092,7 @@ export default function NotebookPage() {
                                   costs nothing, and renaming it after the page
                                   has grown for six months costs a morning. */}
                               {p.isVagueTitle && (
-                                <div style={s('margin-top:3px;font-size:12px;font-weight:600;color:#8a6100;')}>
+                                <div style={s('margin-top:3px;font-size:12px;font-weight:600;color:#e0b85f;')}>
                                   Vague title — rename it to the question staff would ask, or search will never pick it precisely
                                 </div>
                               )}
@@ -1112,8 +1112,8 @@ export default function NotebookPage() {
             <div style={s('display:flex;flex-direction:column;gap:8px;')}>
               {sectionPages.map((p) => (
                 <Hover key={p.id} tag="button" onClick={() => selectNote(p.id)}
-                  base={'display:flex;align-items:center;gap:10px;text-align:left;border:1px solid ' + C.line + ';border-radius:11px;background:#fff;padding:13px 16px;font:inherit;font-size:15px;font-weight:600;color:' + C.ink + ';cursor:pointer;'}
-                  hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
+                  base={'display:flex;align-items:center;gap:10px;text-align:left;border:1px solid ' + C.line + ';border-radius:11px;background:#141416;padding:13px 16px;font:inherit;font-size:15px;font-weight:600;color:' + C.ink + ';cursor:pointer;'}
+                  hover={'border-color:' + C.blue + ';background:#151518;'}>
                   <Svg w={17} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{Icons.fileLines}</Svg>
                   <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{p.title || 'Untitled'}</span>
                   {(p.body || '').trim() ? null : <span style={s('flex:none;font-size:12.5px;font-weight:500;color:' + C.dim + ';')}>Empty</span>}
@@ -1131,9 +1131,9 @@ export default function NotebookPage() {
         {/* Page view — the title lives in the header; the whole content area
             is the note body, with attachments docked below. */}
         {selected && !isSection && (
-          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;background:#fff;')}>
+          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;background:#141416;')}>
             {/* Formatting toolbar — drives the TipTap editor in place. */}
-            <div style={s('flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px;background:#fff;border-bottom:1px solid ' + C.soft + ';padding:5px 20px;')}
+            <div style={s('flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px;background:#141416;border-bottom:1px solid ' + C.soft + ';padding:5px 20px;')}
               onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
               {[
                 { title: 'Undo (Ctrl+Z)', run: () => chain().undo().run(), icon: Icons.undo },
@@ -1187,7 +1187,7 @@ export default function NotebookPage() {
                       (btn.accent && aiFmt && aiFmt.status === 'loading' ? 'opacity:.5;' : '')}
                     hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
                     {btn.swatch
-                      ? <span style={s('width:14px;height:14px;border-radius:99px;background:' + btn.swatch + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + (btn.active ? C.blue : C.line) + ';')} />
+                      ? <span style={s('width:14px;height:14px;border-radius:99px;background:' + btn.swatch + ';border:1.5px solid #141416;box-shadow:0 0 0 1px ' + (btn.active ? C.blue : C.line) + ';')} />
                       : btn.label ? btn.label : <Svg w={16} sw={2}>{btn.icon}</Svg>}
                   </Hover>
                 ))}
@@ -1205,8 +1205,8 @@ export default function NotebookPage() {
                 </span>
                 {aiFmt.status === 'ready' && (
                   <Hover tag="button" onClick={applyAiFormat}
-                    base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
-                    hover="background:#00542b;">Apply changes</Hover>
+                    base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#ffffff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
+                    hover="background:#8ce0b3;">Apply changes</Hover>
                 )}
                 {aiFmt.status !== 'loading' && (
                   <Hover tag="button" onClick={() => setAiFmt(null)}
@@ -1220,11 +1220,11 @@ export default function NotebookPage() {
                 AI diff while reviewing); attachments dock below and never
                 push it down. */}
             {aiFmt && aiFmt.status === 'ready' ? (
-              <div className="nb-scroll" style={s('flex:1;min-height:0;overflow:auto;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
+              <div className="nb-scroll" style={s('flex:1;min-height:0;overflow:auto;background:#131315;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
                 {aiFmt.diff.map((l, i) => (
                   <div key={i} style={s('display:flex;gap:10px;padding:1px 20px;white-space:pre-wrap;word-break:break-word;' +
-                    (l.t === '-' ? 'background:#fbe9e7;color:#8a1206;text-decoration:line-through;' :
-                     l.t === '+' ? 'background:#e7f5ec;color:#00542b;' : 'color:' + C.mut + ';'))}>
+                    (l.t === '-' ? 'background:#2c1719;color:#ffb3ad;text-decoration:line-through;' :
+                     l.t === '+' ? 'background:#19191c;color:#8ce0b3;' : 'color:' + C.mut + ';'))}>
                     <span style={s('flex:none;width:12px;user-select:none;opacity:.7;')}>{l.t === ' ' ? '' : l.t}</span>
                     <span style={s('flex:1;min-width:0;')}>{l.s || ' '}</span>
                   </div>
@@ -1244,7 +1244,7 @@ export default function NotebookPage() {
             {(selectedFiles.length > 0 || uploadErr || uploading) && (
               <div style={s('flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 28px 14px;border-top:1px solid ' + C.soft + ';')}>
                 {selectedFiles.map((a) => (
-                  <span key={a.id} style={s('display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';border-radius:99px;background:#fff;padding:5px 6px 5px 11px;max-width:280px;')}>
+                  <span key={a.id} style={s('display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';border-radius:99px;background:#141416;padding:5px 6px 5px 11px;max-width:280px;')}>
                     <Svg w={14} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
                     <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' · ' + fmtSize(a.size) : '')}
                       style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600;color:' + C.ink + ';text-decoration:none;')}>
@@ -1252,7 +1252,7 @@ export default function NotebookPage() {
                     </a>
                     <Hover tag="button" onClick={() => askRemoveAttachment(a)} aria-label={'Remove ' + a.filename} title="Remove"
                       base={'flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:none;background:' + C.soft + ';border-radius:99px;cursor:pointer;color:' + C.mut + ';'}
-                      hover={'background:#fbe9e7;color:' + C.red + ';'}>
+                      hover={'background:#2c1719;color:' + C.red + ';'}>
                       <Svg w={12} sw={2.6}>{Icons.close}</Svg>
                     </Hover>
                   </span>
@@ -1266,7 +1266,7 @@ export default function NotebookPage() {
 
         {/* Drop overlay */}
         {dragging && selected && !isSection && (
-          <div style={s('position:absolute;inset:10px;border:2.5px dashed ' + C.blue + ';border-radius:14px;background:rgba(232,241,248,.85);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
+          <div style={s('position:absolute;inset:10px;border:2.5px dashed ' + C.blue + ';border-radius:14px;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
             <div style={s('display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;color:' + C.navy + ';')}>
               <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
               Drop files to attach to “{selected.title || 'Untitled'}”
@@ -1278,7 +1278,7 @@ export default function NotebookPage() {
 
       {/* Sidebar right-click menu — rename / delete. */}
       {menu && (
-        <div style={s('position:fixed;left:' + menu.x + 'px;top:' + menu.y + 'px;z-index:90;min-width:168px;background:#fff;border:1px solid ' + C.line + ';border-radius:10px;box-shadow:0 8px 24px rgba(33,43,50,.18);padding:5px;display:flex;flex-direction:column;')}
+        <div style={s('position:fixed;left:' + menu.x + 'px;top:' + menu.y + 'px;z-index:90;min-width:168px;background:#141416;border:1px solid ' + C.line + ';border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:5px;display:flex;flex-direction:column;')}
           onClick={(e) => e.stopPropagation()}>
           <Hover tag="button" onClick={() => { setMenu(null); renameNote(menu.id); }}
             base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.ink + ';cursor:pointer;padding:9px 11px;text-align:left;'}
@@ -1301,7 +1301,7 @@ export default function NotebookPage() {
           ) : null; })()}
           <Hover tag="button" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}
             base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.red + ';cursor:pointer;padding:9px 11px;text-align:left;'}
-            hover={'background:#fbe9e7;'}>
+            hover={'background:#2c1719;'}>
             <Svg w={15} sw={2.2}>{Icons.trash}</Svg>Delete
           </Hover>
         </div>

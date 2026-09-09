@@ -2,6 +2,41 @@ html, body { margin: 0; height: 100%; }
 html { scrollbar-gutter: stable; }
 
 /* ------------------------------------------------------------------ *
+ * The scheme, in one place.
+ *
+ * One accent and a ladder of greys. Everything that used to be an NHS
+ * blue is now the ember; everything that was a white card is now a
+ * surface a shade off the page. The rule the ladder is built to: text
+ * sits on --rv-ink or --rv-ink-2, never lower, so nothing that has to
+ * be read is set in a grey that was chosen for a border.
+ * ------------------------------------------------------------------ */
+:root {
+  --rv-page:      #0b0b0c;   /* the page itself */
+  --rv-rail:      #0e0e10;   /* the rail, a shade off it */
+  --rv-surface:   #141416;   /* a card */
+  --rv-surface-2: #17171a;   /* a card, hovered */
+  --rv-surface-3: #1d1d21;   /* a control on a card */
+  --rv-line:      #26262a;   /* every border */
+  --rv-line-soft: #1c1c1f;   /* a divider inside a card */
+  --rv-ink:       #e9e9ec;   /* body text */
+  --rv-ink-2:     #9a9aa3;   /* secondary text */
+  --rv-ink-3:     #74747d;   /* labels */
+  --rv-ink-4:     #55555e;   /* the quietest thing still meant to be read */
+  --rv-accent:    #e0554f;   /* the ember */
+  --rv-accent-hi: #f0817c;
+  --rv-accent-dim: rgba(224,85,79,.13);
+  --rv-accent-line: rgba(224,85,79,.30);
+  --rv-blue:      #6ea8dc;
+  --rv-gold:      #d9a441;
+  --rv-green:     #56c98a;
+
+  --rv-rail-w: 236px;
+  --rv-crumb-h: 50px;
+  --rv-radius: 10px;
+
+}
+
+/* ------------------------------------------------------------------ *
  * The dock's geometry, in one place.
  *
  * The dock, the room the page leaves for it, the fade where the page
@@ -14,7 +49,7 @@ html { scrollbar-gutter: stable; }
  * foot of this file.
  * ------------------------------------------------------------------ */
 :root {
-  --riva-header-h: 72px;          /* AppHeader's fixed height */
+  --riva-header-h: 50px;          /* the crumb bar; AppHeader renders into it */
   --riva-column-pad-t: 28px;      /* .riva-column's top padding */
   --riva-dock-field-h: 68px;
   --riva-dock-strip-h: 32px;
@@ -73,9 +108,10 @@ html { scrollbar-gutter: stable; }
    fallback for browsers without dvh. */
 .riva-app-shell { height: 100dvh !important; min-height: 100dvh !important; }
 body {
-  background: #f0f4f5;
-  font-family: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
-  color: #212b32;
+  background: #0b0b0c;
+  font-family: Inter, 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-feature-settings: 'cv05' 1, 'ss03' 1;
+  color: #e9e9ec;
   -webkit-font-smoothing: antialiased;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -123,8 +159,8 @@ body {
 }
 /* While an answer is being worked out the dock stays lit. */
 @keyframes rivaDockGlow {
-  0%, 100% { box-shadow: 0 10px 30px rgba(33,43,50,.12); }
-  50%      { box-shadow: 0 10px 30px rgba(33,43,50,.12), 0 0 0 4px rgba(0,94,184,.16); }
+  0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  50%      { box-shadow: 0 10px 30px rgba(0,0,0,.12), 0 0 0 4px rgba(224,85,79,.16); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -140,27 +176,27 @@ body {
 button:focus-visible, [tabindex]:focus-visible {
   outline: none;
   background: #ffeb3b !important;
-  color: #212b32 !important;
-  box-shadow: 0 -2px #ffeb3b, 0 4px #212b32 !important;
+  color: #0b0b0c !important;
+  box-shadow: 0 -2px #ffeb3b, 0 4px #0b0b0c !important;
 }
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 3px solid #ffeb3b;
   outline-offset: 0;
-  border-color: #212b32 !important;
+  border-color: #e9e9ec !important;
 }
 
 /* Input focus styling that mirrors the design's style-focus hints. The
    focused edge is NHS blue rather than black; the yellow focus-visible
    outline above is untouched, so keyboard focus still meets the NHS
    accessibility standard. */
-.riva-input:focus { border-color: #005eb8 !important; background: #fff !important; }
-.riva-form-field:focus { border-color: #005eb8 !important; }
+.riva-input:focus { border-color: rgba(224,85,79,.55) !important; background: #141416 !important; }
+.riva-form-field:focus { border-color: rgba(224,85,79,.55) !important; }
 
 #riva-scroll::-webkit-scrollbar { width: 10px; }
-#riva-scroll::-webkit-scrollbar-thumb { background: #d8dde0; border-radius: 8px; border: 2px solid #f0f4f5; }
+#riva-scroll::-webkit-scrollbar-thumb { background: #26262a; border-radius: 8px; border: 2px solid #0b0b0c; }
 /* Selected text is picked out in NHS blue, the same blue the rest of the
    interface uses, rather than the browser's default. */
-::selection { background: #005eb8; color: #fff; }
+::selection { background: #e0554f; color: #ffffff; }
 
 /* Icon wrappers render raw inline SVG; keep them flush with surrounding text. */
 .riva-ico { display: inline-flex; align-items: center; justify-content: center; }
@@ -177,9 +213,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-head-text { flex: 1; min-width: 0; }
 .riva-head-title { overflow: hidden; text-overflow: ellipsis; }
 
-/* The mobile menu button is hidden on desktop (the tab pills are used there). */
-.riva-nav-btn { display: none; }
-
 /* Citation side panel: the embedded full-document preview shows on desktop and
  * is hidden on phones, where the reader gets Open / Download buttons instead. */
 .riva-doc-embed { display: block; }
@@ -189,24 +222,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-doc-passage { display: none; }
 
 @media (max-width: 600px) {
-  /* Keep the header in view while the page scrolls. It is transparent on
-     desktop; sticking it over moving text needs a surface, so it takes the
-     page colour back here. */
-  .riva-header {
-    padding: 0 14px !important; gap: 10px !important;
-    position: sticky; top: 0; z-index: 40;
-    background: rgba(240,244,245,.92) !important;
-    backdrop-filter: blur(8px);
-  }
-
-  /* Swap the tab pills for a single menu button that opens the nav overlay. */
-  .riva-tabs-desktop { display: none !important; }
-  .riva-nav-btn { display: inline-flex !important; }
+  /* The header is a row of controls now, not a title bar, so it takes the
+     phone's gutters and scrolls away with the page — the crumb bar above it
+     is the thing that stays. */
+  .riva-header { padding: 0 14px !important; gap: 8px !important; }
 
   /* The contacts pill keeps its place beside the menu button but sheds the
      word: at this width the header title needs the room more than the label
      does, and the handset says it on its own. */
-  .riva-contacts-pill { width: 42px; padding: 0 !important; justify-content: center; }
+  .riva-contacts-pill { width: 34px; padding: 0 !important; justify-content: center; }
   .riva-contacts-pill-label { display: none; }
 
   /* In the contacts sheet, each contact's numbers wrap under its name rather
@@ -270,14 +294,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* Popups: centered dialog on desktop, bottom sheet on mobile. The inner panel
  * carries .riva-sheet (and its own max-width inline); on phones it goes
  * full-width and slides up from the bottom edge. */
-.riva-modal-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(33,43,50,.45); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.riva-modal-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.66); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 24px; }
 
 /* The contacts sheet is one fixed shape, whatever is in it. A panel that
  * grew with its results moved the row under the cursor on every keystroke,
  * which is unusable when the thing being typed at is a list of numbers. So
  * the frame is set and the list scrolls inside it. */
 .riva-contacts-sheet { height: min(620px, 78vh); display: flex; flex-direction: column; }
-.riva-sheet { width: 100%; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(33,43,50,.2); overflow: hidden; animation: rivaUp .15s ease; }
+.riva-sheet { width: 100%; background: #141416; border: 1px solid #2c2c32; border-radius: 16px; box-shadow: 0 24px 70px rgba(0,0,0,.6); overflow: hidden; animation: rivaUp .15s ease; }
 
 @keyframes rivaSheetUp { from { transform: translateY(100%); } to { transform: none; } }
 
@@ -304,7 +328,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * Assistant answers — formatted-note prose (chat's counterpart of the
  * notebook's .nb-prose). Rendered by app/_components/chat/Md.jsx.
  * ------------------------------------------------------------------ */
-.riva-md { font-size: 18px; line-height: 1.65; color: #212b32; overflow-wrap: break-word; }
+.riva-md { font-size: 18px; line-height: 1.65; color: #e9e9ec; overflow-wrap: break-word; }
 
 /* An answer arrives a paragraph at a time rather than as a wall: each
    block of it fades up in turn, so reading can start at the top while
@@ -328,14 +352,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-md > :first-child { margin-top: 0; }
 .riva-md > :last-child { margin-bottom: 0; }
 .riva-md p { margin: 0 0 10px; }
-.riva-md h2, .riva-md h3, .riva-md h4 { margin: 18px 0 8px; font-weight: 700; letter-spacing: -0.01em; color: #212b32; }
-.riva-md h2 { font-size: 20px; padding-bottom: 6px; border-bottom: 1px solid #eef1f2; }
+.riva-md h2, .riva-md h3, .riva-md h4 { margin: 18px 0 8px; font-weight: 700; letter-spacing: -0.01em; color: #e9e9ec; }
+.riva-md h2 { font-size: 20px; padding-bottom: 6px; border-bottom: 1px solid #1c1c1f; }
 .riva-md h3 { font-size: 17.5px; }
 .riva-md h4 { font-size: 16px; }
 .riva-md ul, .riva-md ol { margin: 0 0 12px; padding-left: 24px; }
 .riva-md ul ul, .riva-md ol ol, .riva-md ul ol, .riva-md ol ul { margin-bottom: 0; }
 .riva-md li { margin: 4px 0; }
-.riva-md ul > li::marker { color: #005eb8; }
+.riva-md ul > li::marker { color: #e0554f; }
 
 /* A numbered list in an answer is a procedure someone is following with a
    patient waiting, so the top level is rendered as steps: a numbered blue disc
@@ -347,16 +371,16 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   content: counter(riva-step);
   position: absolute; left: 0; top: 0;
   width: 26px; height: 26px; border-radius: 50%;
-  background: #005eb8; color: #fff;
+  background: #e0554f; color: #ffffff;
   font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
   display: flex; align-items: center; justify-content: center;
 }
 .riva-md ol ol { counter-reset: none; list-style: decimal; padding-left: 22px; gap: 2px; margin-top: 6px; }
 .riva-md ol ol > li { counter-increment: none; padding: 0; min-height: 0; margin: 3px 0; }
 .riva-md ol ol > li::before { content: none; }
-.riva-md ol ol > li::marker { color: #005eb8; font-weight: 600; font-variant-numeric: tabular-nums; }
+.riva-md ol ol > li::marker { color: #e0554f; font-weight: 600; font-variant-numeric: tabular-nums; }
 .riva-md ol ul { margin-top: 6px; }
-.riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #005eb8; background: #e8f1f8; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
+.riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #e0554f; background: #221a1a; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
 .riva-md blockquote p { margin: 0 0 4px; }
 .riva-md blockquote p:last-child { margin-bottom: 0; }
 /* A table is a surface of its own, like every other block in an answer:
@@ -364,19 +388,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
    for the column rather than stretching the page. */
 .riva-md .riva-md-tablewrap {
   margin: 0 0 14px; overflow-x: auto;
-  background: #fff; border: 1px solid #dde4e7; border-radius: 10px;
+  background: #141416; border: 1px solid #26262a; border-radius: 10px;
 }
-.riva-md table { border-collapse: collapse; min-width: 100%; background: #fff; }
-.riva-md th, .riva-md td { padding: 10px 14px; font-size: 15.5px; line-height: 1.5; text-align: left; vertical-align: top; min-width: 48px; border-bottom: 1px solid #eef1f2; }
-.riva-md th { background: #f0f4f5; font-weight: 700; color: #212b32; border-bottom: 1px solid #dde4e7; }
-.riva-md td + td, .riva-md th + th { border-left: 1px solid #eef1f2; }
+.riva-md table { border-collapse: collapse; min-width: 100%; background: #141416; }
+.riva-md th, .riva-md td { padding: 10px 14px; font-size: 15.5px; line-height: 1.5; text-align: left; vertical-align: top; min-width: 48px; border-bottom: 1px solid #1c1c1f; }
+.riva-md th { background: #0b0b0c; font-weight: 700; color: #e9e9ec; border-bottom: 1px solid #26262a; }
+.riva-md td + td, .riva-md th + th { border-left: 1px solid #1c1c1f; }
 .riva-md tr:last-child td { border-bottom: none; }
-.riva-md hr { border: none; border-top: 1px solid #d8dde0; margin: 14px 0; }
+.riva-md hr { border: none; border-top: 1px solid #26262a; margin: 14px 0; }
 /* The highlighter. One phrase per answer carries it: the words that
    actually answer the question, so someone scanning finds them without
    reading the rest. Safety-critical rules are marked the same way. */
-.riva-md mark { background: #fff2ac; border-radius: 3px; padding: 1px 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-.riva-md kbd { font-family: Consolas, Menlo, monospace; font-size: .85em; background: #f0f4f5; border: 1px solid #d8dde0; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+.riva-md mark { background: #4a3f10; color: #ffe9a3; border-radius: 3px; padding: 1px 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.riva-md kbd { font-family: Consolas, Menlo, monospace; font-size: .85em; background: #0b0b0c; border: 1px solid #26262a; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
 
 /* Never allow a stray fixed-width child to force horizontal scrolling. */
 body { overflow-x: hidden; }
@@ -412,7 +436,7 @@ body { overflow-x: hidden; }
  * citation pills, the contact rows, the next questions. One rule, so
  * they all answer the mouse the same way. */
 .riva-lift { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background-color .16s ease; }
-.riva-lift:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(33,43,50,.10); }
+.riva-lift:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.10); }
 .riva-lift:active { transform: translateY(0); box-shadow: none; }
 
 /* The opening screen's heading is placed against the dock rather than
@@ -476,17 +500,17 @@ body { overflow-x: hidden; }
   flex-shrink: 0;
   font-size: 19.5px !important;
   padding: 0 26px !important;
-  background: #fff !important;
+  background: #141416 !important;
   /* The dock is the one thing on the page to use, so it is allowed to sit
      a little proud of it: a firmer edge and a deeper lift than a card. */
-  border-color: #cdd8dd !important;
-  box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
+  border-color: #2e2e33 !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 16px 44px rgba(0,0,0,.20);
   transition: border-color .18s ease, box-shadow .22s ease, background-color .18s ease;
 }
 /* :not(:focus) matters. Without it this rule sits after .riva-input:focus at
    the same weight, so hovering a focused field repainted its blue edge grey
    and the field read as though it had lost focus under the cursor. */
-.riva-dock-field:hover:not(:focus) { border-color: #aab8bf !important; }
+.riva-dock-field:hover:not(:focus) { border-color: #3b3b41 !important; }
 
 /* A soft NHS-blue light behind the field, so the dock reads as the live
  * part of the page. Kept faint on purpose: this is a practice's working
@@ -499,8 +523,8 @@ body { overflow-x: hidden; }
   left: 4%; right: 4%; top: 6px; bottom: -10px;
   border-radius: 999px;
   background:
-    radial-gradient(58% 130% at 30% 50%, rgba(0,94,184,.22), rgba(0,94,184,0) 72%),
-    radial-gradient(58% 130% at 72% 50%, rgba(65,182,230,.20), rgba(65,182,230,0) 72%);
+    radial-gradient(58% 130% at 30% 50%, rgba(224,85,79,.22), rgba(224,85,79,0) 72%),
+    radial-gradient(58% 130% at 72% 50%, rgba(240,129,124,.20), rgba(240,129,124,0) 72%);
   filter: blur(20px);
   opacity: .75;
   transition: opacity .3s ease, filter .3s ease;
@@ -511,14 +535,14 @@ body { overflow-x: hidden; }
    it so the state is unmistakable. */
 .riva-dock-form:focus-within .riva-dock-field {
   box-shadow:
-    0 0 0 3px rgba(0,94,184,.08),
-    0 4px 10px rgba(33,43,50,.07),
-    0 18px 44px rgba(33,43,50,.16);
+    0 0 0 3px rgba(224,85,79,.08),
+    0 4px 10px rgba(0,0,0,.07),
+    0 18px 44px rgba(0,0,0,.16);
 }
 .riva-dock-form:has(.riva-dock-live)::before { opacity: 1; animation: rivaGlowPulse 2.4s ease-in-out infinite; }
 @keyframes rivaGlowPulse { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
 .riva-dock-btn {
-  box-shadow: 0 10px 30px rgba(33,43,50,.12);
+  box-shadow: 0 10px 30px rgba(0,0,0,.12);
   transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .12s ease;
 }
 .riva-dock-btn:active { transform: translateY(1px); }
@@ -531,7 +555,7 @@ body { overflow-x: hidden; }
  * right, both inside the pill, so its gutters are cut to fit around them. */
 .riva-dock-field-search { padding: 0 70px 0 68px !important; }
 .riva-dock-send { transition: background-color .18s ease, box-shadow .18s ease; }
-.riva-dock-send:hover { box-shadow: 0 4px 14px rgba(0,94,184,.38); }
+.riva-dock-send:hover { box-shadow: 0 4px 14px rgba(224,85,79,.38); }
 
 /* The strip directly above the dock: the bar that carries a question up
  * out of the field on its way to the heading, and the line confirming a
@@ -546,22 +570,22 @@ body { overflow-x: hidden; }
   position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
   width: 48px; height: 48px; z-index: 3;
 }
-.riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
+.riva-modes-btn:focus-visible { outline: 2px solid #e0554f; outline-offset: 2px; }
 .riva-modes-list {
   position: absolute; left: -1px; bottom: calc(100% + 20px); z-index: 8;
   min-width: 272px; max-width: min(340px, calc(100vw - 48px));
-  background: #fff; border: 1px solid #dde4e7; border-radius: 14px;
-  box-shadow: 0 12px 34px rgba(33,43,50,.18); overflow: hidden;
+  background: #141416; border: 1px solid #26262a; border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.18); overflow: hidden;
   animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
 }
-.riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: -2px; }
+.riva-mode:focus-visible { outline: 2px solid #e0554f; outline-offset: -2px; }
 @media (max-width: 600px) {
   .riva-modes { left: 8px; width: 44px; height: 44px; }
   .riva-modes-list { min-width: 244px; max-width: calc(100vw - 32px); }
 }
 @media (prefers-reduced-motion: reduce) { .riva-modes-list { animation: none; } }
 .riva-dock-emit {
-  width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #005eb8;
+  width: 180px; max-width: 60%; height: 4px; border-radius: 2px; background: #e0554f;
   transform-origin: left center;
   animation: rivaEmit .64s cubic-bezier(.2,.7,.3,1) both;
 }
@@ -571,7 +595,7 @@ body { overflow-x: hidden; }
  * On phones the app header is itself sticky (72px), so sit below it. */
 .riva-lookup-sticky { top: 0; }
 @media (max-width: 600px) {
-  .riva-lookup-sticky { top: 72px; }
+  .riva-lookup-sticky { top: 0; }
 }
 
 /* The lookup page renders its own clear button; hide the browser's built-in
@@ -624,9 +648,6 @@ body { overflow-x: hidden; }
   /* The dock keeps a thumb-sized field but takes the phone's gutters. */
   .riva-dock-inner { padding-left: 16px !important; padding-right: 16px !important; }
 
-  /* No navigation furniture beside the practice's name: the field is the
-     whole page on a phone. */
-  .riva-nav-btn { display: none !important; }
   .riva-dock-field { font-size: 17px !important; padding: 0 20px !important; }
   .riva-dock-field-icon { padding: 0 46px !important; }
   .riva-dock-field-search { padding: 0 62px 0 60px !important; }
@@ -648,3 +669,251 @@ body { overflow-x: hidden; }
   .riva-md { font-size: 17px; }
   .riva-md th, .riva-md td { padding: 9px 12px; font-size: 15px; }
 }
+
+/* ================================================================== *
+ * THE SHELL
+ *
+ * A fixed rail down the left, a crumb bar across the top of whatever is
+ * to the right of it, and the page underneath both. The rail is out of
+ * the flow, so no page had to be rebuilt around it: each one keeps the
+ * full-height layout it already had, inside a column that is the screen
+ * less the rail and less the crumb.
+ * ================================================================== */
+
+.riva-shell { display: flex; align-items: stretch; }
+
+/* ---- the rail ---------------------------------------------------- */
+
+.riva-rail {
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 60;
+  width: var(--rv-rail-w);
+  display: flex; flex-direction: column;
+  background: var(--rv-rail);
+  border-right: 1px solid var(--rv-line);
+  padding: 12px 10px 10px;
+}
+
+/* The practice, at the head of the rail. */
+.riva-rail-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 8px; margin-bottom: 12px;
+  border-radius: var(--rv-radius);
+  text-decoration: none; color: inherit;
+  transition: background-color .15s ease;
+}
+.riva-rail-brand:hover { background: var(--rv-surface-2); }
+.riva-rail-mark {
+  flex: none; width: 26px; height: 26px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--rv-accent); color: #fff;
+  font-size: 14px; font-weight: 800; letter-spacing: -.02em;
+}
+.riva-rail-brandtext { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.riva-rail-brandname {
+  font-size: 14px; font-weight: 700; color: var(--rv-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.riva-rail-brandsub {
+  font-size: 11px; color: var(--rv-ink-4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.riva-rail-brandchev { flex: none; color: var(--rv-ink-4); display: flex; }
+
+/* Search — the ⌘K list of tools. */
+.riva-rail-search {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  height: 34px; padding: 0 9px; margin-bottom: 16px;
+  background: var(--rv-surface); border: 1px solid var(--rv-line);
+  border-radius: 9px; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--rv-ink-3);
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+.riva-rail-search:hover { background: var(--rv-surface-2); border-color: #33333a; color: var(--rv-ink-2); }
+.riva-rail-searchlabel { flex: 1; min-width: 0; text-align: left; }
+
+.riva-kbd {
+  flex: none; font: inherit; font-size: 10.5px; font-weight: 600;
+  color: var(--rv-ink-4); background: var(--rv-surface-3);
+  border: 1px solid var(--rv-line); border-radius: 5px;
+  padding: 1px 5px; line-height: 1.5;
+}
+
+.riva-rail-nav { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+.riva-rail-nav::-webkit-scrollbar { width: 0; }
+.riva-rail-group { display: flex; flex-direction: column; gap: 1px; }
+.riva-rail-grouplabel {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--rv-ink-4);
+  padding: 0 9px 7px;
+}
+
+/* One row. The active one is the only coloured thing in the rail, which
+   is what makes it findable without reading. */
+.riva-rail-row {
+  display: flex; align-items: center; gap: 10px;
+  height: 32px; padding: 0 9px; border-radius: 8px;
+  font-size: 13.5px; font-weight: 500; color: var(--rv-ink-2);
+  text-decoration: none; cursor: pointer;
+  transition: background-color .14s ease, color .14s ease;
+}
+.riva-rail-row:hover { background: var(--rv-surface-2); color: var(--rv-ink); }
+.riva-rail-row.is-active { background: var(--rv-accent-dim); color: var(--rv-accent-hi); font-weight: 600; }
+.riva-rail-row.is-active .riva-rail-ico { color: var(--rv-accent); }
+.riva-rail-ico { flex: none; display: flex; align-items: center; justify-content: center; color: var(--rv-ink-3); }
+.riva-rail-row:hover .riva-rail-ico { color: var(--rv-ink-2); }
+.riva-rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The foot: which build this is, and the way to settings. */
+.riva-rail-foot { flex: none; padding-top: 14px; display: flex; flex-direction: column; gap: 4px; }
+.riva-rail-status {
+  border: 1px solid var(--rv-line); border-radius: var(--rv-radius);
+  background: var(--rv-surface); padding: 9px 10px 10px; margin-bottom: 4px;
+}
+.riva-rail-statusrow { display: flex; align-items: center; gap: 7px; }
+.riva-rail-dot {
+  flex: none; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rv-green); box-shadow: 0 0 0 3px rgba(86,201,138,.14);
+}
+.riva-rail-statustext {
+  flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.riva-rail-ver { flex: none; font-size: 10.5px; font-weight: 600; color: var(--rv-ink-4); font-variant-numeric: tabular-nums; }
+.riva-rail-bar { height: 1px; margin: 9px 0 8px; overflow: hidden; }
+.riva-rail-bar > span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--rv-accent-line), rgba(224,85,79,0)); }
+.riva-rail-statusfoot { display: flex; align-items: center; gap: 7px; font-size: 10.5px; line-height: 1.35; color: var(--rv-ink-4); }
+.riva-rail-nhs { flex: none; height: 13px; width: auto; display: block; opacity: .85; }
+
+/* ---- the column to the right of it ------------------------------- */
+
+.riva-shell-main {
+  flex: 1; min-width: 0;
+  margin-left: var(--rv-rail-w);
+  height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column;
+  background: var(--rv-page);
+}
+
+.riva-crumbbar {
+  flex: none; height: var(--rv-crumb-h);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--rv-line-soft);
+  background: var(--rv-page);
+  position: relative; z-index: 30;
+}
+.riva-crumb { display: flex; align-items: center; gap: 7px; font-size: 12.5px; min-width: 0; }
+/* Where a tool's own controls land (see AppHeader). It takes no room when
+   the page has none, so the crumb bar is the same height either way. */
+.riva-crumb-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.riva-crumb-group { color: var(--rv-ink-4); white-space: nowrap; }
+.riva-crumb-sep { color: #34343a; }
+.riva-crumb-here { color: var(--rv-ink-2); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-crumb-menu {
+  display: none; align-items: center; justify-content: center;
+  width: 30px; height: 30px; margin-left: -6px;
+  background: none; border: none; border-radius: 8px;
+  color: var(--rv-ink-2); cursor: pointer;
+}
+.riva-crumb-menu:hover { background: var(--rv-surface-2); color: var(--rv-ink); }
+
+/* Everything below the crumb scrolls inside this, so a page that asks for
+   the whole screen gets the whole of what is left of it rather than the
+   whole of the screen plus the crumb. */
+.riva-shell-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+
+/* The pages that build their own full-height layout measured the screen
+   before the shell existed. This is the one line that tells them what the
+   screen now is. */
+.riva-app-shell {
+  height: calc(100dvh - var(--rv-crumb-h)) !important;
+  min-height: calc(100dvh - var(--rv-crumb-h)) !important;
+}
+
+/* The dock is fixed to the viewport, so it has to be told the rail is
+   there — otherwise it centres itself under it. */
+.riva-dock { left: var(--rv-rail-w); }
+
+/* ---- ⌘K --------------------------------------------------------- */
+
+.riva-palette-scrim {
+  position: fixed; inset: 0; z-index: 120;
+  background: rgba(0,0,0,.62); backdrop-filter: blur(3px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 14vh 20px 20px;
+  animation: rivaHeaderIn .12s ease both;
+}
+.riva-palette {
+  width: 100%; max-width: 480px;
+  background: var(--rv-surface); border: 1px solid #2c2c32;
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0,0,0,.6);
+  animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
+}
+.riva-palette-field {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-bottom: 1px solid var(--rv-line);
+}
+.riva-palette-ico { flex: none; display: flex; color: var(--rv-ink-4); }
+.riva-palette-input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  font: inherit; font-size: 15px; color: var(--rv-ink);
+}
+.riva-palette-input::placeholder { color: var(--rv-ink-4); }
+.riva-palette-list { max-height: 46vh; overflow-y: auto; padding: 6px; }
+.riva-palette-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border: none; border-radius: 8px; background: none;
+  font: inherit; font-size: 13.5px; color: var(--rv-ink-2);
+  text-align: left; cursor: pointer;
+}
+.riva-palette-row.is-sel { background: var(--rv-accent-dim); color: var(--rv-accent-hi); }
+.riva-palette-row.is-sel .riva-rail-ico { color: var(--rv-accent); }
+.riva-palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-palette-group { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--rv-ink-4); }
+.riva-palette-empty { padding: 18px 12px; font-size: 13.5px; color: var(--rv-ink-4); text-align: center; }
+
+/* ---- the rail on a phone ---------------------------------------- */
+
+.riva-rail-scrim { display: none; }
+
+@media (max-width: 900px) {
+  :root { --rv-rail-w: 0px; }
+  .riva-rail {
+    width: 250px;
+    transform: translateX(-100%);
+    transition: transform .22s cubic-bezier(.2,.7,.3,1);
+    box-shadow: none;
+  }
+  .riva-rail.is-open { transform: none; box-shadow: 0 0 60px rgba(0,0,0,.6); }
+  .riva-rail-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.55); }
+  .riva-crumb-menu { display: inline-flex; }
+  .riva-rail-search .riva-kbd { display: none; }
+  .riva-shell-main { margin-left: 0; }
+  .riva-dock { left: 0; }
+}
+
+/* ================================================================== *
+ * SURFACES, AFTER THE REPAINT
+ *
+ * The pages set their own colours inline, which the repaint has already
+ * been through. What is left is the handful of things a light scheme got
+ * for free from the browser and a dark one has to ask for.
+ * ================================================================== */
+
+/* Form controls stop being white boxes. */
+input, textarea, select, button { font-family: inherit; }
+input, textarea, select { color-scheme: dark; }
+::placeholder { color: var(--rv-ink-4); opacity: 1; }
+
+/* Scrollbars, everywhere rather than only in the conversation. */
+* { scrollbar-color: #2e2e34 transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #26262a; border-radius: 8px; border: 2px solid var(--rv-page); }
+::-webkit-scrollbar-thumb:hover { background: #35353c; }
+
+/* A dark page cannot lean on a drop shadow to lift a card off it — there
+   is no light to cast one. Borders do the work instead, so the shadows
+   the pages carry inline are dialled back to a whisper of depth. */
+.riva-lift:hover { box-shadow: 0 4px 16px rgba(0,0,0,.5); }

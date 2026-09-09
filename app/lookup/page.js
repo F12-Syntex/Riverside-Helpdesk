@@ -27,7 +27,7 @@ const EXAMPLES = ['dentist barnsley', 'Barnsley Hospital', 'S70 2RD', 'care home
 // which made it indistinguishable from the sentence around it.
 function Kbd({ children }) {
   return (
-    <kbd style={s('display:inline-block;min-width:20px;padding:1px 6px;border:1px solid #d8dde0;border-bottom-width:2px;border-radius:5px;background:#fff;color:#4c6272;font:inherit;font-size:12px;font-weight:700;line-height:1.5;text-align:center;')}>
+    <kbd style={s('display:inline-block;min-width:20px;padding:1px 6px;border:1px solid #26262a;border-bottom-width:2px;border-radius:5px;background:#141416;color:#9a9aa3;font:inherit;font-size:12px;font-weight:700;line-height:1.5;text-align:center;')}>
       {children}
     </kbd>
   );
@@ -38,15 +38,15 @@ function Kbd({ children }) {
 // middle of an empty page, which reads as a page that has broken rather than
 // one that has an answer.
 function EmptyState({ icon, tone = 'quiet', title, children }) {
-  const ring = tone === 'warn' ? 'background:#fff6cc;color:#946200;'
-    : tone === 'error' ? 'background:#fdf2f2;color:#d5281b;'
-      : 'background:#e8f1f8;color:#005eb8;';
+  const ring = tone === 'warn' ? 'background:#241f12;color:#d9ab52;'
+    : tone === 'error' ? 'background:#261619;color:#ff7b72;'
+      : 'background:#221a1a;color:#e0554f;';
   return (
-    <div style={s('border:1px solid #d8dde0;background:#fff;border-radius:14px;padding:30px 26px;text-align:center;animation:rivaUp .2s ease;')}>
+    <div style={s('border:1px solid #26262a;background:#141416;border-radius:14px;padding:30px 26px;text-align:center;animation:rivaUp .2s ease;')}>
       <span style={s('display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;margin-bottom:14px;' + ring)}>
         <Svg w={24} sw={2}>{icon}</Svg>
       </span>
-      <h2 style={s('margin:0;font-size:19px;font-weight:700;color:#212b32;letter-spacing:-.01em;line-height:1.3;')}>{title}</h2>
+      <h2 style={s('margin:0;font-size:19px;font-weight:700;color:#e9e9ec;letter-spacing:-.01em;line-height:1.3;')}>{title}</h2>
       {children}
     </div>
   );
@@ -55,16 +55,16 @@ function EmptyState({ icon, tone = 'quiet', title, children }) {
 // The shape of a result, greyed — so the wait reads as "the list is coming"
 // rather than "the page is empty".
 function Skeleton() {
-  const bar = (w, h, mt) => s('display:block;height:' + h + 'px;width:' + w + ';border-radius:5px;background:#eef1f2;margin-top:' + mt + 'px;');
+  const bar = (w, h, mt) => s('display:block;height:' + h + 'px;width:' + w + ';border-radius:5px;background:#1c1c1f;margin-top:' + mt + 'px;');
   return (
-    <div aria-hidden="true" style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;animation:rivaBlink 1.6s ease-in-out infinite;')}>
+    <div aria-hidden="true" style={s('border:1px solid #26262a;border-radius:10px;background:#141416;overflow:hidden;animation:rivaBlink 1.6s ease-in-out infinite;')}>
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} style={s('display:flex;align-items:center;gap:14px;padding:14px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
+        <div key={i} style={s('display:flex;align-items:center;gap:14px;padding:14px;' + (i ? 'border-top:1px solid #1c1c1f;' : ''))}>
           <span style={s('flex:1;min-width:0;')}>
             <span style={bar(['58%', '44%', '66%', '50%'][i], 15, 0)} />
             <span style={bar(['76%', '62%', '70%', '58%'][i], 11, 7)} />
           </span>
-          <span style={s('flex:none;width:132px;height:26px;border-radius:999px;background:#eef1f2;')} />
+          <span style={s('flex:none;width:132px;height:26px;border-radius:999px;background:#1c1c1f;')} />
         </div>
       ))}
     </div>
@@ -98,12 +98,12 @@ function PhoneChip({ phone, onCopied }) {
   return (
     <span style={s('display:inline-flex;align-items:stretch;')}>
       <a href={'tel:' + phone.tel}
-        style={s('display:inline-flex;align-items:center;gap:5px;background:#e8f1f8;color:#003087;border-radius:999px 0 0 999px;padding:4px 8px 4px 12px;font-size:14.5px;font-weight:600;text-decoration:none;font-variant-numeric:tabular-nums;')}>
+        style={s('display:inline-flex;align-items:center;gap:5px;background:#221a1a;color:#f0817c;border-radius:999px 0 0 999px;padding:4px 8px 4px 12px;font-size:14.5px;font-weight:600;text-decoration:none;font-variant-numeric:tabular-nums;')}>
         <Svg w={12} sw={2.2}>{Icons.phone}</Svg>{phone.display}
       </a>
       <Hover tag="button" onClick={copy} aria-label={'Copy ' + phone.display} title="Copy number"
-        base={'display:inline-flex;align-items:center;border:none;cursor:pointer;border-radius:0 999px 999px 0;padding:4px 10px 4px 7px;font:inherit;' + (copied ? 'background:#007f3b;color:#fff;' : 'background:#d9e8f5;color:#003087;')}
-        hover={copied ? '' : 'background:#c8ddf0;'}>
+        base={'display:inline-flex;align-items:center;border:none;cursor:pointer;border-radius:0 999px 999px 0;padding:4px 10px 4px 7px;font:inherit;' + (copied ? 'background:#56c98a;color:#ffffff;' : 'background:#1d1d20;color:#f0817c;')}
+        hover={copied ? '' : 'background:#232326;'}>
         <Svg w={13} sw={2.2}>{copied ? Icons.check : Icons.copy}</Svg>
       </Hover>
     </span>
@@ -114,25 +114,25 @@ function EntryRow({ entry, query, selected, flash }) {
   return (
     <div id={'lk-' + entry.id}
       style={s('display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:11px 14px;scroll-margin:90px;' +
-        (selected ? 'background:#fff7cc;box-shadow:inset 3px 0 0 #ffb81c;' : ''))}>
+        (selected ? 'background:#1e1e21;box-shadow:inset 3px 0 0 #d9a441;' : ''))}>
       <span style={s('flex:1 1 260px;min-width:0;')}>
-        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;line-height:1.35;overflow-wrap:anywhere;')}>
+        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#e9e9ec;line-height:1.35;overflow-wrap:anywhere;')}>
           <Highlighted label={entry.label} query={query} />
         </span>
-        {entry.note ? <span style={s('display:block;font-size:13px;color:#4c6272;margin-top:1px;')}>{entry.note}</span> : null}
+        {entry.note ? <span style={s('display:block;font-size:13px;color:#9a9aa3;margin-top:1px;')}>{entry.note}</span> : null}
         {entry.source === 'cqc' ? (
           <span style={s('display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;margin-top:5px;')}>
             {/* The export packs several service types into one "|"-joined
                 field; two is enough to tell a dentist from a nursing home. */}
             {(entry.types || '').split('|').filter(Boolean).slice(0, 2).map((t, i) => (
-              <span key={i} style={s('font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 7px;background:#eef7ee;color:#00532a;')}>{t}</span>
+              <span key={i} style={s('font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 7px;background:#12211a;color:#8ce0b3;')}>{t}</span>
             ))}
-            {entry.authority ? <span style={s('font-size:12.5px;color:#4c6272;')}>{entry.authority}</span> : null}
+            {entry.authority ? <span style={s('font-size:12.5px;color:#9a9aa3;')}>{entry.authority}</span> : null}
             {entry.url ? (
-              <a href={entry.url} target="_blank" rel="noreferrer" style={s('font-size:12.5px;font-weight:600;color:#005eb8;text-decoration:none;')}>CQC record</a>
+              <a href={entry.url} target="_blank" rel="noreferrer" style={s('font-size:12.5px;font-weight:600;color:#e0554f;text-decoration:none;')}>CQC record</a>
             ) : null}
             {!entry.phones.length && entry.website ? (
-              <a href={entry.website} target="_blank" rel="noreferrer" style={s('font-size:12.5px;font-weight:600;color:#005eb8;text-decoration:none;word-break:break-all;')}>Website</a>
+              <a href={entry.website} target="_blank" rel="noreferrer" style={s('font-size:12.5px;font-weight:600;color:#e0554f;text-decoration:none;word-break:break-all;')}>Website</a>
             ) : null}
           </span>
         ) : null}
@@ -141,7 +141,7 @@ function EntryRow({ entry, query, selected, flash }) {
         {entry.phones.map((p, j) => <PhoneChip key={'p' + j} phone={p} onCopied={flash} />)}
         {entry.emails.map((e, j) => (
           <a key={'e' + j} href={'mailto:' + e}
-            style={s('display:inline-flex;align-items:center;background:#f0f4f5;color:#005eb8;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;text-decoration:none;word-break:break-all;')}>
+            style={s('display:inline-flex;align-items:center;background:#0b0b0c;color:#e0554f;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;text-decoration:none;word-break:break-all;')}>
             {e}
           </a>
         ))}
@@ -252,25 +252,25 @@ export default function Page() {
   };
 
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Instant lookup" />
 
       <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:24px 24px 128px;')}>
         {trimmed && results.length ? (
           <>
             <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 4px 8px;')}>
-              <span style={s('font-size:13px;font-weight:700;color:#4c6272;')}>
+              <span style={s('font-size:13px;font-weight:700;color:#9a9aa3;')}>
                 {results.length} match{results.length === 1 ? '' : 'es'}
               </span>
               {/* The server returns the best 25. Saying so beats letting someone
                   scroll to the bottom and assume that is everything there is. */}
               {results.length >= 25 ? (
-                <span style={s('font-size:12.5px;color:#8a99a3;')}>best 25 shown — add a town or postcode to narrow it</span>
+                <span style={s('font-size:12.5px;color:#63636c;')}>best 25 shown — add a town or postcode to narrow it</span>
               ) : null}
             </div>
-            <div style={s('border:1px solid #d8dde0;border-radius:10px;background:#fff;overflow:hidden;')}>
+            <div style={s('border:1px solid #26262a;border-radius:10px;background:#141416;overflow:hidden;')}>
               {results.map((e, i) => (
-                <div key={e.id} style={s(i ? 'border-top:1px solid #eef1f2;' : '')}>
+                <div key={e.id} style={s(i ? 'border-top:1px solid #1c1c1f;' : '')}>
                   <EntryRow entry={e} query={trimmed} selected={i === selIdx} flash={() => flashCopied(e.label)} />
                 </div>
               ))}
@@ -282,7 +282,7 @@ export default function Page() {
             that, rather than showing a "Searching…" that never finishes. */}
         {tooShort ? (
           <EmptyState icon={Icons.search} title="Keep typing">
-            <p style={s('margin:8px 0 0;font-size:15px;line-height:1.55;color:#4c6272;')}>
+            <p style={s('margin:8px 0 0;font-size:15px;line-height:1.55;color:#9a9aa3;')}>
               Two letters or more, and the register is searched as you type.
             </p>
           </EmptyState>
@@ -297,31 +297,31 @@ export default function Page() {
             automatic: it costs a model call, so the reader asks for it. */}
         {nothingFound && !webShown ? (
           <EmptyState icon={Icons.search} tone="warn" title={'No match for “' + trimmed + '”'}>
-            <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#4c6272;')}>
+            <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#9a9aa3;')}>
               This searches the CQC register — GP practices, dentists, hospitals, clinics,
               care and nursing homes. Pharmacies, interpreting lines, individual hospital
               departments and personal numbers are not on it.
             </p>
 
             <Hover tag="button" onClick={() => searchWeb(trimmed)}
-              base="display:inline-flex;align-items:center;gap:9px;margin-top:18px;padding:11px 20px;border-radius:999px;border:none;background:#005eb8;color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #002a52;"
+              base="display:inline-flex;align-items:center;gap:9px;margin-top:18px;padding:11px 20px;border-radius:999px;border:none;background:#e0554f;color:#ffffff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #f5a29e;"
               active="transform:translateY(4px);box-shadow:none;"
-              hover="background:#0071d4;">
+              hover="background:#ef6f69;">
               <Svg w={17} sw={2.2}>{Icons.globe}</Svg>
               Search the web for a number
             </Hover>
-            <div style={s('margin-top:9px;font-size:12.5px;color:#8a99a3;')}>
+            <div style={s('margin-top:9px;font-size:12.5px;color:#63636c;')}>
               or press <Kbd>Enter</Kbd>
             </div>
 
             {/* A miss is most often too many words. Offering the shorter query
                 as a button beats telling someone to retype it. */}
             {shorter ? (
-              <div style={s('margin-top:20px;padding-top:16px;border-top:1px solid #eef1f2;')}>
-                <span style={s('font-size:13px;color:#768692;')}>Try a shorter search: </span>
+              <div style={s('margin-top:20px;padding-top:16px;border-top:1px solid #1c1c1f;')}>
+                <span style={s('font-size:13px;color:#74747d;')}>Try a shorter search: </span>
                 <Hover tag="button" onClick={() => setQuery(shorter)}
-                  base="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;border:1px solid #d8dde0;background:#fff;color:#005eb8;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;"
-                  hover="border-color:#005eb8;background:#f7fbff;">
+                  base="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;border:1px solid #26262a;background:#141416;color:#e0554f;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;"
+                  hover="border-color:#e0554f;background:#151518;">
                   {shorter}
                 </Hover>
               </div>
@@ -335,30 +335,30 @@ export default function Page() {
         {webShown ? (
           <div>
             <div style={s('display:flex;align-items:baseline;gap:8px;margin:0 2px 8px;')}>
-              <span style={s('font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a6100;')}>From the web</span>
-              <span style={s('font-size:12.5px;color:#8a99a3;')}>not the CQC register &mdash; check before using</span>
+              <span style={s('font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#e0b85f;')}>From the web</span>
+              <span style={s('font-size:12.5px;color:#63636c;')}>not the CQC register &mdash; check before using</span>
             </div>
             {web.loading ? (
-              <div style={s('border:1px solid #ecd39a;background:#fffdf5;border-radius:10px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;')}>
-                <span style={s('display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#fff6cc;color:#946200;')}>
+              <div style={s('border:1px solid #4b3d1f;background:#1b1a15;border-radius:10px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;')}>
+                <span style={s('display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#241f12;color:#d9ab52;')}>
                   <Svg w={17} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
                 </span>
-                <span style={s('font-size:15px;font-weight:600;color:#212b32;')}>Reading the pages for a number&hellip;</span>
-                <span style={s('font-size:13px;color:#768692;')}>This one takes a few seconds — it opens each page and looks.</span>
+                <span style={s('font-size:15px;font-weight:600;color:#e9e9ec;')}>Reading the pages for a number&hellip;</span>
+                <span style={s('font-size:13px;color:#74747d;')}>This one takes a few seconds — it opens each page and looks.</span>
               </div>
             ) : (
               <>
                 {web.contacts.length ? (
-                  <div style={s('border:1px solid #ecd39a;background:#fffdf5;border-radius:10px;overflow:hidden;margin-bottom:14px;')}>
+                  <div style={s('border:1px solid #4b3d1f;background:#1b1a15;border-radius:10px;overflow:hidden;margin-bottom:14px;')}>
                     {web.contacts.map((c, i) => (
-                      <div key={c.url} style={s('padding:12px 14px;' + (i ? 'border-top:1px solid #f3e6c6;' : ''))}>
-                        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;line-height:1.35;overflow-wrap:anywhere;')}>{c.title}</span>
+                      <div key={c.url} style={s('padding:12px 14px;' + (i ? 'border-top:1px solid #222226;' : ''))}>
+                        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#e9e9ec;line-height:1.35;overflow-wrap:anywhere;')}>{c.title}</span>
                         <span style={s('display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;')}>
                           {c.phones.map((p, j) => (
                             <span key={'p' + j} style={s('display:inline-flex;flex-direction:column;gap:2px;')}>
                               <PhoneChip phone={p} onCopied={() => flashCopied(p.display)} />
                               {p.label || p.kind === 'fax' ? (
-                                <span style={s('font-size:11.5px;color:#8a99a3;padding-left:12px;overflow-wrap:anywhere;')}>
+                                <span style={s('font-size:11.5px;color:#63636c;padding-left:12px;overflow-wrap:anywhere;')}>
                                   {p.kind === 'fax' ? 'Fax' : p.label}
                                 </span>
                               ) : null}
@@ -366,13 +366,13 @@ export default function Page() {
                           ))}
                           {c.emails.map((e, j) => (
                             <a key={'e' + j} href={'mailto:' + e}
-                              style={s('display:inline-flex;align-items:center;background:#f0f4f5;color:#005eb8;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;text-decoration:none;word-break:break-all;')}>
+                              style={s('display:inline-flex;align-items:center;background:#0b0b0c;color:#e0554f;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;text-decoration:none;word-break:break-all;')}>
                               {e}
                             </a>
                           ))}
                         </span>
                         <a href={c.url} target="_blank" rel="noreferrer"
-                          style={s('display:block;font-size:12px;color:#8a99a3;margin-top:6px;overflow-wrap:anywhere;text-decoration:none;')}>
+                          style={s('display:block;font-size:12px;color:#63636c;margin-top:6px;overflow-wrap:anywhere;text-decoration:none;')}>
                           Read off {c.host || c.url}
                         </a>
                       </div>
@@ -388,7 +388,7 @@ export default function Page() {
                     publishing a number — ended on a list of dead links. */}
                 {!web.contacts.length ? (
                   <EmptyState icon={Icons.alertCircle} tone="error" title="No number found for this one">
-                    <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#4c6272;')}>
+                    <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#9a9aa3;')}>
                       {web.reason
                         || (web.results.length
                           ? 'The register has no match, and none of the pages found publishes a phone number.'
@@ -396,11 +396,11 @@ export default function Page() {
                     </p>
                     <a href={'https://www.google.com/search?q=' + encodeURIComponent(trimmed + ' phone number')}
                       target="_blank" rel="noreferrer"
-                      style={s('display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:10px 18px;border-radius:999px;border:2px solid #d8dde0;background:#fff;color:#005eb8;font-size:15px;font-weight:600;text-decoration:none;')}>
+                      style={s('display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:10px 18px;border-radius:999px;border:2px solid #26262a;background:#141416;color:#e0554f;font-size:15px;font-weight:600;text-decoration:none;')}>
                       <Svg w={16} sw={2.2}>{Icons.external}</Svg>
                       Search Google for &ldquo;{trimmed}&rdquo;
                     </a>
-                    <p style={s('margin:16px auto 0;max-width:52ch;font-size:13px;line-height:1.5;color:#8a99a3;')}>
+                    <p style={s('margin:16px auto 0;max-width:52ch;font-size:13px;line-height:1.5;color:#63636c;')}>
                       A number found that way is not from the register &mdash; check it before giving it to a patient.
                     </p>
                   </EmptyState>
@@ -410,15 +410,15 @@ export default function Page() {
                     a starting point when none was — either way they are the
                     supporting detail, so they sit below and read quieter. */}
                 {web.results.length ? (
-                  <div style={s('border:1px solid #d8dde0;background:#fff;border-radius:10px;overflow:hidden;' + (web.contacts.length ? '' : 'margin-top:14px;'))}>
-                    <div style={s('padding:8px 14px;background:#f7fafb;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;')}>
+                  <div style={s('border:1px solid #26262a;background:#141416;border-radius:10px;overflow:hidden;' + (web.contacts.length ? '' : 'margin-top:14px;'))}>
+                    <div style={s('padding:8px 14px;background:#141416;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#74747d;')}>
                       {web.contacts.length ? 'Pages searched' : 'Pages searched — none published a number'}
                     </div>
                     {web.results.map((r) => (
                       <a key={r.url} href={r.url} target="_blank" rel="noreferrer"
-                        style={s('display:block;padding:11px 14px;text-decoration:none;color:inherit;border-top:1px solid #eef1f2;')}>
-                        <span style={s('display:block;font-size:14.5px;font-weight:600;color:#005eb8;line-height:1.35;overflow-wrap:anywhere;')}>{r.title}</span>
-                        <span style={s('display:block;font-size:12px;color:#8a99a3;margin-top:3px;overflow-wrap:anywhere;')}>{r.url}</span>
+                        style={s('display:block;padding:11px 14px;text-decoration:none;color:inherit;border-top:1px solid #1c1c1f;')}>
+                        <span style={s('display:block;font-size:14.5px;font-weight:600;color:#e0554f;line-height:1.35;overflow-wrap:anywhere;')}>{r.title}</span>
+                        <span style={s('display:block;font-size:12px;color:#63636c;margin-top:3px;overflow-wrap:anywhere;')}>{r.url}</span>
                       </a>
                     ))}
                   </div>
@@ -433,20 +433,20 @@ export default function Page() {
             nobody learns "a postcode works too" from a placeholder. */}
         {!trimmed ? (
           <EmptyState icon={Icons.search} title={cqc.total ? cqc.total.toLocaleString('en-GB') + ' services, searchable' : 'The CQC register of services in England'}>
-            <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#4c6272;')}>
+            <p style={s('margin:8px auto 0;max-width:52ch;font-size:15px;line-height:1.55;color:#9a9aa3;')}>
               Every service registered with the Care Quality Commission in England. Search by
               name, town, postcode, service type or phone number.
             </p>
             <div style={s('display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px;')}>
               {EXAMPLES.map((ex) => (
                 <Hover key={ex} tag="button" onClick={() => { setQuery(ex); if (inputRef.current) inputRef.current.focus(); }}
-                  base="display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;border:1px solid #d8dde0;background:#fff;color:#005eb8;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;"
-                  hover="border-color:#005eb8;background:#f7fbff;">
+                  base="display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;border:1px solid #26262a;background:#141416;color:#e0554f;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;"
+                  hover="border-color:#e0554f;background:#151518;">
                   {ex}
                 </Hover>
               ))}
             </div>
-            <p style={s('margin:20px auto 0;max-width:52ch;font-size:13px;line-height:1.5;color:#8a99a3;')}>
+            <p style={s('margin:20px auto 0;max-width:52ch;font-size:13px;line-height:1.5;color:#63636c;')}>
               Use <Kbd>↑</Kbd> <Kbd>↓</Kbd> to move through matches and <Kbd>Enter</Kbd> to copy the number.
             </p>
           </EmptyState>
@@ -457,7 +457,7 @@ export default function Page() {
           results: as a block in the flow it pushed the whole list down by its
           own height the moment anyone copied a number. */}
       {flash ? (
-        <div role="status" style={s('position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:20;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:8px;padding:10px 16px;background:#007f3b;color:#fff;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(33,43,50,.18);animation:rivaUp .18s ease;')}>
+        <div role="status" style={s('position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:20;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:8px;padding:10px 16px;background:#56c98a;color:#ffffff;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.18);animation:rivaUp .18s ease;')}>
           <Svg w={16} sw={2.4}>{Icons.check}</Svg>
           <span style={s('min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>Copied {flash}</span>
         </div>
@@ -470,7 +470,7 @@ export default function Page() {
       <div className="riva-dock">
         <div className="riva-dock-inner" style={s('display:flex;gap:10px;align-items:center;')}>
           <div style={s('position:relative;flex:1;')}>
-            <span style={s('position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#4c6272;display:flex;')}>
+            <span style={s('position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#9a9aa3;display:flex;')}>
               <Svg w={22} sw={2.2}>{Icons.search}</Svg>
             </span>
             <input
@@ -483,12 +483,12 @@ export default function Page() {
               onKeyDown={onKeyDown}
               placeholder="Name, town, postcode…"
               aria-label="Search the CQC register"
-              style={s('width:100%;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;color:#212b32;outline:none;')}
+              style={s('width:100%;font:inherit;border:2px solid #26262a;border-radius:999px;background:#0b0b0c;color:#e9e9ec;outline:none;')}
             />
             {query ? (
               <Hover tag="button" onClick={() => { setQuery(''); if (inputRef.current) inputRef.current.focus(); }} aria-label="Clear search"
-                base="position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:none;border-radius:50%;background:none;color:#4c6272;cursor:pointer;"
-                hover="background:#e4e9eb;color:#212b32;">
+                base="position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:none;border-radius:50%;background:none;color:#9a9aa3;cursor:pointer;"
+                hover="background:#1d1d20;color:#e9e9ec;">
                 <Svg w={18} sw={2.2}>{Icons.close}</Svg>
               </Hover>
             ) : null}

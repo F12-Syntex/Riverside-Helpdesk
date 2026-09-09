@@ -29,15 +29,15 @@ import { API_GROUPS, API_ROUTES, PAGES, PAGE_GROUPS, routesInGroup } from '@/lib
  * rendering. The title lives in layout.js for the same reason.
  * ------------------------------------------------------------------ */
 
-const CARD = 'display:block;padding:16px 18px;background:#fff;border:1px solid #d8e1e5;border-radius:12px;text-decoration:none;color:inherit;';
-const PATH = 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#4c6272;overflow-wrap:anywhere;';
+const CARD = 'display:block;padding:16px 18px;background:#141416;border:1px solid #26262a;border-radius:12px;text-decoration:none;color:inherit;';
+const PATH = 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#9a9aa3;overflow-wrap:anywhere;';
 
 // A small caps label: what is special about this route, if anything.
 function Tag({ tone = 'grey', children }) {
   const tones = {
-    grey: 'background:#f0f4f5;border-color:#d8dde0;color:#4c6272;',
-    blue: 'background:#e8f1f8;border-color:#aac7e0;color:#00437e;',
-    amber: 'background:#fdf3e7;border-color:#e4c69a;color:#7a4708;',
+    grey: 'background:#0b0b0c;border-color:#26262a;color:#9a9aa3;',
+    blue: 'background:#221a1a;border-color:#4a3330;color:#ea6a64;',
+    amber: 'background:#231d14;border-color:#51442a;color:#e8c47a;',
   };
   return (
     <span style={s('display:inline-block;flex:none;padding:2px 8px;border:1px solid;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;' + tones[tone])}>
@@ -60,10 +60,10 @@ function Body({ route }) {
   return (
     <>
       <div style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;')}>
-        <span style={s('font-size:18px;font-weight:700;color:#005eb8;')}>{route.title}</span>
+        <span style={s('font-size:18px;font-weight:700;color:#e0554f;')}>{route.title}</span>
         <span style={s(PATH)}>{route.path}</span>
       </div>
-      <p style={s('margin:7px 0 0;font-size:15px;line-height:1.5;color:#4c6272;')}>{route.summary}</p>
+      <p style={s('margin:7px 0 0;font-size:15px;line-height:1.5;color:#9a9aa3;')}>{route.summary}</p>
       {(route.landing || route.hidden || route.local || route.methods) && (
         <div style={s('margin-top:10px;')}><Tags route={route} /></div>
       )}
@@ -75,7 +75,7 @@ function Group({ title, routes, linked }) {
   if (!routes.length) return null;
   return (
     <section style={s('margin:0 0 30px;')}>
-      <h2 style={s('font-size:15px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin:0 0 12px;')}>
+      <h2 style={s('font-size:15px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#74747d;margin:0 0 12px;')}>
         {title}
       </h2>
       <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;')}>
@@ -95,17 +95,17 @@ function Group({ title, routes, linked }) {
 
 export default function Page() {
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Full index" />
 
       <main style={s('flex:1;width:100%;max-width:860px;margin:0 auto;padding:40px 24px 64px;')}>
         <h1 style={s('font-size:32px;margin:0 0 6px;letter-spacing:-0.02em;')}>Everything in this app</h1>
-        <p style={s('font-size:17px;color:#4c6272;margin:0 0 8px;line-height:1.55;')}>
-          The <Link href="/" style={s('color:#005eb8;font-weight:600;')}>practice tools page</Link> shows the two tools
+        <p style={s('font-size:17px;color:#9a9aa3;margin:0 0 8px;line-height:1.55;')}>
+          The <Link href="/" style={s('color:#e0554f;font-weight:600;')}>practice tools page</Link> shows the two tools
           used every day. This is the whole list: {PAGES.length} pages and {API_ROUTES.length} API endpoints, including
           the ones deliberately kept off the front.
         </p>
-        <p style={s('font-size:15px;color:#768692;margin:0 0 32px;line-height:1.5;')}>
+        <p style={s('font-size:15px;color:#74747d;margin:0 0 32px;line-height:1.5;')}>
           Anything marked <em>development machine only</em> returns a 404 in the live app.
         </p>
 
@@ -115,7 +115,7 @@ export default function Page() {
         ))}
 
         <h2 style={s('font-size:24px;margin:34px 0 6px;letter-spacing:-0.01em;')}>API endpoints</h2>
-        <p style={s('font-size:15px;color:#4c6272;margin:0 0 22px;line-height:1.5;')}>
+        <p style={s('font-size:15px;color:#9a9aa3;margin:0 0 22px;line-height:1.5;')}>
           What the pages above call. Listed for reference — they answer to the app, not to a browser address bar.
         </p>
         {API_GROUPS.map((group) => (

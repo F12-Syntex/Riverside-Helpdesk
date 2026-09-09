@@ -2,7 +2,7 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 import Notifications from './_components/Notifications';
 import AuditTracker from './_components/AuditTracker';
-import { BUILD_LABEL, VERSION_LABEL } from '@/lib/version.mjs';
+import AppShell from './_components/AppShell';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
@@ -13,6 +13,11 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  // The chrome around the page — the browser's own address bar and the
+  // phone's status bar — is told the app is dark, so it stops framing a
+  // near-black page in white.
+  themeColor: '#0b0b0c',
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({ children }) {
@@ -20,42 +25,23 @@ export default function RootLayout({ children }) {
     <html lang="en-GB">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Inter for the interface: at 13px in a rail, in a crumb and in a
+            column of figures, the thing that matters is that the letters
+            stay apart and the numerals line up. Hanken Grotesk stays as
+            the fallback, so nothing reflows into a serif if the request
+            for Inter never lands. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>
       <body>
-        {children}
-        {/* Which build this is, in the corner and out of the way. It exists for
-            one exchange: somebody is told a change is live, cannot see it, and
-            needs to say what they are actually looking at. Fixed rather than in
-            the page flow so it never pushes an answer around, and pointer-events
-            off so it can never be the thing a finger lands on. */}
-        <span
-          title={BUILD_LABEL}
-          style={{
-            position: 'fixed',
-            right: '8px',
-            bottom: '6px',
-            zIndex: 1,
-            pointerEvents: 'none',
-            fontSize: '11.5px',
-            fontWeight: 600,
-            fontVariantNumeric: 'tabular-nums',
-            letterSpacing: '.01em',
-            // Legible on its own terms rather than by being loud: the app's
-            // muted ink, on a soft backdrop so it reads over a white card and
-            // over a coloured one without a border drawing a box round itself.
-            color: '#4c6272',
-            background: 'rgba(255,255,255,.82)',
-            padding: '2px 8px',
-            borderRadius: '999px',
-            userSelect: 'none',
-          }}
-        >
-          {VERSION_LABEL}
-        </span>
+        {/* Every page is inside the rail: the tools down the left, the crumb
+            across the top, and which build this is at the foot of the rail —
+            the corner somebody is asked to read out when they have been told
+            a change is live and cannot see it. */}
+        <AppShell>{children}</AppShell>
         <Notifications />
         <AuditTracker />
         <Analytics />

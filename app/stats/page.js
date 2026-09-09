@@ -39,7 +39,7 @@ export default function StatsPage() {
   const active = TABS.find((t) => t.key === tab) || TABS[0];
 
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle={active.subtitle} />
 
       <main style={s('flex:1;width:100%;max-width:1100px;margin:0 auto;padding:36px 24px 64px;')}>
@@ -55,8 +55,8 @@ export default function StatsPage() {
                 <Hover key={t.key} tag="button" type="button" role="tab" aria-selected={on}
                   onClick={() => setTab(t.key)}
                   base={'border-radius:999px;padding:8px 17px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:1px solid '
-                    + (on ? '#005eb8;background:#005eb8;color:#fff;' : '#d8e1e5;background:#fff;color:#4c6272;')}
-                  hover={on ? 'background:#00437e;border-color:#00437e;' : 'border-color:#005eb8;color:#005eb8;'}>
+                    + (on ? '#e0554f;background:#e0554f;color:#ffffff;' : '#26262a;background:#141416;color:#9a9aa3;')}
+                  hover={on ? 'background:#ea6a64;border-color:#ea6a64;' : 'border-color:#e0554f;color:#e0554f;'}>
                   {t.label}
                 </Hover>
               );
@@ -70,14 +70,14 @@ export default function StatsPage() {
           ? <QuestionsView range={range} machineId={machineId} onMachine={setMachineId} />
           : <ActivityView range={range} machineId={machineId} onMachine={setMachineId} />}
 
-        <p style={s('margin:32px 0 0;font-size:14px;color:#768692;line-height:1.5;')}>
+        <p style={s('margin:32px 0 0;font-size:14px;color:#74747d;line-height:1.5;')}>
           Verdicts on their own, without the questions around them, are at{' '}
-          <Hover tag={Link} href="/feedback" base="color:#005eb8;font-weight:600;" hover="color:#003087;">/feedback</Hover>.
+          <Hover tag={Link} href="/feedback" base="color:#e0554f;font-weight:600;" hover="color:#f0817c;">/feedback</Hover>.
           {' '}Nothing on this page can change what was recorded &mdash; only a machine&rsquo;s name.
         </p>
 
-        <Hover tag={Link} href="/" base="display:inline-flex;align-items:center;gap:7px;margin-top:18px;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600;color:#005eb8;text-decoration:none;"
-          hover="border-color:#005eb8;background:#f7fbff;">
+        <Hover tag={Link} href="/" base="display:inline-flex;align-items:center;gap:7px;margin-top:18px;background:#141416;border:1px solid #2a2a2e;border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600;color:#e0554f;text-decoration:none;"
+          hover="border-color:#e0554f;background:#151518;">
           <Svg w={15} sw={2.4}>{Icons.arrowLeft}</Svg>Back to the assistant
         </Hover>
       </main>

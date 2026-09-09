@@ -28,9 +28,9 @@ import { s, Hover, Svg, Icons } from '../ui';
 // Three states, and they have to be told apart at a glance from three feet away
 // with a patient at the desk.
 const TONE = {
-  urgent: { bar: '#d5281b', chip: '#fdf4f3', ink: '#a51b0f' },
-  open: { bar: '#ecd39a', chip: '#fffdf5', ink: '#8a6100' },
-  done: { bar: '#007f3b', chip: '#f0f9f3', ink: '#00632f' },
+  urgent: { bar: '#ff7b72', chip: '#261619', ink: '#ff9d96' },
+  open: { bar: '#4b3d1f', chip: '#1b1a15', ink: '#e0b85f' },
+  done: { bar: '#56c98a', chip: '#161618', ink: '#7fdcaa' },
 };
 
 function Item({ item, onAsk, onDismiss }) {
@@ -39,28 +39,28 @@ function Item({ item, onAsk, onDismiss }) {
   const label = closed ? 'Dealt with' : item.statusLabel;
 
   return (
-    <li style={s('display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px solid #eef1f2;')}>
+    <li style={s('display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px solid #1c1c1f;')}>
       <span style={s('flex:none;width:4px;align-self:stretch;border-radius:2px;background:' + tone.bar + ';')} />
       <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;')}>
         <span style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px;')}>
-          <span style={s('font-size:15.5px;font-weight:700;color:#212b32;overflow-wrap:anywhere;')}>{item.label}</span>
+          <span style={s('font-size:15.5px;font-weight:700;color:#e9e9ec;overflow-wrap:anywhere;')}>{item.label}</span>
           <span style={s('flex:none;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;background:' + tone.chip + ';color:' + tone.ink + ';')}>{label}</span>
         </span>
         {/* The patient's own words, never a rewrite of them. When the gist and
             the span are the same thing there is nothing to add. */}
         {item.text && item.text !== item.label && (
-          <span style={s('font-size:13.5px;line-height:1.45;color:#4c6272;overflow-wrap:anywhere;')}>“{item.text}”</span>
+          <span style={s('font-size:13.5px;line-height:1.45;color:#9a9aa3;overflow-wrap:anywhere;')}>“{item.text}”</span>
         )}
         {(item.askable && !closed) && (
           <span style={s('display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;')}>
             <Hover tag="button" type="button" className="riva-lift" onClick={() => onAsk(item)}
-              base="background:#f0f6fb;border:1px solid #cfe1f0;border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;color:#005eb8;cursor:pointer;"
-              hover="background:#005eb8;border-color:#005eb8;color:#fff;">
+              base="background:#1b1b1f;border:1px solid #3a2b2a;border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;color:#e0554f;cursor:pointer;"
+              hover="background:#e0554f;border-color:#e0554f;color:#ffffff;">
               Answer this one
             </Hover>
             <Hover tag="button" type="button" onClick={() => { setClosed(true); onDismiss(item); }}
-              base="background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;color:#4c6272;cursor:pointer;"
-              hover="border-color:#007f3b;color:#00632f;background:#f0f9f3;">
+              base="background:#141416;border:1px solid #2a2a2e;border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;color:#9a9aa3;cursor:pointer;"
+              hover="border-color:#56c98a;color:#7fdcaa;background:#161618;">
               I have dealt with it
             </Hover>
           </span>
@@ -74,18 +74,18 @@ export default function UnresolvedPanel({ panel, onAsk, onDismiss }) {
   if (!panel || !panel.items || panel.items.length < 2) return null;
 
   return (
-    <div style={s('margin:16px 0 0;background:#fff;border:1px solid #d8e1e5;border-radius:14px;overflow:hidden;')}>
-      <div style={s('padding:13px 18px 12px;border-bottom:1px solid #eef1f2;')}>
+    <div style={s('margin:16px 0 0;background:#141416;border:1px solid #26262a;border-radius:14px;overflow:hidden;')}>
+      <div style={s('padding:13px 18px 12px;border-bottom:1px solid #1c1c1f;')}>
         <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:9px;')}>
-          <Svg w={16} stroke="#4c6272" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
-          <span style={s('flex:1;min-width:0;font-size:17px;font-weight:700;color:#212b32;')}>{panel.title}</span>
+          <Svg w={16} stroke="#9a9aa3" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
+          <span style={s('flex:1;min-width:0;font-size:17px;font-weight:700;color:#e9e9ec;')}>{panel.title}</span>
           {panel.open > 0 && (
-            <span style={s('flex:none;border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;background:#fffdf5;color:#8a6100;border:1px solid #ecd39a;')}>
+            <span style={s('flex:none;border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;background:#1b1a15;color:#e0b85f;border:1px solid #4b3d1f;')}>
               {panel.open} not answered
             </span>
           )}
         </div>
-        <div style={s('margin-top:3px;font-size:13.5px;color:#4c6272;')}>{panel.subtitle}</div>
+        <div style={s('margin-top:3px;font-size:13.5px;color:#9a9aa3;')}>{panel.subtitle}</div>
       </div>
       <ul style={s('margin:0;padding:0 18px 6px;list-style:none;')}>
         {panel.items.map((item) => (
@@ -93,7 +93,7 @@ export default function UnresolvedPanel({ panel, onAsk, onDismiss }) {
         ))}
       </ul>
       {panel.note && (
-        <div style={s('padding:9px 18px 12px;border-top:1px solid #eef1f2;font-size:12.5px;color:#768692;')}>{panel.note}</div>
+        <div style={s('padding:9px 18px 12px;border-top:1px solid #1c1c1f;font-size:12.5px;color:#74747d;')}>{panel.note}</div>
       )}
     </div>
   );

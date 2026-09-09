@@ -193,8 +193,8 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
 
   const rowStyle = (i) => (
     'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;'
-    + (i ? 'border-top:1px solid #eef1f2;' : '')
-    + 'padding:10px 15px;font:inherit;cursor:pointer;background:#fff;'
+    + (i ? 'border-top:1px solid #1c1c1f;' : '')
+    + 'padding:10px 15px;font:inherit;cursor:pointer;background:#141416;'
     + 'transition:background .14s ease;'
   );
 
@@ -212,19 +212,19 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
       title={row.summary}
       onClick={onClick}
       className={'riva-mode riva-mode-' + row.kind}
-      base={rowStyle(i) + (row.kind === 'back' ? 'background:#f7f9fa;' : '')}
-      hover="background:#f0f6fb;">
-      <span style={s('flex:none;display:flex;width:14px;color:#005eb8;justify-content:center;')}>
-        {marked ? <span style={s('width:7px;height:7px;border-radius:50%;background:#005eb8;')} /> : null}
+      base={rowStyle(i) + (row.kind === 'back' ? 'background:#141416;' : '')}
+      hover="background:#1b1b1f;">
+      <span style={s('flex:none;display:flex;width:14px;color:#e0554f;justify-content:center;')}>
+        {marked ? <span style={s('width:7px;height:7px;border-radius:50%;background:#e0554f;')} /> : null}
       </span>
-      <span style={s('flex:none;display:flex;color:' + (marked ? '#005eb8' : '#6b7f8d') + ';')}>
+      <span style={s('flex:none;display:flex;color:' + (marked ? '#e0554f' : '#7c7c85') + ';')}>
         <Svg w={16} sw={2.1}>{Icons[row.icon] || Icons.folder}</Svg>
       </span>
       <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
-        <span style={s('font-size:14px;font-weight:700;color:' + (marked ? '#005eb8' : '#212b32') + ';')}>
+        <span style={s('font-size:14px;font-weight:700;color:' + (marked ? '#e0554f' : '#e9e9ec') + ';')}>
           {row.label}
         </span>
-        <span style={s('font-size:12.5px;color:#5b7183;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+        <span style={s('font-size:12.5px;color:#84848d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
           {row.summary}
         </span>
       </span>
@@ -246,8 +246,8 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
         base={'display:flex;align-items:center;justify-content:center;width:100%;height:100%;'
           + 'border:none;border-radius:50%;padding:0;cursor:pointer;'
           + 'transition:background .16s ease,color .16s ease;'
-          + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eaeff1;color:#4c6272;')}
-        hover={armed ? 'background:#00437f;' : 'background:#dbe3e7;color:#005eb8;'}>
+          + (armed ? 'background:#e0554f;color:#ffffff;' : 'background:#19191c;color:#9a9aa3;')}
+        hover={armed ? 'background:#ea6a64;' : 'background:#202023;color:#e0554f;'}>
         {busy
           ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
           : <Svg w={20} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
@@ -260,7 +260,7 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
               return controlRow(row, i, enterFolder, {
                 marked: Boolean(current.folder),
                 trailing: (
-                  <span style={s('flex:none;display:flex;color:#6b7f8d;')}>
+                  <span style={s('flex:none;display:flex;color:#7c7c85;')}>
                     <Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg>
                   </span>
                 ),
@@ -279,24 +279,24 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
                 onClick={() => choose(row.name)}
                 className="riva-mode"
                 base={rowStyle(i)}
-                hover="background:#f0f6fb;">
+                hover="background:#1b1b1f;">
                 {/* The tick holds its column whether or not it is drawn, so the
                     names line up down the list instead of stepping in on the
                     armed one. */}
-                <span style={s('flex:none;display:flex;width:14px;color:#005eb8;')}>
+                <span style={s('flex:none;display:flex;width:14px;color:#e0554f;')}>
                   {on ? <Svg w={14} sw={3}>{Icons.check}</Svg> : null}
                 </span>
                 {/* The same glyph the disc wears while this mode is armed, so
                     the picture in the field is the picture that was picked and
                     not a second thing to learn. */}
-                <span style={s('flex:none;display:flex;color:' + (on ? '#005eb8' : '#6b7f8d') + ';')}>
+                <span style={s('flex:none;display:flex;color:' + (on ? '#e0554f' : '#7c7c85') + ';')}>
                   <Svg w={16} sw={2.1}>{Icons[row.icon] || Icons.search}</Svg>
                 </span>
                 <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
-                  <span style={s('font-size:14px;font-weight:700;color:' + (on ? '#005eb8' : '#212b32') + ';')}>
+                  <span style={s('font-size:14px;font-weight:700;color:' + (on ? '#e0554f' : '#e9e9ec') + ';')}>
                     {row.label}
                   </span>
-                  <span style={s('font-size:12.5px;color:#5b7183;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+                  <span style={s('font-size:12.5px;color:#84848d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
                     {row.summary}
                   </span>
                 </span>

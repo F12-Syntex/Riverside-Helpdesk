@@ -21,14 +21,14 @@ function Row({ depth = 0, open, hasChildren, icon, label, meta, onClick, tag = '
       tag={tag}
       {...extra}
       onClick={onClick}
-      base={'display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-radius:8px;padding:8px 12px 8px ' + pad + 'px;font:inherit;color:#212b32;text-decoration:none;cursor:pointer;'}
-      hover="background:#e8f1f8;color:#003087;">
-      <span style={s('flex:none;width:16px;display:flex;color:#8a99a3;transform:rotate(' + (hasChildren && open ? 90 : 0) + 'deg);transition:transform .15s ease;')}>
+      base={'display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-radius:8px;padding:8px 12px 8px ' + pad + 'px;font:inherit;color:#e9e9ec;text-decoration:none;cursor:pointer;'}
+      hover="background:#221a1a;color:#f0817c;">
+      <span style={s('flex:none;width:16px;display:flex;color:#63636c;transform:rotate(' + (hasChildren && open ? 90 : 0) + 'deg);transition:transform .15s ease;')}>
         {hasChildren ? <Svg w={14} sw={2.6}>{Icons.chevronRight}</Svg> : null}
       </span>
-      {icon && <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={15} sw={2}>{icon}</Svg></span>}
+      {icon && <span style={s('flex:none;display:flex;color:#e0554f;')}><Svg w={15} sw={2}>{icon}</Svg></span>}
       <span style={s('flex:1;min-width:0;font-size:15px;font-weight:' + (depth === 0 ? 700 : 400) + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{label}</span>
-      {meta ? <span style={s('flex:none;font-size:12.5px;color:#8a99a3;')}>{meta}</span> : null}
+      {meta ? <span style={s('flex:none;font-size:12.5px;color:#63636c;')}>{meta}</span> : null}
     </Hover>
   );
 }
@@ -76,7 +76,7 @@ export default function SourcesView({ v }) {
   const rootNotes = childrenOf.get(null) || [];
 
   const section = (key, label, count, children) => (
-    <div style={s('background:#fff;border:1px solid #dde4e7;border-radius:14px;padding:6px;')}>
+    <div style={s('background:#141416;border:1px solid #26262a;border-radius:14px;padding:6px;')}>
       <Row depth={0} open={openKeys.has(key)} hasChildren label={label} meta={count} onClick={() => toggle(key)} />
       {openKeys.has(key) && <div>{children}</div>}
     </div>
@@ -86,14 +86,14 @@ export default function SourcesView({ v }) {
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 48px;display:flex;flex-direction:column;gap:14px;')}>
       <div>
         <h1 className="riva-hero-h1" style={s('font-size:32px;font-weight:700;letter-spacing:-0.02em;margin:0;')}>Sources</h1>
-        <p style={s('font-size:16px;color:#4c6272;margin:10px 0 0;max-width:58ch;text-wrap:pretty;')}>
+        <p style={s('font-size:16px;color:#9a9aa3;margin:10px 0 0;max-width:58ch;text-wrap:pretty;')}>
           Everything an answer can be built from: the practice&rsquo;s own documents, the notebook, the
           telephone directory and the written guides. Nothing else is used.
         </p>
       </div>
 
       {v.kbStatus === 'loading' && (
-        <div style={s('font-size:15px;color:#4c6272;padding:12px 2px;')}>Loading the document index…</div>
+        <div style={s('font-size:15px;color:#9a9aa3;padding:12px 2px;')}>Loading the document index…</div>
       )}
 
       {section('docs', 'Practice documents', v.kbTotal ? v.kbTotal + ' indexed' : '', (
@@ -117,7 +117,7 @@ export default function SourcesView({ v }) {
           ? rootNotes.map((n) => (
             <NoteBranch key={n.id} note={n} childrenOf={childrenOf} depth={1} openKeys={openKeys} toggle={toggle} />
           ))
-          : <div style={s('font-size:14px;color:#8a99a3;padding:8px 12px 8px 32px;')}>No notes written yet.</div>
+          : <div style={s('font-size:14px;color:#63636c;padding:8px 12px 8px 32px;')}>No notes written yet.</div>
       ))}
 
       {section('contacts', 'Telephone directory', (v.sourceContacts || []).length || '', (

@@ -40,7 +40,7 @@ function rateLine(model) {
   return `${money(inRate)} in / ${money(outRate)} out per 1M tokens`;
 }
 
-const INPUT = 'width:100%;box-sizing:border-box;padding:9px 12px;font:inherit;font-size:15px;border:2px solid #d8dde0;border-radius:8px;background:#fff;color:#212b32;';
+const INPUT = 'width:100%;box-sizing:border-box;padding:9px 12px;font:inherit;font-size:15px;border:2px solid #26262a;border-radius:8px;background:#141416;color:#e9e9ec;';
 
 function ModelField({ value, placeholder, models, index, onChange, label }) {
   const [open, setOpen] = React.useState(false);
@@ -98,20 +98,20 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
         onChange={(e) => { onChange(e.target.value.trim()); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        style={s(INPUT + (bad ? 'border-color:#d5281b;' : ''))}
+        style={s(INPUT + (bad ? 'border-color:#ff7b72;' : ''))}
       />
       {open && options.length > 0 && (
-        <div role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #d8dde0;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:4px;')}>
+        <div role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:#141416;border:1px solid #26262a;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:4px;')}>
           {options.map((id, i) => {
             const model = models.find((m) => m.id === id);
             return (
               <Hover key={id} tag="button" type="button" role="option" aria-selected={i === cursor}
                 onMouseDown={(e) => e.preventDefault()} onClick={() => take(id)}
-                base={'display:block;width:100%;text-align:left;border:none;border-radius:6px;padding:7px 10px;font:inherit;cursor:pointer;background:' + (i === cursor ? '#e8f1f8' : 'transparent') + ';'}
-                hover="background:#e8f1f8;">
-                <span style={s('display:block;font-size:14.5px;color:#212b32;overflow-wrap:anywhere;')}>{id}</span>
+                base={'display:block;width:100%;text-align:left;border:none;border-radius:6px;padding:7px 10px;font:inherit;cursor:pointer;background:' + (i === cursor ? '#221a1a' : 'transparent') + ';'}
+                hover="background:#221a1a;">
+                <span style={s('display:block;font-size:14.5px;color:#e9e9ec;overflow-wrap:anywhere;')}>{id}</span>
                 {model && model.name ? (
-                  <span style={s('display:block;font-size:12.5px;color:#4c6272;overflow-wrap:anywhere;')}>
+                  <span style={s('display:block;font-size:12.5px;color:#9a9aa3;overflow-wrap:anywhere;')}>
                     {model.name}{model.vision ? '' : ' · text only'}
                   </span>
                 ) : null}
@@ -126,15 +126,15 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
 
 function Row({ name, job, rate, used, children }) {
   return (
-    <div style={s('display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:14px 0;border-top:1px solid #eef1f2;')}>
+    <div style={s('display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:14px 0;border-top:1px solid #1c1c1f;')}>
       <div style={s('flex:0 0 150px;min-width:0;')}>
-        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>{name}</span>
-        <span style={s('display:block;font-size:13px;color:#4c6272;')}>{job}</span>
+        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#e9e9ec;')}>{name}</span>
+        <span style={s('display:block;font-size:13px;color:#9a9aa3;')}>{job}</span>
       </div>
       <div style={s('flex:1 1 260px;min-width:0;')}>
         {children}
         {(rate || used) && (
-          <span style={s('display:block;font-size:12.5px;color:#768692;margin-top:5px;font-variant-numeric:tabular-nums;')}>
+          <span style={s('display:block;font-size:12.5px;color:#74747d;margin-top:5px;font-variant-numeric:tabular-nums;')}>
             {[rate, used].filter(Boolean).join(' · ')}
           </span>
         )}
@@ -278,16 +278,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Settings" />
 
       <main style={s('flex:1;width:100%;max-width:680px;margin:0 auto;padding:32px 24px 56px;')}>
         <h1 style={s('font-size:26px;margin:0 0 4px;letter-spacing:-0.02em;')}>Models</h1>
-        <p style={s('font-size:15px;color:#4c6272;margin:0 0 20px;')}>
+        <p style={s('font-size:15px;color:#9a9aa3;margin:0 0 20px;')}>
           Type to search, or paste an id. Blank inherits the model above.
         </p>
 
-        <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:4px 20px 20px;')}>
+        <section style={s('background:#141416;border:1px solid #26262a;border-radius:12px;padding:4px 20px 20px;')}>
           <Row name="Reasoning" job="Decides and writes the answer" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
             <ModelField
               label="Reasoning model" value={model} models={models} index={index}
@@ -344,13 +344,13 @@ export default function SettingsPage() {
             />
           </Row>
 
-          <div style={s('border-top:1px solid #eef1f2;padding:14px 0 2px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;')}>
-            <span style={s('flex:0 0 150px;font-size:15.5px;font-weight:600;color:#212b32;')}>Per question</span>
-            <span style={s('flex:1 1 260px;font-size:15.5px;color:#212b32;font-variant-numeric:tabular-nums;')}>
+          <div style={s('border-top:1px solid #1c1c1f;padding:14px 0 2px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;')}>
+            <span style={s('flex:0 0 150px;font-size:15.5px;font-weight:600;color:#e9e9ec;')}>Per question</span>
+            <span style={s('flex:1 1 260px;font-size:15.5px;color:#e9e9ec;font-variant-numeric:tabular-nums;')}>
               {estimate.measured ? (
                 <>
                   <strong>{formatCost(estimate.total)}</strong>
-                  <span style={s('font-size:13px;color:#768692;')}>
+                  <span style={s('font-size:13px;color:#74747d;')}>
                     {' '}— measured over {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
                     {measured.windowDays ? ` in the last ${measured.windowDays} days` : ''}
                     {estimate.missing.length ? `, excluding ${estimate.missing.join(' and ')} (not run yet)` : ''}
@@ -358,7 +358,7 @@ export default function SettingsPage() {
                   </span>
                 </>
               ) : (
-                <span style={s('font-size:13.5px;color:#768692;')}>
+                <span style={s('font-size:13.5px;color:#74747d;')}>
                   Not measured on these models yet — ask a few questions and the real cost appears here.
                 </span>
               )}
@@ -366,8 +366,8 @@ export default function SettingsPage() {
           </div>
 
           {history.length > 0 && (
-            <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding-top:14px;')}>
-              <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>
+            <div style={s('border-top:1px solid #1c1c1f;margin-top:14px;padding-top:14px;')}>
+              <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#74747d;margin-bottom:8px;')}>
                 Cost per question, by model
               </div>
               <div style={s('overflow-x:auto;')}>
@@ -375,14 +375,14 @@ export default function SettingsPage() {
                   <tbody>
                     {history.map((row) => (
                       <tr key={row.model}>
-                        <td style={s('padding:5px 10px 5px 0;color:#212b32;overflow-wrap:anywhere;')}>
+                        <td style={s('padding:5px 10px 5px 0;color:#e9e9ec;overflow-wrap:anywhere;')}>
                           {row.model}
-                          {row.inUse ? <span style={s('margin-left:7px;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 6px;background:#eef7ee;color:#00532a;')}>IN USE</span> : null}
+                          {row.inUse ? <span style={s('margin-left:7px;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 6px;background:#12211a;color:#8ce0b3;')}>IN USE</span> : null}
                         </td>
-                        <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#212b32;font-variant-numeric:tabular-nums;')}>
+                        <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#e9e9ec;font-variant-numeric:tabular-nums;')}>
                           {row.priced ? formatCost(row.cost) : 'no published price'}
                         </td>
-                        <td style={s('padding:5px 0;text-align:right;white-space:nowrap;color:#768692;font-variant-numeric:tabular-nums;')}>
+                        <td style={s('padding:5px 0;text-align:right;white-space:nowrap;color:#74747d;font-variant-numeric:tabular-nums;')}>
                           {row.turns.toLocaleString()} question{row.turns === 1 ? '' : 's'}
                         </td>
                       </tr>
@@ -390,7 +390,7 @@ export default function SettingsPage() {
                   </tbody>
                 </table>
               </div>
-              <p style={s('margin:8px 0 0;font-size:12.5px;color:#768692;line-height:1.45;')}>
+              <p style={s('margin:8px 0 0;font-size:12.5px;color:#74747d;line-height:1.45;')}>
                 Kept per model. Switching model shows nothing until it has been used; switching back brings its record with it.
               </p>
             </div>
@@ -398,25 +398,25 @@ export default function SettingsPage() {
 
           <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
             <Hover tag="button" type="button" disabled={!dirty || !valid || saving} onClick={save}
-              base={'border:none;border-radius:10px;padding:11px 20px;font:inherit;font-size:15.5px;font-weight:600;color:#fff;background:'
-                + (dirty && valid && !saving ? '#007f3b' : '#aab7bd') + ';cursor:' + (dirty && valid && !saving ? 'pointer' : 'default') + ';'}
-              hover={dirty && valid && !saving ? 'background:#00662f;' : ''}>
+              base={'border:none;border-radius:10px;padding:11px 20px;font:inherit;font-size:15.5px;font-weight:600;color:#ffffff;background:'
+                + (dirty && valid && !saving ? '#56c98a' : '#43434a') + ';cursor:' + (dirty && valid && !saving ? 'pointer' : 'default') + ';'}
+              hover={dirty && valid && !saving ? 'background:#7fdcaa;' : ''}>
               {saving ? 'Saving…' : 'Save'}
             </Hover>
             {note && (
-              <span style={s('display:flex;gap:6px;align-items:center;font-size:15px;color:#007f3b;font-weight:600;')}>
-                <Svg w={16} stroke="#007f3b" sw={2.4}>{Icons.check}</Svg>{note}
+              <span style={s('display:flex;gap:6px;align-items:center;font-size:15px;color:#56c98a;font-weight:600;')}>
+                <Svg w={16} stroke="#56c98a" sw={2.4}>{Icons.check}</Svg>{note}
               </span>
             )}
           </div>
 
           {!valid && (
-            <p style={s('margin:12px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
+            <p style={s('margin:12px 0 0;font-size:13.5px;color:#ff7b72;font-weight:600;')}>
               An id looks like vendor/model, with an optional :variant.
             </p>
           )}
           {error && (
-            <p style={s('margin:12px 0 0;font-size:14px;color:#d5281b;font-weight:600;')}>{error}</p>
+            <p style={s('margin:12px 0 0;font-size:14px;color:#ff7b72;font-weight:600;')}>{error}</p>
           )}
         </section>
 
@@ -426,28 +426,28 @@ export default function SettingsPage() {
             It is a switch rather than a promise: what it turns off is the row
             being written at all. */}
         <h2 style={s('font-size:22px;margin:34px 0 4px;letter-spacing:-0.02em;')}>This computer</h2>
-        <p style={s('font-size:15px;color:#4c6272;margin:0 0 16px;')}>
+        <p style={s('font-size:15px;color:#9a9aa3;margin:0 0 16px;')}>
           Applies to this machine only, and takes effect on the next question.
         </p>
 
-        <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:18px 20px;')}>
+        <section style={s('background:#141416;border:1px solid #26262a;border-radius:12px;padding:18px 20px;')}>
           <div style={s('display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between;')}>
             <span style={s('flex:1 1 260px;min-width:0;')}>
-              <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>Log questions from this computer</span>
-              <span style={s('display:block;font-size:13.5px;color:#4c6272;margin-top:3px;line-height:1.45;')}>
+              <span style={s('display:block;font-size:15.5px;font-weight:600;color:#e9e9ec;')}>Log questions from this computer</span>
+              <span style={s('display:block;font-size:13.5px;color:#9a9aa3;margin-top:3px;line-height:1.45;')}>
                 {logging === false
                   ? 'Off. Questions asked here are answered as usual but no record of them is kept, so they do not appear in the statistics.'
                   : 'On. What is asked here, and the answer given, are recorded so they can be read back in the statistics.'}
               </span>
-              <span style={s('display:block;font-size:12.5px;color:#768692;margin-top:6px;line-height:1.45;')}>
+              <span style={s('display:block;font-size:12.5px;color:#74747d;margin-top:6px;line-height:1.45;')}>
                 The activity log — which pages were opened — is a separate record and is not affected.
               </span>
             </span>
             <Hover tag="button" type="button" disabled={logging === null}
               onClick={() => setLoggingHere(logging === false)}
               base={'flex:none;border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:2px solid '
-                + (logging === false ? '#d5281b;color:#d5281b;background:#fff;' : '#007f3b;color:#fff;background:#007f3b;')}
-              hover={logging === false ? 'background:#fdf4f3;' : 'background:#00662f;border-color:#00662f;'}>
+                + (logging === false ? '#ff7b72;color:#ff7b72;background:#141416;' : '#56c98a;color:#ffffff;background:#56c98a;')}
+              hover={logging === false ? 'background:#261619;' : 'background:#7fdcaa;border-color:#7fdcaa;'}>
               {logging === false ? 'Logging off' : 'Logging on'}
             </Hover>
           </div>

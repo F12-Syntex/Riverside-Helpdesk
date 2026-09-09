@@ -23,25 +23,25 @@ import { s, Hover, Svg, Icons } from './ui';
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
-const INK = '#212b32';
-const MUTED = '#4c6272';
-const BLUE = '#005eb8';
-const GREEN = '#007f3b';
-const EDGE = '#9fb1ba';
+const INK = '#e9e9ec';
+const MUTED = '#9a9aa3';
+const BLUE = '#e0554f';
+const GREEN = '#56c98a';
+const EDGE = '#4a4a52';
 
-const DEP = { A: { c: '#005eb8', t: 'OpenRouter (AI)' }, D: { c: '#8a6100', t: 'Postgres' }, B: { c: '#5b3ca8', t: 'Vercel Blob' }, L: { c: '#c0271b', t: 'localhost only' } };
+const DEP = { A: { c: '#e0554f', t: 'OpenRouter (AI)' }, D: { c: '#e0b85f', t: 'Postgres' }, B: { c: '#a98cf0', t: 'Vercel Blob' }, L: { c: '#ff7b72', t: 'localhost only' } };
 
 /* =============================================================== *
  * Level 1 — the request loop.
  * =============================================================== */
 const L1_NODES = [
-  { x: 40, y: 60, w: 190, h: 100, icon: Icons.chat, title: 'Staff', sub: 'ask in plain English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/agent', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5', ic: '#fff' },
-  { x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'Research loop', sub: 'the AI picks its own tools', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'FIRST SOURCE' },
-  { x: 110, y: 230, w: 230, h: 84, icon: Icons.refresh, title: 'Answer cache', sub: 'asked before, answered again', fill: '#fffdf5', border: '#e3d3a8', ink: '#6b4d00', subInk: '#8a6100', ic: '#8a6100' },
+  { x: 40, y: 60, w: 190, h: 100, icon: Icons.chat, title: 'Staff', sub: 'ask in plain English', fill: '#141416', border: '#5a3d3a', ink: INK, subInk: MUTED, ic: BLUE },
+  { x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/agent', fill: BLUE, border: BLUE, ink: '#ffffff', subInk: '#3a2b2a', ic: '#ffffff' },
+  { x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'Research loop', sub: 'the AI picks its own tools', fill: '#141416', border: '#5a3d3a', ink: INK, subInk: MUTED, ic: BLUE },
+  { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#141416', border: '#204734', ink: INK, subInk: MUTED, ic: GREEN },
+  { x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#141416', border: '#204734', ink: INK, subInk: MUTED, ic: GREEN },
+  { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#18181a', border: '#2a513d', ink: '#7fdcaa', subInk: '#6fcf9b', ic: GREEN, tag: 'FIRST SOURCE' },
+  { x: 110, y: 230, w: 230, h: 84, icon: Icons.refresh, title: 'Answer cache', sub: 'asked before, answered again', fill: '#1b1a15', border: '#51442a', ink: '#ebc984', subInk: '#e0b85f', ic: '#e0b85f' },
 ];
 const L1_EDGES = [
   { d: 'M230 110 L320 110', label: '1 · asks', lx: 275, ly: 100 },
@@ -66,7 +66,7 @@ function L1Node(n, i) {
       <g transform={`translate(${n.x + 20}, ${n.y + 18})`} fill="none" stroke={n.ic} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{n.icon}</g>
       <text x={n.x + 20} y={n.y + 66} fontFamily={FONT} fontSize="18" fontWeight="700" fill={n.ink}>{n.title}</text>
       <text x={n.x + 20} y={n.y + 88} fontFamily={FONT} fontSize="13" fill={n.subInk}>{n.sub}</text>
-      {n.tag && (<><rect x={n.x + n.w - 118} y={n.y + 16} width="102" height="22" rx="11" fill={GREEN} /><text x={n.x + n.w - 67} y={n.y + 31} fontFamily={FONT} fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle" letterSpacing="0.4">{n.tag}</text></>)}
+      {n.tag && (<><rect x={n.x + n.w - 118} y={n.y + 16} width="102" height="22" rx="11" fill={GREEN} /><text x={n.x + n.w - 67} y={n.y + 31} fontFamily={FONT} fontSize="11" fontWeight="700" fill="#141416" textAnchor="middle" letterSpacing="0.4">{n.tag}</text></>)}
     </g>
   );
 }
@@ -141,7 +141,7 @@ function Dots({ deps, x, y }) {
   return deps.map((d, i) => (
     <g key={d}>
       <circle cx={x + i * 15} cy={y} r="6.5" fill={DEP[d].c} />
-      <text x={x + i * 15} y={y + 3.4} fontFamily={FONT} fontSize="8.5" fontWeight="700" fill="#fff" textAnchor="middle">{d}</text>
+      <text x={x + i * 15} y={y + 3.4} fontFamily={FONT} fontSize="8.5" fontWeight="700" fill="#141416" textAnchor="middle">{d}</text>
     </g>
   ));
 }
@@ -173,7 +173,7 @@ function ArchDiagram({ full }) {
 
       {/* Staff + bus */}
       <rect x={STAFF_CX - 95} y="20" width="190" height="46" rx="12" fill={BLUE} />
-      <text x={STAFF_CX} y="48" fontFamily={FONT} fontSize="16" fontWeight="700" fill="#fff" textAnchor="middle">Staff · browser</text>
+      <text x={STAFF_CX} y="48" fontFamily={FONT} fontSize="16" fontWeight="700" fill="#141416" textAnchor="middle">Staff · browser</text>
       <path d={`M${STAFF_CX} 66 L${STAFF_CX} ${BUS_Y}`} stroke={EDGE} strokeWidth="2" markerEnd="url(#a2)" />
       <line x1={colX(0) + COL_W / 2} y1={BUS_Y} x2={colX(FEATURES.length - 1) + COL_W / 2} y2={BUS_Y} stroke={EDGE} strokeWidth="2" />
 
@@ -181,12 +181,12 @@ function ArchDiagram({ full }) {
       {FEATURES.map((f) => {
         const i = FEATURES.indexOf(f);
         const x = colX(i), cx = x + COL_W / 2, rh = routeH(f), rBottom = ROUTE_Y + rh;
-        const stroke = f.hero ? BLUE : EDGE, marker = f.hero ? 'url(#a2b)' : 'url(#a2)', accent = f.hero ? BLUE : '#c9d4da';
+        const stroke = f.hero ? BLUE : EDGE, marker = f.hero ? 'url(#a2b)' : 'url(#a2)', accent = f.hero ? BLUE : '#2b2b2f';
         const downFrom = showRoutes ? rBottom : PAGE_Y + PAGE_H;
         return (
           <g key={f.p}>
             <path d={`M${cx} ${BUS_Y} L${cx} ${PAGE_Y}`} stroke={stroke} strokeWidth="2" markerEnd={marker} />
-            <rect x={x} y={PAGE_Y} width={COL_W} height={PAGE_H} rx="10" fill={f.hero ? '#eaf3fb' : '#fff'} stroke={accent} strokeWidth={f.hero ? 2 : 1.5} />
+            <rect x={x} y={PAGE_Y} width={COL_W} height={PAGE_H} rx="10" fill={f.hero ? '#1b1b1f' : '#141416'} stroke={accent} strokeWidth={f.hero ? 2 : 1.5} />
             <text x={cx} y={PAGE_Y + 22} fontFamily={MONO} fontSize="12.5" fontWeight="700" fill={BLUE} textAnchor="middle">{f.p}</text>
             <text x={cx} y={PAGE_Y + 39} fontFamily={FONT} fontSize="11" fill={MUTED} textAnchor="middle">{f.name}</text>
             {!showRoutes && f.deps.length > 0 && <Dots deps={f.deps} x={cx - (f.deps.length - 1) * 7.5} y={PAGE_Y + PAGE_H + 16} />}
@@ -194,7 +194,7 @@ function ArchDiagram({ full }) {
             {showRoutes && (
               <>
                 <path d={`M${cx} ${PAGE_Y + PAGE_H} L${cx} ${ROUTE_Y}`} stroke={stroke} strokeWidth="2" markerEnd={marker} />
-                <rect x={x} y={ROUTE_Y} width={COL_W} height={rh} rx="10" fill="#fff" stroke={accent} strokeWidth={f.hero ? 2 : 1.5} />
+                <rect x={x} y={ROUTE_Y} width={COL_W} height={rh} rx="10" fill="#141416" stroke={accent} strokeWidth={f.hero ? 2 : 1.5} />
                 {f.routes.map((r, j) => (
                   <text key={j} x={x + 10} y={ROUTE_Y + 18 + j * 15} fontFamily={r.startsWith('/') || r.startsWith('lib') ? MONO : FONT} fontSize="10.5" fontWeight={r.startsWith('/') ? 700 : 400} fill={r.startsWith('/') ? INK : MUTED}>{r}</text>
                 ))}
@@ -208,11 +208,11 @@ function ArchDiagram({ full }) {
       })}
 
       {/* Engine band */}
-      <rect x="50" y={ENGINE_Y} width={ARCH_W - 100} height={ENGINE_H} rx="14" fill="#f5f9fc" stroke="#bcd4ea" strokeWidth="1.5" />
+      <rect x="50" y={ENGINE_Y} width={ARCH_W - 100} height={ENGINE_H} rx="14" fill="#141416" stroke="#2a2a2e" strokeWidth="1.5" />
       <text x="70" y={ENGINE_Y + (showLibs ? 22 : 31)} fontFamily={FONT} fontSize="13" fontWeight="700" fill={BLUE}>Server engine &amp; libraries  ·  lib/{showLibs ? '' : '  (prompt · quote-check · knowledge · notebook · contacts · lookup · guides · rota · …)'}</text>
       {chips.map((c, i) => (
         <g key={i}>
-          <rect x={c.x} y={c.y - 13} width={c.w} height="20" rx="10" fill="#fff" stroke="#d3e0ea" />
+          <rect x={c.x} y={c.y - 13} width={c.w} height="20" rx="10" fill="#141416" stroke="#212125" />
           <text x={c.x + c.w / 2} y={c.y + 1} fontFamily={MONO} fontSize="10.5" fill={INK} textAnchor="middle">{c.label}</text>
         </g>
       ))}
@@ -223,7 +223,7 @@ function ArchDiagram({ full }) {
       ))}
       {DATA_NODES.map((d, i) => (
         <g key={i}>
-          <rect x={d.cx - d.w / 2} y={DATA_Y} width={d.w} height={DATA_H} rx="14" fill="#fff" stroke={DEP[d.dep].c} strokeWidth="2" />
+          <rect x={d.cx - d.w / 2} y={DATA_Y} width={d.w} height={DATA_H} rx="14" fill="#141416" stroke={DEP[d.dep].c} strokeWidth="2" />
           <g transform={`translate(${d.cx - d.w / 2 + 18}, ${DATA_Y + 20})`} fill="none" stroke={DEP[d.dep].c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d.icon}</g>
           <text x={d.cx - d.w / 2 + 52} y={DATA_Y + 34} fontFamily={FONT} fontSize="16" fontWeight="700" fill={INK}>{d.label}</text>
           <text x={d.cx - d.w / 2 + 18} y={DATA_Y + 64} fontFamily={FONT} fontSize="12" fill={MUTED}>{d.sub}</text>
@@ -236,7 +236,7 @@ function ArchDiagram({ full }) {
         const w = 150, gap = 34, x = 70 + i * (w + gap);
         return (
           <g key={i}>
-            <rect x={x} y={RAG_Y} width={w} height={RAG_H} rx="10" fill="#fbfdff" stroke="#cddbe6" strokeWidth="1.5" />
+            <rect x={x} y={RAG_Y} width={w} height={RAG_H} rx="10" fill="#131315" stroke="#252528" strokeWidth="1.5" />
             <text x={x + w / 2} y={RAG_Y + RAG_H / 2 + 4} fontFamily={MONO} fontSize="11.5" fontWeight="700" fill={INK} textAnchor="middle">{r}</text>
             {i < RAG_NODES.length - 1 && <path d={`M${x + w} ${RAG_Y + RAG_H / 2} L${x + w + gap} ${RAG_Y + RAG_H / 2}`} stroke={EDGE} strokeWidth="2" markerEnd="url(#a2)" />}
           </g>
@@ -273,7 +273,7 @@ export default function SystemMap({ align = 'left' }) {
           const on = l.key === level;
           return (
             <Hover key={l.key} tag="button" onClick={() => setLevel(l.key)} className="riva-lift"
-              base={`border:1px solid ${on ? BLUE : '#d5dee2'};border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;${on ? `background:${BLUE};color:#fff;` : 'background:#fff;color:#4c6272;'}`}
+              base={`border:1px solid ${on ? BLUE : '#2a2a2e'};border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;${on ? `background:${BLUE};color:#ffffff;` : 'background:#141416;color:#9a9aa3;'}`}
               hover={on ? '' : `border-color:${BLUE};color:${BLUE};`}>
               {l.label}
             </Hover>
@@ -286,13 +286,13 @@ export default function SystemMap({ align = 'left' }) {
         <div style={s('display:flex;gap:14px;flex-wrap:wrap;margin:0 0 12px;' + (mid ? 'justify-content:center;' : ''))}>
           {Object.entries(DEP).map(([k, d]) => (
             <span key={k} style={s(`display:inline-flex;align-items:center;gap:6px;font-size:12px;color:${MUTED};`)}>
-              <span style={s(`width:15px;height:15px;border-radius:50%;background:${d.c};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;`)}>{k}</span>{d.t}
+              <span style={s(`width:15px;height:15px;border-radius:50%;background:${d.c};color:#ffffff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;`)}>{k}</span>{d.t}
             </span>
           ))}
         </div>
       )}
 
-      <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(33,43,50,.05);')}>
+      <div style={s('background:#141416;border:1px solid #26262a;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.05);')}>
         {level === 1 ? <FlowDiagram /> : <ArchDiagram full={level === 3} />}
       </div>
     </div>

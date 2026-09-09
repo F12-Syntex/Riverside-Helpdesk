@@ -12,13 +12,13 @@ import SystemMap from '../_components/SystemMap';
 
 export default function Page() {
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="System map" />
 
       <main style={s('flex:1;width:100%;max-width:1440px;margin:0 auto;padding:32px 24px 56px;')}>
         <Hover tag={Link} href="/"
-          base="display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:#4c6272;text-decoration:none;margin-bottom:14px;"
-          hover="color:#005eb8;">
+          base="display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:#9a9aa3;text-decoration:none;margin-bottom:14px;"
+          hover="color:#e0554f;">
           <Svg w={17} sw={2.2}>{Icons.arrowLeft}</Svg>Back to the Q&amp;A
         </Hover>
 

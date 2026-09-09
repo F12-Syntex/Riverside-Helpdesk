@@ -28,9 +28,9 @@ export default function SourceLink({ url, title }) {
       rel="noopener noreferrer"
       title={full}
       aria-label={'Open source: ' + full + ' (opens in a new tab)'}
-      base="margin-top:8px;display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#fff;border:1px solid #cfe1f0;border-radius:999px;padding:4px 11px 4px 9px;font:inherit;font-size:12.5px;font-weight:600;color:#005eb8;cursor:pointer;text-decoration:none;"
-      hover="background:#f7fbff;border-color:#005eb8;">
-      <Svg w={13} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>
+      base="margin-top:8px;display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#141416;border:1px solid #3a2b2a;border-radius:999px;padding:4px 11px 4px 9px;font:inherit;font-size:12.5px;font-weight:600;color:#e0554f;cursor:pointer;text-decoration:none;"
+      hover="background:#151518;border-color:#e0554f;">
+      <Svg w={13} stroke="#56c98a" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>
       <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{label}</span>
       <Svg w={12} sw={2.2} style={s('flex:none;opacity:.7;')}>{Icons.external}</Svg>
     </Hover>

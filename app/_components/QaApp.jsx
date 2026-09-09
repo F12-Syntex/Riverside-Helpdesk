@@ -123,7 +123,7 @@ function prepareImage(file) {
           canvas.width = Math.max(1, Math.round(img.width * scale));
           canvas.height = Math.max(1, Math.round(img.height * scale));
           const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#fff'; // JPEG has no alpha — transparent PNGs go black otherwise
+          ctx.fillStyle = '#141416'; // JPEG has no alpha — transparent PNGs go black otherwise
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           resolve(canvas.toDataURL('image/jpeg', 0.85));
@@ -1956,7 +1956,7 @@ class RiversidePracticeQA extends React.Component {
         // heading and the foot of a long answer keep out from under them.
         // Set through the style object rather than s(), which would camel-case
         // the custom property out of existence.
-        style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;'), '--riva-dock-attached': v.dockAttached }}>
+        style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#0b0b0c;'), '--riva-dock-attached': v.dockAttached }}>
 
         {/* The opening screen is mostly empty by design, so it is the one
             place a background earns its keep. It goes the moment there is
@@ -1980,8 +1980,8 @@ class RiversidePracticeQA extends React.Component {
         {v.canReset && (
           <div style={s('position:relative;z-index:1;flex:none;padding:0 24px 10px;')}>
             <Hover tag="button" type="button" onClick={v.onReset} className="riva-lift"
-              base="display:inline-flex;align-items:center;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;color:#005eb8;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.06);"
-              hover="border-color:#005eb8;background:#f0f6fb;">
+              base="display:inline-flex;align-items:center;background:#141416;border:1px solid #2a2a2e;border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;color:#e0554f;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06);"
+              hover="border-color:#e0554f;background:#1b1b1f;">
               Back
             </Hover>
           </div>
@@ -2013,18 +2013,18 @@ class RiversidePracticeQA extends React.Component {
                 now, beside the field. */}
             <div className="riva-dock-strip" aria-live="polite">
               {v.emitting ? <span className="riva-dock-emit" />
-                : v.hasCopied ? <span style={s('font-size:14px;font-weight:600;color:#007f3b;')}>Copied {v.copiedNumber}</span>
+                : v.hasCopied ? <span style={s('font-size:14px;font-weight:600;color:#56c98a;')}>Copied {v.copiedNumber}</span>
                   : null}
             </div>
             {v.hasPendingImages && (
               <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;')}>
                 {v.pendingImages.map((im, i) => (
                   <div key={i} style={s('position:relative;')}>
-                    <img src={im.dataUrl} alt={im.name} title={im.name} style={s('display:block;height:64px;max-width:120px;object-fit:cover;border-radius:10px;border:1px solid #d8dde0;')} />
+                    <img src={im.dataUrl} alt={im.name} title={im.name} style={s('display:block;height:64px;max-width:120px;object-fit:cover;border-radius:10px;border:1px solid #26262a;')} />
                     <Hover tag="button" type="button" onClick={im.onRemove} aria-label={'Remove ' + im.name}
-                      base="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:#212b32;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"
-                      hover="background:#d5281b;">
-                      <Svg w={10} stroke="#fff" sw={3}>{Icons.close}</Svg>
+                      base="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:#e9e9ec;color:#ffffff;border:2px solid #141416;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"
+                      hover="background:#ff7b72;">
+                      <Svg w={10} stroke="#ffffff" sw={3}>{Icons.close}</Svg>
                     </Hover>
                   </div>
                 ))}
@@ -2037,21 +2037,21 @@ class RiversidePracticeQA extends React.Component {
             {v.hasPendingDocs && (
               <div style={s('display:flex;flex-direction:column;gap:8px;margin-bottom:10px;')}>
                 {v.pendingDocs.map((d) => (
-                  <div key={d.key} style={s('display:flex;align-items:center;gap:11px;background:#fff;border:1px solid ' + (d.isError ? '#f0c2bd' : '#d8dde0') + ';border-radius:12px;padding:10px 12px;box-shadow:0 2px 8px rgba(33,43,50,.08);animation:rivaUp .18s ease;')}>
-                    <span style={s('flex:none;display:flex;color:' + (d.isError ? '#d5281b' : '#005eb8') + ';')}>
+                  <div key={d.key} style={s('display:flex;align-items:center;gap:11px;background:#141416;border:1px solid ' + (d.isError ? '#502624' : '#26262a') + ';border-radius:12px;padding:10px 12px;box-shadow:0 2px 8px rgba(0,0,0,.08);animation:rivaUp .18s ease;')}>
+                    <span style={s('flex:none;display:flex;color:' + (d.isError ? '#ff7b72' : '#e0554f') + ';')}>
                       <Svg w={18} sw={2}>{d.isError ? Icons.alertCircle : Icons.file}</Svg>
                     </span>
                     <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
-                      <span style={s('font-size:14.5px;font-weight:600;color:#212b32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.name}</span>
+                      <span style={s('font-size:14.5px;font-weight:600;color:#e9e9ec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.name}</span>
                       {/* One line, always: the row's height is reserved above
                           the dock in pixels, so a note that wrapped would put
                           the dock through whatever is above it. */}
-                      <span style={s('font-size:12.5px;color:' + (d.isError ? '#d5281b' : '#4c6272') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.note}</span>
+                      <span style={s('font-size:12.5px;color:' + (d.isError ? '#ff7b72' : '#9a9aa3') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.note}</span>
                     </span>
-                    {d.isReading && <span style={s('flex:none;width:15px;height:15px;border:2px solid #d8dde0;border-top-color:#005eb8;border-radius:50%;animation:rivaSpin .7s linear infinite;')} />}
+                    {d.isReading && <span style={s('flex:none;width:15px;height:15px;border:2px solid #26262a;border-top-color:#e0554f;border-radius:50%;animation:rivaSpin .7s linear infinite;')} />}
                     <Hover tag="button" type="button" onClick={d.onRemove} aria-label={'Remove ' + d.name}
-                      base="flex:none;width:26px;height:26px;border-radius:50%;background:#f0f4f5;color:#4c6272;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"
-                      hover="background:#d5281b;color:#fff;">
+                      base="flex:none;width:26px;height:26px;border-radius:50%;background:#0b0b0c;color:#9a9aa3;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"
+                      hover="background:#ff7b72;color:#ffffff;">
                       <Svg w={11} sw={2.6}>{Icons.close}</Svg>
                     </Hover>
                   </div>
@@ -2081,9 +2081,9 @@ class RiversidePracticeQA extends React.Component {
                   dead for even half a second would have somebody pressing
                   Enter again. See app/_components/ModeSwitch.jsx. */}
               <ModeSwitch mode={v.mode} onPick={v.onPickMode} busy={v.isScreening} />
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-              <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
-                <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
+              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #26262a;border-radius:999px;background:#0b0b0c;outline:none;')} />
+              <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#e0554f;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#f0817c;">
+                <Svg w={21} stroke="#ffffff" sw={2.4}>{Icons.arrow}</Svg>
               </Hover>
             </form>
 
@@ -2099,11 +2099,11 @@ class RiversidePracticeQA extends React.Component {
         {/* Something is being dragged over the window. The whole page says so,
             because the whole page is the target. */}
         {v.isDragging && (
-          <div style={s('position:fixed;inset:0;z-index:70;pointer-events:none;background:rgba(240,244,245,.82);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;animation:rivaHeaderIn .12s ease both;')}>
-            <div style={s('display:flex;flex-direction:column;align-items:center;gap:14px;border:2px dashed #005eb8;border-radius:20px;background:#fff;padding:34px 46px;box-shadow:0 18px 50px rgba(33,43,50,.18);text-align:center;')}>
-              <span style={s('display:flex;color:#005eb8;')}><Svg w={34} sw={1.8}>{Icons.paperclip}</Svg></span>
+          <div style={s('position:fixed;inset:0;z-index:70;pointer-events:none;background:rgba(11,11,12,.82);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;animation:rivaHeaderIn .12s ease both;')}>
+            <div style={s('display:flex;flex-direction:column;align-items:center;gap:14px;border:2px dashed #e0554f;border-radius:20px;background:#141416;padding:34px 46px;box-shadow:0 18px 50px rgba(0,0,0,.18);text-align:center;')}>
+              <span style={s('display:flex;color:#e0554f;')}><Svg w={34} sw={1.8}>{Icons.paperclip}</Svg></span>
               <span style={s('font-size:21px;font-weight:700;letter-spacing:-0.01em;')}>Drop to attach</span>
-              <span style={s('font-size:14.5px;color:#4c6272;max-width:34ch;')}>
+              <span style={s('font-size:14.5px;color:#9a9aa3;max-width:34ch;')}>
                 PDF, Word, text or a picture. It is read for this question only and is not saved anywhere.
               </span>
             </div>

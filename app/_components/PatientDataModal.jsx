@@ -36,40 +36,40 @@ export default function PatientDataModal({ v }) {
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="riva-blocked-title"
-      style={s('position:fixed;inset:0;background:rgba(33,43,50,.45);display:flex;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto;z-index:60;')}
+      style={s('position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto;z-index:60;')}
     >
-      <div style={s('width:100%;max-width:520px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(33,43,50,.22);overflow:hidden;')}>
-        <div style={s('display:flex;align-items:center;gap:12px;padding:18px 22px;background:#d5281b;color:#fff;')}>
+      <div style={s('width:100%;max-width:520px;background:#141416;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.22);overflow:hidden;')}>
+        <div style={s('display:flex;align-items:center;gap:12px;padding:18px 22px;background:#ff7b72;color:#ffffff;')}>
           <span style={s('display:flex;flex:none;')}><Svg w={26}>{Icons.triangle}</Svg></span>
           <h3 id="riva-blocked-title" style={s('font-size:20px;margin:0;letter-spacing:-0.01em;')}>Not sent — patient details</h3>
         </div>
 
         <div style={s('padding:22px;display:flex;flex-direction:column;gap:16px;')}>
-          <p style={s('font-size:16.5px;line-height:1.5;margin:0;color:#212b32;')}>
+          <p style={s('font-size:16.5px;line-height:1.5;margin:0;color:#e9e9ec;')}>
             {blocked.message}
           </p>
 
           {blocked.kinds.length > 0 && (
-            <ul style={s('margin:0;padding:0 0 0 20px;font-size:15.5px;line-height:1.6;color:#212b32;')}>
+            <ul style={s('margin:0;padding:0 0 0 20px;font-size:15.5px;line-height:1.6;color:#e9e9ec;')}>
               {blocked.kinds.map((k) => <li key={k.id}>Take out {k.label}.</li>)}
             </ul>
           )}
 
-          <div style={s('background:#f0f4f5;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;padding:12px 14px;font-size:15px;line-height:1.55;color:#4c6272;')}>
+          <div style={s('background:#0b0b0c;border-left:4px solid #e0554f;border-radius:0 8px 8px 0;padding:12px 14px;font-size:15px;line-height:1.55;color:#9a9aa3;')}>
             The assistant answers questions about <strong>how the practice works</strong>, so it never needs to know
             which patient. Ask about the process, not the person — “how do I code a discharge summary”, not
             “how do I code Mrs Smith’s”.
           </div>
 
-          <p style={s('font-size:14.5px;line-height:1.55;margin:0;color:#768692;')}>
+          <p style={s('font-size:14.5px;line-height:1.55;margin:0;color:#74747d;')}>
             Nothing was sent and nothing was saved. Your message is still in the box — edit it and send it again.
           </p>
         </div>
 
-        <div style={s('padding:16px 22px;border-top:1px solid #d8dde0;display:flex;justify-content:flex-end;')}>
+        <div style={s('padding:16px 22px;border-top:1px solid #26262a;display:flex;justify-content:flex-end;')}>
           <Hover
             tag="button" type="button" onClick={v.onCloseBlocked} autoFocus
-            base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:11px 20px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #003d78;display:inline-flex;align-items:center;gap:8px;"
+            base="background:#e0554f;color:#ffffff;border:none;border-radius:8px;padding:11px 20px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #ee7671;display:inline-flex;align-items:center;gap:8px;"
             active="transform:translateY(4px);box-shadow:none;"
           >
             <span style={s('display:flex;')}><Svg w={18}>{Icons.edit}</Svg></span>
