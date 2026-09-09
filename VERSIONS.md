@@ -18,6 +18,12 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.34.0` | 2026-09-09 | feat | `ec17ae4` | feat: open Instant lookup on the practice's hospital shortlist |
+| `5.33.1` | 2026-09-09 | style | `a1629ad` | style: make the rail's foot a caption, not a card |
+| `5.33.0` | 2026-09-09 | feat | `b33cb0b` | feat: take the coder off the navigation, and the search list with it |
+| `5.32.3` | 2026-09-09 | fix | `6a52f4d` | fix: drop the yellow focus box from the search palette's field |
+| `5.32.2` | 2026-09-09 | fix | `7655242` | fix: stop every page standing 50px taller than the shell |
+| `5.32.1` | 2026-09-09 | docs | `2a679cf` | docs: record 5.31.2 and 5.32.0 in the versions table |
 | `5.32.0` | 2026-09-09 | feat | `e0c10d5` | feat: trim the rail to six tools, and put the NHS logo at its head |
 | `5.31.2` | 2026-09-09 | style | `0393714` | style: put the practice's own light palette back |
 | `5.31.1` | 2026-09-09 | docs | `ae5ec85` | docs: record 5.31.0 in the versions table |
