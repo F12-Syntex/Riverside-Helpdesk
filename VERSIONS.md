@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.32.0` | 2026-09-09 | feat | `e0c10d5` | feat: trim the rail to six tools, and put the NHS logo at its head |
+| `5.31.2` | 2026-09-09 | style | `0393714` | style: put the practice's own light palette back |
+| `5.31.1` | 2026-09-09 | docs | `ae5ec85` | docs: record 5.31.0 in the versions table |
 | `5.31.0` | 2026-09-09 | feat | `f4e43f6` | feat: rebuild the interface around a navigation rail, in the dark |
 | `5.30.1` | 2026-09-04 | docs | `bb302d3` | docs: record 5.29.4 and 5.30.0 in the versions table |
 | `5.30.0` | 2026-09-04 | feat | `9dc226a` | feat: a Chrome extension, signed in CI and updated over the shared drive |
