@@ -852,8 +852,17 @@ body { overflow-x: hidden; }
 }
 .riva-palette-field {
   display: flex; align-items: center; gap: 10px;
-  padding: 12px 14px; border-bottom: 1px solid var(--rv-line);
+  padding: 12px 14px; border-bottom: 2px solid var(--rv-accent);
 }
+/* The palette opens with its field already focused, so the global yellow
+   focus outline fired on every open and read as a hazard box round the
+   one thing the reader is meant to type into. The dialog is the focus
+   indicator here — it is modal, and this is the only thing in it that
+   takes focus — so the field wears the accent edge above instead of the
+   slab. Every other input in the app keeps the yellow: this is the one
+   place it was saying nothing the reader did not already know. */
+.riva-palette-input:focus,
+.riva-palette-input:focus-visible { outline: none !important; box-shadow: none !important; }
 .riva-palette-ico { flex: none; display: flex; color: var(--rv-ink-3); }
 .riva-palette-input {
   flex: 1; min-width: 0; background: none; border: none; outline: none;
