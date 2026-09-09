@@ -19,18 +19,24 @@ export const HeaderSlot = React.createContext(null);
  *
  * Every tool in the app used to be reached from a menu button in the
  * corner, which meant the answer to "what else is here?" cost a tap and
- * was never on screen. The rail answers it permanently: the whole app,
- * grouped by what somebody is trying to do, with the page they are on
- * marked.
+ * was never on screen. The rail answers it permanently, with the page
+ * you are on marked.
  *
- * THREE GROUPS, NAMED FOR THE MOMENT THEY BELONG TO
- * -------------------------------------------------
- * ASK is the front desk with a patient waiting — a question, a phone
- * number, where to send someone, a medicine. WORK is the half hour
- * afterwards: writing the note, the letter, the rota. REFERENCE is what
- * somebody looks up rather than uses. Reception spends its whole day in
- * the first group, which is why it is at the top and why the Q&A is its
- * first entry.
+ * THE GROUPS ARE NAMED FOR THE MOMENT THEY BELONG TO
+ * --------------------------------------------------
+ * ASK is the front desk with a patient waiting. WORK is the half hour
+ * afterwards. REFERENCE is what somebody looks up rather than uses.
+ * Reception spends its whole day in the first group, which is why it is
+ * at the top and why the Q&A is its first entry.
+ *
+ * IT IS SHORT ON PURPOSE
+ * ----------------------
+ * A rail earns its place by being scannable, and a rail listing every
+ * route is a menu with extra steps. What is here is what somebody opens
+ * on an ordinary day. Everything else is one ⌘K away and is listed in
+ * EXTRA below rather than deleted, so the palette still finds it and the
+ * crumb still knows its name — nothing became unreachable by leaving
+ * the rail.
  *
  * It is fixed, so it does not scroll away, and it is out of the flow, so
  * every page keeps the full-height layout it already had — pages make
@@ -44,51 +50,48 @@ const GROUPS = [
     items: [
       { href: '/', label: 'Practice Q&A', icon: Icons.chat },
       { href: '/lookup', label: 'Instant lookup', icon: Icons.search },
-      { href: '/signpost', label: 'Signposting', icon: Icons.arrow },
-      { href: '/medications', label: 'Medication check', icon: Icons.pill },
     ],
   },
   {
     label: 'Work',
     items: [
       { href: '/notebook', label: 'Notebook', icon: Icons.edit },
-      { href: '/templates', label: 'Templates', icon: Icons.fileLines },
-      { href: '/rota', label: 'Staff rota', icon: Icons.calendar },
       { href: '/coding', label: 'Coding', icon: Icons.stethoscope },
     ],
   },
   {
     label: 'Reference',
     items: [
-      { href: '/tools', label: 'All tools', icon: Icons.folder },
       { href: '/dpia', label: 'Data protection', icon: Icons.shield },
       { href: '/feedback', label: 'Feedback', icon: Icons.chat },
-      { href: '/index', label: 'Full index', icon: Icons.sitemap },
     ],
   },
 ];
 
-/* WHAT IS DELIBERATELY NOT IN THE RAIL
- * ------------------------------------
+/* Reachable, in the ⌘K list, and named by the crumb — but not worth a
+ * permanent row.
+ *
+ * WHAT IS IN NEITHER LIST
+ * -----------------------
  * /knowledge is behind the knowledge-admin check in middleware.js, so
  * for nearly everyone a row for it would be a row that 404s.
  *
  * /stats is the audit log — every question asked and who did what. The
  * note in app/stats/layout.js keeps it off the tools index on purpose,
- * and a permanent row in the rail would undo that more thoroughly than
- * listing it ever did. It is reached by typing its address, as before.
+ * and a row in the rail would undo that more thoroughly than listing it
+ * ever did. It is reached by typing its address, as before.
  *
  * The Q&A's own Sources view is not here either, because it is a view of
  * that page rather than a page: it toggles from the crumb bar, so leaving
  * it returns to the half-asked question (see AppHeader).
- *
- * Only reachable pages belong in the rail. These stay reachable exactly
- * as they were.
  */
-
-// Reachable, in the ⌘K list, and named by the crumb — but not worth a
-// permanent row.
 const EXTRA = [
+  { href: '/tools', label: 'All tools', group: 'Reference', icon: Icons.folder },
+  { href: '/templates', label: 'Templates', group: 'Work', icon: Icons.fileLines },
+  { href: '/rota', label: 'Staff rota', group: 'Work', icon: Icons.calendar },
+  { href: '/signpost', label: 'Signposting', group: 'Ask', icon: Icons.arrow },
+  { href: '/medications', label: 'Medication check', group: 'Ask', icon: Icons.pill },
+  { href: '/index', label: 'Full index', group: 'Reference', icon: Icons.sitemap },
   { href: '/diagram', label: 'System map', group: 'Reference', icon: Icons.sitemap },
   { href: '/settings', label: 'Settings', group: 'Reference', icon: Icons.settings },
 ];
@@ -103,9 +106,9 @@ const ALL = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label }))
 // from being a hydration mismatch.
 const ALIAS = { '/site-index': '/index' };
 
-// Which rail entry is the page being looked at? Longest match wins, so
-// /rota does not light up for every page and / does not light up for all
-// of them.
+// Which entry is the page being looked at? Longest match wins, so /rota
+// does not light up for every page and / does not light up for all of
+// them.
 function matchHref(rawPath) {
   const pathname = ALIAS[rawPath] || rawPath;
   let best = null;
@@ -115,10 +118,10 @@ function matchHref(rawPath) {
     }
   }
   if (best) return best;
-  // A page the rail does not list — /stats, reached by typing its
-  // address. The crumb still has to say where the reader is: naming it
-  // from its own path is honest about that, where falling through to the
-  // first entry in the rail would tell them they are on the Q&A.
+  // A page neither list names — /stats, reached by typing its address.
+  // The crumb still has to say where the reader is: naming it from its
+  // own path is honest about that, where falling through to the first
+  // entry would tell them they are on the Q&A.
   const seg = pathname.split('/').filter(Boolean)[0];
   if (!seg) return null;
   return { href: '/' + seg, group: 'Riverside', label: seg.charAt(0).toUpperCase() + seg.slice(1) };
@@ -142,7 +145,8 @@ function NavRow({ item, active, onNavigate }) {
    the Q&A field is for, and offering a second box that searched
    something else would be the cruellest thing on the page. This one
    moves between tools, which is the thing a keyboard shortcut is
-   actually good at. */
+   actually good at, and it lists the whole app rather than only the part
+   the rail shows. */
 function Palette({ onClose }) {
   const router = useRouter();
   const [q, setQ] = React.useState('');
@@ -228,10 +232,11 @@ export default function AppShell({ children }) {
   return (
     <div className="riva-shell">
       <aside className={'riva-rail' + (openMobile ? ' is-open' : '')} aria-label="Tools">
-        {/* The practice, at the top, as the thing everything below
-            belongs to. It is also the way back to the front door. */}
+        {/* Whose service this is, and the way back to the front door. The
+            logo is here and nowhere else: it used to be reprinted at the
+            top of every page, at 30px, on all of them. */}
         <Link href="/" className="riva-rail-brand">
-          <span className="riva-rail-mark" aria-hidden="true">R</span>
+          <span className="riva-rail-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
           <span className="riva-rail-brandtext">
             <span className="riva-rail-brandname">Riverside</span>
             <span className="riva-rail-brandsub">Practice Q&amp;A</span>
@@ -257,25 +262,19 @@ export default function AppShell({ children }) {
           ))}
         </nav>
 
-        {/* The foot of the rail: which build this is. It is the corner of
-            the app somebody is asked to read out when they have been told
-            a change is live and cannot see it, so it is a plain fact in a
-            fixed place rather than a badge floating over the page. */}
+        {/* The foot of the rail: which build this is. It exists for one
+            exchange — somebody is told a change is live, cannot see it,
+            and needs to say what they are actually looking at — so it is
+            a plain fact in a fixed place, with the commit in the tooltip
+            beside it. */}
         <div className="riva-rail-foot">
           <div className="riva-rail-status" title={BUILD_LABEL}>
             <div className="riva-rail-statusrow">
-              <span className="riva-rail-dot" aria-hidden="true" />
               <span className="riva-rail-statustext">The Riverside Practice</span>
               <span className="riva-rail-ver">{VERSION_LABEL}</span>
             </div>
             <div className="riva-rail-bar"><span /></div>
-            <div className="riva-rail-statusfoot">
-              {/* Whose service this is. It used to be at the top of every
-                  page, at 30px, on all of them; once is enough, and this is
-                  the line it belongs on. */}
-              <img src="/assets/nhs-logo.png" alt="NHS" className="riva-rail-nhs" />
-              <span>Answers from the practice’s own documents</span>
-            </div>
+            <div className="riva-rail-statusfoot">Answers from the practice’s own documents</div>
           </div>
           <NavRow item={{ href: '/settings', label: 'Settings', icon: Icons.settings }}
             active={pathname.startsWith('/settings')} onNavigate={() => setOpenMobile(false)} />

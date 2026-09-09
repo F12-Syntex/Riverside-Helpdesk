@@ -702,12 +702,8 @@ body { overflow-x: hidden; }
   transition: background-color .15s ease;
 }
 .riva-rail-brand:hover { background: var(--rv-surface-2); }
-.riva-rail-mark {
-  flex: none; width: 26px; height: 26px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--rv-accent); color: #fff;
-  font-size: 14px; font-weight: 800; letter-spacing: -.02em;
-}
+.riva-rail-mark { flex: none; display: flex; align-items: center; }
+.riva-rail-mark img { height: 20px; width: auto; display: block; }
 .riva-rail-brandtext { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .riva-rail-brandname {
   font-size: 14px; font-weight: 700; color: var(--rv-ink);
@@ -769,11 +765,7 @@ body { overflow-x: hidden; }
   border: 1px solid var(--rv-line); border-radius: var(--rv-radius);
   background: var(--rv-page); padding: 9px 10px 10px; margin-bottom: 4px;
 }
-.riva-rail-statusrow { display: flex; align-items: center; gap: 7px; }
-.riva-rail-dot {
-  flex: none; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--rv-green); box-shadow: 0 0 0 3px rgba(0,127,59,.14);
-}
+.riva-rail-statusrow { display: flex; align-items: baseline; gap: 8px; }
 .riva-rail-statustext {
   flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -783,8 +775,7 @@ body { overflow-x: hidden; }
    something the app is not measuring. */
 .riva-rail-bar { height: 1px; margin: 9px 0 8px; overflow: hidden; }
 .riva-rail-bar > span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--rv-accent-line), rgba(0,94,184,0)); }
-.riva-rail-statusfoot { display: flex; align-items: center; gap: 7px; font-size: 10.5px; line-height: 1.35; color: var(--rv-ink-3); }
-.riva-rail-nhs { flex: none; height: 13px; width: auto; display: block; }
+.riva-rail-statusfoot { font-size: 10.5px; line-height: 1.35; color: var(--rv-ink-3); }
 
 /* ---- the column to the right of it ------------------------------- */
 
