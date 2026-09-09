@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.36.4` | 2026-09-09 | fix | `e4192c5` | fix: put the Q&A's Back control in the crumb bar |
+| `5.36.3` | 2026-09-09 | docs | `9f6c13b` | docs: record 5.36.1 and 5.36.2 in the versions table |
 | `5.36.2` | 2026-09-09 | fix | `9c648ca` | fix: make Back leave the answer it is leaving |
 | `5.36.1` | 2026-09-09 | docs | `39c0749` | docs: record 5.34.1 through 5.36.0 in the versions table |
 | `5.36.0` | 2026-09-09 | feat | `b9ac181` | feat: add the hospital and community numbers from correspondence |
