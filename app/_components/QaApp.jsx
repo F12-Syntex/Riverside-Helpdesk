@@ -223,6 +223,16 @@ class RiversidePracticeQA extends React.Component {
     this.inputRef = React.createRef();
     // Timers belonging to the stored "test" answer, cleared on unmount.
     this.mockTimers = [];
+    // Which conversation the answers still being worked out belong to. An
+    // answer is addressed by its POSITION in `messages`, and Back empties that
+    // array — so the next question is handed the very position the answer being
+    // left is still streaming into. Every run reads this number when it starts
+    // and drops whatever it produces once it no longer matches. Same guard as
+    // `cqcToken` under the register search; bumped by cancelRun().
+    this.runId = 0;
+    // The requests behind the answers currently being worked out, so leaving
+    // can stop them rather than merely ignore what they send.
+    this.aiAborts = new Set();
     // How many nested elements the dragged file is currently over (see
     // onDragLeave): a counter, because enter/leave fire per element.
     this.dragDepth = 0;
@@ -285,7 +295,55 @@ class RiversidePracticeQA extends React.Component {
     clearTimeout(this.emitTimer);
     clearTimeout(this.copyTimer);
     clearTimeout(this.dirTimer);
+    this.cancelRun();
+  }
+
+  // Stop the answers being worked out and disown anything they still send.
+  // The aborts end the requests; the token bump is what the reader actually
+  // notices, because a stream can have events already in flight and the stored
+  // "test" answer is a row of timers with no request behind it at all.
+  cancelRun() {
+    this.runId += 1;
     this.mockTimers.forEach(clearTimeout);
+    this.mockTimers = [];
+    this.aiAborts.forEach((c) => { try { c.abort(); } catch (e) {} });
+    this.aiAborts.clear();
+  }
+
+  // Back: the way to an empty page.
+  //
+  // It used to empty `messages` and nothing else, which left two ways for the
+  // page just abandoned to follow the reader onto the next one. Anything still
+  // arriving for the question being left wrote itself into whatever now sat at
+  // its index — and after Back that is the NEXT question's answer, so asking
+  // again played the previous answer's tool steps and then its content. And
+  // what was waiting to go up with the next question stayed waiting: a page
+  // still carrying two dropped documents and a half-typed question is not the
+  // empty page the button promises.
+  //
+  // `mode` and the saved guides are deliberately kept: the kind of answer
+  // outlives a question by design (see ModeSwitch.jsx), and the guides are not
+  // part of this conversation at all.
+  reset() {
+    this.cancelRun();
+    clearTimeout(this.emitTimer);
+    clearTimeout(this.copyTimer);
+    this.setState({
+      messages: [],
+      activeTurn: null,
+      view: 'assistant',
+      input: '',
+      pendingImages: [],
+      pendingDocs: [],
+      emitting: false,
+      screening: false,
+      blocked: null,
+      copiedNumber: '',
+      copiedIdx: null,
+      dirSel: -1,
+      cmdSel: -1,
+      viewer: null,
+    }, () => this.save());
   }
 
   /* ---------------------------- Contact mode ---------------------------- *
@@ -854,6 +912,10 @@ class RiversidePracticeQA extends React.Component {
     // for what makes a mode that stays put safe to leave armed.
     this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirSel: -1, cmdSel: -1 }, async () => {
       this.save();
+      // The conversation this question belongs to. The patient-data screen
+      // below is awaited, so Back can land in the middle of it; without this
+      // the refusal path would put the abandoned question back in the field.
+      const run = this.runId;
 
       // Only the TYPED message is screened, and only when the command it was
       // sent under is checked at all. A dropped document is the reader's own
@@ -866,6 +928,7 @@ class RiversidePracticeQA extends React.Component {
       if (t && checksPatientData(command)) {
         this.setState({ screening: true });
         const verdict = await this.screen(t);
+        if (this.runId !== run) return;
         this.setState({ screening: false });
         if (verdict.blocked) {
           // Nothing was sent and nothing is kept. The two messages come back
@@ -883,6 +946,7 @@ class RiversidePracticeQA extends React.Component {
         }
       }
 
+      if (this.runId !== run) return;
       this.fetchAI(question, aiIdx);
     });
     // The emit plays once, then the strip above the dock goes quiet again.
@@ -897,7 +961,13 @@ class RiversidePracticeQA extends React.Component {
    * token being spent. See lib/test-answer.js.
    * ------------------------------------------------------------------ */
   mockAI(idx, general = false) {
-    const at = (ms, fn) => { this.mockTimers.push(setTimeout(fn, ms)); };
+    // Which conversation this playback belongs to. Back bumps the token and
+    // every remaining step becomes a no-op, rather than writing itself into
+    // whatever now sits at `idx`.
+    const run = this.runId;
+    const at = (ms, fn) => {
+      this.mockTimers.push(setTimeout(() => { if (this.runId === run) fn(); }, ms));
+    };
     let clock = 0;
     // "test general" plays the other kind of turn: a request carried out
     // directly, with nothing looked up and nothing cited.
@@ -940,11 +1010,19 @@ class RiversidePracticeQA extends React.Component {
     const m = this.state.messages[idx];
     const images = (m && m.images) || [];
     const attachments = (m && m.attachments) || [];
+    // Which conversation this answer belongs to, and the handle that ends the
+    // request when the reader leaves it. Both are needed: the abort stops work
+    // nobody is waiting for, and the token stops the events already in flight
+    // from landing on the question asked after Back.
+    const run = this.runId;
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    if (ctrl) this.aiAborts.add(ctrl);
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images, attachments, refresh, template: (m && m.commandTemplate) || '' },
-        (ev) => this.onAgentEvent(idx, ev),
+        { question, history, customGuides: this.state.customGuides, images, attachments, refresh, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
+        (ev) => { if (this.runId === run) this.onAgentEvent(idx, ev); },
       );
+      if (this.runId !== run) return;
       if (data.kind === 'docfile') {
         this.updateAi(idx, {
           status: 'done',
@@ -1002,7 +1080,12 @@ class RiversidePracticeQA extends React.Component {
       // it is stored against the answer it was actually about.
       this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
     } catch (e) {
+      // An abort is this conversation being left, not a failed answer: there is
+      // no card left to mark as broken.
+      if (this.runId !== run) return;
       this.updateAi(idx, { status: 'error', statusText: '' });
+    } finally {
+      if (ctrl) this.aiAborts.delete(ctrl);
     }
   }
 
@@ -1870,7 +1953,7 @@ class RiversidePracticeQA extends React.Component {
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
       canReset: this.state.messages.length > 0,
-      onReset: () => self.setState({ messages: [], activeTurn: null, view: 'assistant' }, () => self.save()),
+      onReset: () => self.reset(),
       // Sources: the same material, listed rather than searched.
       sourceNotes: this.state.notes,
       sourceContacts: this.state.directory
