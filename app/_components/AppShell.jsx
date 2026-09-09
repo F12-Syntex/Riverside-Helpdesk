@@ -48,21 +48,21 @@ const GROUPS = [
   {
     label: 'Ask',
     items: [
-      { href: '/', label: 'Practice Q&A', icon: Icons.chat },
-      { href: '/lookup', label: 'Instant lookup', icon: Icons.search },
+      { href: '/', label: 'Ask a question', icon: Icons.chat },
+      { href: '/lookup', label: 'Contact numbers', icon: Icons.search },
     ],
   },
   {
     label: 'Work',
     items: [
-      { href: '/notebook', label: 'Notebook', icon: Icons.edit },
+      { href: '/notebook', label: 'Practice notes', icon: Icons.edit },
     ],
   },
   {
     label: 'Reference',
     items: [
       { href: '/dpia', label: 'Data protection', icon: Icons.shield },
-      { href: '/feedback', label: 'Feedback', icon: Icons.chat },
+      { href: '/feedback', label: 'Answer feedback', icon: Icons.chat },
     ],
   },
 ];
@@ -293,7 +293,7 @@ export default function AppShell({ children }) {
           <nav className="riva-crumb" aria-label="Breadcrumb">
             <span className="riva-crumb-group">{current?.group || 'Ask'}</span>
             <span className="riva-crumb-sep" aria-hidden="true">/</span>
-            <span className="riva-crumb-here">{current?.label || 'Practice Q&A'}</span>
+            <span className="riva-crumb-here">{current?.label || 'Ask a question'}</span>
           </nav>
           <div className="riva-crumb-actions" ref={setSlot} />
         </div>
