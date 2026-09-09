@@ -2054,21 +2054,15 @@ class RiversidePracticeQA extends React.Component {
         {/* Keyed on the state so the header fades through a change rather
             than being swapped under the reader. */}
         <div key={v.isKb ? 'sources' : (v.isEmpty ? 'empty' : 'answers')} style={s('position:relative;z-index:1;flex:none;animation:rivaHeaderIn .45s ease both;')}>
-          <AppHeader v={v} onContacts={v.onOpenContacts} />
+          {/* The way back to an empty page goes into the crumb bar, at its
+              left-hand end, rather than into a band of its own below it —
+              see AppHeader. Not offered under Sources: the way out of that
+              is the pill at the other end of the same bar, already saying
+              "Back to questions", and two Backs in one 50px row is a
+              question rather than a control. */}
+          <AppHeader v={v} onContacts={v.onOpenContacts}
+            back={v.canReset && !v.isKb ? { label: 'Back', onClick: v.onReset } : null} />
         </div>
-
-        {/* The way back to an empty page, at the top left where a back
-            control belongs. Shown only when there is something to leave,
-            so the opening screen stays clean. */}
-        {v.canReset && (
-          <div style={s('position:relative;z-index:1;flex:none;padding:0 24px 10px;')}>
-            <Hover tag="button" type="button" onClick={v.onReset} className="riva-lift"
-              base="display:inline-flex;align-items:center;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:9px 20px;font:inherit;font-size:14.5px;font-weight:700;color:#005eb8;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.06);"
-              hover="border-color:#005eb8;background:#f0f6fb;">
-              Back
-            </Hover>
-          </div>
-        )}
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}

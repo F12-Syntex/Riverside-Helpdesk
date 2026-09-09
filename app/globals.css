@@ -793,6 +793,12 @@ body { overflow-x: hidden; }
 /* Where a tool's own controls land (see AppHeader). It takes no room when
    the page has none, so the crumb bar is the same height either way. */
 .riva-crumb-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* The other end of the same bar: a page's way back, ahead of the crumb.
+   `:empty` is doing real work — the crumb bar is a flex row with a gap, so
+   an empty div left in it would push the crumb 8px right on every page
+   that has no back control, which is nearly all of them. */
+.riva-crumb-lead { display: flex; align-items: center; gap: 8px; }
+.riva-crumb-lead:empty { display: none; }
 .riva-crumb-group { color: var(--rv-ink-3); white-space: nowrap; }
 .riva-crumb-sep { color: #c3ccd1; }
 .riva-crumb-here { color: var(--rv-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -879,6 +885,14 @@ body { overflow-x: hidden; }
 /* ---- the rail on a phone ---------------------------------------- */
 
 .riva-rail-scrim { display: none; }
+
+/* On a phone the crumb bar is carrying the menu button, the crumb and the
+   page's controls already. The way back keeps its arrow and drops its word,
+   the same bargain the Contacts pill makes. */
+@media (max-width: 600px) {
+  .riva-crumb-back { padding: 0 10px !important; }
+  .riva-crumb-back-label { display: none; }
+}
 
 @media (max-width: 900px) {
   :root { --rv-rail-w: 0px; }

@@ -4,7 +4,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { s, Hover, Svg, Icons } from './ui';
 import ContactsSheet from './ContactsSheet';
-import { HeaderSlot } from './AppShell';
+import { HeaderSlot, HeaderLeadSlot } from './AppShell';
 
 /* ------------------------------------------------------------------ *
  * The action row at the top of a tool.
@@ -27,6 +27,14 @@ import { HeaderSlot } from './AppShell';
  * `subtitle` is still accepted and still ignored — every page passes one,
  * and the crumb bar above says it now. Kept in the signature so no page
  * had to be edited to stop passing it.
+ *
+ * `back` is a page's way out of what it is showing — { label, onClick } —
+ * and it goes to the LEFT of the crumb, not in with the controls on the
+ * right. The Q&A drew its own underneath the bar, in a band of its own,
+ * left-aligned to the window while the answer it belonged to was centred
+ * in an 820px column; on a wide screen it sat some 400px away from
+ * anything it had to do with. Handing it to the shell is what puts it
+ * back on the same row as the rest of the chrome.
  * ------------------------------------------------------------------ */
 
 const PILL = 'display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease,color .15s ease;';
@@ -34,7 +42,7 @@ const PILL_REST = 'background:#fff;border:1px solid #d8dde0;color:#005eb8;';
 const PILL_ON = 'background:#e8f1f8;border:1px solid #005eb8;color:#003087;';
 const PILL_HOVER = 'background:#e8f1f8;border-color:#005eb8;color:#003087;';
 
-export default function AppHeader({ v, subtitle = null, tabs = null, onContacts = null }) {
+export default function AppHeader({ v, subtitle = null, tabs = null, onContacts = null, back = null }) {
   // The directory opens over the page it was asked for from, and closes back
   // onto it. Nobody goes anywhere, so a half-typed question is still there
   // afterwards.
@@ -55,6 +63,18 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
   const canSources = !!(v && v.onSetView);
 
   const slot = React.useContext(HeaderSlot);
+  const lead = React.useContext(HeaderLeadSlot);
+
+  // Styled as the other chrome pills are, so the bar reads as one row of
+  // controls rather than a back control that wandered in from elsewhere.
+  const backControl = back ? (
+    <Hover tag="button" type="button" onClick={back.onClick} className="riva-crumb-back"
+      aria-label={back.label || 'Back'}
+      base={PILL + PILL_REST} hover={PILL_HOVER}>
+      <Svg w={15} sw={2.1}>{Icons.arrowLeft}</Svg>
+      <span className="riva-crumb-back-label">{back.label || 'Back'}</span>
+    </Hover>
+  ) : null;
 
   const controls = (
     <>
@@ -103,9 +123,17 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
 
   return (
     <>
+      {backControl && lead && createPortal(backControl, lead)}
       {slot
         ? createPortal(controls, slot)
-        : <header className="riva-header" style={s('flex:none;height:56px;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:0 20px;background:transparent;')}>{controls}</header>}
+        : (
+          // No shell to portal into: the page draws its own row, with the
+          // way back at the left and the controls still at the right.
+          <header className="riva-header" style={s('flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;background:transparent;')}>
+            {!lead && backControl}
+            <div style={s('margin-left:auto;display:flex;align-items:center;gap:10px;')}>{controls}</div>
+          </header>
+        )}
       {/* The directory is a dialog over the whole app, so it stays in the
           page's own tree. Portalled into the crumb bar it would inherit
           that bar's stacking context and open underneath the rail. */}

@@ -14,6 +14,15 @@ import { VERSION_LABEL, BUILD_LABEL } from '@/lib/version.mjs';
    there is no DOM node to portal into on the server. */
 export const HeaderSlot = React.createContext(null);
 
+/* The LEFT-hand end of the same bar, before the crumb, for a page's way
+   back out of what it is showing. It is a second slot rather than a
+   corner of the first because the two ends mean different things: the
+   right-hand end is what you can DO here, and a back control is not one
+   of those — it is where you came from, and it belongs on the side every
+   other back control in the world is on. Same rule otherwise: null until
+   the shell has mounted, and empty on the pages that pass no back. */
+export const HeaderLeadSlot = React.createContext(null);
+
 /* ------------------------------------------------------------------ *
  * The rail.
  *
@@ -206,6 +215,7 @@ export default function AppShell({ children }) {
   // A callback ref rather than a plain one: the page below has to be
   // re-rendered once the node exists, or it would portal into nothing.
   const [slot, setSlot] = React.useState(null);
+  const [lead, setLead] = React.useState(null);
   const current = matchHref(pathname);
 
   // ⌘K / Ctrl-K anywhere, except while something is already being typed
@@ -290,6 +300,8 @@ export default function AppShell({ children }) {
           <button type="button" className="riva-crumb-menu" onClick={() => setOpenMobile(true)} aria-label="Open tools">
             <Svg w={19} sw={2}>{Icons.menu}</Svg>
           </button>
+          {/* A page's way back, ahead of the crumb it is leaving. */}
+          <div className="riva-crumb-lead" ref={setLead} />
           <nav className="riva-crumb" aria-label="Breadcrumb">
             <span className="riva-crumb-group">{current?.group || 'Ask'}</span>
             <span className="riva-crumb-sep" aria-hidden="true">/</span>
@@ -301,7 +313,9 @@ export default function AppShell({ children }) {
             tool that asks for the whole screen gets the whole of what is
             left of it and the crumb never scrolls away. */}
         <div className="riva-shell-body">
-          <HeaderSlot.Provider value={slot}>{children}</HeaderSlot.Provider>
+          <HeaderSlot.Provider value={slot}>
+            <HeaderLeadSlot.Provider value={lead}>{children}</HeaderLeadSlot.Provider>
+          </HeaderSlot.Provider>
         </div>
       </div>
 
