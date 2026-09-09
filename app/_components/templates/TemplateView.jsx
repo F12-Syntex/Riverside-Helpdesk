@@ -56,21 +56,21 @@ function CopyButton({ value, label = 'Copy', small = false }) {
   const text = state === 'done' ? 'Copied' : state === 'failed' ? 'Select and press Ctrl+C' : label;
   return (
     <Hover tag="button" type="button" onClick={run} title={'Copy: ' + value}
-      base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:#141416;border:1px solid '
-        + (state === 'done' ? '#56c98a' : '#2a2a2e')
+      base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid '
+        + (state === 'done' ? '#007f3b' : '#d5dee2')
         + ';border-radius:999px;padding:' + (small ? '4px 10px' : '5px 12px')
         + ';font:inherit;font-size:' + (small ? '12.5px' : '13px')
-        + ';font-weight:600;color:' + (state === 'done' ? '#7fdcaa' : '#e0554f') + ';cursor:pointer;'}
-      hover="border-color:#e0554f;background:#151518;">
+        + ';font-weight:600;color:' + (state === 'done' ? '#00632f' : '#005eb8') + ';cursor:pointer;'}
+      hover="border-color:#005eb8;background:#f7fbff;">
       <Svg w={small ? 12 : 13} sw={2.2}>{state === 'done' ? Icons.check : Icons.copy}</Svg>{text}
     </Hover>
   );
 }
 
 const TONE = {
-  info: { bar: '#e0554f', bg: '#1b1b1f', ink: '#8fb4d6', icon: Icons.infoCircle },
-  warn: { bar: '#4b3d1f', bg: '#1b1a15', ink: '#e0b85f', icon: Icons.alertCircle },
-  critical: { bar: '#ff7b72', bg: '#261619', ink: '#ff9d96', icon: Icons.alertCircle },
+  info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: Icons.infoCircle },
+  warn: { bar: '#ecd39a', bg: '#fffdf5', ink: '#8a6100', icon: Icons.alertCircle },
+  critical: { bar: '#d5281b', bg: '#fdf4f3', ink: '#a51b0f', icon: Icons.alertCircle },
 };
 
 // The values the reader has to type, and nothing else.
@@ -87,23 +87,23 @@ const TONE = {
 // service.
 function Fields({ title, items }) {
   return (
-    <div style={s('border:1px solid #26262a;border-radius:12px;background:#141416;overflow:hidden;')}>
+    <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
       {title && (
-        <div style={s('padding:8px 16px;background:#e0554f;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
+        <div style={s('padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
           {title}
         </div>
       )}
       {items.map((f, i) => (
-        <div key={i} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:11px 16px;' + (i ? 'border-top:1px solid #1c1c1f;' : ''))}>
-          <span style={s('flex:none;min-width:104px;font-size:13.5px;color:#9a9aa3;')}>{f.label}</span>
+        <div key={i} style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:11px 16px;' + (i ? 'border-top:1px solid #eef1f2;' : ''))}>
+          <span style={s('flex:none;min-width:104px;font-size:13.5px;color:#4c6272;')}>{f.label}</span>
           {f.value ? (
             <>
-              <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#e9e9ec;')}>
+              <span style={s('flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:16px;font-weight:700;color:#212b32;')}>
                 {f.value}
                 {/* What goes with the value without being part of it — a
                     medication's directions and quantity under the drug that
                     gets copied. Quieter, and never inside the Copy. */}
-                {f.hint && <span style={s('display:block;font-size:13.5px;font-weight:400;color:#9a9aa3;margin-top:2px;')}>{f.hint}</span>}
+                {f.hint && <span style={s('display:block;font-size:13.5px;font-weight:400;color:#4c6272;margin-top:2px;')}>{f.hint}</span>}
               </span>
               {/* Only on the values that get typed somewhere else. A Copy on
                   every row would be four buttons on a referral card and no
@@ -111,8 +111,8 @@ function Fields({ title, items }) {
               {f.copy && <CopyButton value={f.value} small />}
             </>
           ) : (
-            <span style={s('flex:1 1 auto;display:flex;gap:7px;align-items:center;font-size:15px;font-weight:600;color:#e0b85f;')}>
-              <Svg w={15} stroke="#e0b85f" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
+            <span style={s('flex:1 1 auto;display:flex;gap:7px;align-items:center;font-size:15px;font-weight:600;color:#8a6100;')}>
+              <Svg w={15} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
               {f.missing || 'Not recorded'}
             </span>
           )}
@@ -138,16 +138,16 @@ function Note({ tone, text }) {
 function Expand({ label, hint, blocks }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={s('border:1px solid #26262a;border-radius:12px;background:#141416;overflow:hidden;')}>
+    <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
       <Hover tag="button" type="button" onClick={() => setOpen(!open)}
-        base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:12px 16px;font:inherit;font-size:15px;font-weight:600;color:#e0554f;cursor:pointer;"
-        hover="background:#151518;">
+        base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:12px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;"
+        hover="background:#f7fbff;">
         <Svg w={16} sw={2.4} style={s('flex:none;transition:transform .15s ease;' + (open ? 'transform:rotate(90deg);' : ''))}>{Icons.arrow}</Svg>
         <span style={s('flex:1;min-width:0;')}>{label}</span>
       </Hover>
       {open && (
-        <div style={s('padding:2px 16px 14px;display:flex;flex-direction:column;gap:12px;border-top:1px solid #1c1c1f;')}>
-          {hint && <div style={s('font-size:13px;color:#74747d;padding-top:10px;')}>{hint}</div>}
+        <div style={s('padding:2px 16px 14px;display:flex;flex-direction:column;gap:12px;border-top:1px solid #eef1f2;')}>
+          {hint && <div style={s('font-size:13px;color:#768692;padding-top:10px;')}>{hint}</div>}
           <Blocks blocks={blocks} />
         </div>
       )}
@@ -161,10 +161,10 @@ function Message({ label, text }) {
   return (
     <div>
       <div style={s('display:flex;align-items:center;gap:12px;margin-bottom:6px;')}>
-        <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9a9aa3;')}>{label}</div>
+        <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4c6272;')}>{label}</div>
         <CopyButton value={text} />
       </div>
-      <div style={s('padding:13px 16px;background:#141416;border:1px solid #26262a;border-left:4px solid #e0554f;border-radius:0 8px 8px 0;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#e9e9ec;')}>{text}</div>
+      <div style={s('padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
     </div>
   );
 }
@@ -177,11 +177,11 @@ function Contacts({ items }) {
   return (
     <div style={s('display:flex;flex-direction:column;gap:10px;')}>
       {items.map((c, i) => (
-        <div key={i} style={s('border:1px solid #26262a;border-left:4px solid #e0554f;border-radius:0 12px 12px 0;background:#141416;padding:12px 16px;')}>
-          {c.label && <div style={s('font-size:15px;font-weight:700;color:#e9e9ec;margin-bottom:5px;')}>{c.label}</div>}
-          {c.tel && <div style={s('font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#e0554f;')}>{c.tel}</div>}
-          {c.email && <div style={s('margin-top:3px;font-size:14.5px;font-weight:600;color:#e9e9ec;overflow-wrap:anywhere;')}>{c.email}</div>}
-          {c.note && <div style={s('margin-top:5px;font-size:13.5px;color:#9a9aa3;')}>{c.note}</div>}
+        <div key={i} style={s('border:1px solid #d8e1e5;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;background:#fff;padding:12px 16px;')}>
+          {c.label && <div style={s('font-size:15px;font-weight:700;color:#212b32;margin-bottom:5px;')}>{c.label}</div>}
+          {c.tel && <div style={s('font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#005eb8;')}>{c.tel}</div>}
+          {c.email && <div style={s('margin-top:3px;font-size:14.5px;font-weight:600;color:#212b32;overflow-wrap:anywhere;')}>{c.email}</div>}
+          {c.note && <div style={s('margin-top:5px;font-size:13.5px;color:#4c6272;')}>{c.note}</div>}
         </div>
       ))}
     </div>
@@ -202,8 +202,8 @@ export function Blocks({ blocks }) {
             <ol key={i} style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;')}>
               {b.items.map((it, n) => (
                 <li key={n} style={s('display:flex;gap:12px;align-items:flex-start;')}>
-                  <span style={s('flex:none;width:24px;height:24px;border-radius:50%;background:#e0554f;color:#ffffff;font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}>{n + 1}</span>
-                  <span style={s('flex:1;min-width:0;font-size:15.5px;line-height:1.5;color:#e9e9ec;')}><Rich text={it} /></span>
+                  <span style={s('flex:none;width:24px;height:24px;border-radius:50%;background:#005eb8;color:#fff;font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}>{n + 1}</span>
+                  <span style={s('flex:1;min-width:0;font-size:15.5px;line-height:1.5;color:#212b32;')}><Rich text={it} /></span>
                 </li>
               ))}
             </ol>
@@ -213,12 +213,12 @@ export function Blocks({ blocks }) {
           return (
             <ul key={i} style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
               {b.title && (
-                <li style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9a9aa3;margin-bottom:1px;')}>{b.title}</li>
+                <li style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4c6272;margin-bottom:1px;')}>{b.title}</li>
               )}
               {b.items.map((it, n) => (
                 <li key={n} style={s('display:flex;gap:10px;align-items:flex-start;')}>
-                  <span style={s('flex:none;width:5px;height:5px;border-radius:50%;background:#e0554f;margin-top:9px;')} />
-                  <span style={s('flex:1;min-width:0;font-size:15.5px;line-height:1.5;color:#e9e9ec;')}><Rich text={it} /></span>
+                  <span style={s('flex:none;width:5px;height:5px;border-radius:50%;background:#005eb8;margin-top:9px;')} />
+                  <span style={s('flex:1;min-width:0;font-size:15.5px;line-height:1.5;color:#212b32;')}><Rich text={it} /></span>
                 </li>
               ))}
             </ul>
@@ -226,14 +226,14 @@ export function Blocks({ blocks }) {
         }
         if (b.type === 'table') {
           return (
-            <div key={i} style={s('overflow-x:auto;border:1px solid #26262a;border-radius:12px;background:#141416;')}>
+            <div key={i} style={s('overflow-x:auto;border:1px solid #d8e1e5;border-radius:12px;background:#fff;')}>
               <table style={s('width:100%;border-collapse:collapse;font-size:14.5px;')}>
                 <thead>
-                  <tr>{b.head.map((h, n) => <th key={n} style={s('text-align:left;padding:9px 14px;background:#0b0b0c;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#9a9aa3;')}>{h}</th>)}</tr>
+                  <tr>{b.head.map((h, n) => <th key={n} style={s('text-align:left;padding:9px 14px;background:#f0f4f5;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#4c6272;')}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {b.rows.map((r, n) => (
-                    <tr key={n}>{r.map((c, m) => <td key={m} style={s('padding:9px 14px;border-top:1px solid #1c1c1f;color:#e9e9ec;')}>{c}</td>)}</tr>
+                    <tr key={n}>{r.map((c, m) => <td key={m} style={s('padding:9px 14px;border-top:1px solid #eef1f2;color:#212b32;')}>{c}</td>)}</tr>
                   ))}
                 </tbody>
               </table>
@@ -248,7 +248,7 @@ export function Blocks({ blocks }) {
           return (
             <div key={i} style={s('display:flex;flex-direction:column;gap:8px;')}>
               {b.caption && (
-                <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9a9aa3;')}>{b.caption}</div>
+                <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4c6272;')}>{b.caption}</div>
               )}
               {/* Never stretched. Several of these are small icons cropped out
                   of a screen, and blowing one up to fill a column turns a
@@ -257,9 +257,9 @@ export function Blocks({ blocks }) {
               <div style={s('display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;')}>
                 {b.items.map((img, n) => (
                   <a key={n} href={img.url} target="_blank" rel="noreferrer"
-                    style={s('display:inline-flex;max-width:100%;border:1px solid #26262a;border-radius:10px;overflow:hidden;background:#141416;')}>
+                    style={s('display:inline-flex;max-width:100%;border:1px solid #d8e1e5;border-radius:10px;overflow:hidden;background:#fff;')}>
                     <img src={img.url} alt={img.alt || 'Picture from the practice’s own page'} loading="lazy"
-                      style={s('display:block;max-width:100%;width:auto;height:auto;max-height:420px;background:#141416;')} />
+                      style={s('display:block;max-width:100%;width:auto;height:auto;max-height:420px;background:#fff;')} />
                   </a>
                 ))}
               </div>
@@ -268,11 +268,11 @@ export function Blocks({ blocks }) {
         }
         if (b.type === 'ask') {
           return (
-            <div key={i} style={s('border:1px solid #3a2b2a;border-left:4px solid #e0554f;border-radius:0 12px 12px 0;background:#141416;padding:14px 16px;')}>
-              <div style={s('font-size:16px;font-weight:600;color:#e9e9ec;margin-bottom:10px;')}>{b.question}</div>
+            <div key={i} style={s('border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;background:#fff;padding:14px 16px;')}>
+              <div style={s('font-size:16px;font-weight:600;color:#212b32;margin-bottom:10px;')}>{b.question}</div>
               <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
                 {b.options.map((o, n) => (
-                  <span key={n} style={s('background:#1b1b1f;border:1px solid #3a2b2a;border-radius:999px;padding:8px 15px;font-size:14.5px;font-weight:600;color:#e0554f;')}>{o}</span>
+                  <span key={n} style={s('background:#f0f6fb;border:1px solid #cfe1f0;border-radius:999px;padding:8px 15px;font-size:14.5px;font-weight:600;color:#005eb8;')}>{o}</span>
                 ))}
               </div>
             </div>
@@ -286,22 +286,22 @@ export function Blocks({ blocks }) {
 
 export default function TemplateView({ answer }) {
   return (
-    <div style={s('background:#141416;border:1px solid #26262a;border-radius:14px;overflow:hidden;')}>
-      <div style={s('padding:16px 20px 14px;border-bottom:1px solid #1c1c1f;')}>
-        <div style={s('font-size:21px;font-weight:700;letter-spacing:-0.015em;color:#e9e9ec;')}>{answer.title}</div>
-        {answer.subtitle && <div style={s('margin-top:2px;font-size:14px;font-weight:600;color:#9a9aa3;')}>{answer.subtitle}</div>}
+    <div style={s('background:#fff;border:1px solid #d8e1e5;border-radius:14px;overflow:hidden;')}>
+      <div style={s('padding:16px 20px 14px;border-bottom:1px solid #eef1f2;')}>
+        <div style={s('font-size:21px;font-weight:700;letter-spacing:-0.015em;color:#212b32;')}>{answer.title}</div>
+        {answer.subtitle && <div style={s('margin-top:2px;font-size:14px;font-weight:600;color:#4c6272;')}>{answer.subtitle}</div>}
       </div>
       {answer.warn && (
-        <div style={s('display:flex;gap:9px;align-items:center;padding:10px 20px;background:#261619;border-bottom:1px solid #502624;')}>
-          <Svg w={16} stroke="#ff7b72" sw={2.4} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
-          <span style={s('font-size:14px;font-weight:700;color:#ff9d96;')}>{answer.warn}</span>
+        <div style={s('display:flex;gap:9px;align-items:center;padding:10px 20px;background:#fdf4f3;border-bottom:1px solid #f0c2bd;')}>
+          <Svg w={16} stroke="#d5281b" sw={2.4} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
+          <span style={s('font-size:14px;font-weight:700;color:#a51b0f;')}>{answer.warn}</span>
         </div>
       )}
       <div style={s('padding:16px 20px 18px;display:flex;flex-direction:column;gap:14px;')}>
         <Blocks blocks={answer.blocks} />
       </div>
       {!!answer.source.length && (
-        <div style={s('padding:9px 20px 12px;border-top:1px solid #1c1c1f;font-size:12.5px;color:#74747d;')}>
+        <div style={s('padding:9px 20px 12px;border-top:1px solid #eef1f2;font-size:12.5px;color:#768692;')}>
           From: {answer.source.join(' · ')}
         </div>
       )}

@@ -95,12 +95,12 @@ export default function Page() {
   const ready = !busy && (text.trim() || images.length);
 
   return (
-    <div style={s('min-height:100vh;background:#0b0b0c;display:flex;flex-direction:column;')}>
+    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Code a document" />
 
       <main style={s('flex:1;width:100%;max-width:760px;margin:0 auto;padding:32px 24px 56px;')}>
         <h1 style={s('font-size:28px;margin:0 0 4px;letter-spacing:-0.02em;')}>Code a document</h1>
-        <p style={s('font-size:16px;color:#9a9aa3;margin:0 0 18px;')}>
+        <p style={s('font-size:16px;color:#4c6272;margin:0 0 18px;')}>
           Paste the document text or a screenshot — <strong>remove the patient's name, NHS number and date of birth first</strong>.
         </p>
 
@@ -110,17 +110,17 @@ export default function Page() {
           onPaste={onPaste}
           placeholder="Paste the document text here — or paste a screenshot straight in…"
           rows={9}
-          style={s('width:100%;box-sizing:border-box;padding:14px 16px;font:inherit;font-size:16px;line-height:1.5;border:1px solid #26262a;border-radius:12px;background:#141416;resize:vertical;outline-color:#e0554f;')}
+          style={s('width:100%;box-sizing:border-box;padding:14px 16px;font:inherit;font-size:16px;line-height:1.5;border:1px solid #d8e1e5;border-radius:12px;background:#fff;resize:vertical;outline-color:#005eb8;')}
         />
 
         {images.length > 0 && (
           <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;')}>
             {images.map((src, i) => (
               <div key={i} style={s('position:relative;')}>
-                <img src={src} alt={'Attached screenshot ' + (i + 1)} style={s('height:72px;width:auto;max-width:140px;object-fit:cover;border-radius:8px;border:1px solid #26262a;display:block;')} />
+                <img src={src} alt={'Attached screenshot ' + (i + 1)} style={s('height:72px;width:auto;max-width:140px;object-fit:cover;border-radius:8px;border:1px solid #d8e1e5;display:block;')} />
                 <Hover tag="button" aria-label="Remove screenshot" onClick={() => setImages((cur) => cur.filter((_, j) => j !== i))}
-                  base="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:none;background:#e9e9ec;color:#ffffff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;"
-                  hover="background:#ff7b72;">
+                  base="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:none;background:#212b32;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;"
+                  hover="background:#d5281b;">
                   <Svg w={12} sw={2.6}>{Icons.close}</Svg>
                 </Hover>
               </div>
@@ -130,62 +130,62 @@ export default function Page() {
 
         <div style={s('display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;')}>
           <Hover tag="button" onClick={code} disabled={!ready}
-            base={'display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;padding:12px 22px;font:inherit;font-size:16px;font-weight:600;color:#ffffff;cursor:pointer;background:#e0554f;' + (ready ? '' : 'opacity:.55;cursor:default;')}
-            hover={ready ? 'background:#ea6a64;' : ''}>
+            base={'display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;padding:12px 22px;font:inherit;font-size:16px;font-weight:600;color:#fff;cursor:pointer;background:#005eb8;' + (ready ? '' : 'opacity:.55;cursor:default;')}
+            hover={ready ? 'background:#00477e;' : ''}>
             <Svg w={18} sw={2.2}>{Icons.fileLines}</Svg>
             {busy ? 'Coding…' : 'Code this document'}
           </Hover>
           <Hover tag="button" onClick={() => fileRef.current && fileRef.current.click()} disabled={images.length >= MAX_IMAGES}
-            base={'display:inline-flex;align-items:center;gap:8px;border:1px solid #26262a;border-radius:10px;padding:11px 16px;font:inherit;font-size:15px;font-weight:600;color:#e9e9ec;background:#141416;cursor:pointer;' + (images.length >= MAX_IMAGES ? 'opacity:.55;cursor:default;' : '')}
-            hover={images.length >= MAX_IMAGES ? '' : 'border-color:#e0554f;background:#1b1b1f;'}>
+            base={'display:inline-flex;align-items:center;gap:8px;border:1px solid #d8e1e5;border-radius:10px;padding:11px 16px;font:inherit;font-size:15px;font-weight:600;color:#212b32;background:#fff;cursor:pointer;' + (images.length >= MAX_IMAGES ? 'opacity:.55;cursor:default;' : '')}
+            hover={images.length >= MAX_IMAGES ? '' : 'border-color:#005eb8;background:#f0f6fb;'}>
             <Svg w={17} sw={2.2}>{Icons.paperclip}</Svg>
             Attach screenshot
           </Hover>
           <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
           {result && (
             <Hover tag="button" onClick={() => { setResult(null); setText(''); setImages([]); }}
-              base="border:none;background:none;font:inherit;font-size:15px;font-weight:600;color:#9a9aa3;cursor:pointer;padding:12px 6px;"
-              hover="color:#e9e9ec;">
+              base="border:none;background:none;font:inherit;font-size:15px;font-weight:600;color:#4c6272;cursor:pointer;padding:12px 6px;"
+              hover="color:#212b32;">
               Clear
             </Hover>
           )}
         </div>
 
         {error && (
-          <div style={s('margin-top:16px;padding:14px 16px;background:#2c1719;border:1px solid #ff7b72;border-radius:10px;color:#ffb3ad;font-size:15px;')}>
+          <div style={s('margin-top:16px;padding:14px 16px;background:#fde8e9;border:1px solid #d5281b;border-radius:10px;color:#8a1509;font-size:15px;')}>
             {error}
           </div>
         )}
 
         {result && (
-          <section style={s('margin-top:20px;background:#141416;border:1px solid #26262a;border-radius:12px;overflow:hidden;')}>
-            <div style={s('padding:16px 20px;border-bottom:1px solid #1a1a1d;')}>
-              <div style={s('font-size:13px;font-weight:700;color:#9a9aa3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;')}>Filing title</div>
+          <section style={s('margin-top:20px;background:#fff;border:1px solid #d8e1e5;border-radius:12px;overflow:hidden;')}>
+            <div style={s('padding:16px 20px;border-bottom:1px solid #e8eef1;')}>
+              <div style={s('font-size:13px;font-weight:700;color:#4c6272;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;')}>Filing title</div>
               <div style={s('display:flex;align-items:flex-start;gap:12px;')}>
-                <p style={s('flex:1;margin:0;font-size:18px;font-weight:700;color:#e9e9ec;line-height:1.4;word-break:break-word;')}>{result.title}</p>
+                <p style={s('flex:1;margin:0;font-size:18px;font-weight:700;color:#212b32;line-height:1.4;word-break:break-word;')}>{result.title}</p>
                 <Hover tag="button" onClick={copyTitle}
-                  base={'flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid #26262a;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;' + (copied ? 'background:#12211a;border-color:#56c98a;color:#8ce0b3;' : 'background:#141416;color:#e9e9ec;')}
-                  hover={copied ? '' : 'border-color:#e0554f;background:#1b1b1f;'}>
+                  base={'flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid #d8e1e5;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;' + (copied ? 'background:#e6f4ea;border-color:#007f3b;color:#005a2a;' : 'background:#fff;color:#212b32;')}
+                  hover={copied ? '' : 'border-color:#005eb8;background:#f0f6fb;'}>
                   <Svg w={15} sw={2.2}>{copied ? Icons.check : Icons.copy}</Svg>
                   {copied ? 'Copied' : 'Copy'}
                 </Hover>
               </div>
             </div>
-            <div style={s('padding:14px 20px;display:flex;flex-direction:column;gap:8px;font-size:15px;color:#e9e9ec;')}>
-              <div><span style={s('color:#9a9aa3;font-weight:600;')}>Date: </span>{result.date}</div>
-              {result.source && <div><span style={s('color:#9a9aa3;font-weight:600;')}>Source: </span>{result.source}</div>}
-              {result.department && <div><span style={s('color:#9a9aa3;font-weight:600;')}>Department: </span>{result.department}</div>}
+            <div style={s('padding:14px 20px;display:flex;flex-direction:column;gap:8px;font-size:15px;color:#212b32;')}>
+              <div><span style={s('color:#4c6272;font-weight:600;')}>Date: </span>{result.date}</div>
+              {result.source && <div><span style={s('color:#4c6272;font-weight:600;')}>Source: </span>{result.source}</div>}
+              {result.department && <div><span style={s('color:#4c6272;font-weight:600;')}>Department: </span>{result.department}</div>}
               {itemGroups(result).map((group) => (
                 <div key={group.kind}>
-                  <span style={s('color:#9a9aa3;font-weight:600;')}>{group.label}:</span>
+                  <span style={s('color:#4c6272;font-weight:600;')}>{group.label}:</span>
                   <ul style={s('margin:4px 0 0;padding:0 0 0 20px;')}>
                     {group.items.map((a, i) => <li key={i}>{a}</li>)}
                   </ul>
                 </div>
               ))}
-              {!result.actions.length && result.note && <div><span style={s('color:#9a9aa3;font-weight:600;')}>Note: </span>{result.note}</div>}
-              {!result.actions.length && !result.note && <div style={s('color:#9a9aa3;')}>No active items — nothing outstanding for the practice in this document.</div>}
-              <p style={s('margin:6px 0 0;font-size:13.5px;color:#9a9aa3;border-top:1px solid #1a1a1d;padding-top:10px;')}>
+              {!result.actions.length && result.note && <div><span style={s('color:#4c6272;font-weight:600;')}>Note: </span>{result.note}</div>}
+              {!result.actions.length && !result.note && <div style={s('color:#4c6272;')}>No active items — nothing outstanding for the practice in this document.</div>}
+              <p style={s('margin:6px 0 0;font-size:13.5px;color:#4c6272;border-top:1px solid #e8eef1;padding-top:10px;')}>
                 Check the title against the document before filing — especially the date{result.date === 'dd-Mmm-yyyy' ? ' (none could be verified, fill it in)' : ''}.
               </p>
             </div>

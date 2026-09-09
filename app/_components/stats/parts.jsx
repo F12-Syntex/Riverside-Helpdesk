@@ -9,7 +9,7 @@
 
 import { s, Hover } from '../ui';
 
-export const CARD = 'background:#141416;border:1px solid #26262a;border-radius:12px;';
+export const CARD = 'background:#fff;border:1px solid #d8e1e5;border-radius:12px;';
 
 // The windows both views offer. Kept here so the two cannot disagree about what
 // "7 days" means when the tab is switched.
@@ -67,27 +67,27 @@ export function duration(ms) {
  * difference between a number and a fact about the assistant.
  */
 export function Tile({ value, caption, hint = '', tone = '' }) {
-  const ink = tone === 'bad' ? '#ffb3ad' : tone === 'good' ? '#7fdcaa' : '#e9e9ec';
+  const ink = tone === 'bad' ? '#8a1509' : tone === 'good' ? '#00612f' : '#212b32';
   return (
     <div style={s(CARD + 'padding:16px 18px;')}>
       <div style={s(`font-size:30px;font-weight:800;letter-spacing:-0.02em;color:${ink};line-height:1.1;`)}>{value}</div>
-      <div style={s('font-size:13.5px;color:#9a9aa3;margin-top:3px;')}>{caption}</div>
-      {hint && <div style={s('font-size:12.5px;color:#74747d;margin-top:2px;')}>{hint}</div>}
+      <div style={s('font-size:13.5px;color:#4c6272;margin-top:3px;')}>{caption}</div>
+      {hint && <div style={s('font-size:12.5px;color:#768692;margin-top:2px;')}>{hint}</div>}
     </div>
   );
 }
 
 export function Segmented({ options, value, onChange, name }) {
   return (
-    <div role="group" aria-label={name} style={s('display:inline-flex;flex-wrap:wrap;gap:3px;background:#0b0b0c;border:1px solid #26262a;border-radius:10px;padding:3px;')}>
+    <div role="group" aria-label={name} style={s('display:inline-flex;flex-wrap:wrap;gap:3px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:3px;')}>
       {options.map((option) => {
         const active = value === option.key;
         return (
           <Hover key={option.key} tag="button" type="button" onClick={() => onChange(option.key)}
             aria-pressed={active}
             base={'border:none;border-radius:7px;padding:6px 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;' +
-              (active ? 'background:#141416;color:#e0554f;box-shadow:0 1px 2px rgba(0,0,0,.14);' : 'background:none;color:#9a9aa3;')}
-            hover={active ? '' : 'color:#e9e9ec;'}>
+              (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
+            hover={active ? '' : 'color:#212b32;'}>
             {option.label}
             {option.count != null && (
               <span style={s('margin-left:6px;font-weight:600;opacity:.7;')}>{number(option.count)}</span>
@@ -106,20 +106,20 @@ export function Ranked({ title, rows, labelKey, empty, onPick }) {
   const max = rows.reduce((m, r) => Math.max(m, r.total), 0) || 1;
   return (
     <div style={s(CARD + 'padding:18px 20px;')}>
-      <h2 style={s('font-size:16px;font-weight:700;margin:0 0 12px;color:#e9e9ec;')}>{title}</h2>
+      <h2 style={s('font-size:16px;font-weight:700;margin:0 0 12px;color:#212b32;')}>{title}</h2>
       {rows.length ? (
         <ol style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;')}>
           {rows.map((row) => {
             const label = row[labelKey];
             const body = (
               <>
-                <div style={s('display:flex;justify-content:space-between;gap:12px;font-size:14.5px;color:#e9e9ec;')}>
+                <div style={s('display:flex;justify-content:space-between;gap:12px;font-size:14.5px;color:#212b32;')}>
                   <span style={s('min-width:0;overflow-wrap:anywhere;text-align:left;')}>{label}</span>
                   <span style={s('flex:none;font-weight:700;font-variant-numeric:tabular-nums;')}>{number(row.total)}</span>
                 </div>
                 {/* A magnitude bar in the one blue: same series, same colour. */}
-                <div style={s('height:4px;border-radius:2px;background:#19191c;margin-top:5px;')}>
-                  <div style={s(`height:100%;width:${Math.max(3, (row.total / max) * 100)}%;border-radius:2px;background:#e0554f;`)} />
+                <div style={s('height:4px;border-radius:2px;background:#eaeff1;margin-top:5px;')}>
+                  <div style={s(`height:100%;width:${Math.max(3, (row.total / max) * 100)}%;border-radius:2px;background:#005eb8;`)} />
                 </div>
               </>
             );
@@ -135,7 +135,7 @@ export function Ranked({ title, rows, labelKey, empty, onPick }) {
           })}
         </ol>
       ) : (
-        <p style={s('margin:0;font-size:14.5px;color:#74747d;')}>{empty}</p>
+        <p style={s('margin:0;font-size:14.5px;color:#768692;')}>{empty}</p>
       )}
     </div>
   );

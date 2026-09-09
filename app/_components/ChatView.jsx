@@ -66,17 +66,17 @@ function TurnQuestion({ question }) {
       <h1 className="riva-turn-q" style={s('font-size:22px;font-weight:700;letter-spacing:-0.015em;line-height:1.3;margin:8px 0 0;text-wrap:pretty;')}>
         {opening(text)}
       </h1>
-      <div style={s('margin-top:10px;background:#141416;border:1px solid #26262a;border-radius:12px;padding:12px 14px;')}>
-        <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#63636c;margin-bottom:6px;')}>
+      <div style={s('margin-top:10px;background:#fff;border:1px solid #dde4e7;border-radius:12px;padding:12px 14px;')}>
+        <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a99a3;margin-bottom:6px;')}>
           What was pasted
         </div>
-        <div style={s('font-size:14.5px;line-height:1.55;color:#9a9aa3;white-space:pre-wrap;overflow-wrap:anywhere;'
+        <div style={s('font-size:14.5px;line-height:1.55;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;'
           + (open ? '' : 'max-height:104px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent);'))}>
           {text}
         </div>
         <Hover tag="button" type="button" onClick={() => setOpen(!open)}
-          base="margin-top:8px;background:none;border:none;padding:0;font:inherit;font-size:13.5px;font-weight:600;color:#e0554f;text-decoration:underline;cursor:pointer;"
-          hover="color:#f0817c;">
+          base="margin-top:8px;background:none;border:none;padding:0;font:inherit;font-size:13.5px;font-weight:600;color:#005eb8;text-decoration:underline;cursor:pointer;"
+          hover="color:#003087;">
           {open ? 'Show less' : 'Show the whole message'}
         </Hover>
       </div>
@@ -107,7 +107,7 @@ export default function ChatView({ v }) {
           <h1 className="riva-hero-h1" style={s('font-size:38px;font-weight:700;letter-spacing:-0.02em;margin:0;')}>What do you need?</h1>
           {/* Only when the host page sets one. The default is nothing: a line
               explaining what can be asked is read once and then sits there. */}
-          {v.welcome && <p style={s('font-size:17px;color:#9a9aa3;max-width:52ch;margin:10px auto 0;text-wrap:pretty;')}>{v.welcome}</p>}
+          {v.welcome && <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:10px auto 0;text-wrap:pretty;')}>{v.welcome}</p>}
         </div>
       )}
 
@@ -115,12 +115,12 @@ export default function ChatView({ v }) {
       {v.hasHistory && (
         <div style={s('display:flex;flex-direction:column;margin-bottom:14px;')}>
           {v.history.map((t) => (
-            <div key={t.key} className="riva-history-row" style={s('display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid #26262a;')}>
-              <span style={s('flex:none;font-size:13px;font-weight:600;color:#63636c;font-variant-numeric:tabular-nums;')}>{t.num}</span>
-              <span style={s('flex:1;min-width:0;font-size:15px;color:#9a9aa3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{t.question}</span>
+            <div key={t.key} className="riva-history-row" style={s('display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid #dde4e7;')}>
+              <span style={s('flex:none;font-size:13px;font-weight:600;color:#8a99a3;font-variant-numeric:tabular-nums;')}>{t.num}</span>
+              <span style={s('flex:1;min-width:0;font-size:15px;color:#4c6272;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{t.question}</span>
               <Hover tag="button" onClick={t.onOpen}
-                base="flex:none;background:none;border:none;padding:0;font:inherit;font-size:14.5px;font-weight:600;color:#e0554f;cursor:pointer;"
-                hover="color:#f0817c;text-decoration:underline;">
+                base="flex:none;background:none;border:none;padding:0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;cursor:pointer;"
+                hover="color:#003087;text-decoration:underline;">
                 Show answer
               </Hover>
             </div>
@@ -137,19 +137,19 @@ export default function ChatView({ v }) {
                 the rule under it wipes out from the left a beat later. A
                 pasted consultation is not a heading — see TurnQuestion. */}
             <TurnQuestion question={v.turn.question} />
-            <div style={s('width:68px;height:4px;border-radius:2px;background:#e0554f;margin:14px 0 0;transform-origin:left center;animation:rivaRuleIn .5s cubic-bezier(.2,.7,.3,1) .12s both;')} />
+            <div style={s('width:68px;height:4px;border-radius:2px;background:#005eb8;margin:14px 0 0;transform-origin:left center;animation:rivaRuleIn .5s cubic-bezier(.2,.7,.3,1) .12s both;')} />
             {/* WHICH KIND OF ANSWER THIS WAS ASKED FOR, when it was chosen with
                 a button rather than typed. A typed "/form knee" stays in the
                 reader's own words above; this is the same record for the other
                 way of saying it, and without it a wrong answer has nothing on
                 screen explaining which list it came from. */}
             {v.turn.askedAs && (
-              <div style={s('display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:#221a1a;border:1px solid #27272b;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700;color:#e0554f;')}>
+              <div style={s('display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:#e8f1f8;border:1px solid #bcd9f0;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700;color:#005eb8;')}>
                 <span>Asked as {v.turn.askedAs}</span>
               </div>
             )}
             {v.turn.imageNote && (
-              <div style={s('font-size:13.5px;color:#9a9aa3;margin-top:12px;')}>{v.turn.imageNote}</div>
+              <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>
             )}
             {/* What the local identifier check took out of this question
                 before it was sent. The toast that said so has gone by now;
@@ -157,8 +157,8 @@ export default function ChatView({ v }) {
                 thing that explains it. It counts what went and quotes none of
                 it — see lib/safety/identifiers.mjs. */}
             {v.turn.redactedNote && (
-              <div style={s('display:flex;align-items:flex-start;gap:9px;margin-top:14px;background:#241f12;border:1px solid #51442a;border-radius:10px;padding:9px 12px;font-size:13.5px;line-height:1.45;color:#eccc8b;')}>
-                <Svg w={15} sw={2.2} style={s('flex:none;margin-top:2px;color:#d9ab52;')}>{Icons.triangle}</Svg>
+              <div style={s('display:flex;align-items:flex-start;gap:9px;margin-top:14px;background:#fff6cc;border:1px solid #f0dfa0;border-radius:10px;padding:9px 12px;font-size:13.5px;line-height:1.45;color:#5c4a00;')}>
+                <Svg w={15} sw={2.2} style={s('flex:none;margin-top:2px;color:#946800;')}>{Icons.triangle}</Svg>
                 <span>{v.turn.redactedNote}</span>
               </div>
             )}
@@ -168,8 +168,8 @@ export default function ChatView({ v }) {
             {v.turn.hasDocs && (
               <div style={s('display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;')}>
                 {v.turn.docNames.map((name, j) => (
-                  <span key={j} style={s('display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#141416;border:1px solid #26262a;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#9a9aa3;')}>
-                    <Svg w={14} sw={2} style={s('flex:none;color:#e0554f;')}>{Icons.file}</Svg>
+                  <span key={j} style={s('display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#fff;border:1px solid #dde4e7;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#4c6272;')}>
+                    <Svg w={14} sw={2} style={s('flex:none;color:#005eb8;')}>{Icons.file}</Svg>
                     <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{name}</span>
                   </span>
                 ))}
@@ -178,7 +178,7 @@ export default function ChatView({ v }) {
             {v.turn.hasImages && (
               <div style={s('display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;')}>
                 {v.turn.images.map((src, j) => (
-                  <img key={j} src={src} alt="Attached image" style={s('max-width:200px;max-height:160px;border-radius:10px;display:block;background:#141416;border:1px solid #1d1d20;')} />
+                  <img key={j} src={src} alt="Attached image" style={s('max-width:200px;max-height:160px;border-radius:10px;display:block;background:#fff;border:1px solid #e3e9ec;')} />
                 ))}
               </div>
             )}
@@ -196,8 +196,8 @@ export default function ChatView({ v }) {
 
           {v.isViewingHistory && (
             <Hover tag="button" onClick={v.onLatest}
-              base="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:2px 0;font:inherit;font-size:14.5px;font-weight:600;color:#e0554f;cursor:pointer;"
-              hover="color:#f0817c;">
+              base="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:2px 0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;cursor:pointer;"
+              hover="color:#003087;">
               <Svg w={16} sw={2.4}>{Icons.arrow}</Svg>Back to the latest question
             </Hover>
           )}

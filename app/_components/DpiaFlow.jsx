@@ -15,12 +15,12 @@ import { s } from './ui';
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
-const INK = '#e9e9ec';
-const MUTED = '#9a9aa3';
-const BLUE = '#e0554f';
-const AMBER = '#e0b85f';
-const RED = '#ff7b72';
-const EDGE = '#4a4a52';
+const INK = '#212b32';
+const MUTED = '#4c6272';
+const BLUE = '#005eb8';
+const AMBER = '#8a6100';
+const RED = '#c0271b';
+const EDGE = '#9fb1ba';
 
 // The tools the server runs. Named the way the index names them, so a reader
 // can go from the diagram to the route list without translating.
@@ -102,7 +102,7 @@ const EXTERNAL = [
 function Box({ x, y, w, h, title, lines, colour, mono, dash }) {
   return (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx="10" fill="#141416" stroke={colour} strokeWidth="1.6" strokeDasharray={dash || 'none'} />
+      <rect x={x} y={y} width={w} height={h} rx="10" fill="#fff" stroke={colour} strokeWidth="1.6" strokeDasharray={dash || 'none'} />
       <text x={x + 14} y={y + 24} fontFamily={mono ? MONO : FONT} fontSize="13.5" fontWeight="700" fill={colour}>{title}</text>
       {lines.map((l, i) => (
         <text key={i} x={x + 14} y={y + 46 + i * 14.5} fontFamily={FONT} fontSize="11" fill={MUTED}>{l}</text>
@@ -137,9 +137,9 @@ export default function DpiaFlow() {
 
       {/* Staff */}
       <rect x="400" y="20" width="320" height="86" rx="12" fill={BLUE} />
-      <text x="420" y="50" fontFamily={FONT} fontSize="16" fontWeight="700" fill="#141416">Staff · browser</text>
-      <text x="420" y="72" fontFamily={FONT} fontSize="11.5" fill="#3a2b2a">questions · pasted consultation text</text>
-      <text x="420" y="90" fontFamily={FONT} fontSize="11.5" fill="#3a2b2a">Notebook notes · file attachments</text>
+      <text x="420" y="50" fontFamily={FONT} fontSize="16" fontWeight="700" fill="#fff">Staff · browser</text>
+      <text x="420" y="72" fontFamily={FONT} fontSize="11.5" fill="#cfe3f5">questions · pasted consultation text</text>
+      <text x="420" y="90" fontFamily={FONT} fontSize="11.5" fill="#cfe3f5">Notebook notes · file attachments</text>
 
       {/* Browser-side third parties — nothing to do with the server */}
       <path d="M720 63 L872 63" fill="none" stroke={EDGE} strokeWidth="2" strokeDasharray="5 5" markerEnd="url(#dpia-arrow)" />
@@ -153,12 +153,12 @@ export default function DpiaFlow() {
       <text x="572" y="138" fontFamily={FONT} fontSize="11" fontWeight="600" fill={MUTED}>what staff type or paste</text>
 
       {/* The app */}
-      <rect x="300" y="160" width="520" height="170" rx="14" fill="#151517" stroke={BLUE} strokeWidth="2" />
+      <rect x="300" y="160" width="520" height="170" rx="14" fill="#f2f8fc" stroke={BLUE} strokeWidth="2" />
       <text x="322" y="188" fontFamily={FONT} fontSize="15" fontWeight="700" fill={BLUE}>Riverside Helpdesk — Next.js on Vercel</text>
       <text x="322" y="209" fontFamily={FONT} fontSize="11.5" fill={MUTED}>Server routes. No sign-in: anyone who reaches the URL can use it.</text>
       {toolChips.map((c, i) => (
         <g key={i}>
-          <rect x={c.x} y={c.y - 13} width={c.w} height="20" rx="10" fill="#141416" stroke="#222226" />
+          <rect x={c.x} y={c.y - 13} width={c.w} height="20" rx="10" fill="#fff" stroke="#cfdfec" />
           <text x={c.x + c.w / 2} y={c.y + 1} fontFamily={FONT} fontSize="10.5" fill={INK} textAnchor="middle">{c.label}</text>
         </g>
       ))}
@@ -172,12 +172,12 @@ export default function DpiaFlow() {
       <text x="888" y="382" fontFamily={FONT} fontSize="11" fontWeight="600" fill={RED} textAnchor="end">leaves the practice</text>
 
       {/* Stored */}
-      <rect x="40" y="400" width="520" height="222" rx="14" fill="#1b1a15" stroke="#51442a" strokeWidth="1.5" />
+      <rect x="40" y="400" width="520" height="222" rx="14" fill="#fffdf5" stroke="#e3d3a8" strokeWidth="1.5" />
       <text x="60" y="424" fontFamily={FONT} fontSize="13" fontWeight="700" fill={AMBER}>Stored — the practice’s own processors</text>
       {STORES.map((b) => <Box key={b.title} x={b.x} y={438} w={b.w} h={168} colour={AMBER} title={b.title} lines={b.lines} />)}
 
       {/* Sent outside */}
-      <rect x="620" y="400" width="560" height="222" rx="14" fill="#231617" stroke="#2c2c31" strokeWidth="1.5" />
+      <rect x="620" y="400" width="560" height="222" rx="14" fill="#fff8f7" stroke="#e8bdb7" strokeWidth="1.5" />
       <text x="640" y="424" fontFamily={FONT} fontSize="13" fontWeight="700" fill={RED}>Sent outside the practice</text>
       {EXTERNAL.map((b) => <Box key={b.title} x={b.x} y={438} w={b.w} h={168} colour={RED} title={b.title} lines={b.lines} />)}
 

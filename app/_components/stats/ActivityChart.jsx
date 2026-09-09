@@ -17,8 +17,8 @@ import { s } from '../ui';
  * a table drawn badly; the rest are read by hovering.
  * ------------------------------------------------------------------ */
 
-const BAR = '#e0554f';
-const TRACK = '#19191c';
+const BAR = '#005eb8';
+const TRACK = '#eaeff1';
 const HEIGHT = 132;
 
 function labelFor(bucket, size) {
@@ -51,10 +51,10 @@ export default function ActivityChart({ buckets = [], size = 'day' }) {
   return (
     <figure style={s('margin:0;')}>
       <figcaption style={s('display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 14px;')}>
-        <span style={s('font-size:16px;font-weight:700;color:#e9e9ec;')}>
+        <span style={s('font-size:16px;font-weight:700;color:#212b32;')}>
           Activity by {size === 'hour' ? 'hour' : 'day'}
         </span>
-        <span style={s('font-size:13.5px;color:#74747d;')} aria-live="polite">
+        <span style={s('font-size:13.5px;color:#768692;')} aria-live="polite">
           {active
             ? tooltipFor(active.bucket, size, active.total || 0)
             : `${total.toLocaleString('en-GB')} events across ${buckets.length} ${size === 'hour' ? 'hours' : 'days'}`}
@@ -83,7 +83,7 @@ export default function ActivityChart({ buckets = [], size = 'day' }) {
             >
               {/* A faint full-height track, so the gaps read as "nothing
                   happened" rather than as missing data. */}
-              <div style={s(`position:absolute;inset:0;background:${on ? '#151517' : 'transparent'};border-radius:4px;`)} />
+              <div style={s(`position:absolute;inset:0;background:${on ? '#f4f8fa' : 'transparent'};border-radius:4px;`)} />
               <div
                 style={s(
                   `position:relative;width:100%;height:${scale(value)}px;border-radius:4px 4px 0 0;` +
@@ -91,7 +91,7 @@ export default function ActivityChart({ buckets = [], size = 'day' }) {
                 )}
               />
               {i === busiest && max > 0 && (
-                <span style={s(`position:absolute;left:50%;transform:translateX(-50%);bottom:${scale(value) + 4}px;font-size:12px;font-weight:700;color:#e9e9ec;white-space:nowrap;`)}>
+                <span style={s(`position:absolute;left:50%;transform:translateX(-50%);bottom:${scale(value) + 4}px;font-size:12px;font-weight:700;color:#212b32;white-space:nowrap;`)}>
                   {max.toLocaleString('en-GB')}
                 </span>
               )}
@@ -102,8 +102,8 @@ export default function ActivityChart({ buckets = [], size = 'day' }) {
 
       {/* The baseline and the two ends of the window. Recessive: the bars are
           the data, the axis is only there to say where zero is. */}
-      <div style={s('height:1px;background:#26262a;margin-top:2px;')} />
-      <div style={s('display:flex;justify-content:space-between;margin-top:6px;font-size:12.5px;color:#74747d;')}>
+      <div style={s('height:1px;background:#d8dde0;margin-top:2px;')} />
+      <div style={s('display:flex;justify-content:space-between;margin-top:6px;font-size:12.5px;color:#768692;')}>
         <span>{labelFor(buckets[0].bucket, size)}</span>
         {buckets.length > 2 && <span>{labelFor(buckets[Math.floor(buckets.length / 2)].bucket, size)}</span>}
         <span>{labelFor(buckets[buckets.length - 1].bucket, size)}</span>

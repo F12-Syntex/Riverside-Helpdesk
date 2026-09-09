@@ -105,14 +105,14 @@ function highlightPassage(iframe, query) {
       if (!doc.getElementById('riva-hl-style')) {
         const style = doc.createElement('style');
         style.id = 'riva-hl-style';
-        style.textContent = '::highlight(riva-src){ background:#51442a; color:inherit; }';
+        style.textContent = '::highlight(riva-src){ background:#ffe066; color:inherit; }';
         doc.head.appendChild(style);
       }
       win.CSS.highlights.set('riva-src', new win.Highlight(range));
       painted = true;
     } else if (start.node === end.node) {
       const mark = doc.createElement('mark');
-      mark.style.cssText = 'background:#51442a;color:inherit;';
+      mark.style.cssText = 'background:#ffe066;color:inherit;';
       try { range.surroundContents(mark); painted = true; } catch (e) { /* ignore */ }
     }
 
@@ -152,9 +152,9 @@ export default function DocumentViewer({ v }) {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const label = 'font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#74747d;margin:0 0 8px;';
+  const label = 'font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin:0 0 8px;';
   const action = 'display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 15px;font:inherit;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;';
-  const card = 'background:#141416;border:1px solid #26262a;border-radius:8px;overflow:hidden;';
+  const card = 'background:#fff;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;';
 
   // The standalone passage is hidden on desktop ONLY when it was highlighted in
   // place; if we couldn't locate it, it stays visible so the source text shows.
@@ -164,27 +164,27 @@ export default function DocumentViewer({ v }) {
   const locParts = [vm.location, located && line ? 'line ' + line : ''].filter(Boolean);
 
   return (
-    <div onClick={v.onCloseViewer} style={s('position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:stretch;justify-content:flex-end;z-index:60;')}>
-      <div onClick={(e) => e.stopPropagation()} style={s('width:100%;max-width:680px;background:#141416;height:100%;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.2);')}>
+    <div onClick={v.onCloseViewer} style={s('position:fixed;inset:0;background:rgba(33,43,50,.5);display:flex;align-items:stretch;justify-content:flex-end;z-index:60;')}>
+      <div onClick={(e) => e.stopPropagation()} style={s('width:100%;max-width:680px;background:#fff;height:100%;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(33,43,50,.2);')}>
 
-        <div style={s('flex:none;display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid #26262a;')}>
-          <span style={s('flex:none;width:34px;height:34px;border-radius:8px;background:#221a1a;color:#e0554f;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={18}>{Icons.file}</Svg></span>
+        <div style={s('flex:none;display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid #d8dde0;')}>
+          <span style={s('flex:none;width:34px;height:34px;border-radius:8px;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={18}>{Icons.file}</Svg></span>
           <div style={s('flex:1;min-width:0;')}>
             <div style={s('font-size:17px;font-weight:700;line-height:1.25;text-wrap:pretty;')}>{vm.docTitle}</div>
-            <div style={s('font-size:13px;color:#74747d;')}>{locParts.join(' · ')}</div>
+            <div style={s('font-size:13px;color:#768692;')}>{locParts.join(' · ')}</div>
           </div>
-          <Hover tag="button" onClick={v.onCloseViewer} aria-label="Close" base="flex:none;background:none;border:none;cursor:pointer;color:#9a9aa3;padding:4px;display:flex;" hover="color:#e9e9ec;"><Svg w={24}>{Icons.close}</Svg></Hover>
+          <Hover tag="button" onClick={v.onCloseViewer} aria-label="Close" base="flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:4px;display:flex;" hover="color:#212b32;"><Svg w={24}>{Icons.close}</Svg></Hover>
         </div>
 
         {/* Content region — fixed height; only the document inside it scrolls,
             so the panel shows exactly one scrollbar (the document's own). */}
-        <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;background:#0b0b0c;')}>
+        <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;background:#f0f4f5;')}>
 
           {/* The full document, formatted, with the passage highlighted (desktop). */}
           {vm.hasFile && (
             <div className="riva-doc-embed" style={s('flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 20px 0;')}>
-              <div style={s('flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#9a9aa3;margin:0 0 8px;')}>
-                <Svg w={14} stroke="#d9ab52" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
+              <div style={s('flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
+                <Svg w={14} stroke="#946200" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
                 {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below.' : 'Showing the full document. The exact passage is shown below.')
                   : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (vm.page ? ' (page ' + vm.page + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
                   : 'The full document is shown below.'}
@@ -203,7 +203,7 @@ export default function DocumentViewer({ v }) {
               missing — it's here whenever the highlight couldn't be placed. */}
           <div className={hidePassageOnDesktop ? 'riva-doc-passage' : ''} style={s('flex:0 1 auto;min-height:0;overflow-y:auto;padding:16px 20px;min-width:0;')}>
             <div style={s(label)}>What this is based on</div>
-            <div style={s('background:#141416;border:1px solid #26262a;border-left:4px solid #d9a441;border-radius:0 8px 8px 0;padding:16px 18px;text-wrap:pretty;overflow-wrap:anywhere;')}>
+            <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;text-wrap:pretty;overflow-wrap:anywhere;')}>
               <Md text={passageMd(vm.text)} />
             </div>
           </div>
@@ -212,11 +212,11 @@ export default function DocumentViewer({ v }) {
         {/* Actions pinned to the bottom of the panel — always visible, never
             requiring a scroll. Only the document content above scrolls. */}
         {vm.hasFile && (
-          <div style={s('flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid #26262a;background:#141416;')}>
-            <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#e0554f;color:#ffffff;border:none;'} hover="background:#f0817c;">
-              <Svg w={16} stroke="#ffffff" sw={2.2}>{Icons.file}</Svg>Open full document
+          <div style={s('flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid #d8dde0;background:#fff;')}>
+            <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#005eb8;color:#fff;border:none;'} hover="background:#003087;">
+              <Svg w={16} stroke="#fff" sw={2.2}>{Icons.file}</Svg>Open full document
             </Hover>
-            <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#141416;color:#e0554f;border:2px solid #26262a;'} hover="border-color:#e0554f;">
+            <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#fff;color:#005eb8;border:2px solid #d8dde0;'} hover="border-color:#005eb8;">
               <Svg w={16} sw={2.2}>{Icons.arrow}</Svg>Download
             </Hover>
           </div>

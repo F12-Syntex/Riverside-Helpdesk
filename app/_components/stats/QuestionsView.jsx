@@ -35,9 +35,9 @@ const PAGE_SIZE = 40;
  * word, never the colour alone.
  * ---------------------------------------------------------------- */
 const OUTCOME = {
-  template: { label: 'From the practice', hue: '#56c98a', ink: '#7fdcaa', tint: '#12211a', edge: '#204734' },
-  prose: { label: 'Model wrote it', hue: '#e0b85f', ink: '#e8c47a', tint: '#231d14', edge: '#51442a' },
-  failed: { label: 'Failed', hue: '#ff7b72', ink: '#ffb3ad', tint: '#2c1719', edge: '#502624' },
+  template: { label: 'From the practice', hue: '#007f3b', ink: '#00612f', tint: '#e6f4ec', edge: '#a7d8b6' },
+  prose: { label: 'Model wrote it', hue: '#a4610a', ink: '#7a4708', tint: '#fdf3e7', edge: '#e4c69a' },
+  failed: { label: 'Failed', hue: '#d5281b', ink: '#8a1509', tint: '#fde8e9', edge: '#f0b8b3' },
 };
 
 const OUTCOME_FILTERS = [
@@ -80,10 +80,10 @@ function VerdictChip({ verdict }) {
   const good = isGoodVerdict(verdict);
   return (
     <Chip
-      hue={good ? '#56c98a' : '#ff7b72'}
-      ink={good ? '#7fdcaa' : '#ffb3ad'}
-      tint={good ? '#12211a' : '#2c1719'}
-      edge={good ? '#204734' : '#502624'}
+      hue={good ? '#007f3b' : '#d5281b'}
+      ink={good ? '#00612f' : '#8a1509'}
+      tint={good ? '#e6f4ec' : '#fde8e9'}
+      edge={good ? '#a7d8b6' : '#f0b8b3'}
       icon={good ? Icons.check : Icons.alertCircle}>
       {verdictLabel(verdict)}
     </Chip>
@@ -112,7 +112,7 @@ function inline(line) {
 function AnswerText({ text }) {
   const lines = String(text || '').split('\n');
   return (
-    <div style={s('font-size:14.5px;line-height:1.55;color:#e9e9ec;overflow-wrap:anywhere;')}>
+    <div style={s('font-size:14.5px;line-height:1.55;color:#212b32;overflow-wrap:anywhere;')}>
       {lines.map((line, i) => {
         if (!line.trim()) return <div key={i} style={s('height:8px;')} />;
 
@@ -130,7 +130,7 @@ function AnswerText({ text }) {
         if (note) {
           const serious = note[1] !== 'info';
           return (
-            <div key={i} style={s(`color:${serious ? '#ffb3ad' : '#9a9aa3'};${serious ? 'font-weight:600;' : ''}`)}>
+            <div key={i} style={s(`color:${serious ? '#8a1509' : '#4c6272'};${serious ? 'font-weight:600;' : ''}`)}>
               {inline(note[2])}
             </div>
           );
@@ -138,7 +138,7 @@ function AnswerText({ text }) {
 
         // What was behind a disclosure, still marked as having been behind one.
         if (line.startsWith('▸')) {
-          return <div key={i} style={s('color:#9a9aa3;font-weight:600;margin-top:4px;')}>{inline(line)}</div>;
+          return <div key={i} style={s('color:#4c6272;font-weight:600;margin-top:4px;')}>{inline(line)}</div>;
         }
 
         return <div key={i} style={s(line.startsWith('   ') ? 'padding-left:14px;' : '')}>{inline(line)}</div>;
@@ -167,24 +167,24 @@ function Provenance({ provenance, dismissed }) {
   const closedIds = new Set(closed.map((entry) => entry && entry.item));
 
   return (
-    <div style={s('margin-top:10px;border-top:1px solid #19191c;padding-top:9px;')}>
+    <div style={s('margin-top:10px;border-top:1px solid #eaeff1;padding-top:9px;')}>
       <Hover tag="button" type="button" onClick={() => setOpen(!open)}
-        base="background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:600;color:#9a9aa3;text-decoration:underline;cursor:pointer;"
-        hover="color:#e0554f;">
+        base="background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:600;color:#4c6272;text-decoration:underline;cursor:pointer;"
+        hover="color:#005eb8;">
         {open ? 'Hide why' : `Why this answer (${requests.length ? requests.length + ' requests, ' : ''}${rules.length} rule${rules.length === 1 ? '' : 's'} fired)`}
       </Hover>
 
       {open && (
-        <div style={s('margin-top:9px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#9a9aa3;')}>
+        <div style={s('margin-top:9px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#4c6272;')}>
           {requests.length > 0 && (
             <div>
-              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#74747d;margin-bottom:4px;')}>What the message asked for</div>
+              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>What the message asked for</div>
               <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;')}>
                 {requests.map((r) => (
                   <li key={r.id} style={s('display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;overflow-wrap:anywhere;')}>
-                    <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:#74747d;')}>{r.id}</span>
-                    <strong style={s('color:#e9e9ec;font-weight:600;')}>{r.gist || r.text}</strong>
-                    <span style={s('color:#74747d;')}>
+                    <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:#768692;')}>{r.id}</span>
+                    <strong style={s('color:#212b32;font-weight:600;')}>{r.gist || r.text}</strong>
+                    <span style={s('color:#768692;')}>
                       {r.acuity} · {r.status}
                       {r.raisedBy ? ' · raised by the second pass' : ''}
                       {r.verbatim === false ? ' · span not found in the message' : ''}
@@ -198,12 +198,12 @@ function Provenance({ provenance, dismissed }) {
 
           {rules.length > 0 && (
             <div>
-              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#74747d;margin-bottom:4px;')}>Rules that fired</div>
+              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>Rules that fired</div>
               <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;')}>
                 {rules.map((rule, i) => (
                   <li key={i} style={s('overflow-wrap:anywhere;')}>
-                    <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:#ff9d96;')}>{rule.id}</span>
-                    {rule.span && <span style={s('color:#9a9aa3;')}> — “{rule.span}”</span>}
+                    <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:#a51b0f;')}>{rule.id}</span>
+                    {rule.span && <span style={s('color:#4c6272;')}> — “{rule.span}”</span>}
                   </li>
                 ))}
               </ul>
@@ -212,7 +212,7 @@ function Provenance({ provenance, dismissed }) {
 
           {notebook.length > 0 && (
             <div>
-              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#74747d;margin-bottom:4px;')}>Notebook pages, as they stood</div>
+              <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:4px;')}>Notebook pages, as they stood</div>
               {notebook.map((page, i) => (
                 <div key={i} style={s('overflow-wrap:anywhere;')}>{page.title}{page.updatedAt ? ' — last edited ' + page.updatedAt.slice(0, 10) : ''}</div>
               ))}
@@ -240,39 +240,39 @@ function QuestionCard({ row, machine, onSearch }) {
   return (
     <li style={s(CARD + 'padding:14px 16px;')}>
       <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:7px 10px;margin-bottom:8px;')}>
-        <span style={s('font-variant-numeric:tabular-nums;font-size:13px;color:#74747d;')}>{timeOf(row.at)}</span>
+        <span style={s('font-variant-numeric:tabular-nums;font-size:13px;color:#768692;')}>{timeOf(row.at)}</span>
         <OutcomeChip outcome={row.outcome} />
         {row.verdict && <VerdictChip verdict={row.verdict} />}
         <span style={s('flex:1;')} />
-        {machine && <span style={s('font-size:12.5px;color:#74747d;')}>{machineName(machine)}</span>}
-        {row.durationMs != null && <span style={s('font-size:12.5px;color:#74747d;')}>{duration(row.durationMs)}</span>}
+        {machine && <span style={s('font-size:12.5px;color:#768692;')}>{machineName(machine)}</span>}
+        {row.durationMs != null && <span style={s('font-size:12.5px;color:#768692;')}>{duration(row.durationMs)}</span>}
       </div>
 
-      <p style={s('margin:0;font-size:17px;line-height:1.4;font-weight:600;color:#e9e9ec;overflow-wrap:anywhere;')}>
+      <p style={s('margin:0;font-size:17px;line-height:1.4;font-weight:600;color:#212b32;overflow-wrap:anywhere;')}>
         {row.question}
       </p>
 
-      <div style={s('display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12.5px;color:#74747d;')}>
-        {row.source && <span>Built from <strong style={s('color:#9a9aa3;font-weight:600;')}>{row.source}</strong></span>}
-        {row.template && <span>Template <strong style={s('color:#9a9aa3;font-weight:600;')}>{row.template}</strong></span>}
+      <div style={s('display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12.5px;color:#768692;')}>
+        {row.source && <span>Built from <strong style={s('color:#4c6272;font-weight:600;')}>{row.source}</strong></span>}
+        {row.template && <span>Template <strong style={s('color:#4c6272;font-weight:600;')}>{row.template}</strong></span>}
         {row.model && <span style={s('font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;')}>{row.model}</span>}
         {row.images > 0 && <span>{row.images} image{row.images === 1 ? '' : 's'}</span>}
         {row.attachments > 0 && <span>{row.attachments} document{row.attachments === 1 ? '' : 's'}</span>}
       </div>
 
       {row.error && (
-        <p style={s('margin:10px 0 0;padding:9px 12px;background:#2c1719;border:1px solid #502624;border-radius:9px;font-size:14px;color:#ffb3ad;overflow-wrap:anywhere;')}>
+        <p style={s('margin:10px 0 0;padding:9px 12px;background:#fde8e9;border:1px solid #f0b8b3;border-radius:9px;font-size:14px;color:#8a1509;overflow-wrap:anywhere;')}>
           {row.error}
         </p>
       )}
 
       {answer && (
-        <div style={s('margin-top:10px;border-top:1px solid #19191c;padding-top:10px;')}>
+        <div style={s('margin-top:10px;border-top:1px solid #eaeff1;padding-top:10px;')}>
           <AnswerText text={shown} />
           {long && (
             <Hover tag="button" type="button" onClick={() => setOpen(!open)}
-              base="margin-top:8px;background:none;border:none;padding:0;font:inherit;font-size:13.5px;font-weight:600;color:#e0554f;text-decoration:underline;cursor:pointer;"
-              hover="color:#f0817c;">
+              base="margin-top:8px;background:none;border:none;padding:0;font:inherit;font-size:13.5px;font-weight:600;color:#005eb8;text-decoration:underline;cursor:pointer;"
+              hover="color:#003087;">
               {open ? 'Show less' : `Show the whole answer (${number(answer.length)} characters)`}
             </Hover>
           )}
@@ -283,8 +283,8 @@ function QuestionCard({ row, machine, onSearch }) {
 
       {onSearch && (
         <Hover tag="button" type="button" onClick={() => onSearch(row.question)}
-          base="margin-top:9px;background:none;border:none;padding:0;font:inherit;font-size:13px;color:#9a9aa3;text-decoration:underline;cursor:pointer;"
-          hover="color:#e0554f;">Find every time this was asked</Hover>
+          base="margin-top:9px;background:none;border:none;padding:0;font:inherit;font-size:13px;color:#4c6272;text-decoration:underline;cursor:pointer;"
+          hover="color:#005eb8;">Find every time this was asked</Hover>
       )}
     </li>
   );
@@ -390,11 +390,11 @@ export default function QuestionsView({ range, machineId, onMachine }) {
 
   return (
     <>
-      <p style={s('font-size:16.5px;color:#9a9aa3;margin:0 0 6px;line-height:1.55;max-width:70ch;')}>
+      <p style={s('font-size:16.5px;color:#4c6272;margin:0 0 6px;line-height:1.55;max-width:70ch;')}>
         Every question put to the assistant and the answer it gave, newest first. The answer is stored as it was
         shown, so it still says what the reader saw after the Notebook page behind it has been rewritten.
       </p>
-      <p style={s('font-size:14px;color:#74747d;margin:0 0 20px;line-height:1.5;max-width:70ch;')}>
+      <p style={s('font-size:14px;color:#768692;margin:0 0 20px;line-height:1.5;max-width:70ch;')}>
         Only the assistant writes here. The tools that exist to have a consultation pasted into them &mdash; Signpost,
         Reason for appointment, Code a document &mdash; record nothing but that they were used. Answers have only been
         kept since this log was added: questions asked before that are on the other tab, counted but without the
@@ -411,28 +411,28 @@ export default function QuestionsView({ range, machineId, onMachine }) {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search questions and answers…"
           aria-label="Search questions and answers"
-          style={s('flex:1;min-width:200px;font:inherit;font-size:15px;padding:8px 12px;border:2px solid #9a9aa3;border-radius:9px;background:#141416;')}
+          style={s('flex:1;min-width:200px;font:inherit;font-size:15px;padding:8px 12px;border:2px solid #4c6272;border-radius:9px;background:#fff;')}
         />
 
         <Hover tag="button" type="button" onClick={load} disabled={loading}
-          base="display:inline-flex;align-items:center;gap:7px;border:1px solid #26262a;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;background:#141416;color:#e0554f;cursor:pointer;"
-          hover="border-color:#e0554f;background:#1b1b1f;">
+          base="display:inline-flex;align-items:center;gap:7px;border:1px solid #d8dde0;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;background:#fff;color:#005eb8;cursor:pointer;"
+          hover="border-color:#005eb8;background:#f0f6fb;">
           <Svg w={15} sw={2.2}>{Icons.refresh}</Svg>{loading ? 'Reading…' : 'Refresh'}
         </Hover>
       </div>
 
       {selected && (
-        <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;padding:11px 15px;background:#221a1a;border:1px solid #4a3330;border-radius:10px;font-size:15px;color:#ea6a64;')}>
+        <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;padding:11px 15px;background:#e8f1f8;border:1px solid #aac7e0;border-radius:10px;font-size:15px;color:#00437e;')}>
           <span>Only questions asked on <strong>{machineName(selected)}</strong>.</span>
           <Hover tag="button" type="button" onClick={() => onMachine('')}
-            base="background:none;border:none;padding:0;font:inherit;font-size:14.5px;font-weight:600;color:#e0554f;text-decoration:underline;cursor:pointer;"
-            hover="color:#f0817c;">Show every machine</Hover>
+            base="background:none;border:none;padding:0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;text-decoration:underline;cursor:pointer;"
+            hover="color:#003087;">Show every machine</Hover>
         </div>
       )}
 
       {error && (
-        <p style={s('display:flex;gap:8px;align-items:flex-start;margin:0 0 18px;padding:12px 15px;background:#2c1719;border:1px solid #502624;border-radius:10px;font-size:15px;color:#ffb3ad;font-weight:600;')}>
-          <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={16} stroke="#ff7b72" sw={2.4}>{Icons.alertCircle}</Svg></span>{error}
+        <p style={s('display:flex;gap:8px;align-items:flex-start;margin:0 0 18px;padding:12px 15px;background:#fde8e9;border:1px solid #f0b8b3;border-radius:10px;font-size:15px;color:#8a1509;font-weight:600;')}>
+          <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={16} stroke="#d5281b" sw={2.4}>{Icons.alertCircle}</Svg></span>{error}
         </p>
       )}
 
@@ -473,18 +473,18 @@ export default function QuestionsView({ range, machineId, onMachine }) {
       </h2>
 
       {loading && !rows.length ? (
-        <div style={s(CARD + 'padding:26px;font-size:15px;color:#9a9aa3;')}>Reading the log…</div>
+        <div style={s(CARD + 'padding:26px;font-size:15px;color:#4c6272;')}>Reading the log…</div>
       ) : !rows.length ? (
-        <div style={s(CARD + 'padding:26px;font-size:15px;color:#9a9aa3;')}>
+        <div style={s(CARD + 'padding:26px;font-size:15px;color:#4c6272;')}>
           Nothing matches those filters. Try a longer time range, or clear the search.
         </div>
       ) : (
         <div style={s('display:flex;flex-direction:column;gap:20px;')}>
           {days.map((day) => (
             <section key={day.key}>
-              <h3 style={s('margin:0 0 10px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#9a9aa3;')}>
+              <h3 style={s('margin:0 0 10px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4c6272;')}>
                 {dayHeading(day.key)}
-                <span style={s('float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#74747d;')}>
+                <span style={s('float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#768692;')}>
                   {number(day.rows.length)}
                 </span>
               </h3>
@@ -503,8 +503,8 @@ export default function QuestionsView({ range, machineId, onMachine }) {
 
           {hasMore && (
             <Hover tag="button" type="button" onClick={loadMore} disabled={loadingMore}
-              base="align-self:flex-start;border:1px solid #26262a;border-radius:10px;padding:11px 18px;font:inherit;font-size:15px;font-weight:600;background:#141416;color:#e0554f;cursor:pointer;"
-              hover="border-color:#e0554f;background:#1b1b1f;">
+              base="align-self:flex-start;border:1px solid #d8dde0;border-radius:10px;padding:11px 18px;font:inherit;font-size:15px;font-weight:600;background:#fff;color:#005eb8;cursor:pointer;"
+              hover="border-color:#005eb8;background:#f0f6fb;">
               {loadingMore ? 'Reading…' : 'Load older questions'}
             </Hover>
           )}

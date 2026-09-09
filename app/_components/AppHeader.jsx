@@ -29,6 +29,11 @@ import { HeaderSlot } from './AppShell';
  * had to be edited to stop passing it.
  * ------------------------------------------------------------------ */
 
+const PILL = 'display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease,color .15s ease;';
+const PILL_REST = 'background:#fff;border:1px solid #d8dde0;color:#005eb8;';
+const PILL_ON = 'background:#e8f1f8;border:1px solid #005eb8;color:#003087;';
+const PILL_HOVER = 'background:#e8f1f8;border-color:#005eb8;color:#003087;';
+
 export default function AppHeader({ v, subtitle = null, tabs = null, onContacts = null }) {
   // The directory opens over the page it was asked for from, and closes back
   // onto it. Nobody goes anywhere, so a half-typed question is still there
@@ -56,11 +61,8 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
       {canSources && (
         <Hover tag="button" type="button" onClick={() => v.onSetView(v.isKb ? 'assistant' : 'kb')}
           aria-pressed={v.isKb ? 'true' : 'false'} className="riva-contacts-pill"
-          base={'display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease,color .15s ease;'
-            + (v.isKb
-              ? 'background:rgba(224,85,79,.13);border:1px solid rgba(224,85,79,.30);color:#f0817c;'
-              : 'background:#141416;border:1px solid #26262a;color:#9a9aa3;')}
-          hover={v.isKb ? '' : 'background:#17171a;border-color:rgba(224,85,79,.30);color:#f0817c;'}>
+          base={PILL + (v.isKb ? PILL_ON : PILL_REST)}
+          hover={v.isKb ? '' : PILL_HOVER}>
           <Svg w={15} sw={2.1}>{Icons.book}</Svg>
           <span className="riva-contacts-pill-label">{v.isKb ? 'Back to questions' : 'Sources'}</span>
         </Hover>
@@ -68,14 +70,14 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
 
       {/* Page tabs (e.g. Rota / Staff) — a segmented control, at every size. */}
       {tabs && (
-        <div className="riva-page-tabs" style={s('display:inline-flex;align-items:center;gap:2px;background:#141416;border:1px solid #26262a;border-radius:9px;padding:3px;')}>
+        <div className="riva-page-tabs" style={s('display:inline-flex;align-items:center;gap:2px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:9px;padding:3px;')}>
           {tabs.items.map((t) => {
             const active = tabs.active === t.key;
             return (
               <Hover key={t.key} tag="button" onClick={() => tabs.onSelect(t.key)} className="riva-tab"
                 base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:7px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background-color .15s ease,color .15s ease;'
-                  + (active ? 'background:rgba(224,85,79,.13);color:#f0817c;' : 'background:none;color:#9a9aa3;')}
-                hover={active ? '' : 'color:#e9e9ec;'}>
+                  + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
+                hover={active ? '' : 'color:#212b32;'}>
                 <Svg w={15} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
               </Hover>
             );
@@ -91,8 +93,7 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
       {ownsSheet && (
         <Hover tag="button" type="button" onClick={openContacts} className="riva-contacts-pill"
           aria-label="Contacts" aria-haspopup="dialog" aria-expanded={contactsOpen ? 'true' : 'false'}
-          base="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:9px;background:#141416;border:1px solid #26262a;color:#9a9aa3;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease,color .15s ease;"
-          hover="background:#17171a;border-color:rgba(224,85,79,.30);color:#f0817c;">
+          base={PILL + PILL_REST} hover={PILL_HOVER}>
           <Svg w={15} sw={2.1}>{Icons.phone}</Svg>
           <span className="riva-contacts-pill-label">Contacts</span>
         </Hover>

@@ -17,17 +17,14 @@
  * -----
  * `almoayyed` is the recipe exactly as exported: near-black maroon and
  * plum on warm grey. It is kept whole so it can still be compared with
- * the editor, but it is not what the Q&A uses.
+ * the editor, but it is not what the Q&A uses — this page sets #212b32
+ * text straight over its background, and dark text on those blobs
+ * cannot be read.
  *
- * `ember` keeps the geometry, blend and grain and swaps the palette for
- * the dark scheme's own: the near-black page, a bank of coal to one
- * side, and the accent's ember low in the corner — a heat rather than a
- * colour. It is the default.
- *
- * These are washes UNDER text, so the rule that decides them is the
- * contrast floor, not the picture: every layer stays dark enough that
- * #e9e9ec body type clears it comfortably wherever a blob happens to
- * drift. That is why the ember is set at a tenth of its strength.
+ * `nhs` keeps the geometry, blend and grain and swaps the palette for
+ * the page's own — the practice grey-blue, NHS blue, NHS light blue —
+ * at strengths that leave body text well clear of the contrast floor.
+ * That is the default.
  * ------------------------------------------------------------------ */
 
 const NOISE = "url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.280'/></svg>\")";
@@ -35,7 +32,7 @@ const NOISE = "url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' 
 const TONES = {
   // The exported recipe, verbatim.
   almoayyed: {
-    backgroundColor: '#28282a',
+    backgroundColor: '#D7D5D5',
     layers: [
       'radial-gradient(circle at 66.94% 46.43%, rgba(215, 213, 213, 1) 0%, rgba(215, 213, 213, 0.844) 19.02%, rgba(215, 213, 213, 0.5) 38.05%, rgba(215, 213, 213, 0.156) 57.07%, rgba(215, 213, 213, 0) 76.1%)',
       'radial-gradient(circle at 34.69% 66.31%, rgba(49, 5, 39, 1) 0%, rgba(49, 5, 39, 0.844) 12.73%, rgba(49, 5, 39, 0.5) 25.45%, rgba(49, 5, 39, 0.156) 38.18%, rgba(49, 5, 39, 0) 50.9%)',
@@ -44,24 +41,23 @@ const TONES = {
     ],
     grain: 0.28,
   },
-  // The same shape in the dark scheme's palette: coal at the top right,
-  // a cooler slate low on the left, and the accent's ember in the far
-  // corner at a tenth of its strength — enough to warm the corner, never
-  // enough to be a colour behind a sentence.
-  ember: {
-    backgroundColor: '#0b0b0c',
+  // The same shape in the practice's palette, kept light enough to read
+  // over: a pale wash rather than colour — mint at the top right, NHS
+  // blue low on the left, a lilac cast between them, all under white.
+  nhs: {
+    backgroundColor: '#eef3f6',
     layers: [
-      'radial-gradient(circle at 78% 12%, rgba(42, 42, 48, 0.9) 0%, rgba(42, 42, 48, 0.5) 28%, rgba(42, 42, 48, 0.16) 52%, rgba(42, 42, 48, 0) 70%)',
-      'radial-gradient(circle at 14% 84%, rgba(30, 32, 40, 0.9) 0%, rgba(30, 32, 40, 0.5) 26%, rgba(30, 32, 40, 0.15) 50%, rgba(30, 32, 40, 0) 68%)',
-      'radial-gradient(circle at 88% 78%, rgba(224, 85, 79, 0.10) 0%, rgba(224, 85, 79, 0.05) 24%, rgba(224, 85, 79, 0.015) 46%, rgba(224, 85, 79, 0) 64%)',
-      'radial-gradient(circle at 46% 40%, rgba(26, 26, 30, 0.95) 0%, rgba(26, 26, 30, 0.6) 22%, rgba(26, 26, 30, 0.28) 42%, rgba(26, 26, 30, 0) 66%)',
+      'radial-gradient(circle at 78% 12%, rgba(196, 232, 226, 0.85) 0%, rgba(196, 232, 226, 0.45) 28%, rgba(196, 232, 226, 0.14) 52%, rgba(196, 232, 226, 0) 70%)',
+      'radial-gradient(circle at 14% 84%, rgba(179, 202, 232, 0.8) 0%, rgba(179, 202, 232, 0.42) 26%, rgba(179, 202, 232, 0.13) 50%, rgba(179, 202, 232, 0) 68%)',
+      'radial-gradient(circle at 88% 78%, rgba(206, 205, 236, 0.6) 0%, rgba(206, 205, 236, 0.3) 24%, rgba(206, 205, 236, 0.08) 46%, rgba(206, 205, 236, 0) 64%)',
+      'radial-gradient(circle at 46% 40%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 22%, rgba(255, 255, 255, 0.35) 42%, rgba(255, 255, 255, 0) 66%)',
     ],
-    grain: 0.16,
+    grain: 0.1,
   },
 };
 
-export default function GradientBackground({ className = '', style, tone = 'ember', grain, drift = true, vignette = true }) {
-  const recipe = TONES[tone] || TONES.ember;
+export default function GradientBackground({ className = '', style, tone = 'nhs', grain, drift = true, vignette = true }) {
+  const recipe = TONES[tone] || TONES.nhs;
   const grainOpacity = grain == null ? recipe.grain : grain;
   // The filter id is per tone, so two backgrounds on one page cannot
   // borrow each other's noise.
@@ -99,7 +95,7 @@ export default function GradientBackground({ className = '', style, tone = 'embe
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(125% 95% at 50% 42%, rgba(11,11,12,0) 38%, rgba(11,11,12,0.6) 74%, rgba(11,11,12,0.95) 100%)',
+            background: 'radial-gradient(125% 95% at 50% 42%, rgba(240,244,245,0) 38%, rgba(240,244,245,0.55) 74%, rgba(240,244,245,0.9) 100%)',
           }}
         />
       )}

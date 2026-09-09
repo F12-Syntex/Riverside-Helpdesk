@@ -22,7 +22,7 @@ Structure — apply all of these wherever they fit:
 - Use > blockquotes for tips, asides and "good to know" notes.
 - Bold (**…**) the key facts a reader scans for: names, phone numbers, times, deadlines, quantities, form/document names.
 - <mark>Highlight</mark> safety-critical warnings and must-not-miss rules.
-- Colour-code emphasis where it earns its place: <span style="color:#ff7b72">red for never-do / emergency actions</span>, <span style="color:#56c98a">green for always-do / confirmations</span>, <span style="color:#e0554f">blue for key informational callouts</span>. Also available: <u>underline</u> and <kbd>keyboard keys</kbd>. No other HTML tags or attributes.
+- Colour-code emphasis where it earns its place: <span style="color:#d5281b">red for never-do / emergency actions</span>, <span style="color:#007f3b">green for always-do / confirmations</span>, <span style="color:#005eb8">blue for key informational callouts</span>. Also available: <u>underline</u> and <kbd>keyboard keys</kbd>. No other HTML tags or attributes.
 - Fix spelling, punctuation and grammar throughout.
 
 Content rules — never break these:
