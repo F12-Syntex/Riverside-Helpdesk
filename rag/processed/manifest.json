@@ -1869,6 +1869,16 @@
       "title": "Zero Tolerance Policy The Riverside practice",
       "processedAt": "2026-07-24T06:26:28.112Z",
       "missingEmbeddings": 0
+    },
+    "reception-team-meeting-4-september-2026": {
+      "path": "rag/sources/Reception Team Meeting 4 September 2026.docx",
+      "sha256": "9a710389ffc551a386d80830c544e7fbf0fe7b96019fb99757222ca36b19cd10",
+      "size": 27627,
+      "mtime": 1789134382150.2234,
+      "chunks": 17,
+      "title": "Reception Team Meeting 4 September 2026",
+      "processedAt": "2026-09-11T13:46:41.002Z",
+      "missingEmbeddings": 17
     }
   }
 }
