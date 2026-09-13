@@ -109,12 +109,15 @@ html { scrollbar-gutter: stable; }
    sums again here, where its own values are in scope; the phone's lift
    of zero is repeated below for the same reason. */
 .riva-app-shell {
+  /* The composer is taller than the lookup's pill: a question row and a
+     toolbar under it. Set here, on the Q&A, so the lookup keeps its own. */
+  --riva-dock-field-h: 118px;
   --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-extras) + var(--riva-dock-pad-b));
   --riva-dock-group-h: calc(var(--riva-hero-text-h) + var(--riva-hero-gap) + var(--riva-dock-field-h) + var(--riva-dock-extras));
   --riva-dock-lift: max(0px, calc(53vh - var(--riva-dock-pad-b) - var(--riva-dock-group-h) / 2));
   --riva-hero-clear: calc(var(--riva-dock-lift) + var(--riva-dock-pad-b) + var(--riva-dock-extras) + var(--riva-dock-field-h) + var(--riva-hero-gap));
 }
-@media (max-width: 600px) { .riva-app-shell { --riva-dock-lift: 0px; } }
+@media (max-width: 600px) { .riva-app-shell { --riva-dock-lift: 0px; --riva-dock-field-h: 106px; } }
 
 /* A phone's 100vh is the tall viewport, which runs on under the browser's
    own toolbar, while the dock — fixed to the bottom — sits above it. Both
@@ -571,9 +574,6 @@ body { overflow-x: hidden; }
  * the gutters back. Declared after .riva-dock-field so it wins. */
 .riva-dock-field-icon { padding: 0 54px !important; }
 
-/* The Q&A field carries a search icon on the left and its ask button on the
- * right, both inside the pill, so its gutters are cut to fit around them. */
-.riva-dock-field-search { padding: 0 70px 0 68px !important; }
 .riva-dock-send { transition: background-color .18s ease, box-shadow .18s ease; }
 .riva-dock-send:hover { box-shadow: 0 4px 14px rgba(0,94,184,.38); }
 
@@ -586,13 +586,10 @@ body { overflow-x: hidden; }
    disc sits where the search icon always sat and is the same size as the ask
    button opposite it, so the field is a box with a control at each end. The
    list is out of the flow, above the field, so opening it moves nothing. */
-.riva-modes {
-  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
-  width: 48px; height: 48px; z-index: 3;
-}
+.riva-modes { position: relative; flex: none; z-index: 3; }
 .riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
 .riva-modes-list {
-  position: absolute; left: -1px; bottom: calc(100% + 20px); z-index: 8;
+  position: absolute; left: 0; bottom: calc(100% + 14px); z-index: 8;
   min-width: 272px; max-width: min(340px, calc(100vw - 48px));
   background: #fff; border: 1px solid #dde4e7; border-radius: 14px;
   box-shadow: 0 12px 34px rgba(33,43,50,.18); overflow: hidden;
@@ -600,7 +597,6 @@ body { overflow-x: hidden; }
 }
 .riva-mode:focus-visible { outline: 2px solid #005eb8; outline-offset: -2px; }
 @media (max-width: 600px) {
-  .riva-modes { left: 8px; width: 44px; height: 44px; }
   .riva-modes-list { min-width: 244px; max-width: calc(100vw - 32px); }
 }
 @media (prefers-reduced-motion: reduce) { .riva-modes-list { animation: none; } }
@@ -670,8 +666,10 @@ body { overflow-x: hidden; }
 
   .riva-dock-field { font-size: 17px !important; padding: 0 20px !important; }
   .riva-dock-field-icon { padding: 0 46px !important; }
-  .riva-dock-field-search { padding: 0 62px 0 60px !important; }
-  .riva-dock-send { width: 44px !important; height: 44px !important; right: 8px !important; }
+  /* !important: the composer's own rules come later in this file. */
+  .riva-composer-input { font-size: 17px !important; padding: 0 16px !important; }
+  .riva-composer-bar { padding: 0 6px 0 8px !important; }
+  .riva-composer-hint { display: none !important; }
   /* The glow is a desktop pleasure; on a phone it eats the small margin
      between the dock and the edge of the screen. */
   .riva-dock-form::before { display: none; }
@@ -755,15 +753,15 @@ body { overflow-x: hidden; }
 /* The way back is the one solid thing in the bar: NHS blue, so it is
    found without looking for it. It arrives when the answer does. */
 .riva-crumb-back { animation: rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both; }
+/* The row is pinned to the middle of the screen, so when Back is on the
+   bar the brand keeps its mark and drops its name to stay clear of it. */
+.riva-top:has(.riva-crumb-lead:not(:empty)) .riva-brand-name { display: none; }
 
 /* The row of tools, dead centre. A glass pill with the active tool in
    white, the only coloured thing in the bar, which is what makes it
    findable without reading. */
 .riva-topnav {
-  /* In the flow, centred between the groups either side of it, rather
-     than pinned to the middle of the screen: a Back control at the left
-     then moves the row along instead of sliding underneath it. */
-  flex: none; margin: 0 auto;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; align-items: center; gap: 2px; padding: 4px;
   border-radius: 999px;
   background: rgba(33,43,50,.06); border: 1px solid rgba(33,43,50,.05);
@@ -899,6 +897,52 @@ body { overflow-x: hidden; }
 }
 .riva-starter:hover { background: #fff; color: var(--rv-accent); box-shadow: 0 4px 14px rgba(33,43,50,.10); transform: translateY(-1px); }
 .riva-starter-ico { display: flex; color: var(--rv-accent); }
+
+/* ---- the composer ------------------------------------------------ */
+
+/* One card: the question on top, the toolbar under it. The shape of the
+   21st.dev "Input Bar"; the surface and the lift are the ones the pill
+   had, so the dock is the same live thing in a new shape. */
+.riva-composer {
+  position: relative; display: flex; flex-direction: column;
+  height: var(--riva-dock-field-h); width: 100%;
+  background: #fff; border: 1px solid rgba(255,255,255,.9); border-radius: 22px;
+  box-shadow: 0 2px 4px rgba(33,43,50,.05), 0 18px 48px rgba(0,48,135,.14);
+  transition: border-color .18s ease, box-shadow .22s ease;
+}
+.riva-composer:hover { border-color: rgba(0,94,184,.28); }
+.riva-dock-form:focus-within .riva-composer {
+  border-color: #005eb8;
+  box-shadow: 0 0 0 3px rgba(0,94,184,.08), 0 4px 10px rgba(33,43,50,.07), 0 18px 44px rgba(33,43,50,.16);
+}
+/* Keyboard focus keeps the NHS yellow, worn by the card rather than the
+   line inside it. */
+.riva-dock-form:has(.riva-composer-input:focus-visible) .riva-composer { outline: 3px solid #ffeb3b; outline-offset: 0; }
+.riva-composer-input {
+  flex: 1; min-width: 0; width: 100%;
+  border: none !important; background: transparent !important;
+  outline: none !important; box-shadow: none !important;
+  font: inherit; font-size: 19.5px; padding: 0 22px; color: #212b32;
+}
+.riva-composer-input::placeholder { color: #768692; }
+.riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 8px 0 12px; }
+.riva-composer-hint {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: #8a99a3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.riva-modes-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Status text with a light passing along it: the 21st.dev "Text Shimmer",
+   as one class. The gradient repeats, so with the sweep stopped by a
+   reduced-motion setting the words are still fully coloured. */
+.riva-shimmer {
+  display: inline-block;
+  background-image: linear-gradient(90deg, #4c6272 0%, #4c6272 38%, #005eb8 50%, #4c6272 62%, #4c6272 100%);
+  background-size: 250% 100%; background-repeat: repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: rivaShimmer 2s linear infinite;
+}
+@keyframes rivaShimmer { from { background-position: 100% center; } to { background-position: -150% center; } }
 
 /* ---- the palette ------------------------------------------------- */
 

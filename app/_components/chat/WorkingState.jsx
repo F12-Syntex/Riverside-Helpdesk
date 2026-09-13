@@ -1,6 +1,7 @@
 'use client';
 
 import { s, Svg, Icons } from '../ui';
+import TextShimmer from './TextShimmer';
 
 /* ------------------------------------------------------------------ *
  * What the assistant is doing, while it does it.
@@ -35,7 +36,9 @@ export default function WorkingState({ steps = [], statusText = '' }) {
             <Svg w={r.done ? 17 : 20} sw={r.done ? 2.6 : 2.4}>{r.done ? Icons.check : Icons.spinner}</Svg>
           </span>
           <span style={s('flex:1;min-width:0;')}>
-            <span style={s('display:block;font-size:16.5px;line-height:1.4;font-weight:' + (r.done ? 400 : 600) + ';color:' + (r.done ? '#4c6272' : '#212b32') + ';')}>{r.label}</span>
+            <span style={s('display:block;font-size:16.5px;line-height:1.4;font-weight:' + (r.done ? 400 : 600) + ';color:' + (r.done ? '#4c6272' : '#212b32') + ';')}>
+              {r.done ? r.label : <TextShimmer>{r.label}</TextShimmer>}
+            </span>
             {r.detail && (
               <span style={s('display:block;font-size:14.5px;line-height:1.4;color:#768692;margin-top:2px;overflow-wrap:anywhere;')}>{r.detail}</span>
             )}
@@ -48,7 +51,7 @@ export default function WorkingState({ steps = [], statusText = '' }) {
           <span style={s('flex:none;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;color:#005eb8;animation:rivaSpin 1.1s linear infinite;')}>
             <Svg w={20} sw={2.4}>{Icons.spinner}</Svg>
           </span>
-          <span style={s('flex:1;min-width:0;font-size:16.5px;font-weight:600;color:#212b32;line-height:1.4;')}>{trailing}</span>
+          <span style={s('flex:1;min-width:0;font-size:16.5px;font-weight:600;color:#212b32;line-height:1.4;')}><TextShimmer>{trailing}</TextShimmer></span>
         </li>
       )}
     </ul>

@@ -99,7 +99,11 @@ const FOLDER_ROW = { name: null, kind: 'folder', label: MODE_FOLDER.label, icon:
 const BACK_ROW = { name: null, kind: 'back', label: 'Back', icon: 'arrowLeft', summary: 'All kinds of answer' };
 const rowsFor = (inFolder) => (inFolder ? [BACK_ROW, ...FOLDER_MODES] : [...TOP_MODES, FOLDER_ROW]);
 
-export default function ModeSwitch({ mode, onPick, busy = false }) {
+// `ready` is the host saying it has read the kept mode back from storage.
+// Until then the pill is drawn blank: drawn with the default it would show
+// the search glass for a frame and then swap to whatever was kept, which
+// is the one flash on the opening screen that reads as a bug.
+export default function ModeSwitch({ mode, onPick, busy = false, ready = true }) {
   const [open, setOpen] = React.useState(false);
   // Which row the keyboard is on. It starts on the armed mode rather than at
   // the top, so the first arrow key moves away from where you already are.
@@ -109,7 +113,7 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
   const wrapRef = React.useRef(null);
 
   const current = MODES.find((m) => m.name === mode) || MODES[0];
-  const armed = Boolean(current.name);
+  const armed = Boolean(current.name) && ready;
   const rows = rowsFor(inFolder);
 
   // The trigger, found rather than held: Hover renders the button for us and
@@ -243,14 +247,17 @@ export default function ModeSwitch({ mode, onPick, busy = false }) {
         title={current.summary}
         onClick={() => (open ? setOpen(false) : show())}
         className="riva-modes-btn"
-        base={'display:flex;align-items:center;justify-content:center;width:100%;height:100%;'
-          + 'border:none;border-radius:50%;padding:0;cursor:pointer;'
-          + 'transition:background .16s ease,color .16s ease;'
-          + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eaeff1;color:#4c6272;')}
-        hover={armed ? 'background:#00437f;' : 'background:#dbe3e7;color:#005eb8;'}>
+        base={'display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 9px 0 9px;'
+          + 'border:none;border-radius:999px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;'
+          + 'transition:color .16s ease,opacity .25s ease;'
+          + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eef2f4;color:#4c6272;')
+          + (ready ? '' : 'opacity:0;')}
+        hover={armed ? 'background:#00437f;' : 'background:#e1e8ec;color:#005eb8;'}>
         {busy
-          ? <Svg w={20} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-          : <Svg w={20} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
+          ? <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+          : <Svg w={16} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
+        <span className="riva-modes-label">{current.label}</span>
+        <Svg w={13} sw={2.4} style={s('opacity:.7;')}>{Icons.chevronDown}</Svg>
       </Hover>
 
       {open && (

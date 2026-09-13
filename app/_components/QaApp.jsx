@@ -207,6 +207,9 @@ class RiversidePracticeQA extends React.Component {
       // rather than here, because localStorage does not exist on the server and
       // the first render has to match the one the server sent.
       mode: '',
+      // Whether the kept mode has been read back yet. The pill in the field
+      // stays blank until it has (see ModeSwitch).
+      modeReady: false,
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
       // (the send is held, so the dock says so rather than looking dead), and
@@ -267,6 +270,9 @@ class RiversidePracticeQA extends React.Component {
       const kept = localStorage.getItem(MODE_KEY) || '';
       if (kept && isMode(kept)) this.setState({ mode: kept });
     } catch (e) {}
+    // Only now may the pill show a glyph: drawn any earlier it flashes the
+    // default and then swaps to the kept mode.
+    this.setState({ modeReady: true });
     // Arrived with a question already chosen in ?ask=. It is asked here,
     // through the ordinary path, so a link is a way in rather than a page
     // about the assistant. The parameter is dropped from the URL afterwards,
@@ -1958,6 +1964,7 @@ class RiversidePracticeQA extends React.Component {
       // The kind of answer, chosen with the button in the field rather than by
       // typing a slash. See app/_components/ModeSwitch.jsx.
       mode: this.state.mode,
+      modeReady: this.state.modeReady,
       onPickMode: (name) => self.pickMode(name),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
@@ -2154,20 +2161,30 @@ class RiversidePracticeQA extends React.Component {
                   here too; it is a mode now, and the page itself. */}
               <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
 
-              {/* The disc at the left of the field: the search glass, on a
-                  background that says it can be pressed, opening the list of
-                  modes over the box. It also carries the one moment the field
-                  is busy on its own account — the message typed, Enter
-                  pressed, and the text being checked for patient details
-                  before it goes anywhere (lib/safety/patient-data.mjs) — as a
-                  spinner in the glass's place, because a field that looked
-                  dead for even half a second would have somebody pressing
-                  Enter again. See app/_components/ModeSwitch.jsx. */}
-              <ModeSwitch mode={v.mode} onPick={v.onPickMode} busy={v.isScreening} />
-              <input ref={this.inputRef} className={'riva-input riva-dock-field riva-dock-field-search' + (v.isGenerating ? ' riva-dock-live' : '')} value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" style={s('flex:1;min-width:0;font:inherit;border:2px solid #d8dde0;border-radius:999px;background:#f0f4f5;outline:none;')} />
-              <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="position:absolute;right:9px;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" hover="background:#003087;">
-                <Svg w={21} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
-              </Hover>
+              {/* The composer. The shape of the 21st.dev Agent Elements
+                  "Input Bar", in this project's idiom: one card, the question
+                  on its top row and a toolbar under it — the kind of answer as
+                  a labelled pill (see ModeSwitch), how to attach something,
+                  and the ask button. Enter still asks; a picture can still be
+                  pasted into the box, and a document dropped anywhere on the
+                  page. The pill also carries the one moment the field is busy
+                  on its own account — the message being checked for patient
+                  details before it goes anywhere (lib/safety/patient-data.mjs)
+                  — as a spinner, because a field that looked dead for even
+                  half a second would have somebody pressing Enter again. */}
+              <div className={'riva-composer' + (v.isGenerating ? ' riva-dock-live' : '')}>
+                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" />
+                <div className="riva-composer-bar">
+                  <ModeSwitch mode={v.mode} onPick={v.onPickMode} busy={v.isScreening} ready={v.modeReady} />
+                  <span className="riva-composer-hint" aria-hidden="true">
+                    <Svg w={13} sw={2.2}>{Icons.paperclip}</Svg>
+                    Drop a letter or paste a picture
+                  </span>
+                  <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="flex:none;width:40px;height:40px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" hover="background:#003087;">
+                    <Svg w={19} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
+                  </Hover>
+                </div>
+              </div>
             </form>
 
             {/* Under the box on the opening screen only: four of the things
