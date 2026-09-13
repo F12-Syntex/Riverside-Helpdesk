@@ -78,7 +78,7 @@ html { scrollbar-gutter: stable; }
   /* The heading, at the one line it runs to. Only used to work the lift out —
      the text itself is never held to it, and a second line simply pushes the
      block up by that much. */
-  --riva-hero-text-h: 94px;
+  --riva-hero-text-h: 56px;
   /* The opening screen as one object: heading, the margin under it, and the
      field. */
   --riva-dock-group-h: calc(
@@ -715,32 +715,38 @@ body { overflow-x: hidden; }
 
 /* ---- the bar ---------------------------------------------------- */
 
-/* A bar you can see: glass, with an edge, arriving from above. */
+/* Not a bar: a row of glass islands floating over the light, arriving
+   from above. The page shows between them. */
 .riva-top {
   flex: none; height: var(--rv-top-h);
   position: relative; z-index: 30;
   display: flex; align-items: center; gap: 10px;
-  padding: 0 18px;
-  background: rgba(255,255,255,.62);
-  border-bottom: 1px solid rgba(255,255,255,.85);
-  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
-  box-shadow: 0 1px 0 rgba(33,43,50,.05), 0 12px 34px rgba(0,48,135,.08);
+  padding: 0 16px;
   animation: rivaBarIn .6s cubic-bezier(.2,.7,.3,1) both;
 }
+.riva-island {
+  display: flex; align-items: center; gap: 6px;
+  height: 46px; padding: 0 6px; border-radius: 999px;
+  background: rgba(255,255,255,.66); border: 1px solid rgba(255,255,255,.9);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 12px 34px rgba(0,48,135,.10);
+}
+.riva-top-left { flex: none; padding-left: 4px; }
 @keyframes rivaBarIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 
 .riva-brand {
-  flex: none; display: flex; align-items: center; gap: 11px;
-  height: 38px; padding: 0 12px 0 6px; border-radius: 999px;
+  flex: none; display: flex; align-items: center; gap: 10px;
+  height: 36px; padding: 0 12px 0 6px; border-radius: 999px;
   text-decoration: none; color: inherit;
   transition: background-color .15s ease;
 }
-.riva-brand:hover { background: var(--rv-glass); }
+.riva-brand:hover { background: rgba(255,255,255,.8); }
 .riva-brand-mark { flex: none; display: flex; }
-.riva-brand-mark img { height: 20px; width: auto; display: block; border-radius: 3px; }
+.riva-brand-mark img { height: 22px; width: auto; display: block; border-radius: 4px; }
 .riva-brand-name {
-  font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--rv-ink);
-  white-space: nowrap;
+  font-size: 15px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap;
+  background: linear-gradient(95deg, #003087, #005eb8 60%, #2f8fd8);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
 /* The way back, ahead of everything but the brand. `:empty` is doing
@@ -761,9 +767,11 @@ body { overflow-x: hidden; }
    findable without reading. */
 .riva-topnav {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  display: flex; align-items: center; gap: 2px; padding: 4px;
-  border-radius: 999px;
-  background: rgba(33,43,50,.06); border: 1px solid rgba(33,43,50,.05);
+  display: flex; align-items: center; gap: 2px; padding: 5px;
+  height: 46px; border-radius: 999px;
+  background: rgba(255,255,255,.66); border: 1px solid rgba(255,255,255,.9);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 12px 34px rgba(0,48,135,.10);
 }
 /* The tools arrive one after another, left to right. */
 .riva-topnav-item { animation: rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both; }
@@ -779,14 +787,19 @@ body { overflow-x: hidden; }
   text-decoration: none; white-space: nowrap;
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
-.riva-topnav-item:hover { color: var(--rv-ink); background: rgba(255,255,255,.7); }
-.riva-topnav-item.is-active { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.14), 0 4px 12px rgba(0,48,135,.10); }
+.riva-topnav-item:hover { color: var(--rv-accent); background: rgba(255,255,255,.9); }
+.riva-topnav-item.is-active {
+  color: #fff;
+  background: linear-gradient(120deg, #003087, #005eb8 55%, #2f8fd8);
+  box-shadow: 0 4px 14px rgba(0,94,184,.35);
+}
+.riva-topnav-item.is-active .riva-topnav-ico { opacity: 1; }
 .riva-topnav-ico { display: flex; color: currentColor; opacity: .85; }
 
 /* Where the reader is, said in words when the row is folded away. */
 .riva-top-here { display: none; }
 
-.riva-top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.riva-top-right { margin-left: auto; gap: 6px; }
 /* Where a tool's own controls land (see AppHeader). It takes no room when
    the page has none, so the bar is the same height either way. */
 .riva-crumb-actions { display: flex; align-items: center; gap: 8px; }
@@ -794,13 +807,13 @@ body { overflow-x: hidden; }
 
 .riva-top-btn {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; border-radius: 999px;
-  background: rgba(255,255,255,.75); border: 1px solid rgba(33,43,50,.08);
-  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  width: 34px; height: 34px; border-radius: 999px;
+  background: transparent; border: 1px solid transparent;
   color: var(--rv-ink-2); cursor: pointer;
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
 .riva-top-btn:hover, .riva-top-btn.is-on { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.12); }
+.riva-top-menuwrap { display: flex; }
 
 .riva-top-menuwrap { position: relative; }
 .riva-menu {
@@ -862,8 +875,18 @@ body { overflow-x: hidden; }
 
 /* ---- the opening screen ----------------------------------------- */
 
+/* The heading in the light's own colours, drifting as slowly as the
+   light does. The gradient repeats, so it is whole at any position. */
+.riva-hero-grad {
+  background-image: linear-gradient(100deg, #003087 0%, #005eb8 28%, #2f8fd8 48%, #6d5ce8 68%, #003087 100%);
+  background-size: 220% 100%; background-repeat: repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: rivaHeroGrad 14s linear infinite;
+}
+@keyframes rivaHeroGrad { from { background-position: 0% center; } to { background-position: 220% center; } }
+
 /* The line above the heading: whose assistant this is, in a glass pill,
-   where Emergent puts the name of the project. */
+   where Emergent puts the name of the project. Unused at present. */
 .riva-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
   height: 30px; padding: 0 12px 0 8px; margin: 0 auto 18px;
@@ -929,7 +952,8 @@ body { overflow-x: hidden; }
    above it, which read as a cut-off edge. The card is the surface. */
 .riva-composer-input:focus { background: transparent !important; border: none !important; }
 .riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 8px 0 12px; border-top: 1px solid #e6edf2; }
-.riva-composer-bar .riva-dock-send { margin-left: auto; }
+.riva-composer-bar .riva-dock-send { margin-left: auto; background: linear-gradient(120deg, #003087, #005eb8 55%, #2f8fd8) !important; box-shadow: 0 6px 16px rgba(0,94,184,.30); }
+.riva-composer-bar .riva-dock-send:hover { filter: brightness(1.08); }
 .riva-modes-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Status text with a light passing along it: the 21st.dev "Text Shimmer",
@@ -1007,7 +1031,8 @@ body { overflow-x: hidden; }
   .riva-crumb-back-label { display: none; }
   .riva-brand-name { display: none; }
   .riva-brand { padding: 0 6px; }
-  .riva-top { padding: 0 12px; }
+  .riva-top { padding: 0 10px; }
+  .riva-island { height: 42px; }
 }
 
 /* A tool with tabs in the bar (the rota) has no room for the row beside

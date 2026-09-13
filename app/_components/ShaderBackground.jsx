@@ -148,11 +148,11 @@ function compile(gl, type, src) {
 
 // The still version, for every reader and machine the canvas is not for.
 const FALLBACK =
-  'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.55) 0%, rgba(65,182,230,0) 70%),' +
-  'radial-gradient(50% 50% at 12% 14%, rgba(143,120,245,.38) 0%, rgba(143,120,245,0) 70%),' +
-  'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.34) 0%, rgba(0,94,184,0) 70%),' +
-  'radial-gradient(50% 50% at 88% 86%, rgba(250,153,194,.30) 0%, rgba(250,153,194,0) 70%),' +
-  'radial-gradient(45% 45% at 60% 60%, rgba(0,164,153,.18) 0%, rgba(0,164,153,0) 70%),' +
+  'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.75) 0%, rgba(65,182,230,0) 70%),' +
+  'radial-gradient(50% 50% at 12% 14%, rgba(143,120,245,.55) 0%, rgba(143,120,245,0) 70%),' +
+  'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.48) 0%, rgba(0,94,184,0) 70%),' +
+  'radial-gradient(50% 50% at 88% 86%, rgba(250,153,194,.45) 0%, rgba(250,153,194,0) 70%),' +
+  'radial-gradient(45% 45% at 60% 60%, rgba(0,164,153,.26) 0%, rgba(0,164,153,0) 70%),' +
   '#ecf2f8';
 
 export default function ShaderBackground() {

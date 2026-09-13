@@ -283,19 +283,24 @@ export default function AppShell({ children }) {
 
   return (
     <div className="riva-shell">
+      {/* Three glass islands floating on the light, not a bar: who this is
+          (with the way back beside it), the tools, and what can be done
+          here. Nothing joins them, so the page runs edge to edge behind. */}
       <header className="riva-top">
-        {/* Whose service this is, and the way back to the front door. The
-            logo is here and nowhere else. */}
-        <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
-          <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
-          <span className="riva-brand-name">The Riverside Practice</span>
-        </Link>
+        <div className="riva-top-left riva-island">
+          {/* Whose service this is, and the way back to the front door. The
+              logo is here and nowhere else. */}
+          <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
+            <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
+            <span className="riva-brand-name">Riverside</span>
+          </Link>
 
-        {/* A page's way back, beside the brand it is leaving from. */}
-        <div className="riva-crumb-lead" ref={setLead} />
+          {/* A page's way back, beside the brand it is leaving from. */}
+          <div className="riva-crumb-lead" ref={setLead} />
 
-        {/* Where the reader is, on a phone, where the row is folded away. */}
-        <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
+          {/* Where the reader is, when the row is folded away. */}
+          <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
+        </div>
 
         <nav className="riva-topnav" aria-label="Tools">
           {ROW.map((item) => {
@@ -311,7 +316,7 @@ export default function AppShell({ children }) {
           })}
         </nav>
 
-        <div className="riva-top-right">
+        <div className="riva-top-right riva-island">
           {/* Where a tool's own controls land (see AppHeader). */}
           <div className="riva-crumb-actions" ref={setSlot} />
           <button type="button" className="riva-top-btn riva-top-search" onClick={() => setPaletteOpen(true)}
