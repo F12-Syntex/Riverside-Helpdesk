@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.41.4` | 2026-09-14 | fix | `e8a9017` | fix: a mostly white page with a faint wash |
+| `5.41.3` | 2026-09-14 | docs | `f82229a` | docs: record 5.41.2 in the versions table |
 | `5.41.2` | 2026-09-14 | fix | `91c14af` | fix: one gradient, not several |
 | `5.41.1` | 2026-09-14 | docs | `c794fc5` | docs: record 5.41.0 in the versions table |
 | `5.41.0` | 2026-09-14 | feat | `dae956b` | feat: Back under the brand, one selected colour, a light that stays |
