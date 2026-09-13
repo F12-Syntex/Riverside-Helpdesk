@@ -34,7 +34,7 @@ import React from 'react';
 
 const PALETTE = {
   // Base, and three lights, as normalised RGB.
-  base:  [0.965, 0.976, 0.984], // #f6f9fb — the page
+  base:  [0.925, 0.950, 0.972], // #ecf2f8 — the page, already a tint
   blue:  [0.000, 0.369, 0.722], // #005eb8 — NHS blue
   light: [0.255, 0.714, 0.902], // #41b6e6 — NHS light blue
   aqua:  [0.000, 0.643, 0.600], // #00a499 — NHS aqua green
@@ -116,16 +116,16 @@ void main() {
 
   // Washed to a tint: strength is what keeps body text readable over it.
   vec3 col = u_base;
-  col = mix(col, u_c2, wLight  * 0.72);
-  col = mix(col, u_c4, wViolet * 0.46);
-  col = mix(col, u_c1, wBlue   * 0.50);
-  col = mix(col, u_c5, wPink   * 0.36);
-  col = mix(col, u_c3, wAqua   * 0.30);
+  col = mix(col, u_c2, wLight  * 0.82);
+  col = mix(col, u_c4, wViolet * 0.58);
+  col = mix(col, u_c1, wBlue   * 0.58);
+  col = mix(col, u_c5, wPink   * 0.44);
+  col = mix(col, u_c3, wAqua   * 0.36);
 
   // A wash of the page at the foot, so the dock and any long answer sit
   // on something nearly plain.
   float foot = smoothstep(0.0, 0.42, uv.y);
-  col = mix(u_base, col, 0.62 + 0.38 * foot);
+  col = mix(u_base, col, 0.86 + 0.14 * foot);
 
   // Film grain, the same pass every Shader Builder export carries.
   float g = hash(gl_FragCoord.xy + fract(u_time)) - 0.5;
@@ -153,7 +153,7 @@ const FALLBACK =
   'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.34) 0%, rgba(0,94,184,0) 70%),' +
   'radial-gradient(50% 50% at 88% 86%, rgba(250,153,194,.30) 0%, rgba(250,153,194,0) 70%),' +
   'radial-gradient(45% 45% at 60% 60%, rgba(0,164,153,.18) 0%, rgba(0,164,153,0) 70%),' +
-  '#f6f9fb';
+  '#ecf2f8';
 
 export default function ShaderBackground() {
   const ref = React.useRef(null);

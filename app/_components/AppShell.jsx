@@ -23,6 +23,15 @@ export const HeaderSlot = React.createContext(null);
    the shell has mounted, and empty on the pages that pass no back. */
 export const HeaderLeadSlot = React.createContext(null);
 
+/* Whether there is a shell at all. True from the first render, server
+   included, where the two slots above are still null. AppHeader reads it
+   to know that a null slot means "not mounted yet" rather than "no shell":
+   the difference between holding its controls for one frame and drawing
+   a 56px row of its own into the page, which the server did, and which
+   vanished on hydration and shoved the opening screen up by that much —
+   the jump that read as a broken entrance. */
+export const ShellPresence = React.createContext(false);
+
 /* ------------------------------------------------------------------ *
  * The shell.
  *
@@ -323,9 +332,11 @@ export default function AppShell({ children }) {
           tool that asks for the whole screen gets the whole of what is
           left of it and the bar never scrolls away. */}
       <div className="riva-shell-body">
-        <HeaderSlot.Provider value={slot}>
-          <HeaderLeadSlot.Provider value={lead}>{children}</HeaderLeadSlot.Provider>
-        </HeaderSlot.Provider>
+        <ShellPresence.Provider value={true}>
+          <HeaderSlot.Provider value={slot}>
+            <HeaderLeadSlot.Provider value={lead}>{children}</HeaderLeadSlot.Provider>
+          </HeaderSlot.Provider>
+        </ShellPresence.Provider>
       </div>
 
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}

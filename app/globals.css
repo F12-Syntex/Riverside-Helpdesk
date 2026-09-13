@@ -669,7 +669,6 @@ body { overflow-x: hidden; }
   /* !important: the composer's own rules come later in this file. */
   .riva-composer-input { font-size: 17px !important; padding: 0 16px !important; }
   .riva-composer-bar { padding: 0 6px 0 8px !important; }
-  .riva-composer-hint { display: none !important; }
   /* The glow is a desktop pleasure; on a phone it eats the small margin
      between the dock and the edge of the screen. */
   .riva-dock-form::before { display: none; }
@@ -906,18 +905,18 @@ body { overflow-x: hidden; }
 .riva-composer {
   position: relative; display: flex; flex-direction: column;
   height: var(--riva-dock-field-h); width: 100%;
-  background: #fff; border: 1px solid rgba(255,255,255,.9); border-radius: 22px;
+  background: #fff; border: 2px solid #94aabb; border-radius: 22px;
   box-shadow: 0 2px 4px rgba(33,43,50,.05), 0 18px 48px rgba(0,48,135,.14);
   transition: border-color .18s ease, box-shadow .22s ease;
 }
-.riva-composer:hover { border-color: rgba(0,94,184,.28); }
+.riva-composer:hover { border-color: #5f8fb9; }
 .riva-dock-form:focus-within .riva-composer {
   border-color: #005eb8;
   box-shadow: 0 0 0 3px rgba(0,94,184,.08), 0 4px 10px rgba(33,43,50,.07), 0 18px 44px rgba(33,43,50,.16);
 }
-/* Keyboard focus keeps the NHS yellow, worn by the card rather than the
-   line inside it. */
-.riva-dock-form:has(.riva-composer-input:focus-visible) .riva-composer { outline: 3px solid #ffeb3b; outline-offset: 0; }
+/* No yellow ring here: a text field matches :focus-visible on a mouse
+   click too, so it fired on every tap into the box. The blue edge and
+   the soft ring above are the focus state, for keyboard and mouse alike. */
 .riva-composer-input {
   flex: 1; min-width: 0; width: 100%;
   border: none !important; background: transparent !important;
@@ -925,11 +924,12 @@ body { overflow-x: hidden; }
   font: inherit; font-size: 19.5px; padding: 0 22px; color: #212b32;
 }
 .riva-composer-input::placeholder { color: #768692; }
-.riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 8px 0 12px; }
-.riva-composer-hint {
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px; color: #8a99a3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+/* The global .riva-input:focus paints a field white; inside the card a
+   white, square-cornered field covers the rounded corners of the border
+   above it, which read as a cut-off edge. The card is the surface. */
+.riva-composer-input:focus { background: transparent !important; border: none !important; }
+.riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 8px 0 12px; border-top: 1px solid #e6edf2; }
+.riva-composer-bar .riva-dock-send { margin-left: auto; }
 .riva-modes-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Status text with a light passing along it: the 21st.dev "Text Shimmer",

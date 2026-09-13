@@ -2164,8 +2164,7 @@ class RiversidePracticeQA extends React.Component {
               {/* The composer. The shape of the 21st.dev Agent Elements
                   "Input Bar", in this project's idiom: one card, the question
                   on its top row and a toolbar under it — the kind of answer as
-                  a labelled pill (see ModeSwitch), how to attach something,
-                  and the ask button. Enter still asks; a picture can still be
+                  a labelled pill (see ModeSwitch) and the ask button. Enter still asks; a picture can still be
                   pasted into the box, and a document dropped anywhere on the
                   page. The pill also carries the one moment the field is busy
                   on its own account — the message being checked for patient
@@ -2176,10 +2175,6 @@ class RiversidePracticeQA extends React.Component {
                 <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" />
                 <div className="riva-composer-bar">
                   <ModeSwitch mode={v.mode} onPick={v.onPickMode} busy={v.isScreening} ready={v.modeReady} />
-                  <span className="riva-composer-hint" aria-hidden="true">
-                    <Svg w={13} sw={2.2}>{Icons.paperclip}</Svg>
-                    Drop a letter or paste a picture
-                  </span>
                   <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="flex:none;width:40px;height:40px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" hover="background:#003087;">
                     <Svg w={19} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
                   </Hover>

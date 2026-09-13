@@ -4,7 +4,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { s, Hover, Svg, Icons } from './ui';
 import ContactsSheet from './ContactsSheet';
-import { HeaderSlot, HeaderLeadSlot } from './AppShell';
+import { HeaderSlot, HeaderLeadSlot, ShellPresence } from './AppShell';
 
 /* ------------------------------------------------------------------ *
  * The action row at the top of a tool.
@@ -21,8 +21,10 @@ import { HeaderSlot, HeaderLeadSlot } from './AppShell';
  * of the page and the chrome is one row rather than two.
  *
  * Until the shell has mounted there is no slot to portal into, so the
- * controls render into a bar of their own for that one frame. That is
- * also what a page rendered outside the shell falls back to.
+ * controls are held for that one frame. Only a page rendered with no
+ * shell at all (ShellPresence false) gets a bar of its own — inside the
+ * shell that bar used to be server-rendered into the page and then
+ * vanish on hydration, moving everything under it up by 56px.
  *
  * `subtitle` is still accepted and still ignored — every page passes one,
  * and the crumb bar above says it now. Kept in the signature so no page
@@ -68,6 +70,7 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
 
   const slot = React.useContext(HeaderSlot);
   const lead = React.useContext(HeaderLeadSlot);
+  const inShell = React.useContext(ShellPresence);
 
   // Styled as the other chrome pills are, so the bar reads as one row of
   // controls rather than a back control that wandered in from elsewhere.
@@ -130,7 +133,7 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
       {backControl && lead && createPortal(backControl, lead)}
       {slot
         ? createPortal(controls, slot)
-        : (
+        : inShell ? null : (
           // No shell to portal into: the page draws its own row, with the
           // way back at the left and the controls still at the right.
           <header className="riva-header" style={s('flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;background:transparent;')}>
