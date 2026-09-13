@@ -47,7 +47,7 @@ import React from 'react';
 
 const PALETTE = {
   // Base, and five lights, as normalised RGB.
-  base:  [0.925, 0.950, 0.972], // #ecf2f8 — the page, already a tint
+  base:  [0.973, 0.980, 0.988], // #f8fafc — the page, near white
   blue:  [0.000, 0.369, 0.722], // #005eb8 — NHS blue
   light: [0.255, 0.714, 0.902], // #41b6e6 — NHS light blue
   aqua:  [0.000, 0.643, 0.600], // #00a499 — NHS aqua green
@@ -138,8 +138,8 @@ void main() {
   // One light: NHS light blue, high and right, with a little NHS blue
   // low and left so the foot of the page is not flat. Nothing else.
   vec3 col = u_base;
-  col = mix(col, u_c2, wLight * 0.55);
-  col = mix(col, u_c1, wBlue  * 0.22);
+  col = mix(col, u_c2, wLight * 0.24);
+  col = mix(col, u_c1, wBlue  * 0.08);
 
   // A touch of the base at the foot, so the dock sits on something calm.
   float foot = smoothstep(0.0, 0.42, uv.y);
@@ -199,9 +199,9 @@ function build(gl) {
 // The still version: for every reader and machine the canvas is not for,
 // and for the moment between a context being lost and coming back.
 const FALLBACK =
-  'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.55) 0%, rgba(65,182,230,0) 70%),' +
-  'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.22) 0%, rgba(0,94,184,0) 70%),' +
-  '#ecf2f8';
+  'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.26) 0%, rgba(65,182,230,0) 70%),' +
+  'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.08) 0%, rgba(0,94,184,0) 70%),' +
+  '#f8fafc';
 
 export default function ShaderBackground() {
   const ref = React.useRef(null);

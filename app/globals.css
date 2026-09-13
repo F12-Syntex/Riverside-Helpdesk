@@ -11,7 +11,7 @@ html { scrollbar-gutter: stable; }
  * chosen for borders and cannot carry a sentence.
  * ------------------------------------------------------------------ */
 :root {
-  --rv-page:      #f6f9fb;   /* the page itself, under the light */
+  --rv-page:      #f8fafc;   /* the page itself, under the light */
   --rv-rail:      #ffffff;   /* the rail, and every card, on that page */
   --rv-surface:   #ffffff;
   --rv-surface-2: #f0f6fb;   /* a row under the cursor */
@@ -126,7 +126,7 @@ html { scrollbar-gutter: stable; }
    fallback for browsers without dvh. */
 .riva-app-shell { height: 100dvh !important; min-height: 100dvh !important; }
 body {
-  background: #f6f9fb;
+  background: #f8fafc;
   font-family: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
   color: #212b32;
   -webkit-font-smoothing: antialiased;
