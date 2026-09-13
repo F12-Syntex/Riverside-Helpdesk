@@ -66,7 +66,9 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
   // view of the Q&A page rather than a page of its own, so it toggles
   // here rather than being a rail entry: leaving it puts the reader back
   // on the question they were part-way through asking.
-  const canSources = !!(v && v.onSetView);
+  // Off the bar for now: asked for. The view itself (SourcesView) and the
+  // toggle (v.onSetView) are kept, so putting the pill back is one line.
+  const canSources = false;
 
   const slot = React.useContext(HeaderSlot);
   const lead = React.useContext(HeaderLeadSlot);
