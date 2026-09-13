@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.41.8` | 2026-09-14 | fix | `0335567` | fix: take the starter pills from under the field |
+| `5.41.7` | 2026-09-14 | docs | `47589c7` | docs: record 5.41.6 in the versions table |
 | `5.41.6` | 2026-09-14 | fix | `4f2d1b1` | fix: take the Sources pill off the bar |
 | `5.41.5` | 2026-09-14 | docs | `d1672a6` | docs: record 5.41.4 in the versions table |
 | `5.41.4` | 2026-09-14 | fix | `e8a9017` | fix: a mostly white page with a faint wash |
