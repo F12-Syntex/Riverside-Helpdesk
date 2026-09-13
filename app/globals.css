@@ -877,27 +877,6 @@ body { overflow-x: hidden; }
 .riva-eyebrow img { height: 14px; width: auto; display: block; border-radius: 2px; }
 .riva-eyebrow-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--rv-ink-4); }
 
-/* The starters under the field: four things people actually ask, as
-   glass pills. They belong to the dock, rising and falling with it, and
-   the room they take is declared to the geometry above (--riva-dock-extras)
-   so the heading keeps its margin. One row, always: a second row is cut
-   rather than allowed to push the field up the page. */
-.riva-starters {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
-  height: 40px; margin-top: 16px; overflow: hidden;
-  animation: rivaAnswerIn .5s .28s cubic-bezier(.2,.7,.3,1) both;
-}
-.riva-starter {
-  display: inline-flex; align-items: center; gap: 7px;
-  height: 36px; padding: 0 14px; border-radius: 999px;
-  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
-  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
-  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--rv-ink-2);
-  cursor: pointer; white-space: nowrap;
-  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
-}
-.riva-starter:hover { background: #fff; color: var(--rv-accent); box-shadow: 0 4px 14px rgba(33,43,50,.10); transform: translateY(-1px); }
-.riva-starter-ico { display: flex; color: var(--rv-accent); }
 
 /* ---- the composer ------------------------------------------------ */
 
@@ -1000,11 +979,6 @@ body { overflow-x: hidden; }
    controls already. The way back keeps its arrow and drops its word, the
    same bargain the Contacts pill makes. */
 @media (max-width: 600px) {
-  /* One row still, but a phone cannot hold four pills across, so the
-     row slides sideways under a thumb rather than losing three of them. */
-  .riva-starters { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding: 0 4px; margin-left: -4px; margin-right: -4px; }
-  .riva-starters::-webkit-scrollbar { display: none; }
-  .riva-starter { flex: none; }
   .riva-crumb-back { padding: 0 10px !important; }
   .riva-crumb-back-label { display: none; }
   .riva-brand-name { display: none; }
