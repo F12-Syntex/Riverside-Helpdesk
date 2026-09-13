@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.41.0` | 2026-09-14 | feat | `dae956b` | feat: Back under the brand, one selected colour, a light that stays |
+| `5.40.1` | 2026-09-13 | docs | `b74d3d5` | docs: record 5.40.0 in the versions table |
 | `5.40.0` | 2026-09-13 | feat | `25065aa` | feat: header as glass islands, gradient heading, no eyebrow |
 | `5.39.3` | 2026-09-13 | docs | `c0247e1` | docs: record 5.39.2 in the versions table |
 | `5.39.2` | 2026-09-13 | fix | `9c96c43` | fix: stop the opening screen jumping on hydration; define the composer |
