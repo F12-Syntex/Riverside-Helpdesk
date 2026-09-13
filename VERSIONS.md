@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.38.0` | 2026-09-13 | feat | `26c9fa7` | feat: stronger Stitch-like light, a visible bar, and a blue Back |
+| `5.37.2` | 2026-09-13 | docs | `ce14600` | docs: record 5.37.0 and 5.37.1 in the versions table |
 | `5.37.1` | 2026-09-13 | chore | `357f908` | chore: add a launch config so the dev server can be previewed |
 | `5.37.0` | 2026-09-13 | feat | `c7910bf` | feat: redesign the shell on a shader light, in the Emergent shape |
 | `5.36.7` | 2026-09-11 | docs | `c76b975` | docs: record 5.36.5 and 5.36.6 in the versions table |
