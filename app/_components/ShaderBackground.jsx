@@ -135,11 +135,11 @@ void main() {
   // Three lights, not five: light blue, NHS blue and a soft violet. The
   // pink and the aqua were two more things moving on a page that already
   // had enough moving on it.
+  // One light: NHS light blue, high and right, with a little NHS blue
+  // low and left so the foot of the page is not flat. Nothing else.
   vec3 col = u_base;
-  col = mix(col, u_c2, wLight  * 0.70);
-  col = mix(col, u_c4, wViolet * 0.42);
-  col = mix(col, u_c1, wBlue   * 0.45);
-  col = mix(col, u_c2, wPink   * 0.25);
+  col = mix(col, u_c2, wLight * 0.55);
+  col = mix(col, u_c1, wBlue  * 0.22);
 
   // A touch of the base at the foot, so the dock sits on something calm.
   float foot = smoothstep(0.0, 0.42, uv.y);
@@ -199,10 +199,8 @@ function build(gl) {
 // The still version: for every reader and machine the canvas is not for,
 // and for the moment between a context being lost and coming back.
 const FALLBACK =
-  'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.75) 0%, rgba(65,182,230,0) 70%),' +
-  'radial-gradient(50% 50% at 12% 14%, rgba(143,120,245,.55) 0%, rgba(143,120,245,0) 70%),' +
-  'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.48) 0%, rgba(0,94,184,0) 70%),' +
-  'radial-gradient(50% 50% at 88% 86%, rgba(65,182,230,.35) 0%, rgba(65,182,230,0) 70%),' +
+  'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.55) 0%, rgba(65,182,230,0) 70%),' +
+  'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.22) 0%, rgba(0,94,184,0) 70%),' +
   '#ecf2f8';
 
 export default function ShaderBackground() {

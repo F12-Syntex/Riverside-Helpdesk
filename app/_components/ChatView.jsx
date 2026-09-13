@@ -107,7 +107,7 @@ export default function ChatView({ v }) {
           {/* The heading wears the light's own colours, drifting slowly, so
               the one line on the opening screen belongs to the page behind
               it rather than sitting on top of it. */}
-          <h1 className="riva-hero-h1 riva-hero-grad" style={s('font-size:48px;font-weight:800;letter-spacing:-0.03em;margin:0;line-height:1.08;')}>What do you need?</h1>
+          <h1 className="riva-hero-h1" style={s('font-size:48px;font-weight:800;letter-spacing:-0.03em;margin:0;line-height:1.08;')}>What do you need?</h1>
           {/* Only when the host page sets one. The default is nothing: a line
               explaining what can be asked is read once and then sits there. */}
           {v.welcome && <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:10px auto 0;text-wrap:pretty;')}>{v.welcome}</p>}

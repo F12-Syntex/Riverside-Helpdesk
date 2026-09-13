@@ -535,7 +535,7 @@ body { overflow-x: hidden; }
  * answer is being worked out. */
 .riva-dock-form { position: relative; }
 .riva-dock-form::before {
-  content: '';
+  content: none; /* the light behind the field was one gradient too many */
   position: absolute; z-index: -1; pointer-events: none;
   left: 4%; right: 4%; top: 6px; bottom: -10px;
   border-radius: 999px;
