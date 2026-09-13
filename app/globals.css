@@ -537,13 +537,19 @@ body { overflow-x: hidden; }
   left: 4%; right: 4%; top: 6px; bottom: -10px;
   border-radius: 999px;
   background:
-    radial-gradient(58% 130% at 30% 50%, rgba(0,94,184,.22), rgba(0,94,184,0) 72%),
-    radial-gradient(58% 130% at 72% 50%, rgba(65,182,230,.20), rgba(65,182,230,0) 72%);
-  filter: blur(20px);
+    radial-gradient(58% 130% at 30% 50%, rgba(0,94,184,.30), rgba(0,94,184,0) 72%),
+    radial-gradient(58% 130% at 72% 50%, rgba(65,182,230,.30), rgba(65,182,230,0) 72%);
+  filter: blur(22px);
   opacity: .75;
   transition: opacity .3s ease, filter .3s ease;
+  animation: rivaGlowBreathe 5.5s ease-in-out infinite;
 }
-.riva-dock-form:focus-within::before { opacity: 1; filter: blur(22px); }
+/* At rest the light breathes, slowly, so the field reads as alive. */
+@keyframes rivaGlowBreathe {
+  0%, 100% { opacity: .55; transform: scaleX(.96); }
+  50%      { opacity: .95; transform: scaleX(1.03); }
+}
+.riva-dock-form:focus-within::before { opacity: 1; filter: blur(24px); animation: none; }
 /* Focus is said with weight, not just colour: the field lifts clear off the
    page the moment it is being typed into, and takes a soft blue ring with
    it so the state is unmistakable. */
@@ -712,12 +718,19 @@ body { overflow-x: hidden; }
 
 /* ---- the bar ---------------------------------------------------- */
 
+/* A bar you can see: glass, with an edge, arriving from above. */
 .riva-top {
   flex: none; height: var(--rv-top-h);
   position: relative; z-index: 30;
   display: flex; align-items: center; gap: 10px;
   padding: 0 18px;
+  background: rgba(255,255,255,.62);
+  border-bottom: 1px solid rgba(255,255,255,.85);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  box-shadow: 0 1px 0 rgba(33,43,50,.05), 0 12px 34px rgba(0,48,135,.08);
+  animation: rivaBarIn .6s cubic-bezier(.2,.7,.3,1) both;
 }
+@keyframes rivaBarIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 
 .riva-brand {
   flex: none; display: flex; align-items: center; gap: 11px;
@@ -739,18 +752,29 @@ body { overflow-x: hidden; }
    control, which is nearly all of them. */
 .riva-crumb-lead { display: flex; align-items: center; gap: 8px; }
 .riva-crumb-lead:empty { display: none; }
+/* The way back is the one solid thing in the bar: NHS blue, so it is
+   found without looking for it. It arrives when the answer does. */
+.riva-crumb-back { animation: rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both; }
 
 /* The row of tools, dead centre. A glass pill with the active tool in
    white, the only coloured thing in the bar, which is what makes it
    findable without reading. */
 .riva-topnav {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  /* In the flow, centred between the groups either side of it, rather
+     than pinned to the middle of the screen: a Back control at the left
+     then moves the row along instead of sliding underneath it. */
+  flex: none; margin: 0 auto;
   display: flex; align-items: center; gap: 2px; padding: 4px;
   border-radius: 999px;
-  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
-  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
-  box-shadow: 0 1px 2px rgba(33,43,50,.04), 0 10px 30px rgba(33,43,50,.07);
+  background: rgba(33,43,50,.06); border: 1px solid rgba(33,43,50,.05);
 }
+/* The tools arrive one after another, left to right. */
+.riva-topnav-item { animation: rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both; }
+.riva-topnav-item:nth-child(1) { animation-delay: .10s; }
+.riva-topnav-item:nth-child(2) { animation-delay: .16s; }
+.riva-topnav-item:nth-child(3) { animation-delay: .22s; }
+.riva-topnav-item:nth-child(4) { animation-delay: .28s; }
+.riva-topnav-item:nth-child(5) { animation-delay: .34s; }
 .riva-topnav-item {
   display: inline-flex; align-items: center; gap: 7px;
   height: 34px; padding: 0 14px; border-radius: 999px;
@@ -759,7 +783,7 @@ body { overflow-x: hidden; }
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
 .riva-topnav-item:hover { color: var(--rv-ink); background: rgba(255,255,255,.7); }
-.riva-topnav-item.is-active { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.12); }
+.riva-topnav-item.is-active { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.14), 0 4px 12px rgba(0,48,135,.10); }
 .riva-topnav-ico { display: flex; color: currentColor; opacity: .85; }
 
 /* Where the reader is, said in words when the row is folded away. */
@@ -774,7 +798,7 @@ body { overflow-x: hidden; }
 .riva-top-btn {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: 999px;
-  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
+  background: rgba(255,255,255,.75); border: 1px solid rgba(33,43,50,.08);
   -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
   color: var(--rv-ink-2); cursor: pointer;
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
