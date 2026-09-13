@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.37.1` | 2026-09-13 | chore | `357f908` | chore: add a launch config so the dev server can be previewed |
+| `5.37.0` | 2026-09-13 | feat | `c7910bf` | feat: redesign the shell on a shader light, in the Emergent shape |
+| `5.36.7` | 2026-09-11 | docs | `c76b975` | docs: record 5.36.5 and 5.36.6 in the versions table |
 | `5.36.6` | 2026-09-11 | docs | `5cc2889` | docs: add the September reception team meeting to the knowledge base |
 | `5.36.5` | 2026-09-09 | docs | `e149546` | docs: record 5.36.3 and 5.36.4 in the versions table |
 | `5.36.4` | 2026-09-09 | fix | `e4192c5` | fix: put the Q&A's Back control in the crumb bar |
