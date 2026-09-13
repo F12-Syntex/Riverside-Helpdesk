@@ -295,12 +295,13 @@ export default function AppShell({ children }) {
             <span className="riva-brand-name">Riverside</span>
           </Link>
 
-          {/* A page's way back, beside the brand it is leaving from. */}
-          <div className="riva-crumb-lead" ref={setLead} />
-
           {/* Where the reader is, when the row is folded away. */}
           <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
         </div>
+
+        {/* A page's way back: a pill hanging under the brand, on its own,
+            where a hand goes for "back" and where nothing else is. */}
+        <div className="riva-crumb-lead" ref={setLead} />
 
         <nav className="riva-topnav" aria-label="Tools">
           {ROW.map((item) => {

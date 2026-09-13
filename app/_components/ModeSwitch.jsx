@@ -252,7 +252,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           + 'transition:color .16s ease,opacity .25s ease;'
           + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eef2f4;color:#4c6272;')
           + (ready ? '' : 'opacity:0;')}
-        hover={armed ? 'background:#00437f;' : 'background:#e1e8ec;color:#005eb8;'}>
+        hover={armed ? 'background:#003087;' : 'background:#e1e8ec;color:#005eb8;'}>
         {busy
           ? <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
           : <Svg w={16} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}

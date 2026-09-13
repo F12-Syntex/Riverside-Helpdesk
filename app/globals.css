@@ -545,14 +545,8 @@ body { overflow-x: hidden; }
   filter: blur(22px);
   opacity: .75;
   transition: opacity .3s ease, filter .3s ease;
-  animation: rivaGlowBreathe 5.5s ease-in-out infinite;
 }
-/* At rest the light breathes, slowly, so the field reads as alive. */
-@keyframes rivaGlowBreathe {
-  0%, 100% { opacity: .55; transform: scaleX(.96); }
-  50%      { opacity: .95; transform: scaleX(1.03); }
-}
-.riva-dock-form:focus-within::before { opacity: 1; filter: blur(24px); animation: none; }
+.riva-dock-form:focus-within::before { opacity: 1; filter: blur(24px); }
 /* Focus is said with weight, not just colour: the field lifts clear off the
    page the moment it is being typed into, and takes a soft blue ring with
    it so the state is unmistakable. */
@@ -744,23 +738,21 @@ body { overflow-x: hidden; }
 .riva-brand-mark { flex: none; display: flex; }
 .riva-brand-mark img { height: 22px; width: auto; display: block; border-radius: 4px; }
 .riva-brand-name {
-  font-size: 15px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap;
-  background: linear-gradient(95deg, #003087, #005eb8 60%, #2f8fd8);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-size: 15px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; color: var(--rv-ink);
 }
 
 /* The way back, ahead of everything but the brand. `:empty` is doing
    real work: the bar is a flex row with a gap, so an empty div left in
    it would push the rest 10px along on every page that has no back
    control, which is nearly all of them. */
-.riva-crumb-lead { display: flex; align-items: center; gap: 8px; }
+.riva-crumb-lead {
+  position: absolute; left: 16px; top: calc(100% + 4px); z-index: 31;
+  display: flex; align-items: center; gap: 8px;
+}
 .riva-crumb-lead:empty { display: none; }
 /* The way back is the one solid thing in the bar: NHS blue, so it is
    found without looking for it. It arrives when the answer does. */
 .riva-crumb-back { animation: rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both; }
-/* The row is pinned to the middle of the screen, so when Back is on the
-   bar the brand keeps its mark and drops its name to stay clear of it. */
-.riva-top:has(.riva-crumb-lead:not(:empty)) .riva-brand-name { display: none; }
 
 /* The row of tools, dead centre. A glass pill with the active tool in
    white, the only coloured thing in the bar, which is what makes it
@@ -773,13 +765,6 @@ body { overflow-x: hidden; }
   -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
   box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 12px 34px rgba(0,48,135,.10);
 }
-/* The tools arrive one after another, left to right. */
-.riva-topnav-item { animation: rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both; }
-.riva-topnav-item:nth-child(1) { animation-delay: .10s; }
-.riva-topnav-item:nth-child(2) { animation-delay: .16s; }
-.riva-topnav-item:nth-child(3) { animation-delay: .22s; }
-.riva-topnav-item:nth-child(4) { animation-delay: .28s; }
-.riva-topnav-item:nth-child(5) { animation-delay: .34s; }
 .riva-topnav-item {
   display: inline-flex; align-items: center; gap: 7px;
   height: 34px; padding: 0 14px; border-radius: 999px;
@@ -788,11 +773,7 @@ body { overflow-x: hidden; }
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
 .riva-topnav-item:hover { color: var(--rv-accent); background: rgba(255,255,255,.9); }
-.riva-topnav-item.is-active {
-  color: #fff;
-  background: linear-gradient(120deg, #003087, #005eb8 55%, #2f8fd8);
-  box-shadow: 0 4px 14px rgba(0,94,184,.35);
-}
+.riva-topnav-item.is-active { color: #fff; background: #005eb8; box-shadow: 0 2px 8px rgba(0,94,184,.28); }
 .riva-topnav-item.is-active .riva-topnav-ico { opacity: 1; }
 .riva-topnav-ico { display: flex; color: currentColor; opacity: .85; }
 
@@ -878,12 +859,10 @@ body { overflow-x: hidden; }
 /* The heading in the light's own colours, drifting as slowly as the
    light does. The gradient repeats, so it is whole at any position. */
 .riva-hero-grad {
-  background-image: linear-gradient(100deg, #003087 0%, #005eb8 28%, #2f8fd8 48%, #6d5ce8 68%, #003087 100%);
-  background-size: 220% 100%; background-repeat: repeat;
+  padding-bottom: .06em;
+  background-image: linear-gradient(100deg, #003087 0%, #005eb8 55%, #3a8fd6 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: rivaHeroGrad 14s linear infinite;
 }
-@keyframes rivaHeroGrad { from { background-position: 0% center; } to { background-position: 220% center; } }
 
 /* The line above the heading: whose assistant this is, in a glass pill,
    where Emergent puts the name of the project. Unused at present. */
@@ -952,8 +931,7 @@ body { overflow-x: hidden; }
    above it, which read as a cut-off edge. The card is the surface. */
 .riva-composer-input:focus { background: transparent !important; border: none !important; }
 .riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 8px 0 12px; border-top: 1px solid #e6edf2; }
-.riva-composer-bar .riva-dock-send { margin-left: auto; background: linear-gradient(120deg, #003087, #005eb8 55%, #2f8fd8) !important; box-shadow: 0 6px 16px rgba(0,94,184,.30); }
-.riva-composer-bar .riva-dock-send:hover { filter: brightness(1.08); }
+.riva-composer-bar .riva-dock-send { margin-left: auto; box-shadow: 0 6px 16px rgba(0,94,184,.28); }
 .riva-modes-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Status text with a light passing along it: the 21st.dev "Text Shimmer",

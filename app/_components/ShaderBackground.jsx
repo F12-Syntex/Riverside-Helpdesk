@@ -8,14 +8,15 @@ import React from 'react';
  * One WebGL fragment shader, no dependencies, fixed behind the whole
  * shell. It is the app's equivalent of the sky Emergent puts behind its
  * opening screen: a slow mesh-drift of the practice's own colours —
- * NHS blue, NHS light blue, a touch of aqua — washed almost to white so
+ * NHS blue, NHS light blue, a touch of aqua, with a soft violet and a
+ * warm pink for the Stitch-like spread of hue — over a tinted base, so
  * that dark text reads over it anywhere. It moves at the speed of
  * weather, never faster.
  *
  * Written in the idiom of the 21st.dev Shader Builder exports ("Mesh
- * drift"): a 4-colour palette, domain-warped value noise, a film-grain
- * pass. Kept in the same shape so a builder export can replace it later
- * by swapping the palette and the fragment body.
+ * drift"): a palette, domain-warped value noise, a film-grain pass.
+ * Kept in the same shape so a builder export can replace it later by
+ * swapping the palette and the fragment body.
  *
  * WHAT IT DOES WHEN IT CANNOT
  * ---------------------------
@@ -23,24 +24,35 @@ import React from 'react';
  * keeps a CSS gradient of the same palette and simply does not move.
  * The page never depends on the canvas being there.
  *
+ * A LOST CONTEXT COMES BACK
+ * -------------------------
+ * A GPU reset, a phone reclaiming memory, or a hot reload re-running
+ * this effect on the same canvas all lose the context. The browser only
+ * restores one if the loss is not treated as final (preventDefault on
+ * the event), and the programme has to be built again afterwards; the
+ * CSS behind shows in between. The cleanup does NOT lose the context on
+ * purpose: the next run of this effect gets the same canvas element and
+ * would get the same, now dead, context handed back — which is exactly
+ * what happened, and which left the page on its pale fallback after the
+ * first edit of the session.
+ *
  * COST
  * ----
  * One quad, drawn at a third of the screen's resolution and stretched
  * — it is a blur, so nothing is lost — at thirty frames a second, and
- * paused whenever the tab is hidden. It is the only continuous animation on
- * the page, and it stops the moment the reader says they want less
+ * paused whenever the tab is hidden. It is the only continuous animation
+ * on the page, and it stops the moment the reader says they want less
  * motion.
  * ------------------------------------------------------------------ */
 
 const PALETTE = {
-  // Base, and three lights, as normalised RGB.
+  // Base, and five lights, as normalised RGB.
   base:  [0.925, 0.950, 0.972], // #ecf2f8 — the page, already a tint
   blue:  [0.000, 0.369, 0.722], // #005eb8 — NHS blue
   light: [0.255, 0.714, 0.902], // #41b6e6 — NHS light blue
   aqua:  [0.000, 0.643, 0.600], // #00a499 — NHS aqua green
-  // Two more, for the Stitch-like spread of hue: a soft violet and a
-  // warm pink, both tints rather than brand colours, so the blue stays
-  // the thing the page is made of.
+  // Two tints rather than brand colours, so the blue stays the thing the
+  // page is made of.
   violet: [0.560, 0.470, 0.960],
   pink:   [0.980, 0.600, 0.760],
 };
@@ -93,7 +105,7 @@ void main() {
   vec2 uv = gl_FragCoord.xy / u_res;
   float aspect = u_res.x / u_res.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
-  float t = u_time * 0.085;
+  float t = u_time * 0.04;
 
   // Domain warp: the field is folded through itself once, which is what
   // turns plain noise into the soft, cloud-like drift.
@@ -105,27 +117,33 @@ void main() {
   float n4 = fbm(r * 1.2 + vec2(-t * 0.45, -t * 0.25) + 41.0);
   float n5 = fbm(r * 1.5 + vec2(t * 0.35, t * 0.3) + 57.0);
 
-  // Each light is a soft window on its own noise, biased to a corner so
-  // the composition holds: light blue high and right, NHS blue low and
-  // left, aqua as a thread between them.
-  float wLight = smoothstep(0.35, 0.85, n1) * smoothstep(0.1, 0.9, uv.y * 0.6 + uv.x * 0.4);
-  float wBlue  = smoothstep(0.42, 0.88, n2) * smoothstep(0.0, 0.8, (1.0 - uv.y) * 0.7 + (1.0 - uv.x) * 0.3);
-  float wAqua  = smoothstep(0.50, 0.90, n3) * 0.6;
-  float wViolet = smoothstep(0.40, 0.86, n4) * smoothstep(0.1, 0.9, uv.y * 0.6 + (1.0 - uv.x) * 0.5);
-  float wPink   = smoothstep(0.48, 0.90, n5) * smoothstep(0.0, 0.8, (1.0 - uv.y) * 0.5 + uv.x * 0.6);
+  // Each light is anchored to a corner and is always there; the noise
+  // only breathes it. Windows on noise alone drifted in and out, and for
+  // long stretches the screen was mostly the base — the page read as
+  // white with a gradient that passed through now and then.
+  vec2 a = vec2(uv.x * aspect, uv.y);
+  float aLight  = 1.0 - smoothstep(0.0, 1.25 * aspect, distance(a, vec2(0.95 * aspect, 0.92)));
+  float aViolet = 1.0 - smoothstep(0.0, 1.20 * aspect, distance(a, vec2(0.04 * aspect, 0.94)));
+  float aBlue   = 1.0 - smoothstep(0.0, 1.10 * aspect, distance(a, vec2(0.06 * aspect, 0.06)));
+  float aPink   = 1.0 - smoothstep(0.0, 1.05 * aspect, distance(a, vec2(0.94 * aspect, 0.08)));
+  float wLight  = aLight  * (0.55 + 0.45 * smoothstep(0.25, 0.80, n1));
+  float wViolet = aViolet * (0.55 + 0.45 * smoothstep(0.25, 0.80, n4));
+  float wBlue   = aBlue   * (0.55 + 0.45 * smoothstep(0.30, 0.82, n2));
+  float wPink   = aPink   * (0.55 + 0.45 * smoothstep(0.30, 0.82, n5));
+  float wAqua   = smoothstep(0.45, 0.88, n3) * 0.6;
 
-  // Washed to a tint: strength is what keeps body text readable over it.
+  // Three lights, not five: light blue, NHS blue and a soft violet. The
+  // pink and the aqua were two more things moving on a page that already
+  // had enough moving on it.
   vec3 col = u_base;
-  col = mix(col, u_c2, wLight  * 0.82);
-  col = mix(col, u_c4, wViolet * 0.58);
-  col = mix(col, u_c1, wBlue   * 0.58);
-  col = mix(col, u_c5, wPink   * 0.44);
-  col = mix(col, u_c3, wAqua   * 0.36);
+  col = mix(col, u_c2, wLight  * 0.70);
+  col = mix(col, u_c4, wViolet * 0.42);
+  col = mix(col, u_c1, wBlue   * 0.45);
+  col = mix(col, u_c2, wPink   * 0.25);
 
-  // A wash of the page at the foot, so the dock and any long answer sit
-  // on something nearly plain.
+  // A touch of the base at the foot, so the dock sits on something calm.
   float foot = smoothstep(0.0, 0.42, uv.y);
-  col = mix(u_base, col, 0.86 + 0.14 * foot);
+  col = mix(u_base, col, 0.94 + 0.06 * foot);
 
   // Film grain, the same pass every Shader Builder export carries.
   float g = hash(gl_FragCoord.xy + fract(u_time)) - 0.5;
@@ -146,13 +164,45 @@ function compile(gl, type, src) {
   return sh;
 }
 
-// The still version, for every reader and machine the canvas is not for.
+// Builds the programme on a (fresh or restored) context. Returns the
+// uniform locations the frame loop needs, or null if the GPU refused.
+function build(gl) {
+  const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+  const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+  if (!vs || !fs) return null;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_base'), PALETTE.base);
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_c1'), PALETTE.blue);
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_c2'), PALETTE.light);
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_c3'), PALETTE.aqua);
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_c4'), PALETTE.violet);
+  gl.uniform3fv(gl.getUniformLocation(prog, 'u_c5'), PALETTE.pink);
+  return {
+    uRes: gl.getUniformLocation(prog, 'u_res'),
+    uTime: gl.getUniformLocation(prog, 'u_time'),
+  };
+}
+
+// The still version: for every reader and machine the canvas is not for,
+// and for the moment between a context being lost and coming back.
 const FALLBACK =
   'radial-gradient(60% 55% at 82% 8%, rgba(65,182,230,.75) 0%, rgba(65,182,230,0) 70%),' +
   'radial-gradient(50% 50% at 12% 14%, rgba(143,120,245,.55) 0%, rgba(143,120,245,0) 70%),' +
   'radial-gradient(55% 60% at 10% 90%, rgba(0,94,184,.48) 0%, rgba(0,94,184,0) 70%),' +
-  'radial-gradient(50% 50% at 88% 86%, rgba(250,153,194,.45) 0%, rgba(250,153,194,0) 70%),' +
-  'radial-gradient(45% 45% at 60% 60%, rgba(0,164,153,.26) 0%, rgba(0,164,153,0) 70%),' +
+  'radial-gradient(50% 50% at 88% 86%, rgba(65,182,230,.35) 0%, rgba(65,182,230,0) 70%),' +
   '#ecf2f8';
 
 export default function ShaderBackground() {
@@ -164,35 +214,15 @@ export default function ShaderBackground() {
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const gl = canvas.getContext('webgl', { antialias: false, depth: false, stencil: false, alpha: false, powerPreference: 'low-power' });
     if (!gl) return undefined;
+    // The restore handle has to be taken while the context is alive — a
+    // lost one answers null to getExtension — and it is kept on the canvas
+    // node itself, which is what survives a hot reload of this module.
+    if (!gl.isContextLost()) canvas.__rivaLose = gl.getExtension('WEBGL_lose_context');
 
-    const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
-    if (!vs || !fs) return undefined;
-    const prog = gl.createProgram();
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return undefined;
-    gl.useProgram(prog);
-
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    const aPos = gl.getAttribLocation(prog, 'a_pos');
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-    const uRes = gl.getUniformLocation(prog, 'u_res');
-    const uTime = gl.getUniformLocation(prog, 'u_time');
-    gl.uniform3fv(gl.getUniformLocation(prog, 'u_base'), PALETTE.base);
-    gl.uniform3fv(gl.getUniformLocation(prog, 'u_c1'), PALETTE.blue);
-    gl.uniform3fv(gl.getUniformLocation(prog, 'u_c2'), PALETTE.light);
-    gl.uniform3fv(gl.getUniformLocation(prog, 'u_c3'), PALETTE.aqua);
-    gl.uniform3fv(gl.getUniformLocation(prog, 'u_c4'), PALETTE.violet);
-    gl.uniform3fv(gl.getUniformLocation(prog, 'u_c5'), PALETTE.pink);
-
-    let raf = 0;
     let alive = true;
+    let raf = 0;
+    let last = 0;
+    let u = null;
     const start = performance.now();
 
     function size() {
@@ -207,17 +237,17 @@ export default function ShaderBackground() {
         canvas.height = h;
         gl.viewport(0, 0, w, h);
       }
-      gl.uniform2f(uRes, w, h);
+      gl.uniform2f(u.uRes, w, h);
     }
 
     function draw() {
+      if (!u || gl.isContextLost()) return;
       size();
-      gl.uniform1f(uTime, (performance.now() - start) / 1000);
+      gl.uniform1f(u.uTime, (performance.now() - start) / 1000);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
     // Thirty frames a second is more than a drift this slow can use.
-    let last = 0;
     function loop(now) {
       if (!alive) return;
       raf = requestAnimationFrame(loop);
@@ -226,26 +256,57 @@ export default function ShaderBackground() {
       draw();
     }
 
-    function visibility() {
-      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
-      else if (!reduced && !raf) raf = requestAnimationFrame(loop);
+    function run() {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      if (!reduced && !document.hidden) raf = requestAnimationFrame(loop);
     }
 
-    // The canvas is painted once before it is shown, so it never flashes
-    // its fallback and then the shader.
-    draw();
-    canvas.style.opacity = '1';
-    if (!reduced) raf = requestAnimationFrame(loop);
+    // Paints once and shows the canvas, on a fresh context and again on a
+    // restored one. Nothing is shown until a frame exists, so the page
+    // never flashes the fallback and then the shader.
+    function begin() {
+      u = build(gl);
+      if (!u) return false;
+      draw();
+      canvas.style.opacity = '1';
+      run();
+      return true;
+    }
+
+    function onLost(e) {
+      e.preventDefault();
+      cancelAnimationFrame(raf);
+      raf = 0;
+      u = null;
+      canvas.style.opacity = '0';
+    }
+    function onRestored() { begin(); }
+    function visibility() {
+      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+      else if (u) run();
+    }
+
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
     window.addEventListener('resize', draw);
     document.addEventListener('visibilitychange', visibility);
+
+    // A context handed back already lost (this effect re-run on the same
+    // canvas) is asked to come back; the restored event then builds it.
+    if (gl.isContextLost()) {
+      if (canvas.__rivaLose) canvas.__rivaLose.restoreContext();
+    } else {
+      begin();
+    }
 
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
+      canvas.removeEventListener('webglcontextlost', onLost);
+      canvas.removeEventListener('webglcontextrestored', onRestored);
       window.removeEventListener('resize', draw);
       document.removeEventListener('visibilitychange', visibility);
-      const lose = gl.getExtension('WEBGL_lose_context');
-      if (lose) lose.loseContext();
     };
   }, []);
 
