@@ -5,17 +5,18 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 
 /* ------------------------------------------------------------------ *
- * Tools index — the landing page for The Riverside Practice.
+ * Tools index for The Riverside Practice.
  *
- * A simple list of NHS-style navigation links. Add more by appending
- * to TOOLS.
+ * A short grid of cards on the light — the shape Emergent gives its
+ * showcase — one per tool staff reach for. Add more by appending to
+ * TOOLS.
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
-  { href: '/', title: 'Ask a practice question', icon: Icons.chat },
-  { href: '/lookup', title: 'Find a phone number', icon: Icons.search },
+  { href: '/', title: 'Ask a practice question', blurb: 'Answered only from the practice’s own documents, with a quote behind every claim.', icon: Icons.chat },
+  { href: '/lookup', title: 'Find a phone number', blurb: 'Every service on the CQC register, by name, town, postcode or acronym.', icon: Icons.search },
   // The practice's own directory is not here: it is the Contacts pill in the
-  // header, on every page, and opens over the page rather than replacing it.
+  // bar, on every page, and opens over the page rather than replacing it.
   // Hidden from the index but still reachable directly:
   //  - /settings   — which AI model the assistant runs on (in the menu, not here)
   //  - /diagram    — the full system map (documentation, not a daily tool)
@@ -24,35 +25,31 @@ const TOOLS = [
   // Uncomment to bring any back onto the index.
   // { href: '/diagram', title: 'How the system works', icon: Icons.sitemap },
   // { href: '/notebook', title: 'Write a practice note', icon: Icons.edit },
-  // {
-  //   href: '/medications',
-  //   title: 'Medication check',
-  //   description: 'Look up clear, referenced information about any medicine — from public UK sources (NHS, BNF/NICE, eMC). Add several at once, with an optional question for each. For all staff.',
-  // },
-  // {
-  //   href: '/rota',
-  //   title: 'Staff rota generator',
-  //   description: 'Build and balance staff rotas with help from the practice assistant.',
-  // },
 ];
+
+const CARD = 'display:flex;flex-direction:column;gap:14px;padding:22px 22px 20px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.85);border-radius:18px;text-decoration:none;color:#212b32;box-shadow:0 1px 2px rgba(33,43,50,.04),0 12px 34px rgba(0,48,135,.08);backdrop-filter:saturate(160%) blur(14px);-webkit-backdrop-filter:saturate(160%) blur(14px);transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease;';
 
 export default function Page() {
   return (
     <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
       <AppHeader subtitle="Tools and guidance" />
 
-      <main style={s('flex:1;width:100%;max-width:760px;margin:0 auto;padding:40px 24px 56px;')}>
-        <h1 style={s('font-size:32px;margin:0 0 4px;letter-spacing:-0.02em;')}>Practice tools</h1>
-        <p style={s('font-size:17px;color:#4c6272;margin:0 0 28px;')}>Choose a tool to get started.</p>
+      <main style={s('flex:1;width:100%;max-width:820px;margin:0 auto;padding:56px 24px 64px;')}>
+        <h1 style={s('font-size:36px;margin:0 0 6px;letter-spacing:-0.025em;line-height:1.1;')}>Practice tools</h1>
+        <p style={s('font-size:17px;color:#4c6272;margin:0 0 30px;')}>Choose a tool to get started.</p>
 
-        <ul style={s('list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;')}>
+        <ul className="riva-grid-2" style={s('list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;')}>
           {TOOLS.map((t) => (
             <li key={t.href}>
-              <Hover tag={Link} href={t.href}
-                base="display:flex;align-items:center;gap:14px;padding:18px 20px;background:#fff;border-radius:12px;border:1px solid #d8e1e5;font-size:20px;font-weight:600;color:#212b32;text-decoration:none;"
-                hover="border-color:#005eb8;background:#f0f6fb;">
-                <Svg style={s('flex:none;color:#005eb8;')}>{t.icon}</Svg>
-                {t.title}
+              <Hover tag={Link} href={t.href} base={CARD}
+                hover="transform:translateY(-2px);background:#fff;box-shadow:0 2px 4px rgba(33,43,50,.05),0 18px 44px rgba(0,48,135,.14);">
+                <span style={s('display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:#e8f1f8;color:#005eb8;')}>
+                  <Svg w={20} sw={2}>{t.icon}</Svg>
+                </span>
+                <span style={s('display:flex;flex-direction:column;gap:4px;')}>
+                  <span style={s('font-size:18px;font-weight:700;letter-spacing:-0.01em;')}>{t.title}</span>
+                  <span style={s('font-size:14.5px;color:#4c6272;line-height:1.45;')}>{t.blurb}</span>
+                </span>
               </Hover>
             </li>
           ))}

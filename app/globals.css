@@ -11,7 +11,7 @@ html { scrollbar-gutter: stable; }
  * chosen for borders and cannot carry a sentence.
  * ------------------------------------------------------------------ */
 :root {
-  --rv-page:      #f0f4f5;   /* the page itself */
+  --rv-page:      #f6f9fb;   /* the page itself, under the light */
   --rv-rail:      #ffffff;   /* the rail, and every card, on that page */
   --rv-surface:   #ffffff;
   --rv-surface-2: #f0f6fb;   /* a row under the cursor */
@@ -28,9 +28,13 @@ html { scrollbar-gutter: stable; }
   --rv-accent-line: #aac7e0;
   --rv-green:     #007f3b;
 
-  --rv-rail-w: 236px;
-  --rv-crumb-h: 50px;
+  --rv-top-h: 56px;      /* the bar across the top */
   --rv-radius: 10px;
+  /* Glass: what a control is made of when it sits on the light rather
+     than on a card. */
+  --rv-glass:      rgba(255,255,255,.62);
+  --rv-glass-line: rgba(255,255,255,.8);
+  --rv-glass-blur: saturate(160%) blur(14px);
 }
 
 /* ------------------------------------------------------------------ *
@@ -46,7 +50,7 @@ html { scrollbar-gutter: stable; }
  * foot of this file.
  * ------------------------------------------------------------------ */
 :root {
-  --riva-header-h: 50px;          /* the crumb bar; AppHeader renders into it */
+  --riva-header-h: 56px;          /* the bar across the top; AppHeader renders into it */
   --riva-column-pad-t: 28px;      /* .riva-column's top padding */
   --riva-dock-field-h: 68px;
   --riva-dock-strip-h: 32px;
@@ -74,7 +78,7 @@ html { scrollbar-gutter: stable; }
   /* The heading, at the one line it runs to. Only used to work the lift out —
      the text itself is never held to it, and a second line simply pushes the
      block up by that much. */
-  --riva-hero-text-h: 46px;
+  --riva-hero-text-h: 94px;
   /* The opening screen as one object: heading, the margin under it, and the
      field. */
   --riva-dock-group-h: calc(
@@ -98,6 +102,20 @@ html { scrollbar-gutter: stable; }
   --riva-fade-top: 52px;          /* where the page fades in under the header */
 }
 
+/* The sums again, on the Q&A itself. A custom property is worked out
+   on the element that declares it, so a value the page sets on its own
+   element (--riva-dock-extras, the height of the starters under the
+   field) is invisible to a sum declared on :root. The page declares the
+   sums again here, where its own values are in scope; the phone's lift
+   of zero is repeated below for the same reason. */
+.riva-app-shell {
+  --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-extras) + var(--riva-dock-pad-b));
+  --riva-dock-group-h: calc(var(--riva-hero-text-h) + var(--riva-hero-gap) + var(--riva-dock-field-h) + var(--riva-dock-extras));
+  --riva-dock-lift: max(0px, calc(53vh - var(--riva-dock-pad-b) - var(--riva-dock-group-h) / 2));
+  --riva-hero-clear: calc(var(--riva-dock-lift) + var(--riva-dock-pad-b) + var(--riva-dock-extras) + var(--riva-dock-field-h) + var(--riva-hero-gap));
+}
+@media (max-width: 600px) { .riva-app-shell { --riva-dock-lift: 0px; } }
+
 /* A phone's 100vh is the tall viewport, which runs on under the browser's
    own toolbar, while the dock — fixed to the bottom — sits above it. Both
    ends have to be measured against the same edge, or the foot of the page
@@ -105,7 +123,7 @@ html { scrollbar-gutter: stable; }
    fallback for browsers without dvh. */
 .riva-app-shell { height: 100dvh !important; min-height: 100dvh !important; }
 body {
-  background: #f0f4f5;
+  background: #f6f9fb;
   font-family: 'Hanken Grotesk', Arial, Helvetica, sans-serif;
   color: #212b32;
   -webkit-font-smoothing: antialiased;
@@ -309,7 +327,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* Notifications: top-right under the header on desktop, full-width under the
  * header on mobile. */
 .riva-notify-host {
-  position: fixed; top: 84px; right: 16px; z-index: 90;
+  position: fixed; top: 66px; right: 16px; z-index: 90;
   display: flex; flex-direction: column; gap: 10px;
   width: 360px; max-width: calc(100vw - 32px); pointer-events: none;
 }
@@ -499,8 +517,8 @@ body { overflow-x: hidden; }
   background: #fff !important;
   /* The dock is the one thing on the page to use, so it is allowed to sit
      a little proud of it: a firmer edge and a deeper lift than a card. */
-  border-color: #cdd8dd !important;
-  box-shadow: 0 2px 4px rgba(33,43,50,.06), 0 16px 44px rgba(33,43,50,.20);
+  border-color: rgba(255,255,255,.9) !important;
+  box-shadow: 0 2px 4px rgba(33,43,50,.05), 0 18px 48px rgba(0,48,135,.14);
   transition: border-color .18s ease, box-shadow .22s ease, background-color .18s ease;
 }
 /* :not(:focus) matters. Without it this rule sits after .riva-input:focus at
@@ -669,63 +687,133 @@ body { overflow-x: hidden; }
 /* ================================================================== *
  * THE SHELL
  *
- * A fixed rail down the left, a crumb bar across the top of whatever is
- * to the right of it, and the page underneath both. The rail is out of
- * the flow, so no page had to be rebuilt around it: each one keeps the
- * full-height layout it already had, inside a column that is the screen
- * less the rail and less the crumb.
- *
- * A white rail on the page's grey, which is the same relationship every
- * card on every page already has to it. Nothing here introduces a colour
- * the pages were not already using.
+ * The light behind everything, one bar across the top, and the page
+ * underneath both. Nothing here is a panel: the bar is transparent and
+ * only its controls carry a surface, so the page reads edge to edge on
+ * the shader and every tool keeps the full-height layout it already
+ * had, inside a column that is the screen less the bar.
  * ================================================================== */
 
-.riva-shell { display: flex; align-items: stretch; }
+/* ---- the light -------------------------------------------------- */
 
-/* ---- the rail ---------------------------------------------------- */
+.riva-sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.riva-sky-canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .9s ease; }
 
-.riva-rail {
-  position: fixed; left: 0; top: 0; bottom: 0; z-index: 60;
-  width: var(--rv-rail-w);
+.riva-shell {
+  position: relative; z-index: 1;
+  height: 100vh; height: 100dvh;
   display: flex; flex-direction: column;
-  background: var(--rv-rail);
-  border-right: 1px solid var(--rv-line);
-  padding: 12px 10px 10px;
 }
 
-/* The practice, at the head of the rail. */
-.riva-rail-brand {
+/* Every page painted itself the old grey. The light is the page now, so
+   the top-level wrapper of each one is made clear; the cards inside keep
+   their white. */
+.riva-shell-body > * { background: transparent !important; }
+
+/* ---- the bar ---------------------------------------------------- */
+
+.riva-top {
+  flex: none; height: var(--rv-top-h);
+  position: relative; z-index: 30;
   display: flex; align-items: center; gap: 10px;
-  padding: 7px 8px; margin-bottom: 12px;
-  border-radius: var(--rv-radius);
+  padding: 0 18px;
+}
+
+.riva-brand {
+  flex: none; display: flex; align-items: center; gap: 11px;
+  height: 38px; padding: 0 12px 0 6px; border-radius: 999px;
   text-decoration: none; color: inherit;
   transition: background-color .15s ease;
 }
-.riva-rail-brand:hover { background: var(--rv-surface-2); }
-.riva-rail-mark { flex: none; display: flex; align-items: center; }
-.riva-rail-mark img { height: 20px; width: auto; display: block; }
-.riva-rail-brandtext { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
-.riva-rail-brandname {
-  font-size: 14px; font-weight: 700; color: var(--rv-ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.riva-brand:hover { background: var(--rv-glass); }
+.riva-brand-mark { flex: none; display: flex; }
+.riva-brand-mark img { height: 20px; width: auto; display: block; border-radius: 3px; }
+.riva-brand-name {
+  font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--rv-ink);
+  white-space: nowrap;
 }
-.riva-rail-brandsub {
-  font-size: 11px; color: var(--rv-ink-3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.riva-rail-brandchev { flex: none; color: var(--rv-ink-4); display: flex; }
 
-/* Search — the ⌘K list of tools. */
-.riva-rail-search {
-  display: flex; align-items: center; gap: 9px; width: 100%;
-  height: 34px; padding: 0 9px; margin-bottom: 16px;
-  background: var(--rv-page); border: 1px solid var(--rv-line);
-  border-radius: 9px; cursor: pointer;
-  font: inherit; font-size: 13px; color: var(--rv-ink-3);
-  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+/* The way back, ahead of everything but the brand. `:empty` is doing
+   real work: the bar is a flex row with a gap, so an empty div left in
+   it would push the rest 10px along on every page that has no back
+   control, which is nearly all of them. */
+.riva-crumb-lead { display: flex; align-items: center; gap: 8px; }
+.riva-crumb-lead:empty { display: none; }
+
+/* The row of tools, dead centre. A glass pill with the active tool in
+   white, the only coloured thing in the bar, which is what makes it
+   findable without reading. */
+.riva-topnav {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 2px; padding: 4px;
+  border-radius: 999px;
+  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  box-shadow: 0 1px 2px rgba(33,43,50,.04), 0 10px 30px rgba(33,43,50,.07);
 }
-.riva-rail-search:hover { background: var(--rv-surface-2); border-color: var(--rv-accent-line); color: var(--rv-ink-2); }
-.riva-rail-searchlabel { flex: 1; min-width: 0; text-align: left; }
+.riva-topnav-item {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 14px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: var(--rv-ink-2);
+  text-decoration: none; white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.riva-topnav-item:hover { color: var(--rv-ink); background: rgba(255,255,255,.7); }
+.riva-topnav-item.is-active { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.12); }
+.riva-topnav-ico { display: flex; color: currentColor; opacity: .85; }
+
+/* Where the reader is, said in words when the row is folded away. */
+.riva-top-here { display: none; }
+
+.riva-top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* Where a tool's own controls land (see AppHeader). It takes no room when
+   the page has none, so the bar is the same height either way. */
+.riva-crumb-actions { display: flex; align-items: center; gap: 8px; }
+.riva-crumb-actions:empty { display: none; }
+
+.riva-top-btn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 999px;
+  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  color: var(--rv-ink-2); cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.riva-top-btn:hover, .riva-top-btn.is-on { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.12); }
+
+.riva-top-menuwrap { position: relative; }
+.riva-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 70;
+  width: 264px; padding: 8px;
+  background: #fff; border: 1px solid var(--rv-line);
+  border-radius: 16px; box-shadow: 0 16px 44px rgba(33,43,50,.18);
+  display: flex; flex-direction: column; gap: 10px;
+  animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
+}
+.riva-menu-group { display: flex; flex-direction: column; gap: 1px; }
+.riva-menu-grouplabel {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--rv-ink-3);
+  padding: 4px 9px 6px;
+}
+.riva-menu-row {
+  display: flex; align-items: center; gap: 10px;
+  height: 34px; padding: 0 9px; border-radius: 9px;
+  font-size: 13.5px; font-weight: 500; color: var(--rv-ink-2);
+  text-decoration: none; cursor: pointer;
+  transition: background-color .14s ease, color .14s ease;
+}
+.riva-menu-row:hover { background: var(--rv-surface-2); color: var(--rv-ink); }
+.riva-menu-row.is-active { background: var(--rv-accent-dim); color: var(--rv-accent); font-weight: 600; }
+.riva-menu-row.is-active .riva-menu-ico, .riva-menu-row:hover .riva-menu-ico { color: var(--rv-accent); }
+.riva-menu-ico { flex: none; display: flex; align-items: center; justify-content: center; color: var(--rv-ink-3); }
+.riva-menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-menu-foot {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 9px 4px; border-top: 1px solid var(--rv-line-soft);
+}
+.riva-menu-foottext { flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-menu-ver { flex: none; font-size: 11px; font-weight: 600; color: var(--rv-ink-3); font-variant-numeric: tabular-nums; }
 
 .riva-kbd {
   flex: none; font: inherit; font-size: 10.5px; font-weight: 600;
@@ -734,111 +822,66 @@ body { overflow-x: hidden; }
   padding: 1px 5px; line-height: 1.5;
 }
 
-.riva-rail-nav { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
-.riva-rail-nav::-webkit-scrollbar { width: 0; }
-.riva-rail-group { display: flex; flex-direction: column; gap: 1px; }
-.riva-rail-grouplabel {
-  font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
-  text-transform: uppercase; color: var(--rv-ink-3);
-  padding: 0 9px 7px;
-}
+/* ---- the page under it ------------------------------------------ */
 
-/* One row. The active one is the only coloured thing in the rail, which
-   is what makes it findable without reading. */
-.riva-rail-row {
-  display: flex; align-items: center; gap: 10px;
-  height: 32px; padding: 0 9px; border-radius: 8px;
-  font-size: 13.5px; font-weight: 500; color: var(--rv-ink-2);
-  text-decoration: none; cursor: pointer;
-  transition: background-color .14s ease, color .14s ease;
-}
-.riva-rail-row:hover { background: var(--rv-surface-2); color: var(--rv-ink); }
-.riva-rail-row.is-active { background: var(--rv-accent-dim); color: var(--rv-accent); font-weight: 600; }
-.riva-rail-row.is-active .riva-rail-ico { color: var(--rv-accent); }
-.riva-rail-ico { flex: none; display: flex; align-items: center; justify-content: center; color: var(--rv-ink-3); }
-.riva-rail-row:hover .riva-rail-ico { color: var(--rv-accent); }
-.riva-rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* The foot: which practice, which build, and the way to settings.
-   One line, not a card. A bordered panel around two short facts framed
-   them as a component with something to say; they are a caption, and a
-   caption does not need a box round it. */
-.riva-rail-foot { flex: none; padding-top: 14px; display: flex; flex-direction: column; gap: 2px; }
-.riva-rail-status { display: flex; align-items: baseline; gap: 8px; padding: 4px 9px 8px; }
-.riva-rail-statustext {
-  flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.riva-rail-ver { flex: none; font-size: 11px; font-weight: 600; color: var(--rv-ink-3); font-variant-numeric: tabular-nums; }
-
-/* ---- the column to the right of it ------------------------------- */
-
-.riva-shell-main {
-  flex: 1; min-width: 0;
-  margin-left: var(--rv-rail-w);
-  height: 100vh; height: 100dvh;
-  display: flex; flex-direction: column;
-  background: var(--rv-page);
-}
-
-.riva-crumbbar {
-  flex: none; height: var(--rv-crumb-h);
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--rv-line);
-  background: var(--rv-rail);
-  position: relative; z-index: 30;
-}
-.riva-crumb { display: flex; align-items: center; gap: 7px; font-size: 12.5px; min-width: 0; }
-/* Where a tool's own controls land (see AppHeader). It takes no room when
-   the page has none, so the crumb bar is the same height either way. */
-.riva-crumb-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-/* The other end of the same bar: a page's way back, ahead of the crumb.
-   `:empty` is doing real work — the crumb bar is a flex row with a gap, so
-   an empty div left in it would push the crumb 8px right on every page
-   that has no back control, which is nearly all of them. */
-.riva-crumb-lead { display: flex; align-items: center; gap: 8px; }
-.riva-crumb-lead:empty { display: none; }
-.riva-crumb-group { color: var(--rv-ink-3); white-space: nowrap; }
-.riva-crumb-sep { color: #c3ccd1; }
-.riva-crumb-here { color: var(--rv-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.riva-crumb-menu {
-  display: none; align-items: center; justify-content: center;
-  width: 30px; height: 30px; margin-left: -6px;
-  background: none; border: none; border-radius: 8px;
-  color: var(--rv-ink-2); cursor: pointer;
-}
-.riva-crumb-menu:hover { background: var(--rv-surface-2); color: var(--rv-accent); }
-
-/* Everything below the crumb scrolls inside this, so a page that asks for
+/* Everything below the bar scrolls inside this, so a page that asks for
    the whole screen gets the whole of what is left of it rather than the
-   whole of the screen plus the crumb. */
+   whole of the screen plus the bar. */
 .riva-shell-body { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
 
 /* Every page measured the screen before the shell existed: fourteen of
    them open with `min-height:100vh`, and the two that are whole app
    layouts ask for `height:100vh` outright. Inside the shell the screen is
-   the crumb bar shorter than that, so all of them stood 50px taller than
-   the room they had and every page in the app carried a phantom scroll of
-   exactly that much — most visible on the notebook, where it made the
-   fixed sidebar drift and cut the Export/Import row off the bottom.
-
-   These two lines are what tells them what the screen now is. The pages
-   themselves keep saying 100vh, which stays right when one is opened
-   outside the shell. */
+   the bar shorter than that. These two lines are what tells them what the
+   screen now is. The pages themselves keep saying 100vh, which stays
+   right when one is opened outside the shell. */
 .riva-shell-body > * { min-height: 100% !important; }
 .riva-app-shell,
 .riva-page-fill { height: 100% !important; min-height: 100% !important; }
 
-/* The dock is fixed to the viewport, so it has to be told the rail is
-   there — otherwise it centres itself under it. */
-.riva-dock { left: var(--rv-rail-w); }
+/* ---- the opening screen ----------------------------------------- */
 
-/* ---- ⌘K --------------------------------------------------------- */
+/* The line above the heading: whose assistant this is, in a glass pill,
+   where Emergent puts the name of the project. */
+.riva-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 30px; padding: 0 12px 0 8px; margin: 0 auto 18px;
+  border-radius: 999px;
+  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  font-size: 12.5px; font-weight: 600; color: var(--rv-ink-2);
+}
+.riva-eyebrow img { height: 14px; width: auto; display: block; border-radius: 2px; }
+.riva-eyebrow-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--rv-ink-4); }
+
+/* The starters under the field: four things people actually ask, as
+   glass pills. They belong to the dock, rising and falling with it, and
+   the room they take is declared to the geometry above (--riva-dock-extras)
+   so the heading keeps its margin. One row, always: a second row is cut
+   rather than allowed to push the field up the page. */
+.riva-starters {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  height: 40px; margin-top: 16px; overflow: hidden;
+  animation: rivaAnswerIn .5s .28s cubic-bezier(.2,.7,.3,1) both;
+}
+.riva-starter {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--rv-glass); border: 1px solid var(--rv-glass-line);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--rv-ink-2);
+  cursor: pointer; white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.riva-starter:hover { background: #fff; color: var(--rv-accent); box-shadow: 0 4px 14px rgba(33,43,50,.10); transform: translateY(-1px); }
+.riva-starter-ico { display: flex; color: var(--rv-accent); }
+
+/* ---- the palette ------------------------------------------------- */
 
 .riva-palette-scrim {
   position: fixed; inset: 0; z-index: 120;
-  background: rgba(33,43,50,.45);
+  background: rgba(33,43,50,.35);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 14vh 20px 20px;
   animation: rivaHeaderIn .12s ease both;
@@ -846,7 +889,7 @@ body { overflow-x: hidden; }
 .riva-palette {
   width: 100%; max-width: 480px;
   background: #fff; border: 1px solid var(--rv-line);
-  border-radius: 14px; overflow: hidden;
+  border-radius: 16px; overflow: hidden;
   box-shadow: 0 16px 44px rgba(33,43,50,.22);
   animation: rivaPanelIn .16s cubic-bezier(.2,.7,.3,1) both;
 }
@@ -857,10 +900,9 @@ body { overflow-x: hidden; }
 /* The palette opens with its field already focused, so the global yellow
    focus outline fired on every open and read as a hazard box round the
    one thing the reader is meant to type into. The dialog is the focus
-   indicator here — it is modal, and this is the only thing in it that
-   takes focus — so the field wears the accent edge above instead of the
-   slab. Every other input in the app keeps the yellow: this is the one
-   place it was saying nothing the reader did not already know. */
+   indicator here: it is modal, and this is the only thing in it that
+   takes focus, so the field wears the accent edge above instead of the
+   slab. Every other input in the app keeps the yellow. */
 .riva-palette-input:focus,
 .riva-palette-input:focus-visible { outline: none !important; box-shadow: none !important; }
 .riva-palette-ico { flex: none; display: flex; color: var(--rv-ink-3); }
@@ -877,35 +919,36 @@ body { overflow-x: hidden; }
   text-align: left; cursor: pointer;
 }
 .riva-palette-row.is-sel { background: var(--rv-accent-dim); color: var(--rv-accent); }
-.riva-palette-row.is-sel .riva-rail-ico { color: var(--rv-accent); }
+.riva-palette-row.is-sel .riva-menu-ico { color: var(--rv-accent); }
 .riva-palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-palette-group { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--rv-ink-3); }
 .riva-palette-empty { padding: 18px 12px; font-size: 13.5px; color: var(--rv-ink-3); text-align: center; }
 
-/* ---- the rail on a phone ---------------------------------------- */
+/* ---- the bar when the room runs out ----------------------------- */
 
-.riva-rail-scrim { display: none; }
-
-/* On a phone the crumb bar is carrying the menu button, the crumb and the
-   page's controls already. The way back keeps its arrow and drops its word,
-   the same bargain the Contacts pill makes. */
+/* On a phone the bar is carrying the brand, the way back and the page's
+   controls already. The way back keeps its arrow and drops its word, the
+   same bargain the Contacts pill makes. */
 @media (max-width: 600px) {
+  /* One row still, but a phone cannot hold four pills across, so the
+     row slides sideways under a thumb rather than losing three of them. */
+  .riva-starters { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding: 0 4px; margin-left: -4px; margin-right: -4px; }
+  .riva-starters::-webkit-scrollbar { display: none; }
+  .riva-starter { flex: none; }
   .riva-crumb-back { padding: 0 10px !important; }
   .riva-crumb-back-label { display: none; }
+  .riva-brand-name { display: none; }
+  .riva-brand { padding: 0 6px; }
+  .riva-top { padding: 0 12px; }
 }
 
-@media (max-width: 900px) {
-  :root { --rv-rail-w: 0px; }
-  .riva-rail {
-    width: 250px;
-    transform: translateX(-100%);
-    transition: transform .22s cubic-bezier(.2,.7,.3,1);
+/* A tool with tabs in the bar (the rota) has no room for the row beside
+   them at a laptop width; the row folds into the menu and the page's name
+   is said in words instead. */
+@media (max-width: 1120px) {
+  .riva-topnav { display: none; }
+  .riva-top-here {
+    display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 13.5px; font-weight: 600; color: var(--rv-ink);
   }
-  .riva-rail.is-open { transform: none; box-shadow: 0 0 40px rgba(33,43,50,.25); }
-  .riva-rail-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(33,43,50,.4); }
-  .riva-crumb-menu { display: inline-flex; }
-  /* A keyboard shortcut on a phone is a promise nobody can keep. */
-  .riva-rail-search .riva-kbd { display: none; }
-  .riva-shell-main { margin-left: 0; }
-  .riva-dock { left: 0; }
 }

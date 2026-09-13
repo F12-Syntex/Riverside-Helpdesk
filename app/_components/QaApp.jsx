@@ -19,7 +19,6 @@ import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
-import GradientBackground from './GradientBackground';
 import CommandMenu from './CommandMenu';
 import ModeSwitch from './ModeSwitch';
 import DocumentViewer from './DocumentViewer';
@@ -137,6 +136,16 @@ function prepareImage(file) {
     reader.readAsDataURL(file);
   });
 }
+
+/* The starters under the field. Four, and short: they are there to show
+   what kind of thing the box answers, not to list what it knows. The
+   label is what fits in a pill; the question is what is actually asked. */
+const STARTERS = [
+  { label: 'Register a new patient', ask: 'How do I register a new patient?' },
+  { label: 'Sick note request', ask: 'What do I do with a sick note request?' },
+  { label: 'Book an interpreter', ask: 'How do I book an interpreter?' },
+  { label: 'Repeat prescription query', ask: 'Who deals with a repeat prescription query?' },
+];
 
 /* ------------------------------------------------------------------ *
  * The Riverside Practice Q&A component.
@@ -2011,6 +2020,8 @@ class RiversidePracticeQA extends React.Component {
       onCloseViewer: () => self.closeViewer(),
       onInput: (e) => self.onInput(e.target.value),
       onSubmit: (e) => { e.preventDefault(); self.ask(self.state.input); },
+      // A starter under the field is asked as typed, no field in between.
+      onAskText: (q) => self.ask(q),
       onOpenAdd: () => self.setState({ showAdd: true, draftError: false }),
       onCloseAdd: () => self.setState({ showAdd: false }),
       onDraftQuestion: (e) => self.setDraftField('question', e.target.value),
@@ -2039,16 +2050,11 @@ class RiversidePracticeQA extends React.Component {
         // heading and the foot of a long answer keep out from under them.
         // Set through the style object rather than s(), which would camel-case
         // the custom property out of existence.
-        style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;'), '--riva-dock-attached': v.dockAttached }}>
+        // And how much hangs UNDER the field: the starters, on the opening screen
+        // only. Declared here for the same reason — the hero above measures its
+        // margin from the whole dock, and this is the only place that knows.
+        style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;'), '--riva-dock-attached': v.dockAttached, '--riva-dock-extras': v.isEmpty ? '56px' : '0px' }}>
 
-        {/* The opening screen is mostly empty by design, so it is the one
-            place a background earns its keep. It goes the moment there is
-            an answer to read — nothing decorative sits behind text. */}
-        {v.isEmpty && !v.isKb && (
-          <div style={s('position:absolute;inset:0;z-index:0;pointer-events:none;animation:rivaHeaderIn .6s ease both;')}>
-            <GradientBackground />
-          </div>
-        )}
 
 
         {/* Keyed on the state so the header fades through a change rather
@@ -2164,10 +2170,20 @@ class RiversidePracticeQA extends React.Component {
               </Hover>
             </form>
 
-            {/* Nothing hangs under the box: the modes live on the disc inside
-                the field now, and the directory is reached by typing a name or
-                from the header. The room it would take (--riva-dock-extras) is
-                zero again. */}
+            {/* Under the box on the opening screen only: four of the things
+                people actually ask, as pills. Pressing one asks it. The modes
+                live on the disc inside the field; the directory is reached by
+                typing a name or from the bar. */}
+            {v.isEmpty && (
+              <div className="riva-starters" aria-label="Things people ask">
+                {STARTERS.map((q) => (
+                  <button key={q.ask} type="button" className="riva-starter" onClick={() => v.onAskText(q.ask)}>
+                    <span className="riva-starter-ico"><Svg w={13} sw={2.2}>{Icons.sparkle}</Svg></span>
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
           </div>
         </div>

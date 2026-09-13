@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next';
 import Notifications from './_components/Notifications';
 import AuditTracker from './_components/AuditTracker';
 import AppShell from './_components/AppShell';
+import ShaderBackground from './_components/ShaderBackground';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
@@ -26,13 +27,12 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        {/* Every page is inside the rail: the tools down the left, the crumb
-            across the top, and which build this is at the foot of the rail —
-            the corner somebody is asked to read out when they have been told
-            a change is live and cannot see it. That badge used to float over
-            the bottom right of every page; it is a labelled row in a fixed
-            place now, which is the same job done without sitting on top of
-            an answer. */}
+        {/* The light behind every page (ShaderBackground), then every page
+            inside the shell: the bar across the top, the tools in the middle
+            of it, and which build this is at the foot of its menu, the corner
+            somebody is asked to read out when they have been told a change
+            is live and cannot see it. */}
+        <ShaderBackground />
         <AppShell>{children}</AppShell>
         <Notifications />
         <AuditTracker />

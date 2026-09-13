@@ -6,15 +6,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Svg, Icons } from './ui';
 import { VERSION_LABEL, BUILD_LABEL } from '@/lib/version.mjs';
 
-/* The right-hand end of the crumb bar, offered to whatever page is
-   inside the shell. AppHeader renders its controls into it, so a tool's
-   actions sit on the same line as the crumb rather than in a band of
-   their own underneath it — one row of chrome, not two. Null until the
-   shell has mounted, which is what tells AppHeader to hold its render:
-   there is no DOM node to portal into on the server. */
+/* The right-hand end of the top bar, offered to whatever page is inside
+   the shell. AppHeader renders its controls into it, so a tool's actions
+   sit on the same line as the navigation rather than in a band of their
+   own underneath it — one row of chrome, not two. Null until the shell
+   has mounted, which is what tells AppHeader to hold its render: there
+   is no DOM node to portal into on the server. */
 export const HeaderSlot = React.createContext(null);
 
-/* The LEFT-hand end of the same bar, before the crumb, for a page's way
+/* The LEFT-hand end of the same bar, after the brand, for a page's way
    back out of what it is showing. It is a second slot rather than a
    corner of the first because the two ends mean different things: the
    right-hand end is what you can DO here, and a back control is not one
@@ -24,33 +24,28 @@ export const HeaderSlot = React.createContext(null);
 export const HeaderLeadSlot = React.createContext(null);
 
 /* ------------------------------------------------------------------ *
- * The rail.
+ * The shell.
  *
- * Every tool in the app used to be reached from a menu button in the
- * corner, which meant the answer to "what else is here?" cost a tap and
- * was never on screen. The rail answers it permanently, with the page
- * you are on marked.
+ * One bar across the top and the page underneath, on the light. The
+ * rail that used to run down the left was a white column on a grey
+ * page; with the whole page now sitting on the shader there is nothing
+ * for a column to be a column of, and the tools it listed fit in a row
+ * of pills in the middle of the bar — the same row Emergent puts its
+ * modes in. The page is the page again, edge to edge.
  *
  * THE GROUPS ARE NAMED FOR THE MOMENT THEY BELONG TO
  * --------------------------------------------------
  * ASK is the front desk with a patient waiting. WORK is the half hour
  * afterwards. REFERENCE is what somebody looks up rather than uses.
  * Reception spends its whole day in the first group, which is why it is
- * at the top and why the Q&A is its first entry.
+ * first in the row and why the Q&A is its first entry.
  *
- * IT IS SHORT ON PURPOSE
- * ----------------------
- * A rail earns its place by being scannable, and a rail listing every
- * route is a menu with extra steps. What is here is what somebody opens
- * on an ordinary day. Everything else is one ⌘K away and is listed in
- * EXTRA below rather than deleted, so the palette still finds it and the
- * crumb still knows its name — nothing became unreachable by leaving
- * the rail.
- *
- * It is fixed, so it does not scroll away, and it is out of the flow, so
- * every page keeps the full-height layout it already had — pages make
- * room for it with a margin (see .riva-shell-main in globals.css) rather
- * than being rebuilt around it.
+ * WHAT THE ROW SHOWS, AND WHERE THE REST IS
+ * -----------------------------------------
+ * The row is the five tools reception reaches for on an ordinary day.
+ * Everything else — Settings, the build — is in the menu at the right,
+ * and the whole list is one ⌘K away in the palette. On a phone the row
+ * folds into that same menu.
  * ------------------------------------------------------------------ */
 
 const GROUPS = [
@@ -76,45 +71,42 @@ const GROUPS = [
   },
 ];
 
-/* Settings is reachable and searchable but sits at the foot of the rail
- * rather than in a group, so it is listed here to give ⌘K and the crumb
- * bar its name.
+/* Settings is reachable and searchable but sits in the menu rather than
+ * in the row, so it is listed here to give ⌘K its name.
  *
  * WHAT IS IN NEITHER LIST, AND WHY
  * --------------------------------
  * Signposting, the medication check, the templates, the staff rota, the
  * tools index, the full index, the system map and the coder are off the
- * navigation entirely — the rail AND the palette. A search that offered a
- * tool the rail deliberately leaves out would be the rail's decision
- * undone by the box next to it, and it would make ⌘K the place to
- * rediscover exactly what had just been taken away. Their routes still
- * answer, so a bookmarked address still works; nothing in the app links
- * to them.
+ * navigation entirely — the row AND the palette. A search that offered a
+ * tool the row deliberately leaves out would be the row's decision
+ * undone by the box next to it. Their routes still answer, so a
+ * bookmarked address still works; nothing in the app links to them.
  *
  * /knowledge is behind the knowledge-admin check in middleware.js, so
  * for nearly everyone a row for it would be a row that 404s.
  *
  * /stats is the audit log — every question asked and who did what. The
- * note in app/stats/layout.js keeps it off the tools index on purpose,
- * and a row in the rail would undo that more thoroughly than listing it
- * ever did. It is reached by typing its address, as before.
+ * note in app/stats/layout.js keeps it off the tools index on purpose.
+ * It is reached by typing its address, as before.
  *
  * The Q&A's own Sources view is not here either, because it is a view of
- * that page rather than a page: it toggles from the crumb bar, so leaving
- * it returns to the half-asked question (see AppHeader).
+ * that page rather than a page: it toggles from the bar's right-hand end,
+ * so leaving it returns to the half-asked question (see AppHeader).
  */
 const EXTRA = [
   { href: '/settings', label: 'Settings', group: 'Reference', icon: Icons.settings },
 ];
 
-const ALL = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label }))).concat(EXTRA);
+const ROW = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
+const ALL = ROW.concat(EXTRA);
 
 // One address the router sees under two names. /index is served by the
 // page in app/site-index (see the rewrite in next.config.mjs), so the
 // server renders this component knowing it as /site-index while the
-// browser knows it as /index — and the crumb, worked out from the path,
-// came out different on each side. Normalising first is what stops that
-// from being a hydration mismatch.
+// browser knows it as /index — and the active entry, worked out from the
+// path, came out different on each side. Normalising first is what stops
+// that from being a hydration mismatch.
 const ALIAS = { '/site-index': '/index' };
 
 // Which entry is the page being looked at? Longest match wins, so /rota
@@ -130,9 +122,9 @@ function matchHref(rawPath) {
   }
   if (best) return best;
   // A page neither list names — /stats, reached by typing its address.
-  // The crumb still has to say where the reader is: naming it from its
-  // own path is honest about that, where falling through to the first
-  // entry would tell them they are on the Q&A.
+  // The bar still has to say where the reader is: naming it from its own
+  // path is honest about that, where falling through to the first entry
+  // would tell them they are on the Q&A.
   const seg = pathname.split('/').filter(Boolean)[0];
   if (!seg) return null;
   return { href: '/' + seg, group: 'Riverside', label: seg.charAt(0).toUpperCase() + seg.slice(1) };
@@ -143,11 +135,11 @@ function NavRow({ item, active, onNavigate }) {
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={'riva-rail-row' + (active ? ' is-active' : '')}
+      className={'riva-menu-row' + (active ? ' is-active' : '')}
       aria-current={active ? 'page' : undefined}
     >
-      <span className="riva-rail-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
-      <span className="riva-rail-label">{item.label}</span>
+      <span className="riva-menu-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
+      <span className="riva-menu-label">{item.label}</span>
     </Link>
   );
 }
@@ -157,7 +149,7 @@ function NavRow({ item, active, onNavigate }) {
    something else would be the cruellest thing on the page. This one
    moves between tools, which is the thing a keyboard shortcut is
    actually good at, and it lists the whole app rather than only the part
-   the rail shows. */
+   the row shows. */
 function Palette({ onClose }) {
   const router = useRouter();
   const [q, setQ] = React.useState('');
@@ -197,7 +189,7 @@ function Palette({ onClose }) {
           {rows.map((item, i) => (
             <button key={item.href} type="button" onClick={() => go(item)} onMouseMove={() => setSel(i)}
               className={'riva-palette-row' + (i === sel ? ' is-sel' : '')}>
-              <span className="riva-rail-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
+              <span className="riva-menu-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
               <span className="riva-palette-label">{item.label}</span>
               <span className="riva-palette-group">{item.group}</span>
             </button>
@@ -208,15 +200,55 @@ function Palette({ onClose }) {
   );
 }
 
+/* The menu at the right-hand end of the bar: every tool by group,
+   Settings, and which build this is. On a desktop it is the long form of
+   the row; on a phone it is the row. */
+function Menu({ current, pathname, onClose }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    function onDown(e) { if (ref.current && !ref.current.contains(e.target)) onClose(); }
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [onClose]);
+
+  return (
+    <div ref={ref} className="riva-menu" role="menu" aria-label="All tools">
+      {GROUPS.map((g) => (
+        <div className="riva-menu-group" key={g.label}>
+          <div className="riva-menu-grouplabel">{g.label}</div>
+          {g.items.map((item) => (
+            <NavRow key={item.href} item={item} active={current?.href === item.href} onNavigate={onClose} />
+          ))}
+        </div>
+      ))}
+      <div className="riva-menu-group">
+        <NavRow item={{ href: '/settings', label: 'Settings', icon: Icons.settings }}
+          active={pathname.startsWith('/settings')} onNavigate={onClose} />
+      </div>
+      {/* Which practice, and which build. It exists for one exchange —
+          somebody is told a change is live, cannot see it, and needs to
+          say what they are actually looking at — so it is a plain caption
+          in a fixed place, with the commit in the tooltip. */}
+      <div className="riva-menu-foot" title={BUILD_LABEL}>
+        <span className="riva-menu-foottext">The Riverside Practice</span>
+        <span className="riva-menu-ver">{VERSION_LABEL}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AppShell({ children }) {
   const pathname = usePathname() || '/';
-  const [openMobile, setOpenMobile] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   // A callback ref rather than a plain one: the page below has to be
   // re-rendered once the node exists, or it would portal into nothing.
   const [slot, setSlot] = React.useState(null);
   const [lead, setLead] = React.useState(null);
   const current = matchHref(pathname);
+  const closeMenu = React.useCallback(() => setMenuOpen(false), []);
 
   // ⌘K / Ctrl-K anywhere, except while something is already being typed
   // into — the Q&A field is the one thing on the page people are here to
@@ -236,87 +268,64 @@ export default function AppShell({ children }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // The rail closes behind you on a phone: it is a full-screen overlay
-  // there, so leaving it open over the page you just asked for would be
-  // a dead end.
-  React.useEffect(() => { setOpenMobile(false); }, [pathname]);
+  // The menu closes behind you: leaving it open over the page you just
+  // asked for would be a dead end.
+  React.useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   return (
     <div className="riva-shell">
-      <aside className={'riva-rail' + (openMobile ? ' is-open' : '')} aria-label="Tools">
+      <header className="riva-top">
         {/* Whose service this is, and the way back to the front door. The
-            logo is here and nowhere else: it used to be reprinted at the
-            top of every page, at 30px, on all of them. */}
-        <Link href="/" className="riva-rail-brand">
-          <span className="riva-rail-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
-          <span className="riva-rail-brandtext">
-            <span className="riva-rail-brandname">Riverside</span>
-            <span className="riva-rail-brandsub">Practice Q&amp;A</span>
-          </span>
-          <span className="riva-rail-brandchev" aria-hidden="true"><Svg w={13} sw={2}>{Icons.chevronUpDown}</Svg></span>
+            logo is here and nowhere else. */}
+        <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
+          <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
+          <span className="riva-brand-name">The Riverside Practice</span>
         </Link>
 
-        <button type="button" className="riva-rail-search" onClick={() => setPaletteOpen(true)}>
-          <span className="riva-rail-ico"><Svg w={15} sw={2}>{Icons.search}</Svg></span>
-          <span className="riva-rail-searchlabel">Search</span>
-          <kbd className="riva-kbd">⌘K</kbd>
-        </button>
+        {/* A page's way back, beside the brand it is leaving from. */}
+        <div className="riva-crumb-lead" ref={setLead} />
 
-        <nav className="riva-rail-nav">
-          {GROUPS.map((g) => (
-            <div className="riva-rail-group" key={g.label}>
-              <div className="riva-rail-grouplabel">{g.label}</div>
-              {g.items.map((item) => (
-                <NavRow key={item.href} item={item} active={current?.href === item.href}
-                  onNavigate={() => setOpenMobile(false)} />
-              ))}
-            </div>
-          ))}
+        {/* Where the reader is, on a phone, where the row is folded away. */}
+        <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
+
+        <nav className="riva-topnav" aria-label="Tools">
+          {ROW.map((item) => {
+            const active = current?.href === item.href;
+            return (
+              <Link key={item.href} href={item.href}
+                className={'riva-topnav-item' + (active ? ' is-active' : '')}
+                aria-current={active ? 'page' : undefined}>
+                <span className="riva-topnav-ico"><Svg w={15} sw={2}>{item.icon}</Svg></span>
+                <span className="riva-topnav-label">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* The foot of the rail: which practice, and which build. It
-            exists for one exchange — somebody is told a change is live,
-            cannot see it, and needs to say what they are actually looking
-            at — so it is a plain caption in a fixed place, with the commit
-            in the tooltip. */}
-        <div className="riva-rail-foot">
-          <div className="riva-rail-status" title={BUILD_LABEL}>
-            <span className="riva-rail-statustext">The Riverside Practice</span>
-            <span className="riva-rail-ver">{VERSION_LABEL}</span>
-          </div>
-          <NavRow item={{ href: '/settings', label: 'Settings', icon: Icons.settings }}
-            active={pathname.startsWith('/settings')} onNavigate={() => setOpenMobile(false)} />
-        </div>
-      </aside>
-
-      {/* On a phone the rail is an overlay; this is what closes it. */}
-      {openMobile && <div className="riva-rail-scrim" onClick={() => setOpenMobile(false)} role="presentation" />}
-
-      <div className="riva-shell-main">
-        {/* The crumb: which group, then which tool. It replaces the page
-            titles each tool used to print for itself, so every page says
-            where it is in the same words and the same place. */}
-        <div className="riva-crumbbar">
-          <button type="button" className="riva-crumb-menu" onClick={() => setOpenMobile(true)} aria-label="Open tools">
-            <Svg w={19} sw={2}>{Icons.menu}</Svg>
-          </button>
-          {/* A page's way back, ahead of the crumb it is leaving. */}
-          <div className="riva-crumb-lead" ref={setLead} />
-          <nav className="riva-crumb" aria-label="Breadcrumb">
-            <span className="riva-crumb-group">{current?.group || 'Ask'}</span>
-            <span className="riva-crumb-sep" aria-hidden="true">/</span>
-            <span className="riva-crumb-here">{current?.label || 'Ask a question'}</span>
-          </nav>
+        <div className="riva-top-right">
+          {/* Where a tool's own controls land (see AppHeader). */}
           <div className="riva-crumb-actions" ref={setSlot} />
+          <button type="button" className="riva-top-btn riva-top-search" onClick={() => setPaletteOpen(true)}
+            aria-label="Go to a tool (⌘K)" title="Go to a tool — ⌘K">
+            <Svg w={17} sw={2}>{Icons.search}</Svg>
+          </button>
+          <div className="riva-top-menuwrap">
+            <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
+              aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
+              <Svg w={19} sw={2}>{Icons.menu}</Svg>
+            </button>
+            {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} />}
+          </div>
         </div>
-        {/* The page scrolls inside the shell rather than the window, so a
-            tool that asks for the whole screen gets the whole of what is
-            left of it and the crumb never scrolls away. */}
-        <div className="riva-shell-body">
-          <HeaderSlot.Provider value={slot}>
-            <HeaderLeadSlot.Provider value={lead}>{children}</HeaderLeadSlot.Provider>
-          </HeaderSlot.Provider>
-        </div>
+      </header>
+
+      {/* The page scrolls inside the shell rather than the window, so a
+          tool that asks for the whole screen gets the whole of what is
+          left of it and the bar never scrolls away. */}
+      <div className="riva-shell-body">
+        <HeaderSlot.Provider value={slot}>
+          <HeaderLeadSlot.Provider value={lead}>{children}</HeaderLeadSlot.Provider>
+        </HeaderSlot.Provider>
       </div>
 
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
