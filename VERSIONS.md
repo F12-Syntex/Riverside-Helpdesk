@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.39.0` | 2026-09-13 | feat | `330cde5` | feat: composer dock, shimmering status, centred row, no mode flash |
+| `5.38.1` | 2026-09-13 | docs | `e31e54a` | docs: record 5.38.0 in the versions table |
 | `5.38.0` | 2026-09-13 | feat | `26c9fa7` | feat: stronger Stitch-like light, a visible bar, and a blue Back |
 | `5.37.2` | 2026-09-13 | docs | `ce14600` | docs: record 5.37.0 and 5.37.1 in the versions table |
 | `5.37.1` | 2026-09-13 | chore | `357f908` | chore: add a launch config so the dev server can be previewed |
