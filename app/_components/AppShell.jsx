@@ -294,6 +294,10 @@ export default function AppShell({ children }) {
             <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
             <span className="riva-brand-name">Riverside</span>
           </Link>
+          {/* Which build this is, in plain sight on every page. Somebody told
+              a change is live should be able to see the number without
+              opening a menu; the commit still rides in the tooltip. */}
+          <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
 
           {/* Where the reader is, when the row is folded away. */}
           <span className="riva-top-here">{current?.label || 'Ask a question'}</span>

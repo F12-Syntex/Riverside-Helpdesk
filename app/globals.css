@@ -780,6 +780,14 @@ body { overflow-x: hidden; }
 /* Where the reader is, said in words when the row is folded away. */
 .riva-top-here { display: none; }
 
+/* The build, beside the brand, on every page. Small and quiet, but always
+   there — it is read when somebody asks "is the new version live?". */
+.riva-top-ver {
+  flex: none; margin-left: 2px; padding: 2px 7px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
+  color: var(--rv-ink-3); background: rgba(33,43,50,.06); font-variant-numeric: tabular-nums;
+}
+
 .riva-top-right { margin-left: auto; gap: 6px; }
 /* Where a tool's own controls land (see AppHeader). It takes no room when
    the page has none, so the bar is the same height either way. */
