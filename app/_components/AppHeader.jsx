@@ -15,7 +15,8 @@ import { HeaderSlot, HeaderLeadSlot, ShellPresence } from './AppShell';
  * nobody was still asking, and it cost the page 72px of its best space.
  *
  * What is left is the part that was never said anywhere else: the things
- * you can DO on this page — Contacts, Sources, and a tool's own tabs —
+ * you can DO on this page — a tool's own tabs (Contacts and Sources are
+ * both switched off below) —
  * and they are not drawn here at all. They are portalled up into the
  * right-hand end of the shell's crumb bar, so the page begins at the top
  * of the page and the chrome is one row rather than two.
@@ -48,19 +49,18 @@ const PILL_HOVER = 'background:#e8f1f8;border-color:#005eb8;color:#003087;';
 const BACK = 'background:#005eb8;border:1px solid #005eb8;color:#fff;box-shadow:0 6px 18px rgba(0,94,184,.28);';
 const BACK_HOVER = 'background:#003087;border-color:#003087;color:#fff;';
 
+// `onContacts` is still accepted and ignored: the Q&A page passes its opener
+// and nothing had to be edited to stop it. The Contacts pill is off the bar
+// on every page — the Q&A page had already dropped it (it opens the directory
+// from under the box instead), and the other tools showed one only because
+// nobody had asked them not to. The sheet itself (ContactsSheet) is untouched,
+// so putting the pill back is the block below and one import.
 export default function AppHeader({ v, subtitle = null, tabs = null, onContacts = null, back = null }) {
-  // The directory opens over the page it was asked for from, and closes back
-  // onto it. Nobody goes anywhere, so a half-typed question is still there
-  // afterwards.
-  //
-  // A page that puts the Contacts pill somewhere better than a header corner —
-  // the Q&A page has it under the box, where it is actually seen — passes its
-  // own opener in. The header then drops its pill rather than showing a second
-  // one.
+  const canContacts = false;
   const [contactsOpen, setContactsOpen] = React.useState(false);
   const closeContacts = React.useCallback(() => setContactsOpen(false), []);
   const openContacts = onContacts || (() => setContactsOpen(true));
-  const ownsSheet = !onContacts;
+  const ownsSheet = canContacts && !onContacts;
 
   // Sources — everything the assistant is allowed to read from. It is a
   // view of the Q&A page rather than a page of its own, so it toggles
@@ -114,11 +114,8 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
         </div>
       )}
 
-      {/* The practice's own telephone directory. A pill rather than a rail
-          entry: it is the thing reception reaches for most, and reaching it
-          should never cost more than the one tap. It opens the directory over
-          this page rather than going to one — see ContactsSheet. On phones it
-          keeps the handset and drops the word (see globals.css). */}
+      {/* The practice's own telephone directory, opened over this page — see
+          ContactsSheet. Off the bar on every page (canContacts above). */}
       {ownsSheet && (
         <Hover tag="button" type="button" onClick={openContacts} className="riva-contacts-pill"
           aria-label="Contacts" aria-haspopup="dialog" aria-expanded={contactsOpen ? 'true' : 'false'}
