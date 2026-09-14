@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.43.0` | 2026-09-14 | feat | `6c00026` | feat: show the version beside the brand on every page |
+| `5.42.3` | 2026-09-14 | docs | `c7c6322` | docs: record 5.42.2 in the versions table |
 | `5.42.2` | 2026-09-14 | fix | `55ffe85` | fix: take the Contacts pill off the header on every page |
 | `5.42.1` | 2026-09-14 | docs | `acc24a9` | docs: record 5.42.0 in the versions table |
 | `5.42.0` | 2026-09-14 | feat | `3d957b4` | feat: read referral pathways from the Notebook before the code list |
