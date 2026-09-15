@@ -82,7 +82,7 @@ function describe(e) {
   if (e.kind === 'settled') {
     return {
       tone: (e.written || []).length ? 'green' : 'grey',
-      title: 'Settled' + (e.subject ? ' — ' + e.subject : ''),
+      title: 'Settled',
       lines: [e.resolution].concat((e.written || []).map((w) => w.title + ' now says “' + w.to + '”')).filter(Boolean),
     };
   }
@@ -124,53 +124,90 @@ function Bar({ value, total, tone = '#005eb8' }) {
   );
 }
 
-// One side of a disagreement: where it is written, what it says, and a box the
-// reader can correct on the spot. The box starts as the line exactly as the page
-// has it; whatever they leave in it is what gets written, word for word.
-function Side({ side, letter, value, changed, onChange, onTakeOther, onReset, onOpenPage, disabled }) {
-  const id = 'flag-side-' + letter + '-' + (side.noteId || '0');
+// One side of a disagreement: a card you click to say "this one is right".
+function Side({ side, letter, picked, dimmed, onPick, onOpenPage, disabled }) {
   return (
-    <div style={s('flex:1;min-width:260px;border:1px solid ' + (changed ? '#9cc5ea' : '#dde5e9') + ';border-radius:10px;padding:10px 12px;background:' + (changed ? '#f5fafe' : '#fbfdfe') + ';transition:border-color .18s ease,background .18s ease;')}>
-      <div style={s('display:flex;align-items:center;gap:6px;flex-wrap:wrap;')}>
-        <span style={s('display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e8eef2;color:' + INK + ';font-size:11px;font-weight:700;flex:none;')}>{letter}</span>
-        <Hover tag="button" onClick={() => onOpenPage(side.noteId)} base={'background:none;border:none;padding:0;font:inherit;font-size:12px;color:#005eb8;cursor:pointer;text-align:left;'} hover="text-decoration:underline;">
-          {side.path || side.title}
-        </Hover>
-        {changed && <span style={s('margin-left:auto;background:#e3f0fb;color:#00437e;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;')}>will be changed</span>}
-      </div>
-      <label htmlFor={id} style={s('position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);')}>What page {letter} should say</label>
-      <textarea id={id} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} rows={Math.min(6, Math.max(2, Math.ceil(value.length / 58)))}
-        style={s('width:100%;margin-top:7px;border:1px solid #cfdae0;border-radius:8px;padding:8px 10px;font:inherit;font-size:13.5px;line-height:1.5;color:' + INK + ';background:#fff;resize:vertical;')} />
-      <div style={s('display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;')}>
-        <Hover tag="button" onClick={onTakeOther} disabled={disabled} base={btn('#fff', '#005eb8', 'padding:5px 10px;font-size:12.5px;')} hover="background:#f2f8fd;">
-          Use {letter === 'A' ? 'B' : 'A'}’s wording here
-        </Hover>
-        {changed && <Hover tag="button" onClick={onReset} disabled={disabled} base={btn('#fff', MUTED, 'padding:5px 10px;font-size:12.5px;')} hover="background:#f4f7f8;">Put it back</Hover>}
-      </div>
+    <div style={s('flex:1;min-width:250px;position:relative;')}>
+      <Hover tag="button" onClick={onPick} disabled={disabled} aria-pressed={picked}
+        base={'display:block;width:100%;text-align:left;font:inherit;cursor:pointer;border-radius:10px;padding:11px 13px 12px;'
+          + 'border:2px solid ' + (picked ? '#005eb8' : '#dde5e9') + ';background:' + (picked ? '#f1f8fe' : '#fff') + ';'
+          + 'opacity:' + (dimmed ? '.6' : '1') + ';transition:border-color .15s ease,background .15s ease,opacity .15s ease;'}
+        hover={disabled ? '' : 'border-color:#9cc5ea;background:#f7fbff;'}>
+        <span style={s('display:flex;align-items:center;gap:8px;')}>
+          <Dot on={picked} />
+          <span style={s('font-size:12.5px;font-weight:700;color:' + (picked ? '#00437e' : INK) + ';')}>{letter} is right</span>
+          <span style={s('font-size:12px;color:' + MUTED + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{side.path || side.title}</span>
+        </span>
+        <span style={s('display:block;margin-top:7px;font-size:13.5px;color:' + INK + ';line-height:1.5;white-space:pre-wrap;')}>{side.text}</span>
+      </Hover>
+      <Hover tag="button" onClick={() => onOpenPage(side.noteId)}
+        base={'position:absolute;top:9px;right:10px;background:none;border:none;padding:2px;font:inherit;font-size:11.5px;color:#005eb8;cursor:pointer;'} hover="text-decoration:underline;">
+        open
+      </Hover>
     </div>
+  );
+}
+
+const Dot = ({ on }) => (
+  <span style={s('flex:none;display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:2px solid ' + (on ? '#005eb8' : '#b9c6cd') + ';background:#fff;')}>
+    {on && <span style={s('width:8px;height:8px;border-radius:50%;background:#005eb8;')} />}
+  </span>
+);
+
+// The two answers that change nothing on either page.
+function Choice({ on, title, hint, onPick, disabled }) {
+  return (
+    <Hover tag="button" onClick={onPick} disabled={disabled} aria-pressed={on}
+      base={'display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;cursor:pointer;border-radius:10px;padding:9px 12px;margin-top:8px;'
+        + 'border:2px solid ' + (on ? '#005eb8' : '#dde5e9') + ';background:' + (on ? '#f1f8fe' : '#fff') + ';transition:border-color .15s ease,background .15s ease;'}
+      hover={disabled ? '' : 'border-color:#9cc5ea;background:#f7fbff;'}>
+      <Dot on={on} />
+      <span style={s('font-size:13.5px;font-weight:600;color:' + INK + ';')}>{title}</span>
+      <span style={s('font-size:12.5px;color:' + MUTED + ';')}>{hint}</span>
+    </Hover>
   );
 }
 
 const DECIDED_WORD = { resolved: 'Settled', dismissed: 'Both are right', deferred: 'Left for now' };
 
-// The whole of one disagreement: what it is, and every way out of it.
+// What kind of line this is. Taking a plain sentence over a table row would put
+// prose where a row belongs and break the table, so the reader is warned before
+// they do it rather than after.
+const shapeOf = (text) => (/^\s*\|/.test(text) ? 'a table row'
+  : /^\s*#{1,6}\s/.test(text) ? 'a heading'
+    : /^\s*(?:[-*+•]|\d+[.)])\s/.test(text) ? 'a list item' : 'a line');
+
+/**
+ * One disagreement, one question, one Save.
+ *
+ * Four answers, picked like a radio button: A is right, B is right, both are
+ * right, or not now. A note can be typed with any of them and is kept either
+ * way. Picking A or B shows the exact line the other page will end up with,
+ * which can be reworded before it is written. Nothing else.
+ */
 function Flag({ flag, onDecide, onOpenPage, busy, error, active }) {
   const open = flag.status === 'open';
   const blocking = flag.verdict === 'contradiction' && open;
   const tone = !open ? 'grey' : blocking ? (flag.severity === 'high' ? 'red' : 'amber') : 'amber';
-  const textA = String(flag.sideA?.text || '');
-  const textB = String(flag.sideB?.text || '');
+  const sides = { a: flag.sideA || {}, b: flag.sideB || {} };
 
-  const [draftA, setDraftA] = React.useState(textA);
-  const [draftB, setDraftB] = React.useState(textB);
+  const [choice, setChoice] = React.useState(null); // 'a' | 'b' | 'both' | 'later'
+  const [draft, setDraft] = React.useState('');
+  const [editing, setEditing] = React.useState(false);
   const [note, setNote] = React.useState('');
-  // A fresh sweep can re-read a page: start again from what it says now.
-  React.useEffect(() => { setDraftA(textA); setDraftB(textB); }, [textA, textB]);
 
-  const changedA = draftA.trim() !== textA.trim();
-  const changedB = draftB.trim() !== textB.trim();
-  const changes = (changedA ? 1 : 0) + (changedB ? 1 : 0);
-  const save = () => onDecide(flag.id, 'edit', { note, edits: { a: draftA, b: draftB } });
+  const loser = choice === 'a' ? 'b' : 'a';
+  const pick = (key) => {
+    setChoice(key);
+    setEditing(false);
+    if (key === 'a' || key === 'b') setDraft(mergeWording(String(sides[key === 'a' ? 'b' : 'a'].text || ''), String(sides[key].text || '')));
+  };
+  const save = () => {
+    if (choice === 'a' || choice === 'b') onDecide(flag.id, 'edit', { note, edits: { [loser]: draft } });
+    else if (choice === 'both') onDecide(flag.id, 'dismiss', { note });
+    else if (choice === 'later') onDecide(flag.id, 'defer', { note });
+  };
+  const ready = !!choice && (!['a', 'b'].includes(choice) || !!draft.trim());
 
   return (
     <div className={active ? 'riva-flag-new' : ''}
@@ -179,66 +216,78 @@ function Flag({ flag, onDecide, onOpenPage, busy, error, active }) {
         <span style={s('font-size:14px;font-weight:700;color:' + INK + ';')}>
           {!open ? DECIDED_WORD[flag.status] || 'Settled' : blocking ? 'These two pages disagree' : 'Possibly a disagreement'}
         </span>
-        {flag.subject && <span style={s('font-size:12.5px;color:' + MUTED + ';')}>· {flag.subject}</span>}
         {blocking && flag.severity === 'high' && <span style={s('background:' + BAND_TINT.red + ';color:' + BAND_INK.red + ';border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:700;')}>an answer would be wrong</span>}
         {!blocking && open && <span style={s('background:' + BAND_TINT.grey + ';color:' + MUTED + ';border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:700;')}>nothing is waiting on this</span>}
       </div>
       {flag.reason && <div style={s('margin-top:4px;font-size:13px;color:' + MUTED + ';line-height:1.5;')}>{flag.reason}</div>}
-      {flag.why && <div style={s('margin-top:2px;font-size:12px;color:' + MUTED + ';')}>The code noticed — {flag.why}</div>}
-      {open && flag.question && <div style={s('margin-top:8px;font-size:13.5px;font-weight:600;color:' + INK + ';')}>{flag.question}</div>}
 
       {!open ? (
         <div style={s('margin-top:8px;')}>
           <div style={s('font-size:12.5px;color:' + MUTED + ';line-height:1.5;')}>{flag.resolution}</div>
           <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;')}>
-            {[['A', flag.sideA], ['B', flag.sideB]].map(([letter, side]) => (
-              <div key={letter} style={s('flex:1;min-width:240px;border:1px solid #e6ecef;border-radius:10px;padding:9px 11px;background:#fbfcfd;')}>
-                <Hover tag="button" onClick={() => onOpenPage(side?.noteId)} base={'background:none;border:none;padding:0;font:inherit;font-size:12px;color:#005eb8;cursor:pointer;text-align:left;'} hover="text-decoration:underline;">{side?.path || side?.title}</Hover>
-                <div style={s('margin-top:4px;font-size:13px;color:' + MUTED + ';line-height:1.5;')}>{side?.text}</div>
+            {['a', 'b'].map((key) => (
+              <div key={key} style={s('flex:1;min-width:240px;border:1px solid #e6ecef;border-radius:10px;padding:9px 11px;background:#fbfcfd;')}>
+                <Hover tag="button" onClick={() => onOpenPage(sides[key].noteId)} base={'background:none;border:none;padding:0;font:inherit;font-size:12px;color:#005eb8;cursor:pointer;text-align:left;'} hover="text-decoration:underline;">{sides[key].path || sides[key].title}</Hover>
+                <div style={s('margin-top:4px;font-size:13px;color:' + MUTED + ';line-height:1.5;')}>{sides[key].text}</div>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <>
-          <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;')}>
-            <Side side={flag.sideA || {}} letter="A" value={draftA} changed={changedA} disabled={busy}
-              onChange={setDraftA} onReset={() => setDraftA(textA)} onOpenPage={onOpenPage}
-              onTakeOther={() => setDraftA(mergeWording(textA, draftB))} />
-            <Side side={flag.sideB || {}} letter="B" value={draftB} changed={changedB} disabled={busy}
-              onChange={setDraftB} onReset={() => setDraftB(textB)} onOpenPage={onOpenPage}
-              onTakeOther={() => setDraftB(mergeWording(textB, draftA))} />
+        <div role="group" aria-label={flag.question || 'Which page is right?'}>
+          <div style={s('margin-top:9px;font-size:13.5px;font-weight:600;color:' + INK + ';')}>
+            {flag.question || 'Which page is right?'}
           </div>
+          <div style={s('display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;')}>
+            <Side side={sides.a} letter="A" picked={choice === 'a'} dimmed={!!choice && choice !== 'a'} disabled={busy} onPick={() => pick('a')} onOpenPage={onOpenPage} />
+            <Side side={sides.b} letter="B" picked={choice === 'b'} dimmed={!!choice && choice !== 'b'} disabled={busy} onPick={() => pick('b')} onOpenPage={onOpenPage} />
+          </div>
+          <Choice on={choice === 'both'} onPick={() => pick('both')} disabled={busy}
+            title="Both are right" hint="— leave both pages exactly as they are" />
+          <Choice on={choice === 'later'} onPick={() => pick('later')} disabled={busy}
+            title="Not now" hint="— stop it holding the run up, ask me again next time" />
 
-          <div style={s('margin-top:10px;')}>
-            <label htmlFor={'flag-note-' + flag.id} style={s('display:block;font-size:12.5px;font-weight:600;color:' + INK + ';margin-bottom:4px;')}>
-              Why — in your words, kept with the decision
-            </label>
-            <textarea id={'flag-note-' + flag.id} value={note} disabled={busy} onChange={(e) => setNote(e.target.value)} rows={2}
-              placeholder="e.g. CAMHS is right — the other page is the adult service. Or: both are right, they cover different situations."
-              style={s('width:100%;border:1px solid #cfdae0;border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;line-height:1.5;color:' + INK + ';background:#fff;resize:vertical;')} />
-          </div>
+          {(choice === 'a' || choice === 'b') && (
+            <div style={s('margin-top:10px;border-left:3px solid #005eb8;background:#f1f8fe;border-radius:0 8px 8px 0;padding:9px 12px;')}>
+              <div style={s('font-size:12.5px;color:#00437e;font-weight:700;')}>
+                “{sides[loser].title || sides[loser].path}” will read:
+              </div>
+              {editing ? (
+                <textarea value={draft} disabled={busy} onChange={(e) => setDraft(e.target.value)} rows={2} aria-label="The wording to write"
+                  style={s('width:100%;margin-top:6px;border:1px solid #9cc5ea;border-radius:8px;padding:8px 10px;font:inherit;font-size:13.5px;line-height:1.5;color:' + INK + ';background:#fff;resize:vertical;')} />
+              ) : (
+                <div style={s('margin-top:5px;font-size:13.5px;color:' + INK + ';line-height:1.5;white-space:pre-wrap;')}>{draft}</div>
+              )}
+              <Hover tag="button" onClick={() => setEditing((v) => !v)} disabled={busy}
+                base={'background:none;border:none;padding:4px 0 0;font:inherit;font-size:12px;color:#005eb8;cursor:pointer;'} hover="text-decoration:underline;">
+                {editing ? 'Done' : 'Word it differently'}
+              </Hover>
+              {shapeOf(String(sides[loser].text || '')) !== shapeOf(draft) && (
+                <div style={s('margin-top:7px;background:' + BAND_TINT.amber + ';color:' + BAND_INK.amber + ';border-radius:8px;padding:7px 10px;font-size:12.5px;line-height:1.45;')}>
+                  That page’s line is {shapeOf(String(sides[loser].text || ''))} and this wording is {shapeOf(draft)}. Word it differently to keep the page’s shape.
+                </div>
+              )}
+            </div>
+          )}
+
+          <input value={note} disabled={busy} onChange={(e) => setNote(e.target.value)}
+            placeholder="Anything you want to add — kept with the decision"
+            style={s('width:100%;margin-top:10px;border:1px solid #d9e2e7;border-radius:8px;padding:8px 11px;font:inherit;font-size:13px;color:' + INK + ';background:#fff;')} />
 
           {error && <div style={s('margin-top:8px;font-size:13px;color:' + BAND_INK.red + ';')}>{error}</div>}
 
-          <div style={s('margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;')}>
-            <Hover tag="button" onClick={save} disabled={busy || !changes}
-              base={btn(changes ? '#007f3b' : '#c9d3d8', '#fff') + (changes && !busy ? '' : 'cursor:default;')} hover={changes && !busy ? 'background:#00542b;' : ''}>
-              <Svg w={13} sw={2.6}>{Icons.check}</Svg>
-              {changes ? 'Save — ' + (changes === 2 ? 'both pages change' : 'one page changes') : 'Save the correction'}
+          <div style={s('margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;')}>
+            <Hover tag="button" onClick={save} disabled={busy || !ready}
+              base={btn(ready && !busy ? '#007f3b' : '#c9d3d8', '#fff') + (ready && !busy ? '' : 'cursor:default;')} hover={ready && !busy ? 'background:#00542b;' : ''}>
+              <Svg w={13} sw={2.6}>{Icons.check}</Svg>{busy ? 'Saving…' : 'Save'}
             </Hover>
-            <Hover tag="button" onClick={() => onDecide(flag.id, 'dismiss', { note })} disabled={busy} base={btn('#fff', MUTED)} hover="background:#f4f7f8;">Both are right</Hover>
-            <Hover tag="button" onClick={() => onDecide(flag.id, 'defer', { note })} disabled={busy} base={btn('#fff', MUTED)} hover="background:#f4f7f8;">Leave it for now</Hover>
-            <Hover tag="button" onClick={() => onDecide(flag.id, 'resolved', { note })} disabled={busy} base={btn('#fff', MUTED)} hover="background:#f4f7f8;">I have fixed it myself</Hover>
+            <span style={s('font-size:12px;color:' + MUTED + ';line-height:1.5;')}>
+              {choice === 'a' || choice === 'b'
+                ? 'One line on one page changes. It can be undone from that page’s history.'
+                : choice ? 'Nothing on either page changes.' : 'Pick one of the four above.'}
+            </span>
           </div>
-          <div style={s('margin-top:6px;font-size:12px;color:' + MUTED + ';line-height:1.5;')}>
-            {blocking
-              ? 'Both pages wait until you decide. Only the lines above change, word for word as you leave them, and every change can be undone from the page’s history.'
-              : 'Nothing is waiting on this one, but you can still put it right here.'}
-            {' '}“Leave it for now” stops it blocking and brings it back next time.
-            {changes ? ' Your wording above is written only by Save — the other three leave both pages as they are.' : ''}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
