@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.48.0` | 2026-09-15 | feat | `538873a` | feat: defragment the whole Notebook, stopping where pages disagree |
+| `5.47.1` | 2026-09-15 | docs | `b5109e8` | docs: record 5.47.0 in the versions table |
 | `5.47.0` | 2026-09-15 | feat | `9f4baea` | feat: propose, validate and apply a rewrite of one Notebook page |
 | `5.46.1` | 2026-09-15 | docs | `1bc753b` | docs: record 5.46.0 in the versions table |
 | `5.46.0` | 2026-09-15 | feat | `9594ae7` | feat: a Map tab in the Notebook — treemap of every page by health |
