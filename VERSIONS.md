@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.50.0` | 2026-09-15 | feat | `54d165e` | feat: one question, four answers, one Save on a disagreement |
+| `5.49.1` | 2026-09-15 | docs | `e47ff13` | docs: record 5.49.0 in the versions table |
 | `5.49.0` | 2026-09-15 | feat | `950500b` | feat: correct a disagreement in your own words, and watch the run happen |
 | `5.48.1` | 2026-09-15 | docs | `a913994` | docs: record 5.48.0 in the versions table |
 | `5.48.0` | 2026-09-15 | feat | `538873a` | feat: defragment the whole Notebook, stopping where pages disagree |
