@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.50.4` | 2026-09-15 | fix | `2a00cf8` | fix: restore propose and recheck, lost in the last edit |
+| `5.50.3` | 2026-09-15 | docs | `219df77` | docs: record 5.50.2 in the versions table |
 | `5.50.2` | 2026-09-15 | fix | `e5c9788` | fix: apply the clean rewrites one at a time, visibly |
 | `5.50.1` | 2026-09-15 | docs | `14234d7` | docs: record 5.50.0 in the versions table |
 | `5.50.0` | 2026-09-15 | feat | `54d165e` | feat: one question, four answers, one Save on a disagreement |
