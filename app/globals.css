@@ -180,6 +180,25 @@ body {
   50%      { box-shadow: 0 10px 30px rgba(33,43,50,.12), 0 0 0 4px rgba(0,94,184,.16); }
 }
 
+/* Defragmenting the Notebook is watched rather than waited out: the map is the
+   progress bar. A page being worked on breathes, a page held back by a
+   disagreement pulses amber, a page just rewritten flashes green once, and the
+   two pages that disagree are joined by a travelling dashed line so the reader
+   can see WHICH two. The sweep passes over the map while the pairs are read. */
+@keyframes rivaCellBreathe { 0%, 100% { opacity: .15; } 50% { opacity: .55; } }
+@keyframes rivaCellFlash { from { opacity: .85; } to { opacity: 0; } }
+@keyframes rivaArcDash { to { stroke-dashoffset: -36; } }
+@keyframes rivaArcIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rivaSweepAcross { from { transform: translateX(-70px); } to { transform: translateX(var(--riva-sweep-to, 100%)); } }
+@keyframes rivaFeedIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes rivaFlagIn { 0% { box-shadow: 0 0 0 0 rgba(213, 40, 27, .35); } 100% { box-shadow: 0 0 0 14px rgba(213, 40, 27, 0); } }
+.riva-cell-breathe { animation: rivaCellBreathe 1.6s ease-in-out infinite; }
+.riva-cell-flash { animation: rivaCellFlash 1.4s ease-out forwards; }
+.riva-arc { animation: rivaArcIn .4s ease-out both, rivaArcDash 1.4s linear infinite; }
+.riva-sweep { animation: rivaSweepAcross 2.4s linear infinite; }
+.riva-feed-in { animation: rivaFeedIn .32s ease-out both; }
+.riva-flag-new { animation: rivaFlagIn 1.2s ease-out 2; }
+
 @media (prefers-reduced-motion: reduce) {
   /* Honour the setting the reader has already made: the timeline still shows
      what it is doing, it just stops moving to say so. */

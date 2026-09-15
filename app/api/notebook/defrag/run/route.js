@@ -6,7 +6,11 @@
 //                                       pairs that might disagree, queue the rest
 //   POST { runId, step: true }          do the next thing — judge the next chunk
 //                                       of candidates, or propose the next page
-//   POST { contradictionId, decision }  settle one flag: 'a', 'b', 'resolved', 'dismiss'
+//   POST { contradictionId, decision, note, edits }
+//                                       settle one flag: 'a' or 'b' (the other
+//                                       page takes that wording), 'edit' (the
+//                                       reader's own wording for either page or
+//                                       both), 'dismiss', 'defer', 'resolved'
 //   POST { itemId, apply|reject: true } apply or reject one page's proposal
 //   POST { runId, applyAll: true }      apply every proposal that passed cleanly
 //   POST { runId, cancel: true }        abandon the run
@@ -46,7 +50,13 @@ export async function POST(request) {
   try {
     // The decisions and the writes need no model, so they work even without a key.
     if (body.contradictionId) {
-      return reply(await decideContradiction({ id: parseInt(body.contradictionId, 10), decision: String(body.decision || ''), note: body.note || '', turnId }));
+      return reply(await decideContradiction({
+        id: parseInt(body.contradictionId, 10),
+        decision: String(body.decision || ''),
+        note: body.note || '',
+        edits: body.edits && typeof body.edits === 'object' ? body.edits : {},
+        turnId,
+      }));
     }
     if (body.itemId && body.apply) return reply(await applyRunItem({ itemId: parseInt(body.itemId, 10), turnId }));
     if (body.itemId && body.reject) return reply(await rejectRunItem({ itemId: parseInt(body.itemId, 10) }));

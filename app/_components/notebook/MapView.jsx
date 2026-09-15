@@ -79,7 +79,12 @@ async function postJson(url, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-function Treemap({ report, rootId, onRoot, onSelect, onOpen, selectedId }) {
+// What a page looks like while a run is passing over it. The map is the
+// progress bar: nothing here changes what a cell means, only how loudly it
+// says what is happening to it right now.
+const LIVE_STROKE = { blocked: BAND.amber, proposed: '#005eb8', applied: BAND.green, failed: BAND.red };
+
+function Treemap({ report, rootId, onRoot, onSelect, onOpen, selectedId, live }) {
   const box = React.useRef(null);
   const [width, setWidth] = React.useState(0);
   const [hover, setHover] = React.useState(null);
@@ -97,14 +102,30 @@ function Treemap({ report, rootId, onRoot, onSelect, onOpen, selectedId }) {
   const cells = width ? layoutTree({ ...root, kind: 'root' }, { x: 0, y: 0, w: width, h: height }, { padding: 3, header: 18, minCell: 4 }) : [];
   const hovered = hover ? report.pages[hover.id] : null;
 
+  // Where each page sits, so the two pages of a disagreement can be joined.
+  const centres = new Map(cells.filter((c) => c.kind !== 'section' && c.depth > 0).map((c) => [c.id, { x: c.x + c.w / 2, y: c.y + c.h / 2 }]));
+  const arcs = (live ? live.arcs : []).map((arc) => ({ ...arc, from: centres.get(arc.a), to: centres.get(arc.b) })).filter((arc) => arc.from && arc.to);
+
   return (
     <div ref={box} style={s('position:relative;width:100%;')}>
       {width > 0 && (
         <svg width={width} height={height} role="img" aria-label="Notebook map" style={s('display:block;font-family:inherit;')} onMouseLeave={() => setHover(null)}>
+          <defs>
+            <linearGradient id="riva-map-sweep" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#fff" stopOpacity="0" />
+              <stop offset="55%" stopColor="#fff" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
           {cells.filter((c) => c.depth > 0).map((c) => {
             const isSection = c.kind === 'section';
             const band = c.node.health ? c.node.health.band : 'grey';
             const selected = c.id === selectedId;
+            const state = !isSection && live ? live.byNote[c.id] : null;
+            const active = !isSection && live && live.active.has(c.id);
+            const flashing = !isSection && live && live.flash.has(c.id);
+            const ring = active ? '#fff' : LIVE_STROKE[state] || null;
+            const dim = state === 'pending' && !active;
             return (
               <g key={c.kind + c.id}
                 onMouseMove={(e) => { if (!isSection) setHover({ id: c.id, x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }); }}
@@ -112,14 +133,48 @@ function Treemap({ report, rootId, onRoot, onSelect, onOpen, selectedId }) {
                 onDoubleClick={() => { if (!isSection) onOpen(c.id); }}
                 style={s('cursor:pointer;')}>
                 <rect x={c.x} y={c.y} width={Math.max(0, c.w)} height={Math.max(0, c.h)} rx={isSection ? 6 : 3}
-                  fill={isSection ? '#e6ecf0' : BAND[band]} fillOpacity={isSection ? 1 : selected ? 1 : 0.82}
-                  stroke={selected ? INK : '#fff'} strokeWidth={selected ? 2 : 1} />
+                  fill={isSection ? '#e6ecf0' : BAND[band]} fillOpacity={isSection ? 1 : dim ? 0.4 : selected ? 1 : 0.82}
+                  stroke={selected ? INK : ring || '#fff'} strokeWidth={selected ? 2 : ring ? (active ? 2.5 : 2) : 1}
+                  strokeDasharray={state === 'blocked' && !active ? '4 3' : undefined} />
+                {/* Being worked on now, or held back: the cell breathes rather than sits there. */}
+                {(active || state === 'blocked') && (
+                  <rect className="riva-cell-breathe" x={c.x} y={c.y} width={Math.max(0, c.w)} height={Math.max(0, c.h)} rx={3}
+                    fill={active ? '#fff' : BAND.amber} pointerEvents="none" />
+                )}
+                {/* Just rewritten: one flash of green, then it is simply green. */}
+                {flashing && <rect key={'f' + c.id + live.flashAt} className="riva-cell-flash" x={c.x} y={c.y} width={Math.max(0, c.w)} height={Math.max(0, c.h)} rx={3} fill={BAND.green} pointerEvents="none" />}
                 {isSection && c.h > 18 && <rect x={c.x} y={c.y} width={Math.max(0, c.w)} height={18} rx={6} fill={BAND[band]} fillOpacity={0.18} />}
                 {isSection && c.h > 18 && c.w > 40 && <text x={c.x + 6} y={c.y + 13} fontSize={11} fontWeight={700} fill={INK}>{fit(c.node.title, c.w)}</text>}
                 {!isSection && c.w > 56 && c.h > 18 && <text x={c.x + 5} y={c.y + 14} fontSize={11} fontWeight={600} fill="#fff">{fit(c.node.title, c.w)}</text>}
               </g>
             );
           })}
+          {/* The two pages that disagree, joined. This is the one thing the map
+              could never show before: a fault BETWEEN pages, not on one. */}
+          {arcs.map((arc) => {
+            const mx = (arc.from.x + arc.to.x) / 2;
+            const my = (arc.from.y + arc.to.y) / 2;
+            const dx = arc.to.x - arc.from.x;
+            const dy = arc.to.y - arc.from.y;
+            const len = Math.max(1, Math.hypot(dx, dy));
+            const lift = Math.min(70, len * 0.24);
+            const cx = mx + (-dy / len) * lift;
+            const cy = my + (dx / len) * lift;
+            const colour = arc.severity === 'high' ? BAND.red : BAND.amber;
+            return (
+              <g key={'arc' + arc.a + '-' + arc.b} className="riva-arc" pointerEvents="none">
+                <path d={`M${arc.from.x} ${arc.from.y} Q${cx} ${cy} ${arc.to.x} ${arc.to.y}`} fill="none" stroke={colour} strokeWidth={1.8} strokeDasharray="6 5" strokeLinecap="round" />
+                <circle cx={arc.from.x} cy={arc.from.y} r={3.2} fill={colour} stroke="#fff" strokeWidth={1.2} />
+                <circle cx={arc.to.x} cy={arc.to.y} r={3.2} fill={colour} stroke="#fff" strokeWidth={1.2} />
+              </g>
+            );
+          })}
+          {/* Reading every page against every other: the pass is shown passing. */}
+          {live && live.sweeping && (
+            <g className="riva-sweep" style={{ '--riva-sweep-to': width + 'px' }} pointerEvents="none">
+              <rect x={-70} y={0} width={70} height={height} fill="url(#riva-map-sweep)" />
+            </g>
+          )}
         </svg>
       )}
       {hovered && (
@@ -309,6 +364,11 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
   const [runError, setRunError] = React.useState('');
   const [runBusy, setRunBusy] = React.useState(false);
   const [driving, setDriving] = React.useState(false);
+  const [flagErrors, setFlagErrors] = React.useState({});
+  // What has just happened, newest first — the run's own account of itself.
+  const [events, setEvents] = React.useState([]);
+  const [fresh, setFresh] = React.useState(new Set()); // flags that arrived this moment
+  const [flash, setFlash] = React.useState({ ids: new Set(), at: 0 }); // pages just written
   // The driver is a loop, not a timer: one step at a time, and it stops the
   // moment the run says it is done or waiting on a decision.
   const drivingRef = React.useRef(false);
@@ -337,6 +397,26 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
 
   /* ------------------------------------------------- the whole-Notebook run */
 
+  // Every reply carries what that step did. The list is the run talking, and
+  // the map reads the same events to light the pages up as they are worked on.
+  const record = (event) => {
+    if (!event) return;
+    setEvents((list) => [{ ...event, at: Date.now(), key: 'e' + Date.now() + Math.random().toString(36).slice(2, 6) }, ...list].slice(0, 60));
+    if (event.kind === 'scan' && (event.found || []).length) {
+      const ids = new Set((event.found || []).flatMap((f) => [f.a.noteId, f.b.noteId]));
+      setFresh(ids);
+      setTimeout(() => setFresh(new Set()), 2600);
+    }
+    const written = event.kind === 'applied' ? [event.noteId]
+      : event.kind === 'appliedMany' ? (event.noteIds || [])
+        : event.kind === 'settled' ? (event.written || []).map((w) => w.noteId)
+          : [];
+    if (written.length) {
+      setFlash({ ids: new Set(written), at: Date.now() });
+      setTimeout(() => setFlash({ ids: new Set(), at: 0 }), 1500);
+    }
+  };
+
   const drive = async (runId) => {
     if (drivingRef.current) return;
     drivingRef.current = true;
@@ -348,7 +428,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
         const { ok, data } = await postJson('/api/notebook/defrag/run', { runId, step: true });
         if (!ok || data.error) { setRunError(data.error || 'The run could not be advanced.'); break; }
         setRun(data);
-        changed();
+        record(data.event);
         if (data.done || data.waiting) break;
       }
     } finally {
@@ -364,6 +444,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     setRunBusy(false);
     if (!ok || data.error) { setRunError(data.error || 'The run could not be started.'); return; }
     setRun(data);
+    setEvents([{ kind: 'started', pages: data.progress.pages, pairs: data.progress.candidates, at: Date.now(), key: 'start' }]);
     drive(data.run.id);
   };
 
@@ -376,15 +457,23 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     if (ok && !data.error) setRun(data);
   };
 
-  const decide = async (contradictionId, decision) => {
+  const decide = async (contradictionId, decision, extra = {}) => {
     setRunBusy(true);
     setRunError('');
-    const { ok, data } = await postJson('/api/notebook/defrag/run', { contradictionId, decision });
+    setFlagErrors((e) => ({ ...e, [contradictionId]: '' }));
+    const { ok, data } = await postJson('/api/notebook/defrag/run', { contradictionId, decision, note: extra.note || '', edits: extra.edits || {} });
     setRunBusy(false);
-    if (!ok || data.error) { setRunError(data.error || 'That decision could not be recorded.'); return; }
+    if (!ok || data.error) { setFlagErrors((e) => ({ ...e, [contradictionId]: data.error || 'That decision could not be recorded.' })); return; }
     if (data.state) setRun(data.state);
-    changed();
-    if (data.revisionId) setToast({ text: 'The page was changed to match. The previous version is kept.', revisionId: data.revisionId });
+    record(data.event);
+    const written = (data.event && data.event.written) || [];
+    if (written.length) {
+      changed();
+      setToast({
+        text: written.length === 1 ? '“' + written[0].title + '” corrected. The previous version is kept.' : number(written.length) + ' pages corrected. Every previous version is kept.',
+        revisionId: (data.revisionIds || []).length === 1 ? data.revisionIds[0] : null,
+      });
+    }
     // A settled flag may have freed pages that were waiting on it.
     if (data.state && !data.state.done && !data.state.waiting) drive(data.state.run.id);
   };
@@ -405,6 +494,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     setRunBusy(false);
     if (data.state) setRun(data.state);
     if (!ok || data.error) { setRunError(data.error || 'That page could not be rewritten.'); return; }
+    record(data.event);
     setToast({ text: '“' + item.title + '” rewritten. The previous version is kept.', revisionId: data.revisionId });
     changed();
   };
@@ -428,6 +518,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
       applied += (data.applied || []).length;
       failed += (data.failed || []).length;
       if (data.state) setRun(data.state);
+      record(data.event);
       // A round that writes nothing will write nothing next time either.
       if (!data.remaining || !(data.applied || []).length) break;
     }
@@ -461,6 +552,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
       : await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, apply: true });
     if (data.state) setRun(data.state);
     if (!ok || data.error) { setDefrag({ ...defrag, busy: false, error: data.error || 'Could not apply.' }); return; }
+    record(data.event);
     setDefrag(null);
     setToast({ text: 'Page rewritten. The previous version is kept.', revisionId: data.revisionId });
     changed();
@@ -480,6 +572,23 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     setToast(ok ? { text: 'Put back as it was.' } : { text: 'Could not undo — see the page’s history.' });
     if (ok) changed();
   };
+
+  // Everything the map needs to show the run happening on it.
+  const live = React.useMemo(() => {
+    if (!run || !run.run || ['cancelled'].includes(run.run.status)) return null;
+    const byNote = {};
+    for (const i of run.items || []) byNote[i.noteId] = i.status;
+    return {
+      byNote,
+      active: new Set(driving && run.upcoming ? run.upcoming.noteIds || [] : []),
+      flash: flash.ids,
+      flashAt: flash.at,
+      sweeping: driving && run.run.status === 'scanning',
+      arcs: (run.contradictions || [])
+        .filter((c) => c.status === 'open' && c.verdict === 'contradiction' && c.noteA && c.noteB)
+        .map((c) => ({ a: c.noteA, b: c.noteB, severity: c.severity })),
+    };
+  }, [run, driving, flash]);
 
   if (error) return <div style={s('padding:28px;color:#8a1509;font-size:14.5px;')}>{error}</div>;
   if (!report) return <div style={s('padding:28px;color:' + MUTED + ';font-size:14.5px;')}>Reading every page…</div>;
@@ -501,12 +610,19 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
       <div className="riva-grid-2" style={s('display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:16px;align-items:start;')}>
         <div style={s(CARD + 'padding:14px 16px 16px;')}>
           <Crumbs report={report} rootId={rootId} onRoot={(id) => { setRootId(id); setSelectedId(null); }} />
-          <Treemap report={report} rootId={rootId} onRoot={(id) => { setRootId(id); setSelectedId(null); }} onSelect={setSelectedId} onOpen={onOpenPage} selectedId={selectedId} />
+          <Treemap report={report} rootId={rootId} onRoot={(id) => { setRootId(id); setSelectedId(null); }} onSelect={setSelectedId} onOpen={onOpenPage} selectedId={selectedId} live={live} />
           <div style={s('display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:' + MUTED + ';')}>
             {['green', 'amber', 'red'].map((b) => (
               <span key={b} style={s('display:inline-flex;align-items:center;gap:5px;')}><span style={s('width:10px;height:10px;border-radius:2px;background:' + BAND[b] + ';')} />{b === 'green' ? 'Reads cleanly' : b === 'amber' ? 'Needs attention' : 'Assistant cannot read it'}</span>
             ))}
             <span>Area = how much is written</span>
+            {live && (
+              <>
+                <span style={s('display:inline-flex;align-items:center;gap:5px;')}><span style={s('width:10px;height:10px;border-radius:2px;border:2px solid #fff;background:#8f9ba3;')} />being read now</span>
+                <span style={s('display:inline-flex;align-items:center;gap:5px;')}><span style={s('width:10px;height:10px;border-radius:2px;border:2px dashed ' + BAND.amber + ';')} />held by a disagreement</span>
+                <span style={s('display:inline-flex;align-items:center;gap:5px;')}><span style={s('width:14px;height:0;border-top:2px dashed ' + BAND.red + ';')} />these two disagree</span>
+              </>
+            )}
           </div>
         </div>
         <div style={s('display:flex;flex-direction:column;gap:14px;')}>
@@ -533,8 +649,11 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
         <RunPanel
           state={run}
           driving={driving}
-          busy={runBusy || driving}
+          busy={runBusy}
           error={runError}
+          errors={flagErrors}
+          fresh={fresh}
+          events={events}
           onStart={startRun}
           onContinue={() => run && run.run && drive(run.run.id)}
           onCancel={stopRun}
