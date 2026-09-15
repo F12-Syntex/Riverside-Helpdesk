@@ -555,6 +555,21 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     }
   };
 
+  const propose = async (noteId) => {
+    setDefrag({ status: 'loading' });
+    setAck(false);
+    const { ok, data } = await postJson('/api/notebook/defrag', { noteId });
+    if (!ok || data.error) { setDefrag({ status: 'error', message: data.error || 'The rewrite could not be proposed.' }); return; }
+    setDefrag({ status: 'ready', ...data, editing: false, draft: data.proposal.body, busy: false, error: '' });
+  };
+  const recheck = async () => {
+    if (!defrag || defrag.status !== 'ready') return;
+    setDefrag({ ...defrag, busy: true, error: '' });
+    const { ok, data } = await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, body: defrag.draft });
+    if (!ok || data.error) { setDefrag({ ...defrag, busy: false, error: data.error || 'Could not re-check.' }); return; }
+    setAck(false);
+    setDefrag({ status: 'ready', ...data, itemId: defrag.itemId || null, editing: false, draft: data.proposal.body, busy: false, error: '' });
+  };
   // A proposal made inside a run is applied through the run, so the queue
   // knows the page is done; otherwise straight through the single-page path.
   const apply = async () => {
