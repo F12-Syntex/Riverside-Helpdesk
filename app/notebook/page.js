@@ -959,6 +959,14 @@ export default function NotebookPage() {
               <Svg w={13} sw={2.2}>{Icons.refresh}</Svg>Import
             </Hover>
           </div>
+          {/* Saves: the whole notebook at a moment, and the way back to one.
+              Export/Import above are per-file and additive; that page is the
+              stored list, and loading from it replaces the notebook. */}
+          <Hover tag="a" href="/notebook/saves" title="Saves of the whole notebook — take one, or roll back to one"
+            base={'display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;text-decoration:none;'}
+            hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
+            <Svg w={13} sw={2.2}>{Icons.undo}</Svg>Saves &amp; rollback
+          </Hover>
         </div>
       </aside>
 

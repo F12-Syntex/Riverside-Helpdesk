@@ -165,6 +165,9 @@ deployment URL can:
   (`GET /api/audit`, rendered at `/stats`),
 - download a full Notebook backup (`GET /api/notebook/export`) and restore an
   arbitrary one (`POST /api/notebook/import`),
+- read, take, download and delete the Notebook's saves, and **replace the whole
+  Notebook** with any one of them (`/api/notebook/snapshots`,
+  `/api/notebook/snapshots/load`, `/api/notebook/snapshots/import`),
 - open any practice document served from `public/assets/rag/`.
 
 The **only** access control in the codebase is `middleware.js` +
@@ -249,6 +252,7 @@ versioning. Tables, grouped by the feature that owns them:
 | --- | --- | --- |
 | `notes` | `id, parent_id, title, body, position, is_section, created_at, updated_at` | **Free text written by staff.** Intended for procedures; nothing in the code prevents patient or staff details being typed in. This is risk #2 in the DPIA. |
 | `note_attachments` | `id, note_id, url, pathname, filename, content_type, size, created_at` | Whatever is in the uploaded file. `url` is a public Blob URL. |
+| `notebook_snapshots` | `id, label, kind, note_count, attachment_count, payload, created_at` | **A copy of every note's free text** at the moment the save was taken — the same exposure as `notes`, held for as long as the save is. |
 
 **Canonical knowledge** — `ensureKnowledgeSchema()`
 
@@ -495,6 +499,7 @@ somewhere else (email, Accurx).
 | Notebook format / organise | `POST /api/notebook/format`, `/organize` | The note's text, to OpenRouter. Returned as a diff/plan the user must confirm — nothing is saved unseen. | The confirmed result is saved as note text. Audit records the action only. |
 | Notebook edit | `PATCH /api/notebook` | Nothing to OpenRouter at save time (`upsertKnowledgeEntry(..., { embed: false })`), but the text is queued for **claim extraction**, which does send it to the fast-role model. | `notes`, `knowledge_entries`, `knowledge_passages`, `knowledge_claims`. |
 | Notebook backup | `GET /api/notebook/export` | — | Downloads every note and attachment record as one JSON file, to any caller. |
+| Notebook saves | `/api/notebook/snapshots` (+ `/load`, `/import`) | — | A save is every note and attachment record, kept in `notebook_snapshots` and downloadable as the same JSON file, to any caller. Loading one replaces the Notebook; the state it discards is saved first. |
 | Instant lookup (register) | `GET /api/cqc` | Nothing external — the gzipped extract is searched on the server. | Query text recorded in the audit log. |
 | Instant lookup (web) | `GET /api/lookup-web` | The search query to OpenRouter/Exa; then direct GETs to the pages found. | Query text recorded in the audit log. |
 | Rota | `/api/rota`, `/api/staff` | Staff names and constraints go to the model when a rota is generated from plain-English rules. | `staff`, `rotas`. |
@@ -607,6 +612,7 @@ prevents it arriving in free text.
 | Data | Retention | Deletion path |
 | --- | --- | --- |
 | `notes`, `note_attachments` | Until staff delete them | `DELETE /api/notebook` cascades the subtree, archives the knowledge entries, and deletes the Blob objects. |
+| `notebook_snapshots` | Saves taken by staff: until deleted from `/notebook/saves`. Saves taken automatically before a load: the last ten, older ones pruned on the next load. | `DELETE /api/notebook/snapshots?id=`. Deleting a note does **not** remove it from saves taken before the deletion. |
 | `knowledge_*` | Follows the source entry; an archived entry cascades its passages, claims and conflicts | Automatic on note delete / document removal |
 | `answer_cache` | `MAX_AGE_DAYS`, and invalidated by any Notebook edit or model change | Pruned on the next write. `clearAnswerCache()` exists but is not exposed by any route. |
 | `ai_usage` | **Indefinite — never reset or deleted, by design** | None. Contains no personal data. |
