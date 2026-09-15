@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.44.2` | 2026-09-15 | style | `c010720` | style: take the Copy buttons off the e-RS screen |
+| `5.44.1` | 2026-09-15 | docs | `f9801d9` | docs: record 5.44.0 in the versions table |
 | `5.44.0` | 2026-09-15 | feat | `f08ff9d` | feat: draw referral answers as the e-RS screen, steps behind a disclosure |
 | `5.43.2` | 2026-09-15 | fix | `7725402` | fix: stop a heading on a pathway page being read as a referral |
 | `5.43.1` | 2026-09-14 | docs | `eae67aa` | docs: record 5.43.0 in the versions table |
