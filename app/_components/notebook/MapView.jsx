@@ -13,12 +13,19 @@
 // the whole point of the feature: the current page beside the proposal, the
 // code checks and the meaning check as chips, and Apply only when both pass.
 // Apply snapshots first; Undo puts the snapshot back.
+//
+// The same review serves the whole-Notebook run (RunPanel): there it is one
+// page of a queue, and applying it goes through the run so the queue knows.
+// What the run adds in front of all this is the coherence sweep — two pages
+// that tell staff different things are flagged and nothing on either is
+// rewritten until the reader has said which is right.
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../ui';
 import { CARD, Tile, number, ago } from '../stats/parts';
 import { layoutTree } from '@/lib/notebook/treemap.mjs';
 import { healthOf } from '@/lib/notebook/rules.mjs';
 import SplitDiff from './SplitDiff';
+import RunPanel from './RunPanel';
 
 const BAND = { green: '#007f3b', amber: '#a4610a', red: '#d5281b', grey: '#8f9ba3' };
 const BAND_INK = { green: '#00612f', amber: '#7a4708', red: '#8a1509', grey: '#4c6272' };
@@ -171,7 +178,7 @@ function History({ noteId, onChanged, refreshKey }) {
       <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + MUTED + ';margin-bottom:6px;')}>History</div>
       {rows.slice(0, 6).map((r) => (
         <div key={r.id} style={s('display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;color:' + MUTED + ';')}>
-          <span style={s('flex:1;min-width:0;')}>Before {r.reason === 'revert' ? 'a revert' : r.reason === 'defrag' ? 'a rewrite' : 'a change'} · {ago(r.createdAt)} · {number(r.chars)} chars</span>
+          <span style={s('flex:1;min-width:0;')}>Before {r.reason === 'revert' ? 'a revert' : r.reason === 'defrag' ? 'a rewrite' : r.reason === 'contradiction' ? 'settling a disagreement' : 'a change'} · {ago(r.createdAt)} · {number(r.chars)} chars</span>
           <Hover tag="button" onClick={() => revert(r.id)} disabled={busy} base={btn('#fff', '#005eb8', 'padding:4px 10px;font-size:12.5px;')} hover="background:#f7fbff;">Restore</Hover>
         </div>
       ))}
@@ -298,6 +305,14 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
   const [defrag, setDefrag] = React.useState(null); // null | {status:'loading'} | {status:'ready', ...} | {status:'error', message}
   const [ack, setAck] = React.useState(false);
   const [toast, setToast] = React.useState(null); // { text, revisionId }
+  const [run, setRun] = React.useState(null); // the whole-Notebook run's state
+  const [runError, setRunError] = React.useState('');
+  const [runBusy, setRunBusy] = React.useState(false);
+  const [driving, setDriving] = React.useState(false);
+  // The driver is a loop, not a timer: one step at a time, and it stops the
+  // moment the run says it is done or waiting on a decision.
+  const drivingRef = React.useRef(false);
+  const stopRef = React.useRef(false);
 
   const stamp = (notes || []).map((n) => n.id + ':' + (n.updatedAt || '')).join('|');
   React.useEffect(() => {
@@ -309,7 +324,117 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     return () => { live = false; };
   }, [stamp, tick]);
 
+  React.useEffect(() => {
+    let live = true;
+    fetch('/api/notebook/defrag/run', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => { if (live && !data.error) setRun(data); })
+      .catch(() => {});
+    return () => { live = false; stopRef.current = true; };
+  }, []);
+
   const changed = () => { setTick((t) => t + 1); onChanged && onChanged(); };
+
+  /* ------------------------------------------------- the whole-Notebook run */
+
+  const drive = async (runId) => {
+    if (drivingRef.current) return;
+    drivingRef.current = true;
+    stopRef.current = false;
+    setDriving(true);
+    try {
+      for (;;) {
+        if (stopRef.current) break;
+        const { ok, data } = await postJson('/api/notebook/defrag/run', { runId, step: true });
+        if (!ok || data.error) { setRunError(data.error || 'The run could not be advanced.'); break; }
+        setRun(data);
+        changed();
+        if (data.done || data.waiting) break;
+      }
+    } finally {
+      drivingRef.current = false;
+      setDriving(false);
+    }
+  };
+
+  const startRun = async (scope) => {
+    setRunBusy(true);
+    setRunError('');
+    const { ok, data } = await postJson('/api/notebook/defrag/run', { start: true, scope });
+    setRunBusy(false);
+    if (!ok || data.error) { setRunError(data.error || 'The run could not be started.'); return; }
+    setRun(data);
+    drive(data.run.id);
+  };
+
+  const stopRun = async () => {
+    stopRef.current = true;
+    if (!run || !run.run) return;
+    setRunBusy(true);
+    const { ok, data } = await postJson('/api/notebook/defrag/run', { runId: run.run.id, cancel: true });
+    setRunBusy(false);
+    if (ok && !data.error) setRun(data);
+  };
+
+  const decide = async (contradictionId, decision) => {
+    setRunBusy(true);
+    setRunError('');
+    const { ok, data } = await postJson('/api/notebook/defrag/run', { contradictionId, decision });
+    setRunBusy(false);
+    if (!ok || data.error) { setRunError(data.error || 'That decision could not be recorded.'); return; }
+    if (data.state) setRun(data.state);
+    changed();
+    if (data.revisionId) setToast({ text: 'The page was changed to match. The previous version is kept.', revisionId: data.revisionId });
+    // A settled flag may have freed pages that were waiting on it.
+    if (data.state && !data.state.done && !data.state.waiting) drive(data.state.run.id);
+  };
+
+  const reviewItem = async (item) => {
+    setDefrag({ status: 'loading' });
+    setAck(false);
+    const res = await fetch('/api/notebook/defrag?proposalId=' + item.proposalId, { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) { setDefrag({ status: 'error', message: data.error || 'That proposal could not be read.' }); return; }
+    setDefrag({ status: 'ready', ...data, itemId: item.id, editing: false, draft: data.proposal.body, busy: false, error: data.stale ? 'This page has been edited since the proposal was made. Propose it again.' : '' });
+  };
+
+  const applyItem = async (item) => {
+    setRunBusy(true);
+    setRunError('');
+    const { ok, data } = await postJson('/api/notebook/defrag/run', { itemId: item.id, apply: true });
+    setRunBusy(false);
+    if (data.state) setRun(data.state);
+    if (!ok || data.error) { setRunError(data.error || 'That page could not be rewritten.'); return; }
+    setToast({ text: '“' + item.title + '” rewritten. The previous version is kept.', revisionId: data.revisionId });
+    changed();
+  };
+
+  const rejectItem = async (item) => {
+    setRunBusy(true);
+    const { ok, data } = await postJson('/api/notebook/defrag/run', { itemId: item.id, reject: true });
+    setRunBusy(false);
+    if (ok && data.state) setRun(data.state);
+  };
+
+  const applyAll = async () => {
+    if (!run || !run.run) return;
+    setRunBusy(true);
+    setRunError('');
+    let applied = 0;
+    let failed = 0;
+    for (;;) {
+      const { ok, data } = await postJson('/api/notebook/defrag/run', { runId: run.run.id, applyAll: true });
+      if (!ok || data.error) { setRunError(data.error || 'The rewrites could not all be applied.'); break; }
+      applied += (data.applied || []).length;
+      failed += (data.failed || []).length;
+      if (data.state) setRun(data.state);
+      // A round that writes nothing will write nothing next time either.
+      if (!data.remaining || !(data.applied || []).length) break;
+    }
+    setRunBusy(false);
+    changed();
+    setToast({ text: number(applied) + ' page' + (applied === 1 ? '' : 's') + ' rewritten' + (failed ? ', ' + number(failed) + ' could not be' : '') + '. Every previous version is kept.' });
+  };
 
   const propose = async (noteId) => {
     setDefrag({ status: 'loading' });
@@ -324,19 +449,29 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     const { ok, data } = await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, body: defrag.draft });
     if (!ok || data.error) { setDefrag({ ...defrag, busy: false, error: data.error || 'Could not re-check.' }); return; }
     setAck(false);
-    setDefrag({ status: 'ready', ...data, editing: false, draft: data.proposal.body, busy: false, error: '' });
+    setDefrag({ status: 'ready', ...data, itemId: defrag.itemId || null, editing: false, draft: data.proposal.body, busy: false, error: '' });
   };
+  // A proposal made inside a run is applied through the run, so the queue
+  // knows the page is done; otherwise straight through the single-page path.
   const apply = async () => {
     if (!defrag || defrag.status !== 'ready') return;
     setDefrag({ ...defrag, busy: true, error: '' });
-    const { ok, data } = await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, apply: true });
+    const { ok, data } = defrag.itemId
+      ? await postJson('/api/notebook/defrag/run', { itemId: defrag.itemId, apply: true })
+      : await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, apply: true });
+    if (data.state) setRun(data.state);
     if (!ok || data.error) { setDefrag({ ...defrag, busy: false, error: data.error || 'Could not apply.' }); return; }
     setDefrag(null);
     setToast({ text: 'Page rewritten. The previous version is kept.', revisionId: data.revisionId });
     changed();
   };
   const reject = async () => {
-    if (defrag && defrag.status === 'ready') await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, reject: true });
+    if (defrag && defrag.status === 'ready') {
+      const { ok, data } = defrag.itemId
+        ? await postJson('/api/notebook/defrag/run', { itemId: defrag.itemId, reject: true })
+        : await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, reject: true });
+      if (ok && data.state) setRun(data.state);
+    }
     setDefrag(null);
   };
   const undo = async () => {
@@ -392,6 +527,24 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div style={s('margin-top:16px;')}>
+        <RunPanel
+          state={run}
+          driving={driving}
+          busy={runBusy || driving}
+          error={runError}
+          onStart={startRun}
+          onContinue={() => run && run.run && drive(run.run.id)}
+          onCancel={stopRun}
+          onDecide={decide}
+          onReview={reviewItem}
+          onApply={applyItem}
+          onReject={rejectItem}
+          onApplyAll={applyAll}
+          onOpenPage={onOpenPage}
+        />
       </div>
 
       {defrag && defrag.status === 'ready' && (

@@ -5,17 +5,31 @@
 //   POST { proposalId, body }          re-check an edited proposal
 //   POST { proposalId, apply: true }   apply: re-validated server-side, snapshot first
 //   POST { proposalId, reject: true }  mark it rejected
+//   GET  ?proposalId=…                 read a stored proposal back for review,
+//                                      re-checked in code, no model call
 //
 // See lib/notebook/defrag.js for what each step refuses and why.
 import { NextResponse } from 'next/server';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
-import { proposeDefrag, revalidateProposal, applyProposal, rejectProposal } from '@/lib/notebook/defrag.js';
+import { proposeDefrag, revalidateProposal, applyProposal, rejectProposal, loadProposal } from '@/lib/notebook/defrag.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
+
+export async function GET(request) {
+  const proposalId = new URL(request.url).searchParams.get('proposalId');
+  if (!proposalId) return NextResponse.json({ error: 'A proposalId is required.' }, { status: 400 });
+  try {
+    const out = await loadProposal({ proposalId: parseInt(proposalId, 10) });
+    return NextResponse.json(out, { status: out.error ? out.status || 400 : 200 });
+  } catch (e) {
+    console.error('[defrag]', e);
+    return NextResponse.json({ error: 'The proposal could not be read.', detail: String(e.message || e).slice(0, 300) }, { status: 500 });
+  }
+}
 
 export async function POST(request) {
   let body = null;
