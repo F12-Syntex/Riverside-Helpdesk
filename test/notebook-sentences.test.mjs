@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitSentences, annotate, stripAnnotations, hashBody, isContent } from '../lib/notebook/sentences.mjs';
+import { splitSentences, annotate, stripAnnotations, isContent } from '../lib/notebook/sentences.mjs';
+import { hashBody } from '../lib/notebook/validate.mjs';
 
 const kinds = (md) => splitSentences(md).map((s) => s.kind + ':' + s.text);
 
