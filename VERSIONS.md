@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.45.2` | 2026-09-15 | fix | `45f09a0` | fix: read the physio page as it is written, and stop matching inside words |
+| `5.45.1` | 2026-09-15 | docs | `cc8386f` | docs: record 5.45.0 in the versions table |
 | `5.45.0` | 2026-09-15 | feat | `084ab36` | feat: give the picker the whole Notebook, not a catalogue of titles |
 | `5.44.3` | 2026-09-15 | docs | `da129e3` | docs: record 5.44.2 in the versions table |
 | `5.44.2` | 2026-09-15 | style | `c010720` | style: take the Copy buttons off the e-RS screen |
