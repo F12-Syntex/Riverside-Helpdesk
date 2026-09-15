@@ -43,7 +43,7 @@ import { generateObject, generateText, zodSchema } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
-  commandPrompt, notebookCatalogue, renderCommand, renderSelection, selectionClarify, selectionPrompt,
+  commandPrompt, notebookCatalogue, notebookFits, notebookFullText, renderCommand, renderSelection, selectionClarify, selectionPrompt,
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
@@ -999,17 +999,17 @@ export async function POST(request) {
           return;
         }
 
-        // THE NOTEBOOK GOES IN AS A LIST, NOT AS TEXT.
+        // THE NOTEBOOK GOES IN IN FULL.
         //
-        // The model's job is to name the page, not to read every page and write
-        // the answer again. So it gets one line per page — title, and the first
-        // real line so a modest title can still be recognised — and returns a
-        // title. The page itself is rendered from the database, exactly as the
-        // practice wrote it.
-        //
-        // That is roughly 3k tokens in and ten out, against 18k in and 600 out
-        // for composing an answer; it is byte-identical on every asking; and it
-        // cannot garble a procedure, because nothing rewrites one.
+        // The model's job is to name the page, not to write the answer again —
+        // the page itself is rendered from the database, exactly as the
+        // practice wrote it, so nothing can garble a procedure. It used to see
+        // one line per page and choose from titles; that could not tell two
+        // similarly titled pages apart, and could not see a value written
+        // inside a page. Now it reads the bodies. About 26k tokens in and ten
+        // out, with the block first in the prompt so a provider that caches
+        // prefixes pays for it once. The catalogue is the fallback for a
+        // Notebook that has outgrown the budget.
         //
         // Best-effort: a Notebook that cannot be read leaves the templates
         // working rather than failing the turn. The prompt says so, and the
@@ -1017,7 +1017,10 @@ export async function POST(request) {
         // memoised `notebook()` declared at the top of this stream, so a turn
         // that already loaded it for a list command does not load it twice.
         const notebookPages = await notebook();
-        const notebookText = notebookPages.length ? notebookCatalogue(notebookPages) : '';
+        const notebookInFull = notebookPages.length > 0 && notebookFits(notebookPages);
+        const notebookText = !notebookPages.length ? ''
+          : notebookInFull ? notebookFullText(notebookPages)
+            : notebookCatalogue(notebookPages);
 
         let templateAnswer = null;
         let clarify = null;
@@ -1044,7 +1047,7 @@ export async function POST(request) {
             object: await readValues({
               model: selectModel,
               schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
-              text: selectionPrompt({ question, attached, notebook: notebookText, decompose, images: images.length }),
+              text: selectionPrompt({ question, attached, notebook: notebookText, full: notebookInFull, decompose, images: images.length }),
               role: seeing ? 'images' : 'fast',
               phase: 'select',
             }),
