@@ -16,7 +16,6 @@
 // which this card cannot know.
 import React from 'react';
 import { s, Svg, Icons } from '../ui';
-import CopyButton from './CopyButton';
 
 const INK = '#212b32';
 const LINE = '#4c6272';
@@ -38,10 +37,11 @@ function Step({ children }) {
   return <div style={s('font-size:17px;font-weight:700;color:' + INK + ';margin:0 0 12px;')}>{children}</div>;
 }
 
-// A select box in the state it should be left in. A value the practice does
-// not record is said IN the box, in amber, so an empty box never reads as
-// "leave this blank".
-function Select({ value, missing, placeholder = 'Select an option', copy = false }) {
+// A select box in the state it should be left in. No Copy beside it: the
+// values are short, and the screen is meant to look like e-RS, not like a
+// card about e-RS. A value the practice does not record is said IN the box,
+// in amber, so an empty box never reads as "leave this blank".
+function Select({ value, missing, placeholder = 'Select an option' }) {
   const has = !!value;
   return (
     <div style={s('display:flex;align-items:center;gap:10px;')}>
@@ -58,7 +58,6 @@ function Select({ value, missing, placeholder = 'Select an option', copy = false
         )}
         <Svg w={16} stroke={INK} sw={2.4} style={s('flex:none;')}>{Icons.chevronDown}</Svg>
       </div>
-      {has && copy && <CopyButton value={value} small />}
     </div>
   );
 }
@@ -130,7 +129,7 @@ export default function ErsForm({ block, below = null }) {
         <Step>Step 2: Select service details</Step>
         <div style={s('margin:0 0 14px;')}>
           <Label>Specialty</Label>
-          <Select value={b.specialty} missing={missing} copy />
+          <Select value={b.specialty} missing={missing} />
         </div>
         <div style={s('margin:0 0 ' + (more ? '14px' : '4px') + ';')}>
           <Label>Clinic type</Label>
@@ -141,12 +140,12 @@ export default function ErsForm({ block, below = null }) {
               {options.map((o, i) => (
                 <div key={o} style={s('display:flex;align-items:center;gap:8px;')}>
                   {i > 0 && <span style={s('flex:none;font-size:13px;font-weight:600;color:#768692;width:18px;')}>or</span>}
-                  <div style={s('flex:1;min-width:0;')}><Select value={o} copy /></div>
+                  <div style={s('flex:1;min-width:0;')}><Select value={o} /></div>
                 </div>
               ))}
             </div>
           ) : (
-            <Select value={b.clinicType} missing={missing} copy />
+            <Select value={b.clinicType} missing={missing} />
           )}
           {b.clinicTypeCondition && <Condition text={b.clinicTypeCondition} />}
         </div>
@@ -160,13 +159,13 @@ export default function ErsForm({ block, below = null }) {
             {b.hospital && (
               <div style={s('margin:0 0 14px;')}>
                 <Label>Organisation or site</Label>
-                <Select value={b.hospital} copy />
+                <Select value={b.hospital} />
               </div>
             )}
             {b.pathway && (
               <div style={s('margin:0 0 4px;')}>
                 <Label>Service name</Label>
-                <Select value={b.pathway} copy />
+                <Select value={b.pathway} />
               </div>
             )}
           </div>
