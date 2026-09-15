@@ -20,6 +20,8 @@ import { Markdown } from 'tiptap-markdown';
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
+import MapView from '../_components/notebook/MapView';
+import { lineDiff } from '@/lib/notebook/diff.mjs';
 
 /* ------------------------------------------------------------------ *
  * Notebook — practice notes the assistant uses automatically.
@@ -231,28 +233,8 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
   );
 }
 
-// Line-level diff (LCS) for the AI-format preview: ' ' unchanged, '-' removed,
-// '+' added. Notes are small, so the quadratic table is fine.
-function lineDiff(a, b) {
-  const A = a.split('\n'), B = b.split('\n');
-  const n = A.length, m = B.length;
-  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
-    }
-  }
-  const out = [];
-  let i = 0, j = 0;
-  while (i < n && j < m) {
-    if (A[i] === B[j]) { out.push({ t: ' ', s: A[i] }); i++; j++; }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ t: '-', s: A[i] }); i++; }
-    else { out.push({ t: '+', s: B[j] }); j++; }
-  }
-  while (i < n) out.push({ t: '-', s: A[i++] });
-  while (j < m) out.push({ t: '+', s: B[j++] });
-  return out;
-}
+// The line diff for the AI-format preview lives in lib/notebook/diff.mjs now,
+// shared with the Map tab's side-by-side review.
 
 // NHS-style confirmation sheet — same pattern as the rota system so popups
 // stay consistent across the app.
@@ -375,6 +357,7 @@ export default function NotebookPage() {
   }, [expanded]);
   const [search, setSearch] = React.useState('');
   const [saveState, setSaveState] = React.useState('');     // '' | 'saving' | 'saved' | 'unsaved'
+  const [view, setView] = React.useState('pages');           // 'pages' — the editor; 'map' — the treemap and fragmentation report
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState('');
   const [dragging, setDragging] = React.useState(false);
@@ -919,7 +902,16 @@ export default function NotebookPage() {
       <aside style={s('flex:none;width:290px;border-right:1px solid ' + C.line + ';background:#fff;display:flex;flex-direction:column;min-height:0;')}>
         <div style={s('flex:none;padding:12px 14px 6px;display:flex;flex-direction:column;gap:10px;')}>
           <div style={s('display:flex;align-items:center;gap:8px;')}>
-            <span style={s('flex:1;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + C.mut + ';')}>Sections</span>
+            {/* Pages is the editor; Map is the treemap of every page and what
+                the assistant makes of it. Same sidebar, same notes. */}
+            <div role="tablist" style={s('flex:1;display:inline-flex;background:' + C.bg + ';border:1px solid ' + C.line + ';border-radius:8px;padding:2px;')}>
+              {[['pages', 'Pages'], ['map', 'Map']].map(([id, label]) => (
+                <button key={id} role="tab" type="button" aria-selected={view === id} onClick={() => setView(id)}
+                  style={s('flex:1;border:none;border-radius:6px;padding:5px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;' + (view === id ? 'background:#fff;color:' + C.ink + ';box-shadow:0 1px 2px rgba(0,0,0,.08);' : 'background:none;color:' + C.mut + ';'))}>
+                  {label}
+                </button>
+              ))}
+            </div>
             <Hover tag="button" onClick={() => newNote(null)} aria-label="New section" title="New section (with its first page)"
               base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;'}
               hover={'background:' + C.navy + ';'}>
@@ -972,6 +964,10 @@ export default function NotebookPage() {
 
       {/* ------------------------- Notes area --------------------------- */}
       <main style={s('flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;')} {...dropHandlers}>
+        {view === 'map' && (
+          <MapView notes={notes} onOpenPage={(id) => { setView('pages'); selectNote(id); }} onChanged={reloadAll} />
+        )}
+        {view !== 'map' && (<>
         {/* Notes header — breadcrumb, save state and actions for the open note. */}
         <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:#fff;border-bottom:1px solid ' + C.line + ';padding:10px 22px;min-height:56px;')}>
           <div style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:14px;color:' + C.mut + ';overflow:hidden;white-space:nowrap;')}>
@@ -1273,6 +1269,7 @@ export default function NotebookPage() {
             </div>
           </div>
         )}
+        </>)}
       </main>
       </div>
 
