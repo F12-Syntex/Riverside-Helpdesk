@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { findPathwayReferral, isPathwayPage, readPathways } from '../lib/referrals/pathways.mjs';
-import { referralAnswer } from '../lib/templates/referrals.mjs';
+import { findReferralService, referralAnswer } from '../lib/templates/referrals.mjs';
 
 // THE GAP THIS FILE EXISTS FOR. The practice keeps its e-RS pairings in the
 // Notebook under "Referral pathways / All Clinic types and their specialities".
@@ -122,17 +122,86 @@ test('a heading or a sentence on a pathway page is not a referral', () => {
   // The physio page had this heading, and the list reader split it on the
   // dash: a referral called "#### Follow-up Appointments (Physiotherapy
   // referral" with a speciality of "FCP)".
-  const PHYSIO = {
+  const PROSE = {
     docTitle: 'Notebook: Referrals / Referral pathways / Physiotherapy (FCP) and Extended Scope Physiotherapy',
     text: `#### Follow-up Appointments (Physiotherapy referral - FCP) and how they are booked
 The FCP books follow-ups directly - reception does not.
-- Physiotherapy — Physiotherapy — Musculoskeletal`,
+- Send a task to the FCP team: they book it.`,
+  };
+  assert.equal(readPathways([PROSE]).length, 0);
+  // A page that is only a list still reads as one.
+  const entries = readPathways([LIST]);
+  assert.equal(entries[0].name, 'Rheumatology');
+});
+
+test('the physio page yields one record per clinic, bold labels and all, standard first', () => {
+  // The page as the practice actually wrote it: a bold bullet titles each
+  // clinic, the fields are bold labels nested under it, and "Location" is
+  // the hospital.
+  const PHYSIO = {
+    docTitle: 'Notebook: Referrals / Referral pathways / Physiotherapy (FCP) and Extended Scope Physiotherapy',
+    text: `#### Clinic Selection for Booking in ERS (HOW TO REFER TO physiotherapy)
+
+- **Standard Physiotherapy (IF ONLY physiotherapy IS MENTIONED)**
+
+  - **Clinic type:** Not otherwise specified
+  - **Speciality:** Physiotherapy
+  - **Location:** **Any that don't include extended**
+
+- **Extended Scope Physiotherapy (ESP) Assessment Service**
+
+  - **Clinic type:** Not otherwise specified
+  - **Speciality:** ESP
+  - **Location:** **ST LEONARD'S**
+
+<span style="color: rgb(213, 40, 27);">**Never**</span> book the wrong clinic type.\\*\\*`,
   };
   const entries = readPathways([PHYSIO]);
-  assert.equal(entries.length, 1);
-  assert.equal(entries[0].name, 'Physiotherapy');
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].name, 'Standard Physiotherapy');
   assert.equal(entries[0].specialty, 'Physiotherapy');
-  assert.equal(entries[0].clinicType, 'Musculoskeletal');
+  assert.equal(entries[0].clinicType, 'Not otherwise specified');
+  assert.equal(entries[1].specialty, 'ESP');
+  assert.equal(entries[1].hospital, "ST LEONARD'S");
+
+  // "physio" finds standard first; "esp" finds the other.
+  const card = referralAnswer({ question: 'how to refer to physio', name: 'physio', pages: [PHYSIO] });
+  const screen = card.blocks.find((b) => b.type === 'ers');
+  assert.equal(screen.specialty, 'Physiotherapy');
+  assert.match(flat(card), /Also on this page/);
+  assert.match(flat(card), /ESP/);
+  const esp = referralAnswer({ question: 'esp referral', name: 'esp', pages: [PHYSIO] });
+  assert.equal(esp.blocks.find((b) => b.type === 'ers').specialty, 'ESP');
+});
+
+test('a vertical two-column table is a labelled block, and "Clinic:" is the clinic type', () => {
+  const ENDO = {
+    docTitle: 'Notebook: Referrals / Referral pathways / Endoscopy referral',
+    text: `| Item | Selection |
+| --- | --- |
+| **Priority** | **Routine** |
+| **Speciality** | **Diagnostic Endoscopy** |
+| **Clinic type** | **Gastroscopy** |
+| **Hospital** | **HOMERTON UNIVERSITY HOSPITAL** |`,
+  };
+  const HERNIA = {
+    docTitle: 'Notebook: Referrals / Referral pathways / General surgery referral — hernias',
+    text: `*   **Speciality:** **Not Otherwise Specified**
+*   **Clinic:** **Hernias**`,
+  };
+  const [endo] = readPathways([ENDO]);
+  assert.equal(endo.name, 'Endoscopy');
+  assert.equal(endo.specialty, 'Diagnostic Endoscopy');
+  assert.equal(endo.clinicType, 'Gastroscopy');
+  assert.equal(endo.hospital, 'HOMERTON UNIVERSITY HOSPITAL');
+  const [hernia] = readPathways([HERNIA]);
+  assert.equal(hernia.name, 'General surgery — hernias');
+  assert.equal(hernia.clinicType, 'Hernias');
+});
+
+test('the code list matches whole words only, so physiotherapy is not OT', () => {
+  assert.equal(findReferralService('physiotherapy referral'), null);
+  assert.equal(findReferralService('ot referral').name, 'Occupational therapy (OT)');
 });
 
 test('the e-RS card is the screen, with the steps behind a disclosure and the hospital on it', () => {
