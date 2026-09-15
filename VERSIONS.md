@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.51.0` | 2026-09-15 | feat | `adc6c6a` | feat: save the whole Notebook, and load one back |
+| `5.50.5` | 2026-09-15 | docs | `4274cc1` | docs: record 5.50.4 in the versions table |
 | `5.50.4` | 2026-09-15 | fix | `2a00cf8` | fix: restore propose and recheck, lost in the last edit |
 | `5.50.3` | 2026-09-15 | docs | `219df77` | docs: record 5.50.2 in the versions table |
 | `5.50.2` | 2026-09-15 | fix | `e5c9788` | fix: apply the clean rewrites one at a time, visibly |
