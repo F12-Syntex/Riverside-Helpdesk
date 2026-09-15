@@ -1116,7 +1116,10 @@ export async function POST(request) {
           });
           const written = logTurn({
             outcome: 'template',
-            template: picked,
+            // A flagged card is logged under its flag — "referral:not-recorded"
+            // — so the gaps in the practice's notes show up as their own line
+            // on the stats page rather than hiding among answered referrals.
+            template: templateAnswer.flag ? `${picked}:${templateAnswer.flag}` : picked,
             source: (templateAnswer.source || []).join(' · '),
             answer: shownText(safety.alerts, templateAnswer),
             provenance: buildProvenance({ scan, card: templateAnswer, pages: notebookPages }),

@@ -86,9 +86,10 @@ test('a table row is a pathway, matched by the name the model read', () => {
 
 test('a 2WW row keeps 2WW in both boxes and is flagged as cancer', () => {
   const card = referralAnswer({ question: '2ww skin cancer referral', name: 'skin cancer', pages: PAGES });
-  const fields = card.blocks.find((b) => b.type === 'fields').items;
-  assert.equal(fields.find((f) => f.label === 'Speciality').value, '2WW');
-  assert.equal(fields.find((f) => f.label === 'Clinic type').value, '2WW Dermatology');
+  const screen = card.blocks.find((b) => b.type === 'ers');
+  assert.equal(screen.specialty, '2WW');
+  assert.equal(screen.clinicType, '2WW Dermatology');
+  assert.equal(screen.priority, '2WW');
   assert.match(card.warn, /2WW/);
 });
 
@@ -115,6 +116,43 @@ test('matched from the question when the model named nothing', () => {
 test('without a pathway page the code list still answers as before', () => {
   const card = referralAnswer({ question: 'racpc referral', name: 'racpc', pages: [ELSEWHERE] });
   assert.match(flat(card), /Ischaemic Heart Disease/);
+});
+
+test('a heading or a sentence on a pathway page is not a referral', () => {
+  // The physio page had this heading, and the list reader split it on the
+  // dash: a referral called "#### Follow-up Appointments (Physiotherapy
+  // referral" with a speciality of "FCP)".
+  const PHYSIO = {
+    docTitle: 'Notebook: Referrals / Referral pathways / Physiotherapy (FCP) and Extended Scope Physiotherapy',
+    text: `#### Follow-up Appointments (Physiotherapy referral - FCP) and how they are booked
+The FCP books follow-ups directly - reception does not.
+- Physiotherapy — Physiotherapy — Musculoskeletal`,
+  };
+  const entries = readPathways([PHYSIO]);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].name, 'Physiotherapy');
+  assert.equal(entries[0].specialty, 'Physiotherapy');
+  assert.equal(entries[0].clinicType, 'Musculoskeletal');
+});
+
+test('the e-RS card is the screen, with the steps behind a disclosure and the hospital on it', () => {
+  const card = referralAnswer({ question: 'racpc referral', name: 'racpc', pages: [] });
+  const screen = card.blocks.find((b) => b.type === 'ers');
+  assert.equal(screen.specialty, 'Cardiology');
+  assert.equal(screen.hospital, 'Homerton University Hospital');
+  assert.match(screen.pathway, /Rapid Access Chest Pain/);
+  assert.equal(screen.priority, 'Urgent');
+  // No bare steps on the card: they live in the disclosure.
+  assert.ok(!card.blocks.some((b) => b.type === 'steps'));
+  const opened = card.blocks.find((b) => b.type === 'expand' && /steps/i.test(b.label));
+  assert.ok(opened && opened.blocks.some((b) => b.type === 'steps'));
+});
+
+test('the unrecorded card says it does not know, and is flagged', () => {
+  const card = referralAnswer({ question: 'how do I refer for a minmax', name: 'minmax', pages: [] });
+  assert.equal(card.flag, 'not-recorded');
+  assert.match(flat(card), /don’t know/);
+  assert.doesNotMatch(flat(card), /Smartcard/);
 });
 
 test('nothing recorded anywhere is still the honest card', () => {

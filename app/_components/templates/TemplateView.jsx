@@ -14,58 +14,8 @@ import React, { useState } from 'react';
 import { s, Hover, Svg, Icons } from '../ui';
 import Rich from '../chat/Rich';
 import Md from '../chat/Md';
-
-// One copy button, used by every block that has something worth copying.
-//
-// Two ways of doing it, because one of them is not always available: the
-// clipboard API needs a secure context, and a practice reaching this over plain
-// HTTP on the local network would otherwise get a button that silently does
-// nothing — which is worse than no button, because the reader believes it
-// worked and pastes the last thing they copied onto a document.
-async function copyText(value) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(value);
-      return true;
-    }
-  } catch (e) { /* fall through to the old way */ }
-  try {
-    const box = document.createElement('textarea');
-    box.value = value;
-    box.setAttribute('readonly', '');
-    box.style.cssText = 'position:fixed;top:-1000px;opacity:0;';
-    document.body.appendChild(box);
-    box.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(box);
-    return ok;
-  } catch (e) {
-    return false;
-  }
-}
-
-// Says what happened, including when it did not work. "Press Ctrl+C" is a worse
-// outcome than a copy, and a far better one than a button that lies.
-function CopyButton({ value, label = 'Copy', small = false }) {
-  const [state, setState] = useState('');
-  const run = async () => {
-    const ok = await copyText(value);
-    setState(ok ? 'done' : 'failed');
-    setTimeout(() => setState(''), ok ? 2000 : 4000);
-  };
-  const text = state === 'done' ? 'Copied' : state === 'failed' ? 'Select and press Ctrl+C' : label;
-  return (
-    <Hover tag="button" type="button" onClick={run} title={'Copy: ' + value}
-      base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid '
-        + (state === 'done' ? '#007f3b' : '#d5dee2')
-        + ';border-radius:999px;padding:' + (small ? '4px 10px' : '5px 12px')
-        + ';font:inherit;font-size:' + (small ? '12.5px' : '13px')
-        + ';font-weight:600;color:' + (state === 'done' ? '#00632f' : '#005eb8') + ';cursor:pointer;'}
-      hover="border-color:#005eb8;background:#f7fbff;">
-      <Svg w={small ? 12 : 13} sw={2.2}>{state === 'done' ? Icons.check : Icons.copy}</Svg>{text}
-    </Hover>
-  );
-}
+import CopyButton from './CopyButton';
+import ErsForm from './ErsForm';
 
 const TONE = {
   info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: Icons.infoCircle },
@@ -193,6 +143,7 @@ export function Blocks({ blocks }) {
     <>
       {blocks.map((b, i) => {
         if (b.type === 'fields') return <Fields key={i} title={b.title} items={b.items} />;
+        if (b.type === 'ers') return <ErsForm key={i} block={b} />;
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
         if (b.type === 'expand') return <Expand key={i} label={b.label} hint={b.hint} blocks={b.blocks} />;
         if (b.type === 'contacts') return <Contacts key={i} items={b.items} />;
@@ -290,6 +241,14 @@ export default function TemplateView({ answer }) {
       <div style={s('padding:16px 20px 14px;border-bottom:1px solid #eef1f2;')}>
         <div style={s('font-size:21px;font-weight:700;letter-spacing:-0.015em;color:#212b32;')}>{answer.title}</div>
         {answer.subtitle && <div style={s('margin-top:2px;font-size:14px;font-weight:600;color:#4c6272;')}>{answer.subtitle}</div>}
+        {/* A gap the practice should hear about. It is also written into the
+            question log under this flag, so the chip is the reader's half of
+            the same record. */}
+        {answer.flag && (
+          <div style={s('margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:#fdf4f3;border:1px solid #f0c2bd;border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:700;color:#a51b0f;')}>
+            <Svg w={13} stroke="#d5281b" sw={2.4}>{Icons.alertCircle}</Svg>Flagged for the practice
+          </div>
+        )}
       </div>
       {answer.warn && (
         <div style={s('display:flex;gap:9px;align-items:center;padding:10px 20px;background:#fdf4f3;border-bottom:1px solid #f0c2bd;')}>

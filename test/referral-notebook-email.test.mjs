@@ -99,7 +99,7 @@ test('with no Notebook loaded it falls back rather than guessing', () => {
   const card = referralAnswer({ question: 'how do I do a dietitian referral', name: 'dietitian', pages: [] });
   assert.match(card.subtitle, /Not recorded/);
   assert.doesNotMatch(JSON.stringify(card.source), /Referral Tree/);
-  assert.match(flat(card), /choose Referral form/);
+  assert.match(flat(card), /choose \*\*Referral form\*\*/);
   assert.doesNotMatch(flat(card), /Smartcard/);
 
   // A name neither the practice nor the tree has is still the honest card.
@@ -110,7 +110,7 @@ test('with no Notebook loaded it falls back rather than guessing', () => {
 test('a referral on no list at all still gets the honest card', () => {
   const card = referralAnswer({ question: 'how do I refer to vascular surgery', name: 'vascular surgery', pages: PAGES });
   assert.match(card.subtitle, /Not recorded in the practice’s notes/);
-  assert.match(flat(card), /ask the secretaries or the referring GP/);
+  assert.match(flat(card), /Ask the secretaries or the referring GP/);
   // Never the standard steps with two blank boxes, which reads as an answer.
   assert.doesNotMatch(flat(card), /Smartcard/);
 });

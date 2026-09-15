@@ -314,7 +314,7 @@ test('a referral nobody has recorded does NOT reach the tree', () => {
   assert.match(card.subtitle, /Not recorded/);
   assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
   // The dead end names the way on.
-  assert.match(JSON.stringify(card.blocks), /choose Referral form/);
+  assert.match(JSON.stringify(card.blocks), /choose \*\*Referral form\*\*/);
 });
 
 // The command still reads it, which is the whole point of restricting it.
