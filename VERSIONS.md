@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.47.0` | 2026-09-15 | feat | `9f4baea` | feat: propose, validate and apply a rewrite of one Notebook page |
+| `5.46.1` | 2026-09-15 | docs | `1bc753b` | docs: record 5.46.0 in the versions table |
 | `5.46.0` | 2026-09-15 | feat | `9594ae7` | feat: a Map tab in the Notebook — treemap of every page by health |
 | `5.45.3` | 2026-09-15 | docs | `7bf5de3` | docs: record 5.45.2 in the versions table |
 | `5.45.2` | 2026-09-15 | fix | `45f09a0` | fix: read the physio page as it is written, and stop matching inside words |
