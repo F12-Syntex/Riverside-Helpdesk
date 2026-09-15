@@ -328,7 +328,7 @@ function Item({ item, onReview, onApply, onReject, onOpenPage, busy }) {
   );
 }
 
-export default function RunPanel({ state, driving, error, busy, errors = {}, fresh = new Set(), events = [], onStart, onContinue, onCancel, onDecide, onReview, onApply, onReject, onApplyAll, onOpenPage }) {
+export default function RunPanel({ state, driving, error, busy, errors = {}, fresh = new Set(), events = [], bulk = null, onStopBulk, onStart, onContinue, onCancel, onDecide, onReview, onApply, onReject, onApplyAll, onOpenPage }) {
   const [showSettled, setShowSettled] = React.useState(false);
   const run = state && state.run;
   const p = (state && state.progress) || null;
@@ -428,12 +428,21 @@ export default function RunPanel({ state, driving, error, busy, errors = {}, fre
       <div style={s(CARD + 'padding:14px 16px 16px;')}>
         <div style={s('display:flex;align-items:center;gap:10px;flex-wrap:wrap;')}>
           <div style={s(LABEL + 'flex:1;min-width:160px;')}>Proposed rewrites</div>
-          {p.clean > 0 && (
+          {bulk ? (
+            <div style={s('display:flex;align-items:center;gap:10px;flex-wrap:wrap;')}>
+              <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:' + BAND_INK.green + ';')}>
+                <Svg w={14} sw={2.4} style={s('animation:rivaSpin 1s linear infinite;')}>{Icons.spinner}</Svg>
+                Rewriting <Count value={bulk.done} /> of {number(bulk.total)}…
+              </span>
+              <Hover tag="button" onClick={onStopBulk} base={btn('#fff', MUTED, 'padding:5px 11px;font-size:12.5px;')} hover="background:#f4f7f8;">Stop</Hover>
+            </div>
+          ) : p.clean > 0 && (
             <Hover tag="button" onClick={onApplyAll} disabled={busy} base={btn('#007f3b', '#fff')} hover="background:#00542b;">
               <Svg w={13} sw={2.6}>{Icons.check}</Svg>Apply the {number(p.clean)} that passed cleanly
             </Hover>
           )}
         </div>
+        {bulk && <Bar value={bulk.done} total={bulk.total} tone={BAND.green} />}
         {queue.length === 0 && <div style={s('margin-top:8px;font-size:13.5px;color:' + MUTED + ';')}>Nothing to review yet.</div>}
         {queue.map((item) => <Item key={item.id} item={item} onReview={onReview} onApply={onApply} onReject={onReject} onOpenPage={onOpenPage} busy={busy} />)}
         {rest.length > 0 && (

@@ -73,10 +73,18 @@ const fit = (text, w) => {
   return t.length <= max ? t : max > 3 ? t.slice(0, max - 1) + '…' : '';
 };
 
+// Never throws. A request that dies — a dropped connection, a gateway timeout,
+// an HTML error page — used to reject and leave the view spinning with nothing
+// on screen; it now comes back as a plain failure the caller can show.
 async function postJson(url, body) {
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, data };
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok && !data.error) data.error = 'The server returned ' + res.status + '.';
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, data: { error: 'Could not reach the server — the change was not saved. Try again.' } };
+  }
 }
 
 // What a page looks like while a run is passing over it. The map is the
@@ -369,6 +377,8 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
   const [events, setEvents] = React.useState([]);
   const [fresh, setFresh] = React.useState(new Set()); // flags that arrived this moment
   const [flash, setFlash] = React.useState({ ids: new Set(), at: 0 }); // pages just written
+  const [bulk, setBulk] = React.useState(null); // { done, total } while applying the clean ones
+  const stopBulk = React.useRef(false);
   // The driver is a loop, not a timer: one step at a time, and it stops the
   // moment the run says it is done or waiting on a decision.
   const drivingRef = React.useRef(false);
@@ -506,42 +516,45 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     if (ok && data.state) setRun(data.state);
   };
 
+  // One page per request, so every page shows up as it lands: the cell flashes
+  // green on the map, the list gains a line, the counter comes down. A batch of
+  // forty in one request showed nothing for two minutes and then timed out.
   const applyAll = async () => {
-    if (!run || !run.run) return;
-    setRunBusy(true);
+    if (!run || !run.run || bulk) return;
+    const total = run.progress ? run.progress.clean : 0;
+    if (!total) return;
     setRunError('');
+    setBulk({ done: 0, total });
+    stopBulk.current = false;
     let applied = 0;
     let failed = 0;
-    for (;;) {
-      const { ok, data } = await postJson('/api/notebook/defrag/run', { runId: run.run.id, applyAll: true });
-      if (!ok || data.error) { setRunError(data.error || 'The rewrites could not all be applied.'); break; }
-      applied += (data.applied || []).length;
-      failed += (data.failed || []).length;
-      if (data.state) setRun(data.state);
-      record(data.event);
-      // A round that writes nothing will write nothing next time either.
-      if (!data.remaining || !(data.applied || []).length) break;
+    let rounds = 0;
+    try {
+      for (;;) {
+        // One page that refuses does not stop the other thirty-nine; a round
+        // that neither writes nor refuses anything means there is nothing left.
+        if (stopBulk.current || rounds++ > total + 5) break;
+        const { ok, data } = await postJson('/api/notebook/defrag/run', { runId: run.run.id, applyAll: true });
+        if (!ok || data.error) { setRunError(data.error || 'The rewrites could not all be applied.'); break; }
+        const wrote = (data.applied || []).length;
+        const refused = (data.failed || []).length;
+        applied += wrote;
+        failed += refused;
+        if (data.state) setRun(data.state);
+        record(data.event);
+        changed();
+        setBulk({ done: applied + failed, total });
+        if (!data.remaining || !(wrote + refused)) break;
+      }
+    } finally {
+      setBulk(null);
     }
-    setRunBusy(false);
     changed();
-    setToast({ text: number(applied) + ' page' + (applied === 1 ? '' : 's') + ' rewritten' + (failed ? ', ' + number(failed) + ' could not be' : '') + '. Every previous version is kept.' });
+    if (applied || failed) {
+      setToast({ text: number(applied) + ' page' + (applied === 1 ? '' : 's') + ' rewritten' + (failed ? ', ' + number(failed) + ' could not be' : '') + '. Every previous version is kept.' });
+    }
   };
 
-  const propose = async (noteId) => {
-    setDefrag({ status: 'loading' });
-    setAck(false);
-    const { ok, data } = await postJson('/api/notebook/defrag', { noteId });
-    if (!ok || data.error) { setDefrag({ status: 'error', message: data.error || 'The rewrite could not be proposed.' }); return; }
-    setDefrag({ status: 'ready', ...data, editing: false, draft: data.proposal.body, busy: false, error: '' });
-  };
-  const recheck = async () => {
-    if (!defrag || defrag.status !== 'ready') return;
-    setDefrag({ ...defrag, busy: true, error: '' });
-    const { ok, data } = await postJson('/api/notebook/defrag', { proposalId: defrag.proposal.id, body: defrag.draft });
-    if (!ok || data.error) { setDefrag({ ...defrag, busy: false, error: data.error || 'Could not re-check.' }); return; }
-    setAck(false);
-    setDefrag({ status: 'ready', ...data, itemId: defrag.itemId || null, editing: false, draft: data.proposal.body, busy: false, error: '' });
-  };
   // A proposal made inside a run is applied through the run, so the queue
   // knows the page is done; otherwise straight through the single-page path.
   const apply = async () => {
@@ -649,11 +662,13 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
         <RunPanel
           state={run}
           driving={driving}
-          busy={runBusy}
+          busy={runBusy || !!bulk}
           error={runError}
           errors={flagErrors}
           fresh={fresh}
           events={events}
+          bulk={bulk}
+          onStopBulk={() => { stopBulk.current = true; }}
           onStart={startRun}
           onContinue={() => run && run.run && drive(run.run.id)}
           onCancel={stopRun}

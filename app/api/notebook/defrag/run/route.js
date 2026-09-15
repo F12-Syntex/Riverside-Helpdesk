@@ -12,7 +12,8 @@
 //                                       reader's own wording for either page or
 //                                       both), 'dismiss', 'defer', 'resolved'
 //   POST { itemId, apply|reject: true } apply or reject one page's proposal
-//   POST { runId, applyAll: true }      apply every proposal that passed cleanly
+//   POST { runId, applyAll: true }      apply the next proposal that passed
+//                                       cleanly, and say how many are left
 //   POST { runId, cancel: true }        abandon the run
 //
 // See lib/notebook/run.js for what each step refuses and why. Every write still
@@ -60,7 +61,7 @@ export async function POST(request) {
     }
     if (body.itemId && body.apply) return reply(await applyRunItem({ itemId: parseInt(body.itemId, 10), turnId }));
     if (body.itemId && body.reject) return reply(await rejectRunItem({ itemId: parseInt(body.itemId, 10) }));
-    if (body.runId && body.applyAll) return reply(await applyAllClean({ runId: parseInt(body.runId, 10), turnId }));
+    if (body.runId && body.applyAll) return reply(await applyAllClean({ runId: parseInt(body.runId, 10), limit: body.limit, turnId }));
     if (body.runId && body.cancel) return reply(await cancelRun(parseInt(body.runId, 10)));
     if (body.start) return reply(await startRun({ scope: body.scope === 'needs-attention' ? 'needs-attention' : 'all', turnId }));
 
