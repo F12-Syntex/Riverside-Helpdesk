@@ -22,6 +22,7 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
+import { OUTPUT_TAGS, outputTag } from '@/lib/templates/output-tags.mjs';
 
 /* ------------------------------------------------------------------ *
  * Notebook — practice notes the assistant uses automatically.
@@ -280,6 +281,7 @@ function SideRow({ n, depth, ctx }) {
   const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
   const open = !!expanded[n.id] || (!!q && kids.length > 0);
   const fileCount = attachments.filter((a) => a.noteId === n.id).length;
+  const tag = outputTag(n.outputTag);
   // Drag a note (anything below the root) onto a section row to move it there.
   const draggable = !!n.parentId;
   const dropOk = dragId != null && canDropOn(dragId, n.id);
@@ -323,6 +325,15 @@ function SideRow({ n, depth, ctx }) {
           <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 || n.isSection ? Icons.book : Icons.fileLines}</Svg>
           <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
+          {/* The shape answers from here come back in. Only shown where the row
+              itself sets it — putting it on every inheriting page below would
+              be the same chip twenty times down the tree. */}
+          {tag && (
+            <span title={'Answers from here are drawn as the ' + tag.label + '.'}
+              style={s('flex:none;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:' + C.blue + ';background:' + C.sel + ';border-radius:999px;padding:2px 7px;')}>
+              {tag.label}
+            </span>
+          )}
         </button>
         <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
           {depth < MAX_DEPTH - 1 && (
@@ -411,6 +422,20 @@ export default function NotebookPage() {
   }, []);
 
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
+  // The tag in force for a row — its own, or the nearest tagged folder above
+  // it. The same walk the assistant does server-side (noteOutputTag in
+  // lib/knowledge-context.mjs), so the chip in the sidebar and the shape of the
+  // answer cannot disagree.
+  const inheritedTag = React.useCallback((note) => {
+    const seen = new Set();
+    let cur = note;
+    while (cur && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      if (String(cur.outputTag || '').trim()) return String(cur.outputTag).trim();
+      cur = cur.parentId == null ? null : byId.get(cur.parentId);
+    }
+    return '';
+  }, [byId]);
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
   const isSection = !!selected && (!selected.parentId || !!selected.isSection);
@@ -795,6 +820,28 @@ export default function NotebookPage() {
   async function renameNote(id) {
     await selectNote(id);
     setTimeout(() => { if (titleInput.current) { titleInput.current.focus(); titleInput.current.select(); } }, 0);
+  }
+
+  /**
+   * Tag a folder (or one page) with the shape its answers come back in.
+   *
+   * The tag is inherited by everything beneath it, so this is normally done
+   * once on a section — "Referrals is the e-RS screen" — rather than page by
+   * page. '' clears it, which means "whatever the folder above says", not
+   * "plain": see setNoteOutputTag in lib/notebook.js.
+   */
+  async function setOutputTag(id, tag) {
+    try {
+      const res = await fetch('/api/notebook', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, outputTag: tag }),
+      });
+      if (!res.ok) throw new Error('bad status');
+      const { note } = await res.json();
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, outputTag: note.outputTag || '' } : n)));
+    } catch (e) {
+      setUploadErr('Could not change the answer format.');
+    }
   }
 
   // Promote a note to a section (name-only container for sub-notes) or back.
@@ -1304,6 +1351,39 @@ export default function NotebookPage() {
               <Svg w={15} sw={2.2}>{n.isSection ? Icons.fileLines : Icons.book}</Svg>{n.isSection ? 'Convert to page' : 'Convert to section'}
             </Hover>
           ) : null; })()}
+          {/* What shape the answers from here come back in. Set on a folder and
+              everything beneath it inherits it — so this reads as a property of
+              the folder, with the inherited value shown but not ticked. */}
+          {(() => {
+            const n = byId.get(menu.id);
+            if (!n) return null;
+            const own = String(n.outputTag || '');
+            const inherited = inheritedTag(n);
+            return (
+              <>
+                <div style={s('margin:5px 4px 3px;padding:6px 7px 0;border-top:1px solid ' + C.line + ';font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + C.dim + ';')}>
+                  Format answers as
+                </div>
+                {[{ id: '', label: 'The page itself' }, ...OUTPUT_TAGS].map((t) => {
+                  const on = own === t.id;
+                  // The folder's tag, showing through on a page that sets none.
+                  const from = !own && t.id && t.id === inherited;
+                  return (
+                    <Hover key={t.id || 'plain'} tag="button" title={t.help || 'Answers are the page exactly as it is written.'}
+                      onClick={() => { setMenu(null); setOutputTag(menu.id, t.id); }}
+                      base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:'
+                        + (on ? C.blue : C.ink) + ';cursor:pointer;padding:8px 11px;text-align:left;' + (on ? 'font-weight:600;' : '')}
+                      hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
+                      <span style={s('flex:none;width:15px;display:flex;')}>{on ? <Svg w={15} sw={2.6}>{Icons.check}</Svg> : null}</span>
+                      <span style={s('flex:1;min-width:0;')}>{t.label}</span>
+                      {from && <span style={s('flex:none;font-size:11px;color:' + C.dim + ';')}>from folder</span>}
+                    </Hover>
+                  );
+                })}
+                <div style={s('margin:3px 4px 0;border-top:1px solid ' + C.line + ';')} />
+              </>
+            );
+          })()}
           <Hover tag="button" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}
             base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.red + ';cursor:pointer;padding:9px 11px;text-align:left;'}
             hover={'background:#fbe9e7;'}>

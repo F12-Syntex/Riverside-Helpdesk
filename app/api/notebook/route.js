@@ -3,13 +3,15 @@
 //   POST   /api/notebook          — create a note { title?, parentId? }
 //   PATCH  /api/notebook          — update a note { id, title?, body? } (autosave)
 //                                   or move it { id, parentId } (drag to a section)
+//                                   or tag it { id, outputTag } (right-click → Format answers as)
 //   DELETE /api/notebook?id=123   — delete a note (its sub-notes cascade)
 //
 // Notes written here are automatically mirrored into canonical knowledge as
 // citable sources (no re-ingest or redeploy).
 import { NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
-import { listNotes, createNote, updateNote, moveNote, deleteNote, listAttachments, attachmentsUnderNote } from '@/lib/notebook';
+import { listNotes, createNote, updateNote, moveNote, deleteNote, listAttachments, attachmentsUnderNote, setNoteOutputTag } from '@/lib/notebook';
+import { isOutputTag } from '@/lib/templates/output-tags.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,8 +43,17 @@ export async function PATCH(request) {
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   if (!parseInt(body?.id, 10)) return NextResponse.json({ error: 'A valid id is required.' }, { status: 400 });
-  if (body?.title == null && body?.body == null && typeof body?.isSection !== 'boolean' && body?.parentId == null) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
+  if (body?.title == null && body?.body == null && typeof body?.isSection !== 'boolean' && body?.parentId == null && body?.outputTag == null) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
   try {
+    // Tagging is its own operation: it is the only field a SECTION can carry
+    // besides its title, and the value is checked against what can actually be
+    // rendered rather than stored as whatever the client sent.
+    if (body?.outputTag != null) {
+      if (!isOutputTag(body.outputTag)) return NextResponse.json({ error: 'Not an output tag.' }, { status: 400 });
+      const note = await setNoteOutputTag({ id: body.id, outputTag: body.outputTag });
+      if (!note) return NextResponse.json({ error: 'Note not found.' }, { status: 404 });
+      return NextResponse.json({ note });
+    }
     // A move (reparent) is its own operation — validated against the tree.
     if (body?.parentId != null) {
       const out = await moveNote({ id: body.id, parentId: body.parentId });

@@ -44,7 +44,9 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
   commandPrompt, notebookCatalogue, notebookFits, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
+  taggedNotebookPage,
 } from '@/lib/templates/route.mjs';
+import { outputTagPrompt, withTaggedOutput } from '@/lib/templates/output-tags.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
 import { needsAppointmentMode } from '@/lib/triage/destinations.mjs';
@@ -1049,6 +1051,35 @@ export async function POST(request) {
             complaint: scan.complaint,
             gist: (scan.routed && scan.routed.gist) || '',
           });
+
+          // THE FOLDER'S OWN SHAPE, when the practice has given it one.
+          //
+          // A Notebook page normally answers as itself — the page, as they
+          // wrote it. Where the practice has tagged the folder it sits in (the
+          // notebook sidebar, right-click → Format answers as), the values on
+          // that screen are lifted out of the page and the screen is drawn
+          // above it. ONE focused read, of one page, and only for a tagged
+          // page: every other turn costs exactly what it did before.
+          //
+          // The page is still shown underneath, so a read that comes back thin
+          // — or does not come back at all — leaves the reader with what they
+          // had before the tag existed. That is why this is allowed to fail
+          // quietly.
+          const tagged = templateAnswer ? taggedNotebookPage(selection.object, notebookPages) : null;
+          if (tagged) {
+            try {
+              const values = await readValues({
+                model,
+                schema: tagged.tag.schema,
+                text: outputTagPrompt({ tag: tagged.tag, page: tagged.page, question }),
+                role: 'fast',
+                phase: 'format',
+              });
+              templateAnswer = withTaggedOutput(templateAnswer, tagged.tag, values);
+            } catch (e) {
+              console.warn('[agent] tagged output read failed:', String(e).slice(0, 160));
+            }
+          }
         } catch (e) {
           // A router that cannot answer is not a turn that cannot answer — and
           // the scan already ran over the whole message, so a turn that ends in
