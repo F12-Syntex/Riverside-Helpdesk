@@ -9,11 +9,31 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { BLOOD_FORMS, bloodForm, bloodFormAnswer, clinicalDetails } from '../lib/templates/bloods.mjs';
+import {
+  BLOOD_FORMS, FORM_SECTIONS, bloodForm, bloodFormAnswer, clinicalDetails, findRecordedBloods, formItem,
+} from '../lib/templates/bloods.mjs';
 import { SELECTION_SCHEMA, renderSelection, selectionPrompt } from '../lib/templates/route.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
 
 const screen = (card) => card.blocks.find((b) => b.type === 'pathology');
+
+// The practice's own page, in the shape the Notebook holds it. The array in
+// bloods.mjs holds ONE filled-in form; the practice writes down more than it
+// sends screenshots of, and "no form recorded" about something they wrote down
+// is worse than a gap.
+const BLOODS_PAGE = {
+  docTitle: 'Notebook: Nurse / Blood tests before a review',
+  text: `Reviews that need the bloods first. Book them before 1pm.
+
+- Mental health review — FBC, U&E, LFT, lipids, HbA1c
+- Diabetes review — HbA1c, U&E, lipids, Urine Albumin Creatinine Ratio`,
+};
+
+// Mentioning a review is not listing its bloods.
+const PROSE_PAGE = {
+  docTitle: 'Notebook: Front desk / Clinics',
+  text: 'Mental health review clinics run on Tuesdays. Blood tests are taken in the morning.',
+};
 
 // The form as it was filled in on the screen the feature was built from.
 const HEALTH_CHECK = [
@@ -66,23 +86,124 @@ test('no check named: the one recorded form, said to be that one', () => {
   }
 });
 
-test('a review with no recorded form ticks nothing, and is flagged', () => {
-  for (const asked of ['diabetes review', 'learning disability review', 'mental health review']) {
+test('a review nobody has written down ticks nothing, and is flagged', () => {
+  for (const asked of ['learning disability review', 'at-risk review']) {
     const card = bloodFormAnswer({ check: asked });
     const form = screen(card);
 
     // The whole point. A wrong tick is a patient bled for the wrong test.
     assert.deepEqual(form.ordered, [], asked + ': something was ordered');
     assert.deepEqual(form.groups, [], asked + ': something was ticked');
-    for (const test of HEALTH_CHECK) {
-      assert.ok(!answerToText(card).includes(test), asked + ': the health-check panel leaked onto it');
-    }
+
+    // But the reader is not sent away empty-handed: with nothing ticked, the
+    // form's own boxes are drawn in the screen itself, to find the ones the
+    // request names by their exact wording. That is what was being asked.
+    assert.deepEqual(form.offered, FORM_SECTIONS, asked + ': the form’s own list is missing');
 
     // The line still gets filled in: the laboratory reads it either way.
     assert.match(form.clinicalDetails, /review/i, asked);
     // And the practice hears about the gap rather than it being met with a shrug.
-    assert.match(card.flag, /No blood form recorded for/i, asked);
+    assert.match(card.flag, /No bloods recorded for/i, asked);
   }
+});
+
+test('a review the Notebook lists the bloods for is answered from the page', () => {
+  const card = bloodFormAnswer({ check: 'mental health review', pages: [BLOODS_PAGE] });
+  const form = screen(card);
+
+  // The page's own words, in the box that gets sent.
+  assert.deepEqual(form.ordered, ['FBC', 'U&E', 'LFT', 'lipids', 'HbA1c']);
+
+  // And the boxes those names unambiguously name, ticked under the form's own
+  // sections. "U&E", "lipids" and "HbA1c" name no single box, so nothing is
+  // ticked for them — they stay on the list for the reader to settle.
+  assert.deepEqual(form.groups, [
+    { heading: 'Biochemistry 1', tests: ['Liver Profile (LFT)'] },
+    { heading: 'Haematology', tests: ['Full Blood Count (FBC)'] },
+  ]);
+
+  // Where it came from, on the card and in the sources, with the line quoted.
+  const text = answerToText(card);
+  assert.match(text, /Notebook: Nurse \/ Blood tests before a review/);
+  assert.match(text, /Mental health review — FBC, U&E, LFT, lipids, HbA1c/);
+  assert.equal(card.source[0], BLOODS_PAGE.docTitle);
+
+  // A page that lists it is not a gap.
+  assert.equal(card.flag, undefined);
+
+  // The ticks are the answer here, so the screen is not padded out with the
+  // other twenty-six boxes — they go behind a disclosure, for "U&E" and
+  // "HbA1c", which named no single box and so ticked nothing.
+  assert.deepEqual(form.offered, []);
+  const rest = card.blocks.find((b) => b.type === 'expand' && /Every box on the form/.test(b.label));
+  assert.ok(rest, 'the rest of the form is nowhere');
+  const rows = rest.blocks.find((b) => b.type === 'table');
+  assert.deepEqual(rows.rows.map((r) => r[0]), FORM_SECTIONS.map((f) => f.heading));
+  assert.match(rows.rows.map((r) => r[1]).join(' '), /Urine Albumin Creatinine Ratio/);
+});
+
+test('a page that only mentions the review has not listed its bloods', () => {
+  const card = bloodFormAnswer({ check: 'mental health review', pages: [PROSE_PAGE] });
+  assert.deepEqual(screen(card).ordered, []);
+  assert.match(card.flag, /No bloods recorded for/i);
+});
+
+test('the Notebook is read in both shapes people write it in', () => {
+  // On the line.
+  const inline = findRecordedBloods({ check: 'diabetes review', pages: [BLOODS_PAGE] });
+  assert.deepEqual(inline.tests, ['HbA1c', 'U&E', 'lipids', 'Urine Albumin Creatinine Ratio']);
+  assert.equal(inline.page, BLOODS_PAGE.docTitle);
+
+  // Listed under it.
+  const under = findRecordedBloods({
+    check: 'at-risk review',
+    pages: [{
+      docTitle: 'Notebook: Nurse / At-risk bloods',
+      text: '### At-risk review\nBlood tests to order first:\n\n- Haemoglobin A1c\n- Lipid Profile\n- Electrolytes + Creatinine\n\nBook the review once they are back.',
+    }],
+  });
+  assert.deepEqual(under.tests, ['Haemoglobin A1c', 'Lipid Profile', 'Electrolytes + Creatinine']);
+
+  // And those three each name exactly one box, so all three are ticked — in
+  // the form's own order, not the page's, because that is how the reader's eye
+  // goes down the screen.
+  const card = bloodFormAnswer({
+    check: 'at-risk review',
+    pages: [{
+      docTitle: 'Notebook: Nurse / At-risk bloods',
+      text: '### At-risk review\nBlood tests to order first:\n\n- Haemoglobin A1c\n- Lipid Profile\n- Electrolytes + Creatinine',
+    }],
+  });
+  assert.deepEqual(screen(card).groups, [
+    { heading: 'Biochemistry 1', tests: ['Electrolytes + Creatinine', 'Lipid Profile', 'Haemoglobin A1c'] },
+  ]);
+});
+
+test('the health-check panel never answers a review that says its words', () => {
+  // "Mental health check" contains "health check". Answering it with the
+  // health-check panel is the exact mistake this file is arranged to avoid.
+  for (const asked of ['mental health check', 'learning disability health check', 'diabetic check']) {
+    assert.equal(bloodForm(asked), null, asked + ' matched the health check');
+    const form = screen(bloodFormAnswer({ check: asked }));
+    assert.deepEqual(form.ordered, [], asked);
+    assert.deepEqual(form.groups, [], asked);
+  }
+});
+
+test('a name only ticks a box when it names exactly one', () => {
+  // The form's own bracketed abbreviation settles the common ones.
+  assert.equal(formItem('FBC'), 'Full Blood Count (FBC)');
+  assert.equal(formItem('LFT'), 'Liver Profile (LFT)');
+  assert.equal(formItem('Lipid Profile'), 'Lipid Profile');
+  assert.equal(formItem('ferritin'), 'Ferritin Only');
+
+  // "TSH" is in two boxes and they are different tests. Two matches is a
+  // question, not a near miss, and nothing is ticked on a guess.
+  assert.equal(formItem('TSH'), null);
+  // Nothing invented for a name the form does not carry.
+  assert.equal(formItem('U&E'), null);
+  assert.equal(formItem('HbA1c'), null);
+  assert.equal(formItem(''), null);
 });
 
 test('the timing and age gates are on every card, from the practice’s own gates', () => {

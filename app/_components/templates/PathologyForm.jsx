@@ -8,10 +8,12 @@
 // the left under the screen's own section headings, and the Ordered Items list
 // and the Clinical Details box sit on the right, where they are on EMIS.
 //
-// ONLY THE BOXES THAT GET TICKED ARE DRAWN. The real form is a wall of a
-// hundred tests and redrawing all of them would put ninety-six things on the
-// card that the reader is being told to leave alone. What is here is what
-// changes: the ticks, the list they produce, and the line under it.
+// WHICH BOXES ARE DRAWN DEPENDS ON WHETHER THE CARD COULD TICK THEM. Where it
+// could — a form the practice has recorded — only the ticked ones are here:
+// redrawing the other ninety would put ninety things on the card that the
+// reader is being told to leave alone. Where it could not, `offered` carries
+// the form's own list and all of them are drawn, ticked and unticked, because
+// then "which items do I select" is the question and the boxes are the answer.
 //
 // Nothing is interactive. The boxes are pictures of the state the screen should
 // end up in, not controls, and they are marked as such for a screen reader.
@@ -27,14 +29,17 @@ function Label({ children }) {
   return <div style={s('font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:' + LINE + ';margin:0 0 6px;')}>{children}</div>;
 }
 
-// A ticked box, exactly as the form shows one: the box, then the test.
-function Ticked({ test }) {
+// A box, exactly as the form shows one: the box, then the test. An unticked one
+// is quieter but never greyed out — it is not disabled, it is a box the reader
+// may be about to tick, and half the point of showing it is that they can read
+// its exact wording.
+function Box({ test, on }) {
   return (
-    <div role="img" aria-label={test + ' (ticked)'} style={s('display:flex;align-items:flex-start;gap:9px;padding:5px 0;')}>
+    <div role="img" aria-label={test + (on ? ' (ticked)' : '')} style={s('display:flex;align-items:flex-start;gap:9px;padding:4px 0;')}>
       <span style={s('flex:none;width:19px;height:19px;border:2px solid ' + LINE + ';background:#fff;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}>
-        <Svg w={13} stroke="#007f3b" sw={3.2}>{Icons.check}</Svg>
+        {on && <Svg w={13} stroke="#007f3b" sw={3.2}>{Icons.check}</Svg>}
       </span>
-      <span style={s('flex:1;min-width:0;font-size:15px;font-weight:700;color:' + INK + ';overflow-wrap:anywhere;')}>{test}</span>
+      <span style={s('flex:1;min-width:0;font-size:' + (on ? '15px' : '14px') + ';font-weight:' + (on ? '700' : '400') + ';color:' + (on ? INK : LINE) + ';overflow-wrap:anywhere;')}>{test}</span>
     </div>
   );
 }
@@ -56,9 +61,24 @@ function Missing({ text }) {
 // with the same keys.
 export default function PathologyForm({ block }) {
   const b = block || {};
-  const groups = (b.groups || []).filter((g) => g && (g.tests || []).length);
+  const ticked = (b.groups || []).filter((g) => g && (g.tests || []).length);
   const ordered = (b.ordered || []).filter(Boolean);
   const details = String(b.clinicalDetails || '').trim();
+
+  // The sections to draw. The form's own list when the card has one — every
+  // box, with the ticked ones ticked — and otherwise just what was ticked.
+  const on = new Set(ticked.flatMap((g) => g.tests));
+  const offered = (b.offered || []).filter((g) => g && (g.tests || []).length);
+  const sections = offered.length
+    ? offered.map((g) => ({
+      heading: g.heading,
+      // The form's own order, ticked in place. Floating the ticked ones to the
+      // top would put the card's boxes in a different order from the screen's,
+      // which is the one thing this block exists not to do. A ticked box the
+      // list does not carry goes on the end rather than being dropped.
+      tests: [...g.tests, ...(ticked.find((t) => t.heading === g.heading)?.tests || []).filter((t) => !g.tests.includes(t))],
+    }))
+    : ticked;
 
   return (
     <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
@@ -73,11 +93,11 @@ export default function PathologyForm({ block }) {
           {/* The tick boxes, under the screen's own section headings so the
               reader can find each one without scrolling the whole form. */}
           <div style={s('flex:1 1 240px;min-width:0;')}>
-            <Label>Tick these</Label>
-            {groups.length ? groups.map((g) => (
+            <Label>{offered.length ? (on.size ? 'Tick these' : 'The boxes on the form') : 'Tick these'}</Label>
+            {sections.length ? sections.map((g) => (
               <div key={g.heading} style={s('margin:0 0 10px;background:#fff;border:2px solid ' + LINE + ';padding:8px 12px 10px;')}>
                 <div style={s('font-size:13.5px;font-weight:700;color:' + LINE + ';margin:0 0 2px;')}>{g.heading}</div>
-                {(g.tests || []).map((t) => <Ticked key={t} test={t} />)}
+                {(g.tests || []).map((t) => <Box key={t} test={t} on={on.has(t)} />)}
               </div>
             )) : (
               <div style={s('background:#fff;border:2px solid #b58500;padding:10px 12px;')}>
