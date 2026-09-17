@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  OUTPUT_TAGS, OUTPUT_TAG_IDS, isOutputTag, outputTag, outputTagPrompt, withTaggedOutput,
+  OUTPUT_TAGS, OUTPUT_TAG_IDS, TAG_COLOURS, isOutputTag, outputTag, outputTagPrompt, withTaggedOutput,
 } from '../lib/templates/output-tags.mjs';
 import { buildFullNotebookSources, noteOutputTag } from '../lib/knowledge-context.mjs';
 import { renderSelection, taggedNotebookPage } from '../lib/templates/route.mjs';
@@ -52,6 +52,37 @@ test('a cycle in the tree cannot hang the walk', () => {
 });
 
 /* ------------------------------------------------------- what is taggable */
+
+test('every tag can be recognised without being read', () => {
+  const hex = /^#[0-9a-f]{6}$/;
+  const inks = new Set();
+  for (const tag of OUTPUT_TAGS) {
+    // A short name for the sidebar, where a chip competes with a page title,
+    // and a full one for the menu, where the reader is choosing between them.
+    assert.ok(tag.short && tag.short.length <= 8, tag.id + ' has no short name');
+    assert.ok(tag.label.length > tag.short.length, tag.id + ': the short name is not shorter');
+
+    // Three parts: the word, the ground it sits on, and the line down the
+    // folder's contents. Every one of them a real colour.
+    for (const part of ['ink', 'tint', 'edge']) {
+      assert.match(String(tag.colour[part]), hex, tag.id + '.' + part);
+    }
+    inks.add(tag.colour.ink);
+  }
+  // Distinct, or the colour says nothing. And none of them is the red this app
+  // keeps for deleting and for a safety rule.
+  assert.equal(inks.size, OUTPUT_TAGS.length, 'two tags share a colour');
+  for (const ink of inks) assert.notEqual(ink.toLowerCase(), '#d5281b');
+});
+
+test('the colours live with the tags, not with the page that draws them', () => {
+  // The sidebar chip, the folder's guide line and the menu swatch are all one
+  // colour per tag because they all read it from here. A colour picked in the
+  // notebook page would be a fourth place for it to drift.
+  for (const tag of OUTPUT_TAGS) {
+    assert.ok(Object.values(TAG_COLOURS).includes(tag.colour), tag.id + ' has a colour of its own');
+  }
+});
 
 test('only a tag that can actually be drawn may be stored', () => {
   assert.deepEqual(OUTPUT_TAG_IDS, ['ers', 'profMessage', 'pathology']);

@@ -53,9 +53,13 @@ const CSS = `
 .nb-row .nb-actions{opacity:0;transition:opacity .12s;}
 .nb-row:hover .nb-actions,.nb-row:focus-within .nb-actions{opacity:1;}
 .nb-row:hover{background:#f7fbff;}
-.nb-kids{margin-left:13px;padding-left:6px;border-left:1.5px solid ${C.line};}
+/* The guide line down a folder's contents, and the tick joining each row to
+   it. Both read --nb-edge, which a tagged folder sets to its own colour — so
+   a tag is visible all the way down its subtree without a chip on every row.
+   Untagged folders never set it and get the plain line they always had. */
+.nb-kids{margin-left:13px;padding-left:6px;border-left:var(--nb-edge-w,1.5px) solid var(--nb-edge,${C.line});}
 .nb-kids>div>.nb-row{position:relative;}
-.nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
+.nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:var(--nb-edge-w,1.5px);background:var(--nb-edge,${C.line});}
 .nb-row.nb-dragging{opacity:.45;}
 /* The import bar in the moment before a phase knows how big it is. A bar
    sitting still at zero reads as stuck, which is the thing this whole
@@ -275,6 +279,32 @@ function ConfirmSheet({ confirm, onClose }) {
   );
 }
 
+/**
+ * The tag a row sets, as a chip.
+ *
+ * A swatch and the short name, in the tag's own colour. `full` spells the whole
+ * name out — used in the menu, where there is room and where the reader is
+ * choosing between them; the sidebar uses the short one so a chip never pushes
+ * a page title out of view.
+ *
+ * The name is always on it. Colour is the thing that makes a tagged folder
+ * findable at a glance, but it is never the only thing saying which tag it is.
+ */
+function TagChip({ tag, full = false }) {
+  return (
+    <span title={'Answers from here are drawn as the ' + tag.label + '.'}
+      style={s('flex:none;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;'
+        + 'letter-spacing:.02em;white-space:nowrap;border-radius:999px;padding:2px 8px;'
+        + 'color:' + tag.colour.ink + ';background:' + tag.colour.tint + ';box-shadow:inset 0 0 0 1px ' + tag.colour.edge + ';')}>
+      {/* The swatch is the menu's, where the colour is being learned. In the
+          sidebar the chip's own tint already carries it, and twelve pixels
+          there is twelve pixels off the end of a folder's name. */}
+      {full && <span style={s('flex:none;width:7px;height:7px;border-radius:2px;background:' + tag.colour.ink + ';')} />}
+      {full ? tag.label : tag.short}
+    </span>
+  );
+}
+
 // One tree row; children render recursively inside .nb-kids, which draws the
 // parent→child connector lines. Defined at module level (not inside the page
 // component) so React keeps the same component identity across renders —
@@ -332,15 +362,11 @@ function SideRow({ n, depth, ctx }) {
           <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 || n.isSection ? Icons.book : Icons.fileLines}</Svg>
           <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
-          {/* The shape answers from here come back in. Only shown where the row
-              itself sets it — putting it on every inheriting page below would
-              be the same chip twenty times down the tree. */}
-          {tag && (
-            <span title={'Answers from here are drawn as the ' + tag.label + '.'}
-              style={s('flex:none;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:' + C.blue + ';background:' + C.sel + ';border-radius:999px;padding:2px 7px;')}>
-              {tag.label}
-            </span>
-          )}
+          {/* The shape answers from here come back in. The CHIP is only on the
+              row that sets it — the same chip twenty times down a folder would
+              be noise — and what everything below inherits is shown instead by
+              the coloured line running down their indent. */}
+          {tag && <TagChip tag={tag} />}
         </button>
         <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
           {depth < MAX_DEPTH - 1 && (
@@ -352,7 +378,11 @@ function SideRow({ n, depth, ctx }) {
         </span>
       </div>
       {open && kids.length > 0 && (
-        <div className="nb-kids">
+        // The guide line down a folder's contents takes the tag's colour where
+        // the folder sets one. That is what makes a tag visible at a glance
+        // without a chip on every page: the whole subtree is drawn in it, and a
+        // sub-folder that overrides the tag changes colour from there down.
+        <div className="nb-kids" style={tag ? { '--nb-edge': tag.colour.edge, '--nb-edge-w': '2px' } : undefined}>
           {kids.map((k) => <SideRow key={k.id} n={k} depth={depth + 1} ctx={ctx} />)}
         </div>
       )}
@@ -477,16 +507,22 @@ export default function NotebookPage() {
   // it. The same walk the assistant does server-side (noteOutputTag in
   // lib/knowledge-context.mjs), so the chip in the sidebar and the shape of the
   // answer cannot disagree.
-  const inheritedTag = React.useCallback((note) => {
+  // WHICH ROW a tag is coming from — the row itself, or the nearest folder
+  // above it that sets one. Null when nothing on the path does.
+  const tagSource = React.useCallback((note) => {
     const seen = new Set();
     let cur = note;
     while (cur && !seen.has(cur.id)) {
       seen.add(cur.id);
-      if (String(cur.outputTag || '').trim()) return String(cur.outputTag).trim();
+      if (String(cur.outputTag || '').trim()) return cur;
       cur = cur.parentId == null ? null : byId.get(cur.parentId);
     }
-    return '';
+    return null;
   }, [byId]);
+  const inheritedTag = React.useCallback((note) => {
+    const found = tagSource(note);
+    return found ? String(found.outputTag).trim() : '';
+  }, [tagSource]);
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
   const isSection = !!selected && (!selected.parentId || !!selected.isSection);
@@ -1432,36 +1468,72 @@ export default function NotebookPage() {
               <Svg w={15} sw={2.2}>{n.isSection ? Icons.fileLines : Icons.book}</Svg>{n.isSection ? 'Convert to page' : 'Convert to section'}
             </Hover>
           ) : null; })()}
-          {/* What shape the answers from here come back in. Set on a folder and
-              everything beneath it inherits it — so this reads as a property of
-              the folder, with the inherited value shown but not ticked. */}
+          {/* What shape the answers from here come back in.
+              Set on a folder and everything beneath it inherits it, so this
+              reads as a property of the folder: the tag in force is named at
+              the top, the one this row sets is ticked, and where those differ
+              the difference is the whole point of the panel. */}
           {(() => {
             const n = byId.get(menu.id);
             if (!n) return null;
             const own = String(n.outputTag || '');
             const inherited = inheritedTag(n);
+            const from = !own && inherited ? tagSource(n) : null;
             return (
               <>
-                <div style={s('margin:5px 4px 3px;padding:6px 7px 0;border-top:1px solid ' + C.line + ';font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + C.dim + ';')}>
-                  Format answers as
+                <div style={s('margin:6px 4px 2px;padding:8px 8px 0;border-top:1px solid ' + C.line + ';')}>
+                  <div style={s('font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + C.dim + ';')}>
+                    Format answers as
+                  </div>
+                  {/* WHAT IS IN FORCE, and where it comes from. Without this the
+                      panel is a list of choices with no statement of the current
+                      one — and on a page that inherits, the ticked row would be
+                      the only thing on screen, reading as "nothing" about pages
+                      that are in fact drawn as something. */}
+                  <div style={s('margin-top:6px;display:flex;align-items:center;gap:6px;font-size:12px;color:' + C.mut + ';')}>
+                    {inherited
+                      ? <TagChip tag={outputTag(inherited)} />
+                      : <span style={s('font-weight:600;color:' + C.ink + ';')}>The page itself</span>}
+                    <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
+                      {own ? 'set here' : from ? 'from ' + from.title : 'nothing set'}
+                    </span>
+                  </div>
                 </div>
-                {[{ id: '', label: 'The page itself' }, ...OUTPUT_TAGS].map((t) => {
+                {[{
+                  id: '',
+                  // Clearing a page's own tag does NOT mean "plain" — it means
+                  // "whatever the folder says", and where a folder says
+                  // something, saying "the page itself" here would be a lie
+                  // with a tick next to it.
+                  label: from ? 'Use the folder’s format' : 'The page itself',
+                  help: from
+                    ? 'Answers follow ' + from.title + ' — the ' + outputTag(inherited).label + '.'
+                    : 'Answers are the page exactly as it is written.',
+                }, ...OUTPUT_TAGS].map((t) => {
                   const on = own === t.id;
-                  // The folder's tag, showing through on a page that sets none.
-                  const from = !own && t.id && t.id === inherited;
+                  const colour = t.colour || { ink: C.mut, tint: C.soft, edge: C.line };
                   return (
-                    <Hover key={t.id || 'plain'} tag="button" title={t.help || 'Answers are the page exactly as it is written.'}
+                    <Hover key={t.id || 'plain'} tag="button"
                       onClick={() => { setMenu(null); setOutputTag(menu.id, t.id); }}
-                      base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:'
-                        + (on ? C.blue : C.ink) + ';cursor:pointer;padding:8px 11px;text-align:left;' + (on ? 'font-weight:600;' : '')}
-                      hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                      <span style={s('flex:none;width:15px;display:flex;')}>{on ? <Svg w={15} sw={2.6}>{Icons.check}</Svg> : null}</span>
-                      <span style={s('flex:1;min-width:0;')}>{t.label}</span>
-                      {from && <span style={s('flex:none;font-size:11px;color:' + C.dim + ';')}>from folder</span>}
+                      base={'display:flex;align-items:flex-start;gap:9px;border:none;border-radius:8px;font:inherit;text-align:left;cursor:pointer;'
+                        + 'padding:7px 10px;margin:1px 0;color:' + C.ink + ';background:' + (on ? colour.tint : 'none') + ';'}
+                      hover={'background:' + (on ? colour.tint : C.soft) + ';'}>
+                      {/* The swatch is the same square the chip carries, so the
+                          colour is learned here and recognised in the tree. */}
+                      <span style={s('flex:none;margin-top:3px;width:11px;height:11px;border-radius:3px;background:'
+                        + (t.id ? colour.ink : '#fff') + ';box-shadow:inset 0 0 0 1px ' + (t.id ? colour.ink : C.line) + ';')} />
+                      <span style={s('flex:1;min-width:0;')}>
+                        <span style={s('display:block;font-size:14px;font-weight:' + (on ? '700' : '500') + ';color:'
+                          + (on ? colour.ink : C.ink) + ';')}>{t.label}</span>
+                        <span style={s('display:block;margin-top:1px;font-size:11.5px;line-height:1.4;color:' + C.dim + ';')}>{t.help}</span>
+                      </span>
+                      <span style={s('flex:none;width:14px;margin-top:2px;display:flex;color:' + colour.ink + ';')}>
+                        {on ? <Svg w={14} sw={2.8}>{Icons.check}</Svg> : null}
+                      </span>
                     </Hover>
                   );
                 })}
-                <div style={s('margin:3px 4px 0;border-top:1px solid ' + C.line + ';')} />
+                <div style={s('margin:4px 4px 0;border-top:1px solid ' + C.line + ';')} />
               </>
             );
           })()}
