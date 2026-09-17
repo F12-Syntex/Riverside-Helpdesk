@@ -23,6 +23,7 @@ import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
 import { OUTPUT_TAGS, outputTag } from '@/lib/templates/output-tags.mjs';
+import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 
 /* ------------------------------------------------------------------ *
  * Notebook — practice notes the assistant uses automatically.
@@ -56,6 +57,12 @@ const CSS = `
 .nb-kids>div>.nb-row{position:relative;}
 .nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:1.5px;background:${C.line};}
 .nb-row.nb-dragging{opacity:.45;}
+/* The import bar in the moment before a phase knows how big it is. A bar
+   sitting still at zero reads as stuck, which is the thing this whole
+   indicator exists to stop. */
+.nb-bar-idle{animation:nb-bar-slide 1.1s ease-in-out infinite;}
+@keyframes nb-bar-slide{0%{margin-left:-38%;}100%{margin-left:100%;}}
+@media (prefers-reduced-motion:reduce){.nb-bar-idle{animation:none;margin-left:0;width:100% !important;opacity:.45;}}
 .nb-row.nb-drop-ok{background:${C.sel} !important;box-shadow:inset 0 0 0 2px ${C.blue};}
 .nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
 .nb-crumb:hover{color:${C.blue};}
@@ -353,6 +360,45 @@ function SideRow({ n, depth, ctx }) {
   );
 }
 
+/**
+ * The bar an import runs under.
+ *
+ * Determinate wherever the step knows its total — restoring pages does, and so
+ * does indexing once it has counted them — and a moving stripe in the moment
+ * before a phase knows its size, rather than a bar sitting at zero looking
+ * stuck. The count is spelled out underneath, because "312 of 312 pages" is the
+ * thing that tells somebody it is working.
+ */
+function ImportProgress({ step }) {
+  const total = Number(step.total) || 0;
+  const done = Math.min(Number(step.done) || 0, total || Infinity);
+  const known = total > 0;
+  const pct = known ? Math.round((done / total) * 100) : 0;
+  return (
+    <div role="status" aria-live="polite"
+      style={s('position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:rgba(33,43,50,.32);')}>
+      <div style={s('width:min(420px,calc(100vw - 32px));background:#fff;border-radius:14px;box-shadow:0 18px 48px rgba(33,43,50,.28);padding:22px 24px 20px;')}>
+        <div style={s('font-size:17px;font-weight:700;color:' + C.navy + ';margin:0 0 3px;')}>Restoring the notebook</div>
+        <div style={s('font-size:14px;color:' + C.mut + ';margin:0 0 14px;')}>{phaseLabel(step.phase)}</div>
+        <div style={s('height:8px;border-radius:999px;background:' + C.soft + ';overflow:hidden;')}>
+          <div className={known ? '' : 'nb-bar-idle'}
+            style={s('height:100%;border-radius:999px;background:' + C.blue + ';'
+              + (known ? 'width:' + pct + '%;transition:width .25s ease;' : 'width:38%;'))} />
+        </div>
+        <div style={s('margin-top:9px;font-size:13px;color:' + C.dim + ';')}>
+          {known ? done + ' of ' + total + (step.phase === 'attachments' ? ' files' : ' pages') : 'Working…'}
+        </div>
+        {step.phase === 'indexing' && (
+          <div style={s('margin-top:8px;font-size:12.5px;line-height:1.5;color:' + C.dim + ';')}>
+            Your pages are already back and the assistant can read them. This last step files them for the
+            knowledge tools.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function NotebookPage() {
   const [notes, setNotes] = React.useState([]);
   const [attachments, setAttachments] = React.useState([]);
@@ -371,6 +417,11 @@ export default function NotebookPage() {
   const [view, setView] = React.useState('pages');           // 'pages' — the editor; 'map' — the treemap and fragmentation report
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState('');
+  // Where an import has got to: { phase, done, total, note } or null when none
+  // is running. The import used to finish in silence — a file was posted and
+  // nothing happened on screen until it was over, which looked broken on a big
+  // notebook and got clicked twice. See /api/notebook/import, which streams.
+  const [importing, setImporting] = React.useState(null);
   const [dragging, setDragging] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
@@ -893,18 +944,48 @@ export default function NotebookPage() {
         confirmLabel: 'Import',
         onConfirm: async () => {
           setConfirm(null);
-          try {
-            const res = await fetch('/api/notebook/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-            const out = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(out.error || 'Import failed.');
-            await reloadAll();
-          } catch (err) {
-            setConfirm({ title: 'Import failed', message: String(err.message || err), confirmLabel: 'OK', onConfirm: () => setConfirm(null) });
-          }
+          await runImport(data, count);
         },
       });
     };
     reader.readAsText(file);
+  }
+
+  /**
+   * Post a backup and follow it, line by line, while it is restored.
+   *
+   * The route streams one JSON object per step (see /api/notebook/import). Two
+   * of them change what is on screen rather than just the number: `ready` means
+   * the pages are in and the tree can be reloaded — so the reader has their
+   * notebook back before the indexing that follows it has finished — and
+   * `error` is the failure, which arrives as a line because by then the
+   * response has already started and cannot be a status code.
+   */
+  async function runImport(data, count) {
+    setImporting({ phase: 'notes', done: 0, total: count });
+    let failed = '';
+    let reloaded = false;
+    try {
+      const res = await fetch('/api/notebook/import', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      await readProgress(res, (step) => {
+        if (step.phase === 'ready') {
+          // The notebook is usable now. Show it, and let the indexing that
+          // follows run under a bar the reader is free to ignore.
+          if (!reloaded) { reloaded = true; reloadAll(); }
+          setImporting({ phase: 'indexing', done: 0, total: 0 });
+          return;
+        }
+        if (step.phase === 'done') return;
+        setImporting({ phase: step.phase, done: Number(step.done) || 0, total: Number(step.total) || 0 });
+      });
+    } catch (err) {
+      failed = String(err.message || err);
+    }
+    if (!reloaded) await reloadAll();
+    setImporting(null);
+    if (failed) setConfirm({ title: 'Import failed', message: failed, confirmLabel: 'OK', onConfirm: () => setConfirm(null) });
   }
 
   /* -------------------- Sidebar right-click menu ---------------------- */
@@ -1391,6 +1472,11 @@ export default function NotebookPage() {
           </Hover>
         </div>
       )}
+
+      {/* An import in progress. A sheet rather than a corner toast: restoring a
+          backup rewrites what is on the left of the screen, and clicking about
+          in the tree while that happens is how a second import gets started. */}
+      {importing && <ImportProgress step={importing} />}
 
       {confirm && <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} />}
     </div>

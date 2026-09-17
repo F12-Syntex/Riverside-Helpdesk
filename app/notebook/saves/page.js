@@ -21,6 +21,7 @@
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../../_components/ui';
 import AppHeader from '../../_components/AppHeader';
+import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 
 const C = {
   ink: '#212b32', mut: '#4c6272', dim: '#768692', line: '#d8dde0',
@@ -79,6 +80,10 @@ export default function NotebookSavesPage() {
   const [snapshots, setSnapshots] = React.useState([]);
   const [status, setStatus] = React.useState('loading'); // loading | ready | error
   const [busy, setBusy] = React.useState('');             // what is running, for the buttons
+  // Where a load has got to: { phase, done, total }, or null when none is
+  // running. A load rewrites every page in the notebook, and it used to do it
+  // behind a button that only said "Loading…".
+  const [progress, setProgress] = React.useState(null);
   const [note, setNote] = React.useState(null);           // { tone, text }
   const [label, setLabel] = React.useState('');
   const [confirm, setConfirm] = React.useState(null);
@@ -128,20 +133,26 @@ export default function NotebookSavesPage() {
     });
   }
 
+  // Loading REPLACES the notebook — the save is written back page by page — so
+  // it is the one action here worth watching rather than waiting out. The route
+  // streams where it has got to; see lib/notebook/progress.mjs.
   async function doLoad(snap) {
     setBusy('load:' + snap.id);
     setNote(null);
+    setProgress({ phase: 'saving', done: 0, total: 0 });
     try {
       const res = await fetch('/api/notebook/snapshots/load', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: snap.id }),
       });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(out.error || 'Could not load that save.');
+      const out = await readProgress(res, (step) => {
+        if (step.phase === 'done' || step.phase === 'ready') return;
+        setProgress({ phase: step.phase, done: Number(step.done) || 0, total: Number(step.total) || 0 });
+      });
       await load();
       const n = (out.restored && out.restored.notes) || 0;
       done('Loaded “' + snap.label + '” — the notebook now holds ' + n + ' page' + (n === 1 ? '' : 's') + '. What it held before is at the top of this list.');
-    } catch (e) { fail(String(e.message || e)); } finally { setBusy(''); }
+    } catch (e) { fail(String(e.message || e)); } finally { setBusy(''); setProgress(null); }
   }
 
   function askDelete(snap) {
@@ -246,6 +257,18 @@ export default function NotebookSavesPage() {
 
         {/* The saves themselves, newest first. */}
         <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;overflow:hidden;')}>
+          {progress && (
+            <div role="status" aria-live="polite" style={s('padding:16px 22px;border-bottom:1px solid ' + C.line + ';')}>
+              <div style={s('font-size:14.5px;font-weight:600;color:' + C.navy + ';margin:0 0 8px;')}>
+                {phaseLabel(progress.phase)}
+                {progress.total > 0 && <span style={s('margin-left:8px;font-weight:400;color:' + C.mut + ';')}>{progress.done} of {progress.total}</span>}
+              </div>
+              <div style={s('height:7px;border-radius:999px;background:' + C.soft + ';overflow:hidden;')}>
+                <div style={s('height:100%;border-radius:999px;background:' + C.blue + ';transition:width .25s ease;width:'
+                  + (progress.total > 0 ? Math.round((Math.min(progress.done, progress.total) / progress.total) * 100) : 12) + '%;')} />
+              </div>
+            </div>
+          )}
           {status === 'loading' && <p style={s('margin:0;padding:22px;font-size:15px;color:' + C.mut + ';')}>Loading saves…</p>}
           {status === 'error' && <p style={s('margin:0;padding:22px;font-size:15px;color:' + C.red + ';')}>Could not load the saves. Is the database configured?</p>}
           {status === 'ready' && snapshots.length === 0 && (
