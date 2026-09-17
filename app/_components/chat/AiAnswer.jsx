@@ -244,6 +244,7 @@ function ReferralRoute({ route }) {
     clinicTypeOptions: (route.clinicTypeOptions || []).filter(Boolean),
     clinicTypeCondition: String(route.clinicTypeCondition || '').trim(),
     hospital: route.hospital || '',
+    hospitalRule: route.hospitalRule || '',
     pathway: route.pathway || '',
   };
   return (

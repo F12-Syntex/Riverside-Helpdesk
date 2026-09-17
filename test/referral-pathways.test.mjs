@@ -304,3 +304,116 @@ test('e-RS named in the route beats the word email in the same sentence', () => 
   const entry = findPathwayReferral({ name: 'audiology', pages: CARDS });
   assert.equal(entry.route, 'ers');
 });
+
+// THE DERMATOLOGY PAGE. Five pathways, each its own one-row table under its own
+// heading, whose speciality and clinic type repeat: three normal ones all say
+// "Dermatology / Not otherwise specified" and two 2WW ones both say "2WW / 2WW
+// skin". What tells them apart is the hospital selection rule, and that column
+// was read by nothing — so the page answered as two pathways, not five, and
+// "dermatology referral" came back as the 2WW card headed "Priority is 2WW,
+// never Routine": a routine referral sent down the cancer pathway.
+const DERM = {
+  docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / ERS referrals / Dermatology and Telederm',
+  text: `## Normal Dermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| Normal Dermatology | Dermatology | Not otherwise specified | First hospital that isn't a telederm / community hospital |
+
+Note: This pathway is used for standard skin conditions that do not require urgent 2-week-wait (2WW) referral.
+
+## Normal Teledermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| Normal Telederm | Dermatology | Not otherwise specified | First hospital that is a telederm |
+
+## Normal Community Dermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| Normal Community | Dermatology | Not otherwise specified | First hospital that is a community hospital |
+
+## 2-Week-Wait (2WW) Dermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| 2WW Dermatology | 2WW | 2WW skin | First hospital that isn't a telederm |
+
+## 2-Week-Wait (2WW) Teledermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| 2WW Telederm Dermatology | 2WW | 2WW skin | First hospital that is a telederm |
+`,
+};
+
+test('the hospital selection rule is read, and is what tells five pathways apart', () => {
+  const entries = readPathways([DERM]);
+  assert.equal(entries.length, 5);
+  assert.deepEqual(entries.map((e) => e.hospitalRule), [
+    "First hospital that isn't a telederm / community hospital",
+    'First hospital that is a telederm',
+    'First hospital that is a community hospital',
+    "First hospital that isn't a telederm",
+    'First hospital that is a telederm',
+  ]);
+  // A rule is not the name of a hospital, so nothing goes in the dropdown.
+  assert.deepEqual([...new Set(entries.map((e) => e.hospital))], ['']);
+});
+
+test('a 2WW pathway is not the answer to a question that did not ask for one', () => {
+  const entry = findPathwayReferral({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
+  assert.equal(entry.name, 'Normal Dermatology');
+  assert.equal(entry.specialty, 'Dermatology');
+  assert.equal(entry.clinicType, 'Not otherwise specified');
+  assert.equal(entry.cancer, false);
+
+  const card = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
+  const screen = card.blocks.find((b) => b.type === 'ers');
+  assert.equal(screen.priority, 'Routine');
+  assert.equal(screen.specialty, 'Dermatology');
+  assert.equal(screen.hospitalRule, "First hospital that isn't a telederm / community hospital");
+  assert.equal(flat(card).includes('Priority is 2WW, never Routine'), false);
+});
+
+test('asking for the two week wait still gets the 2WW pathway', () => {
+  const entry = findPathwayReferral({ name: 'dermatology', question: '2ww dermatology referral', pages: [DERM] });
+  assert.equal(entry.name, '2WW Dermatology');
+  assert.equal(entry.specialty, '2WW');
+  assert.equal(entry.clinicType, '2WW skin');
+  assert.equal(entry.hospitalRule, "First hospital that isn't a telederm");
+
+  const card = referralAnswer({ name: 'dermatology', question: 'suspected skin cancer referral', pages: [DERM] });
+  assert.equal(card.blocks.find((b) => b.type === 'ers').specialty, '2WW');
+});
+
+test('the heading above a table names its rows, so telederm and community are findable', () => {
+  const tele = findPathwayReferral({ name: 'teledermatology', question: 'teledermatology referral', pages: [DERM] });
+  assert.equal(tele.name, 'Normal Telederm');
+  assert.equal(tele.hospitalRule, 'First hospital that is a telederm');
+
+  const community = findPathwayReferral({ name: 'community dermatology', question: 'community dermatology referral', pages: [DERM] });
+  assert.equal(community.name, 'Normal Community');
+  assert.equal(community.hospitalRule, 'First hospital that is a community hospital');
+});
+
+test('the siblings on the dermatology page are all offered, rules and all', () => {
+  const card = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
+  const text = flat(card);
+  assert.match(text, /Also on this page/);
+  for (const name of ['Normal Community', '2WW Dermatology', '2WW Telederm Dermatology']) assert.ok(text.includes(name), `${name} must be offered`);
+  assert.match(text, /First hospital that is a community hospital/);
+});
+
+test('a hospital written as an instruction is a rule, not a name in the dropdown', () => {
+  const PAGE = {
+    docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Skin lesion',
+    text: `Speciality: Dermatology
+Clinic type: Not otherwise specified
+Hospital: the first one that is not a telederm`,
+  };
+  const [entry] = readPathways([PAGE]);
+  assert.equal(entry.hospital, '');
+  assert.equal(entry.hospitalRule, 'the first one that is not a telederm');
+});

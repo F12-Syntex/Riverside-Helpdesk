@@ -100,7 +100,7 @@ export default function ErsForm({ block, below = null }) {
   const options = (b.clinicTypeOptions || []).filter(Boolean);
   const priority = priorityOf(b.priority);
   const requestType = /advice/i.test(String(b.requestType || '')) ? 'Advice' : 'Referral';
-  const more = !!(b.hospital || b.pathway);
+  const more = !!(b.hospital || b.hospitalRule || b.pathway);
   const missing = b.missing || 'Not recorded — take it from the doctor’s task';
 
   return (
@@ -156,10 +156,16 @@ export default function ErsForm({ block, below = null }) {
               <span>Add more search detail</span>
               <span style={s('font-size:22px;line-height:1;color:#005eb8;')}>&minus;</span>
             </div>
-            {b.hospital && (
+            {(b.hospital || b.hospitalRule) && (
               <div style={s('margin:0 0 14px;')}>
                 <Label>Organisation or site</Label>
-                <Select value={b.hospital} />
+                {/* Where the practice records HOW to pick the hospital rather
+                    than which one — "the first that is not a telederm" — the box
+                    stays open and the rule goes against it. Drawn inside the
+                    dropdown a rule reads as the name of a hospital, and the
+                    reader looks for it in the list and does not find it. */}
+                <Select value={b.hospital} placeholder={b.hospitalRule ? 'Pick by the rule below' : undefined} />
+                {b.hospitalRule && <Condition text={b.hospitalRule} />}
               </div>
             )}
             {b.pathway && (
