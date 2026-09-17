@@ -17,6 +17,7 @@ import Md from '../chat/Md';
 import CopyButton from './CopyButton';
 import ErsForm from './ErsForm';
 import ProfMessage from './ProfMessage';
+import PathologyForm from './PathologyForm';
 
 const TONE = {
   info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: Icons.infoCircle },
@@ -146,6 +147,7 @@ export function Blocks({ blocks }) {
         if (b.type === 'fields') return <Fields key={i} title={b.title} items={b.items} />;
         if (b.type === 'ers') return <ErsForm key={i} block={b} />;
         if (b.type === 'profMessage') return <ProfMessage key={i} block={b} />;
+        if (b.type === 'pathology') return <PathologyForm key={i} block={b} />;
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
         if (b.type === 'expand') return <Expand key={i} label={b.label} hint={b.hint} blocks={b.blocks} />;
         if (b.type === 'contacts') return <Contacts key={i} items={b.items} />;
