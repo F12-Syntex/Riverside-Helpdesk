@@ -228,3 +228,79 @@ test('nothing recorded anywhere is still the honest card', () => {
   const card = referralAnswer({ question: 'how do I refer for hyperbaric oxygen', name: 'hyperbaric oxygen', pages: PAGES });
   assert.match(card.subtitle, /Not recorded/);
 });
+
+/* ------------------------------------------------- the shape live today */
+//
+// EVERY PAGE ABOVE IS ONE WE WROTE. The practice then renamed the section to
+// "Pathway cards (A to Z)" and rewrote the cards, and these tests went on
+// passing while the live Notebook produced ZERO pathways and every referral
+// card fell back to the copied array. So the cards below are the practice's
+// own, copied from the Notebook as it stands.
+
+// The section as it is named now, with the labels bold — the commonest card.
+const HERNIA_CARD = {
+  path: ['Referrals', 'Pathway cards (A to Z)', 'General surgery: hernias'],
+  docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / General surgery: hernias',
+  text: `**Route:** e-RS, when doctors request
+**Speciality:** **Surgery - Not Otherwise Specified**
+**Clinic type:** **Hernias**
+**Priority:** Standard`,
+};
+
+// The label is the HEADING and the value is the line under it.
+const PHYSIO_CARD = {
+  path: ['Referrals', 'Pathway cards (A to Z)', 'Physiotherapy (standard)'],
+  docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Physiotherapy (standard)',
+  text: `## Route
+**e-RS**
+
+## Speciality
+**Physiotherapy**
+
+## Clinic type
+**Not Otherwise Specified**
+
+## Differences from the standard process
+- Verify the patient is eligible for **standard** physiotherapy (not ESP).`,
+};
+
+// A page whose OWN title carries a slash, and whose route names e-RS in a
+// sentence that also says the word email.
+const AUDIOLOGY_CARD = {
+  path: ['Referrals', 'Pathway cards (A to Z)', 'Audiology / hearing test'],
+  docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Audiology / hearing test',
+  text: `**Route:** e-RS (Step 2a). The form must carry the practice email.
+**Speciality:** **Diagnostic Physiological Measurement**
+**Clinic type:** **Audiology - Hearing Assess**`,
+};
+
+const CARDS = [HERNIA_CARD, PHYSIO_CARD, AUDIOLOGY_CARD];
+
+test('the Pathway cards section is read as pathways', () => {
+  assert.ok(CARDS.every(isPathwayPage));
+  assert.equal(readPathways(CARDS).length, 3);
+});
+
+test("a card's own pairing wins over the copy in code", () => {
+  const entry = findPathwayReferral({ name: 'hernia', pages: CARDS });
+  assert.equal(entry.specialty, 'Surgery - Not Otherwise Specified');
+  assert.equal(entry.clinicType, 'Hernias');
+});
+
+test('a heading that is a label is read, with the value under it', () => {
+  const entry = findPathwayReferral({ name: 'physiotherapy', pages: CARDS });
+  assert.equal(entry.specialty, 'Physiotherapy');
+  assert.equal(entry.clinicType, 'Not Otherwise Specified');
+  assert.equal(entry.route, 'ers');
+});
+
+test('a slash in the page title is part of the title, not a path', () => {
+  const entry = findPathwayReferral({ name: 'audiology', pages: CARDS });
+  assert.ok(entry, "audiology must find its own card");
+  assert.equal(entry.specialty, 'Diagnostic Physiological Measurement');
+});
+
+test('e-RS named in the route beats the word email in the same sentence', () => {
+  const entry = findPathwayReferral({ name: 'audiology', pages: CARDS });
+  assert.equal(entry.route, 'ers');
+});
