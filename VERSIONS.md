@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.2.5` | 2026-09-17 | fix | `b42624e` | fix: read the dermatology page as the five pathways it records |
+| `6.2.4` | 2026-09-17 | docs | `850804d` | docs: record 6.2.3 in the versions table |
 | `6.2.3` | 2026-09-17 | style | `45b36e5` | style: give each output tag a colour, and the menu a shape |
 | `6.2.2` | 2026-09-17 | docs | `f5f5426` | docs: record 6.2.0 and 6.2.1 in the versions table |
 | `6.2.1` | 2026-09-17 | perf | `80949e7` | perf: restore a notebook in seconds, and show it happening |
