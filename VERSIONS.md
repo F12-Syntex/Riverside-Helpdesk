@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.54.0` | 2026-09-17 | feat | `f91843b` | feat: answer a blood form with the screen it is raised on |
+| `5.53.1` | 2026-09-17 | docs | `ab0e19f` | docs: record 5.53.0 in the versions table |
 | `5.53.0` | 2026-09-17 | feat | `3cd6c76` | feat: write the email an emailed referral goes out with |
 | `5.52.1` | 2026-09-17 | docs | `83d0bde` | docs: record 5.52.0 in the versions table |
 | `5.52.0` | 2026-09-17 | feat | `5c050fc` | feat: give the prose turn the whole Notebook too |
