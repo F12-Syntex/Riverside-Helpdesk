@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.2.1` | 2026-09-17 | perf | `80949e7` | perf: restore a notebook in seconds, and show it happening |
+| `6.2.0` | 2026-09-17 | feat | `608c528` | feat: let a Notebook folder say what shape its answers come back in |
+| `6.1.1` | 2026-09-17 | docs | `1c7f3cd` | docs: record 6.0.0 and 6.1.0 in the versions table |
 | `6.1.0` | 2026-09-17 | feat | `6defb96` | feat: answer a blood form with the closest thing anybody wrote down |
 | `6.0.0` | 2026-09-17 | feat | `cded092` | feat!: the reason for appointment is the AccurX mode's job only |
 | `5.54.1` | 2026-09-17 | docs | `a46106b` | docs: record 5.54.0 in the versions table |
