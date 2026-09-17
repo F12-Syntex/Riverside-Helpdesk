@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `5.53.0` | 2026-09-17 | feat | `3cd6c76` | feat: write the email an emailed referral goes out with |
+| `5.52.1` | 2026-09-17 | docs | `83d0bde` | docs: record 5.52.0 in the versions table |
 | `5.52.0` | 2026-09-17 | feat | `5c050fc` | feat: give the prose turn the whole Notebook too |
 | `5.51.3` | 2026-09-17 | docs | `6761ad4` | docs: record 5.51.2 in the versions table |
 | `5.51.2` | 2026-09-17 | fix | `127ce15` | fix: read the referral pathway cards the practice actually keeps |
