@@ -43,7 +43,7 @@ import { generateObject, generateText, zodSchema } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
-  commandPrompt, notebookCatalogue, notebookFits, notebookFullText, renderCommand, renderSelection, selectionClarify, selectionPrompt,
+  commandPrompt, notebookCatalogue, notebookFits, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
@@ -90,22 +90,6 @@ export const maxDuration = 120;
 // than this.
 const READ_MAX_TOKENS = 2000;
 const PROSE_MAX_TOKENS = 1500;
-
-const SYSTEM = [
-  'You are the reception assistant for The Riverside Practice, a UK GP surgery. You are answering a member of practice staff — reception, admin, nursing, clinical or management.',
-  '',
-  'YOU HAVE NO ACCESS TO THE PRACTICE’S OWN MATERIAL. Its Notebook, policies and guides are not in front of you. So:',
-  '- Answer general questions from what you know, plainly and briefly.',
-  '- Never invent anything specific to this practice: no telephone numbers, email addresses, staff names, opening times, room numbers, form names, local rules or local pathways. If the answer depends on one of those, say plainly that you cannot see the practice’s own material and name who to ask (the practice manager, the secretaries, the duty doctor).',
-  '- Never give clinical judgement about a specific patient. That is a clinician’s decision; route it to the duty doctor.',
-  '- If the message could be a medical emergency (chest pain, difficulty breathing, signs of a stroke, severe bleeding, collapse, anaphylaxis, sepsis, a seizure, suicidal thoughts): call 999 now, alert a duty clinician immediately, and stay with the patient.',
-  '',
-  'HOW TO WRITE',
-  '- Plain British English, NHS style. Calm, sentence case, no emoji, no marketing words.',
-  '- Short. A busy receptionist with a patient at the desk reads the first few lines and nothing else.',
-  '- Markdown: "## " and "### " headings, "- " bullets, "1. " numbered lists for anything done in order, tables where the content is tabular, **bold** for the exact thing to click, type or say.',
-  '- No preamble, no summary of what you are about to say, no closing pleasantries. Start with the answer.',
-].join('\n');
 
 // Numbers the answer is allowed to keep: the practice directory, plus anything
 // already present in the reader's own message, history or attached document (an
@@ -1141,7 +1125,8 @@ export async function POST(request) {
         const proseModel = seeing ? imageModel : model;
         const generated = await generateText({
           model: openrouter(proseModel),
-          system: SYSTEM,
+          // The whole Notebook, the same text the picker read — see systemFor.
+          system: proseSystemPrompt(notebookText, notebookInFull),
           // Capped for the same reason as readValues: an uncapped call reserves
           // the model's whole window and is refused when the balance is low.
           maxOutputTokens: PROSE_MAX_TOKENS,
@@ -1165,17 +1150,26 @@ export async function POST(request) {
           return;
         }
 
-        const verified = verifiedNumbers([question, history, attached]);
+        // THE NOTEBOOK COUNTS AS VERIFIED. The model is now shown it and told to
+        // use its exact wording, so the numbers it writes are largely the
+        // practice's own — and the redactor, which strips any number it cannot
+        // vouch for, would have cut every one of them out of the answer it just
+        // asked for. A number written in the Notebook is a number the practice
+        // wrote down; nothing else on this path is.
+        const verified = verifiedNumbers([question, history, attached, notebookText]);
         const redact = (t) => redactUnverifiedNumbers(t, verified);
         const prose = redact(markdown);
 
         send({
           type: 'answer',
           payload: payload({
-            // Not one line of this came from a practice document, and the card
-            // says so once at the top rather than leaving it to be assumed. The
-            // bands above it are the exception and are not the model's work at
-            // all — which is precisely why they still apply here.
+            // No passage of a practice DOCUMENT was retrieved and cited for this,
+            // whatever the Notebook in the prompt contributed, so nothing here
+            // carries a citation the reader can open. The card says that once at
+            // the top rather than leaving it to be assumed — and says less than
+            // the turn now knows, which is the right direction to be wrong in.
+            // The bands above it are the exception and are not the model's work
+            // at all — which is precisely why they still apply here.
             general: true,
             alerts: safety.alerts,
             panel: safety.panel,
