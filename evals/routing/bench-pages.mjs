@@ -39,7 +39,18 @@ const opt = (name, fallback) => { const i = args.indexOf(name); return i > -1 &&
 const repeats = Math.max(1, Number(opt('--repeats', 1)) || 1);
 
 // ---- the cases, from pages.md ---------------------------------------------
-const md = fs.readFileSync(path.join(here, 'pages.md'), 'utf8').split(/\r?\n/);
+//
+// FENCED BLOCKS ARE NOT CASES. pages.md's own header shows the format with a
+// worked example inside a ``` fence, and a parser that does not know about
+// fences reads that example as case 1 — which then counts as a case, breaks
+// the numbering and reports itself as an unresolved page, quietly polluting
+// every rate this script prints. So the fences are tracked and skipped.
+const raw = fs.readFileSync(path.join(here, 'pages.md'), 'utf8').split(/\r?\n/);
+let fenced = false;
+const md = raw.map((line) => {
+  if (/^\s*```/.test(line)) { fenced = !fenced; return ''; }
+  return fenced ? '' : line;
+});
 const cases = [];
 for (let i = 0; i < md.length; i++) {
   const h = /^##\s+\d+\.\s+(.+?)\s*$/.exec(md[i]);
@@ -79,6 +90,14 @@ const thresholds = {
 };
 
 const norm = (t) => String(t || '').toLowerCase().replace(/^notebook:\s*/i, '').replace(/\s+/g, ' ').trim();
+
+// A case naming a page that is not there is worse than no case: the bench
+// would score it as never matched and read as a router failure. So it is a
+// failure of the SET, reported before a single question is routed.
+function unresolvedCases(list) {
+  return list.filter((c) => !/^none$/i.test(c.expected) && String(expectedId(c.expected)).startsWith('unresolved:'));
+}
+
 function expectedId(expected) {
   if (/^none$/i.test(expected)) return 'none';
   if (/^note:/.test(expected)) return expected;
@@ -86,6 +105,14 @@ function expectedId(expected) {
     || pages.find((p) => norm(pagePath(p.docTitle)).split('/').pop().trim() === norm(expected).split('/').pop().trim());
   return page ? page.docId : `unresolved:${expected}`;
 }
+
+const broken = unresolvedCases(cases);
+if (broken.length) {
+  console.error(`${broken.length} of ${cases.length} cases name a Notebook page that does not exist. Fix pages.md before reading any rate off this.`);
+  for (const c of broken) console.error(`  unresolved: ${c.expected}`);
+  process.exit(2);
+}
+console.log(`${cases.length} cases (${cases.filter((c) => /^none$/i.test(c.expected)).length} expecting no page), ${pages.length} Notebook pages, ${repeats} repeat${repeats === 1 ? '' : 's'}`);
 
 // ---- run ---------------------------------------------------------------------
 const rows = [];
