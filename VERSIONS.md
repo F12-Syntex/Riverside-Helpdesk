@@ -18,6 +18,12 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.3.0` | 2026-09-18 | feat | `cfe745e` | feat: route confident questions to their Notebook page without a model call |
+| `6.2.10` | 2026-09-18 | fix | `a46bb33` | fix: embed documents added since the last ingest |
+| `6.2.9` | 2026-09-18 | docs | `c295771` | docs: describe the pipeline that exists |
+| `6.2.8` | 2026-09-18 | refactor | `5ba183f` | refactor: fold the answer cache into the routing layer |
+| `6.2.7` | 2026-09-18 | refactor | `6160dcb` | refactor: remove the superseded answer path |
+| `6.2.6` | 2026-09-17 | docs | `edc005f` | docs: record 6.2.5 in the versions table |
 | `6.2.5` | 2026-09-17 | fix | `b42624e` | fix: read the dermatology page as the five pathways it records |
 | `6.2.4` | 2026-09-17 | docs | `850804d` | docs: record 6.2.3 in the versions table |
 | `6.2.3` | 2026-09-17 | style | `45b36e5` | style: give each output tag a colour, and the menu a shape |
