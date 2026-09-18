@@ -18,6 +18,14 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.4.6` | 2026-09-18 | fix | `188334b` | fix: logging off at a desk stops the router learning from it too |
+| `6.4.5` | 2026-09-18 | docs | `bde7a9f` | docs: bring the architecture document up to the current code |
+| `6.4.4` | 2026-09-18 | test | `eced25c` | test: label the golden set for page routing |
+| `6.4.3` | 2026-09-18 | fix | `4fdcf9c` | fix: do not read the bench's own worked example as a case |
+| `6.4.2` | 2026-09-18 | fix | `50f2db0` | fix: judge a close call on the cosines, not on the ranking scores |
+| `6.4.1` | 2026-09-18 | chore | `9b8d6b4` | chore: gate every push on the tests, the version and the build |
+| `6.4.0` | 2026-09-18 | feat | `3b535b6` | feat: mine the question log for the questions the router got wrong |
+| `6.3.1` | 2026-09-18 | docs | `d62bb67` | docs: record 6.3.0 in the versions table |
 | `6.3.0` | 2026-09-18 | feat | `cfe745e` | feat: route confident questions to their Notebook page without a model call |
 | `6.2.10` | 2026-09-18 | fix | `a46bb33` | fix: embed documents added since the last ingest |
 | `6.2.9` | 2026-09-18 | docs | `c295771` | docs: describe the pipeline that exists |
