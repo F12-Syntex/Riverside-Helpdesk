@@ -97,7 +97,7 @@ const colX = (i) => COL_X0 + COL_STEP * i;
 // documentation and administration. A page that is not on the index is still
 // served, so it is still drawn.
 const FEATURES = [
-  { p: '/', name: 'Practice Q&A', routes: ['/api/agent', '+ tools · compose', '/api/ask', '/api/kb'], deps: ['A', 'D'], hero: true },
+  { p: '/', name: 'Practice Q&A', routes: ['/api/agent', '+ select · render', '/api/kb'], deps: ['A', 'D'], hero: true },
   { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory', '/api/cqc', '/api/lookup-web'], deps: ['D', 'A'] },
   { p: '/tools', name: 'Tools index', routes: ['the index list'], deps: [] },
   { p: '/signpost', name: 'Signpost', routes: ['/api/signpost'], deps: ['A', 'D'] },
@@ -113,7 +113,7 @@ const FEATURES = [
   { p: '/diagram', name: 'System map', routes: ['this page'], deps: [] },
   { p: '/knowledge', name: 'Knowledge admin', routes: ['/api/knowledge', '+ analyse · conflicts', '+ status · sync'], deps: ['L', 'D', 'A'] },
 ];
-const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/client', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'answer-cache', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
+const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'answer-cache', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
 // The four services the engine talks to. Everything that leaves the practice
 // leaves through one of the three on the right; see /dpia for what each holds.
 const DATA_NODES = [

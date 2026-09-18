@@ -62,7 +62,7 @@ test('a path is matched whatever is hung off the end of it', () => {
   // The Q&A answers at "/" now; /helpbot is kept as its old address.
   assert.equal(routeTitle('/'), 'Practice Q&A');
   assert.equal(routeTitle('/helpbot'), 'Practice Q&A (old address)');
-  assert.equal(routeTitle('/api/ask'), 'Ask a question');
+  assert.equal(routeTitle('/api/agent'), 'Assistant (agent)');
 });
 
 test('a route that grows a segment later still resolves to its parent', () => {

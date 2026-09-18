@@ -28,13 +28,14 @@ const nextConfig = {
     // dropped PDF was read. Left external, it resolves from node_modules and
     // behaves as it does in the ingestion scripts, which have always worked.
     serverComponentsExternalPackages: ['pdfjs-dist'],
-    // Ensure the baseline supplementary-context notes ship with the /api/ask
-    // function so they can be read at runtime. (The Notebook and configured URLs
-    // need no bundling and update without a redeploy.)
+    // The bundled knowledge (rag/processed, read at bootstrap by
+    // lib/knowledge-bootstrap.js) and the baseline supplementary-context notes
+    // under rag/context are read from disk, so they are traced into the two
+    // functions that bootstrap them. (The Notebook and configured URLs need no
+    // bundling and update without a redeploy.)
     outputFileTracingIncludes: {
-      '/api/ask': ['./rag/context/**/*', './rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
-      '/api/directory': ['./rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
-      '/api/kb': ['./rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
+      '/api/directory': ['./rag/context/**/*', './rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
+      '/api/kb': ['./rag/context/**/*', './rag/processed/*', './lib/*.data.json', './lib/lookup/*.data.json'],
       // The CQC dataset is read from disk (gzipped) rather than bundled, so it
       // has to be traced in explicitly.
       '/api/cqc': ['./lib/lookup/cqc.data.json.gz'],

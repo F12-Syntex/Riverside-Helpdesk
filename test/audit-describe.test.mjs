@@ -40,7 +40,7 @@ test('every guarded route is handed no body at all, even by a careless caller', 
 
 test('a question asked of the assistant is recorded — that is the point of a query log', () => {
   const event = describeRequest({
-    path: '/api/ask',
+    path: '/api/agent',
     method: 'POST',
     body: { question: 'How do I report a significant event?' },
   });
@@ -76,7 +76,7 @@ test('a route with no describer still reads as something rather than nothing', (
 
 test('the audit endpoint is never recorded, or the log would log itself for ever', () => {
   assert.equal(shouldRecord('/api/audit'), false);
-  assert.equal(shouldRecord('/api/ask'), true);
+  assert.equal(shouldRecord('/api/agent'), true);
 });
 
 test('only this app’s own API is recorded — fonts and analytics are not', () => {
@@ -87,7 +87,7 @@ test('only this app’s own API is recorded — fonts and analytics are not', ()
 
 test('long text is cut rather than stored whole', () => {
   const long = 'a'.repeat(500);
-  const event = describeRequest({ path: '/api/ask', method: 'POST', body: { question: long } });
+  const event = describeRequest({ path: '/api/agent', method: 'POST', body: { question: long } });
   assert.equal(event.detail.length <= 400, true);
   assert.equal(event.detail.endsWith('…'), true);
   assert.equal(trim('  spaced   out  ', 40), 'spaced out');

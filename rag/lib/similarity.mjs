@@ -1,6 +1,6 @@
-// Shared cosine similarity for embedding vectors — used by the knowledge-base
-// retriever (rag/lib/store.mjs) and the Notebook's own semantic search
-// (lib/notebook.js), which used to each carry an identical copy of this.
+// Shared cosine similarity for embedding vectors — used by the Notebook's own
+// semantic search (lib/notebook.js) and the ingest scripts. One definition, so
+// no two callers can drift apart on what "similar" means.
 export function cosine(a, b) {
   // Vectors of different lengths are not comparable — that only happens when the
   // embedding model changed after the index was built. Comparing the overlapping

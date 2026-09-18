@@ -1,9 +1,8 @@
 // Document-coding endpoint. Staff paste the text of a medical document (or a
 // screenshot of it) with patient identifiers removed, and get back the one-line
 // filing title "(dd-Mmm-yyyy) SOURCE DEPARTMENT actions-or-note" used to code
-// the document into the clinical system. Dedicated, lightweight version of the
-// docfile branch in /api/ask: no retrieval — the pasted document is the only
-// evidence for the title — with the same server-side date and active-item
+// the document into the clinical system. No retrieval — the pasted document is
+// the only evidence for the title — with server-side date and active-item
 // sanitisation so nothing unevidenced reaches the title.
 //
 // The title's tail is the document's ACTIVE items: what the practice has to do,
@@ -27,7 +26,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 
-// Same bounds as /api/ask for attached images.
+// Same bounds as /api/agent for attached images.
 const MAX_IMAGES = 4;
 const MAX_IMAGE_CHARS = 6_000_000;
 function sanitizeImages(raw) {
@@ -132,7 +131,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'This does not look like a medical document to code. Paste the document text itself.' }, { status: 422 });
     }
 
-    // Same assembly as /api/ask: verified date (or a visible placeholder so the
+    // Verified date (or a visible placeholder so the
     // title's shape is stable and staff fill the gap in), evidence-checked
     // actions and note.
     const date = resolveDocfileDate({
