@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.4.12` | 2026-09-18 | test | `4f168f3` | test: measure the picker on the same cases, or say why it could not be |
+| `6.4.11` | 2026-09-18 | chore | `06de978` | chore: move the app workflow onto the v5 actions |
+| `6.4.10` | 2026-09-18 | docs | `37929df` | docs: record 6.4.9 in the versions table |
 | `6.4.9` | 2026-09-18 | docs | `8d7c19a` | docs: record what the router measured, and what it does not say |
 | `6.4.8` | 2026-09-18 | docs | `8ad9561` | docs: the logging switch now covers the router's learning too |
 | `6.4.7` | 2026-09-18 | docs | `def833e` | docs: record 6.4.5 in the versions table |
