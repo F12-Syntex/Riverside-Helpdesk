@@ -28,3 +28,11 @@ scripts/notebook-backup.json
 # The extension's signing key. It fixes the extension's id for life and lives
 # in the CRX_PRIVATE_KEY GitHub Actions secret — never in the repository.
 *.pem
+
+# Real staff questions, dumped out of question_log by `npm run routing:questions`
+# for labelling into the router's golden set. The questions are redacted of
+# names and addresses before they are ever stored, but they are still what
+# somebody typed about practice business, so they stay out of the repository.
+# What IS committed is evals/routing/pages.md — the labelled cases, chosen
+# deliberately.
+/evals/routing/questions*.txt
