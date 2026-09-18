@@ -20,12 +20,11 @@ clickable sources they can open in-browser.
   filled in rather than prose the model composed — the same answer every time,
   about ten output tokens, and no way for a procedure to be paraphrased on its
   way to somebody following it.
-- **The tool-calling loop this replaced is gone**, along with
-  `lib/agent/tools.mjs` and the `search_practice` / `find_contact` /
-  `suggest_ers_referral_route` tools it carried. `ANSWER-PIPELINE-REDESIGN.md`
-  records how it used to work and why. Parts of this file and of
-  `ARCHITECTURE.md` still describe the loop and have not been rewritten yet —
-  where the two disagree, `app/api/agent/route.js` is what runs.
+- **The tool-calling loop this replaced is gone**, along with its tools, its
+  evidence registry, its compose/validate/repair cycle and the single-shot
+  `/api/ask` endpoint before it. `ANSWER-PIPELINE-REDESIGN.md` records how they
+  used to work and why they were replaced; `ARCHITECTURE.md` §8 describes the
+  turn that runs now.
 - **A contact question is answered with a contact.** The practice directory and
   the CQC register are matched in code (`lib/contacts.fuzzy.mjs`,
   `lib/lookup/`), and what they hold is shown in the contacts card as structured
@@ -33,12 +32,12 @@ clickable sources they can open in-browser.
   stripped out.
 - **The turn is streamed to the browser as it happens** (newline-delimited JSON),
   so the field says which step is running instead of showing a silent spinner.
-- **The answer cache is deliberately unwired, not deleted** (`lib/answer-cache/`).
-  With the answer now assembled in code from a page and a template rather than
-  researched, there is very little left to cache. **Every turn is written down**
-  instead: the question, the answer as text, the template that built it and the
-  model that ran are recorded in `question_log` (`lib/questions/log.js`) and read
-  back at `/stats`.
+- **Every turn is written down.** The question, the answer as text, the
+  template that built it and the model that ran are recorded in `question_log`
+  (`lib/questions/log.js`) and read back at `/stats`. There is no answer cache:
+  with the answer assembled in code from a page and a template, there was
+  nothing left worth caching, and its question normaliser now lives in
+  `lib/routing/` as the first rung of the router.
 - **A message that asks for five things gets five things acknowledged.** The
   selection call returns exactly one template, which is why an eConsult listing
   a knee, a hoarse voice, a repeat prescription, a fit note and a question about
@@ -69,7 +68,7 @@ clickable sources they can open in-browser.
     and no network (`lib/safety/identifiers.mjs`) — and a name or an address it
     finds is replaced with `[name removed]` / `[address removed]` before the
     request is built, before the transcript is written and before anything is
-    saved. `/api/agent` and `/api/ask` run the same check on arrival, so the
+    saved. `/api/agent` runs the same check on arrival, so the
     guard belongs to the endpoint and not just to the page. The reader is told
     what went, as a count and never as a quote. It redacts rather than blocking
     the send: making somebody retype a sentence in a hurry does not get the
@@ -485,33 +484,34 @@ clickable sources they can open in-browser.
 - One message box, no modes to pick. The assistant works out for itself whether
   a message is a **how-to question** or an **incoming patient request to triage**
   (for example an Accurx online consultation) and replies with the matching
-  shape. A pasted document or an incoming patient request is recognised by the
-  agent and handed to `POST /api/ask`, which still produces those two cards
-  unchanged — the model returns a `kind` of `"answer"`, `"triage"` or
-  `"docfile"`:
+  shape — or the `/accurx` and `/coding` commands name it outright. The picker
+  returns the template that fits, and the card is rendered in code from it:
   - **answer** — the step-by-step how-to described above.
   - **triage** — grounded *action notes*: an urgency band, the actions to take,
     who to route it to, safety-net red flags and an optional draft reply. This
     is **care navigation / routing only** — it applies the practice's own triage,
     duty-doctor and signposting protocols and never diagnoses or gives clinical
-    advice. Same `POST /api/ask` request path, same source-checked citations.
+    advice.
 
 ## Layout
 
 - **`app/page.js`** — the chat UI (React). Persists chat + custom guides to
   `localStorage`.
-- **`app/api/agent/route.js`** — the assistant's brain: the research tool loop,
-  the compose + validate phases, and the NDJSON event stream the chat reads.
-- **`lib/agent/`** — `tools.mjs` (the tools, every one of them list-taking), `evidence.mjs` (what the tools
-  actually returned, and quote verification against it), `compose.mjs` (the
-  structured answer + the validate-and-repair loop), `web-search.mjs`
-  (OpenRouter's web-search server tool).
-- **`app/api/ask/route.js`** — the previous single-shot endpoint, still used for
-  the document-filing and triage card shapes the agent hands off to.
+- **`app/api/agent/route.js`** — the assistant's only answer path: the safety
+  scan, the directory check, the one selection call, the template render, the
+  prose fallback and the NDJSON event stream the chat reads.
+- **`lib/templates/`** — the templates: the selection schema and prompt
+  (`route.mjs`), each card's renderer, the output tags a Notebook folder can
+  carry.
+- **`lib/routing/`** — the confidence-scored router in front of the picker:
+  the question normaliser (exact-match rung) and the trigger-phrase index.
+- **`lib/agent/`** — `practice-answer.mjs` (the `/practice` answer, quote-checked
+  against the passages it cites), `contract-intent.mjs`, `web-search.mjs`
+  (OpenRouter's web-search server tool, used by Instant Lookup).
 - **`lib/guides/`** — the built-in practice guides, categories and helpers.
-- **`lib/ai/`** — prompt builder + response parser for the hand-off endpoint
-  (server), the streaming `askAgent` client (`agent-client.js`) and the older
-  `askQuestion` helper.
+- **`lib/ai/`** — the streaming `askAgent` client (`agent-client.js`), the
+  OpenRouter wrapper, quote matching, and the document-coding and medication
+  helpers.
 - **`rag/`** — the document knowledge base: ingest pipeline, parsers (including
   vision image reading and PDF page rendering), and the runtime retrieval store.
   See `rag/README.md`.
@@ -676,8 +676,8 @@ Set these in `.env.local` (see `.env.local.example`):
 | --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
 | ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Should be vision-capable — the ingester reads images with it whenever the fast model cannot. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
-| `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the committed `rag/` index and the answer cache's question matching (default `openai/text-embedding-3-small`). Documents and Notebook pages are no longer embedded. |
-| `OPENROUTER_ANALYSIS_MODEL` | Optional default for the **fast** role — the reading: the agent's research loop, claim extraction, the medicine-name extractor, the ingester's image transcription. Wants a cheap model that calls tools reliably. |
+| `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the practice documents and the router's trigger phrases (default `openai/text-embedding-3-small`). Notebook pages are not embedded: they go into the prompt whole. |
+| `OPENROUTER_ANALYSIS_MODEL` | Optional default for the **fast** role — the reading: the template picker, claim extraction, the medicine-name extractor, the ingester's image transcription. Wants a cheap model that calls tools reliably. |
 | `OPENROUTER_WEB_MODEL` | Optional default for the **web search** role — searching the internet and reading a page for a phone number. A search-grounded model such as `perplexity/sonar` belongs here. Falls back to `OPENROUTER_MEDICATION_MODEL`, then `OPENROUTER_ANALYSIS_MODEL`. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |
 | `SUPPLEMENTARY_CONTEXT_URLS` | Optional. Direct text/markdown/JSON URLs to inject as extra supplementary context (the Notebook is the main channel and needs no config). |
@@ -691,9 +691,10 @@ of the model calls in a turn and none of its output. **Deciding** is the answer
 itself and every judgement in it: one call, and the only thing anybody reads.
 
 So `/settings` picks the model the practice runs on — the **reasoning** role,
-which decides and writes — and two optional overrides sit beside it: **fast**,
-which does the reading (the agent's research loop, claim extraction, the
-medicine-name extractor, the ingester's image transcription), and **web search**,
+which every other role falls back to — and two optional overrides sit beside
+it: **fast**, which runs the whole assistant turn (the template picker and the
+prose fallback) as well as claim extraction, the medicine-name extractor and
+the ingester's image transcription, and **web search**,
 a search-grounded model such as `perplexity/sonar` for the internet and for
 reading a page to lift a number off it. Each is stored in `app_settings`, so
 changing one needs no redeploy. There is no separate vision role: the ingester
@@ -704,21 +705,13 @@ Every role is optional. Unset, it falls back to the environment variable that
 used to carry it and then to the reasoning model, so an install that has only
 ever chosen one model is completely unaffected.
 
-**The answer is always written by the reasoning model.** That is deliberate and
-not a tunable: writing is the one job that needs the whole context held at once —
-every source, the conversation, which claims the practice's own material actually
-backs, and what the reader will do next. The cheaper roles exist to keep work
-*away* from that model (the reading, fewer sources put in front of it, background
-jobs); they never take the writing, or a judgement inside it, off it.
-
-The one risk in moving the research loop off the reasoning model is a fast model
-too weak to drive tools: it answers in prose instead of searching, and the turn
-reports "the practice has nothing on this" for a question the Notebook covers in
-full. That failure is silent, so it is caught in code — a loop that ends without
-having called a single tool, or one that fails outright, is run again on the
-reasoning model (`lib/agent/research-model.mjs`). A loop that searched and found
-nothing is *not* re-run: that is a finding, and "the practice's material does not
-cover this" is the right answer to it.
+**The model does not write the answer.** The assistant turn is one structured
+read on the fast role — which template fits, and its variables — and the card
+is rendered in code from what the practice wrote. So the fast role can be a
+small, cheap model without the answer getting any worse: the procedure on the
+card is the Notebook page, not the model's paraphrase of it. Only the prose
+fallback, taken when no template fits, is the model's own writing, and the card
+says so.
 
 ### What a question costs
 
@@ -745,13 +738,6 @@ every model that has answered anything, marking the ones in use.
 A role nobody has run on its current model, or one whose model publishes no
 price, is excluded from the total and named as excluded. Unpriced models sort
 last in the table rather than cheapest — unknown is not $0.
-
-The writer is also given less to read than the research loop found: sources are
-ranked against the question and the weakest held back (`lib/agent/select.mjs`),
-because the loop opens sources for the price of a database query while the
-writer pays the reasoning model's input rate for every character. Nothing is
-lost — the full set stays in the evidence registry, which is what quotes are
-still validated against.
 
 ## Run
 

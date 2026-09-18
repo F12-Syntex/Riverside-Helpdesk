@@ -272,12 +272,6 @@ versioning. Tables, grouped by the feature that owns them:
 | --- | --- | --- |
 | `question_log` | `turn_id, machine_id, question, outcome, template, source, answer, model, duration_ms, images, attachments, error, provenance (jsonb), dismissed (jsonb), at` | **Stores the staff question verbatim and the answer as text.** `provenance` additionally holds the message split into its separate requests — each with the acuity code gave it and, where a span was quoted, **the patient's own words** — plus every deterministic rule that fired with the text that matched it, and the revision of each Notebook page the card stood in for. `dismissed` records which panel items reception closed, when, and from which machine. Written by `/api/agent` as each answer goes out; `provenance` and `dismissed` are added by `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, so an existing install picks them up on the next schema check. |
 
-**Answer cache** — `ensureAnswerCacheSchema()`
-
-| Table | Columns | Personal data |
-| --- | --- | --- |
-| `answer_cache` | `id (hash of the canonicalised question), question (verbatim), question_norm, model, fingerprint, payload (jsonb — the whole answer), embedding vector(1536), hits, created_at, used_at` | **Stores the staff question verbatim** and the complete answer. Only reached for questions `isCacheableRequest()` allows — no follow-ups, no messages with images, no triage, no filing titles, no "nothing found". Rows are only *served* while the model and the Notebook fingerprint match and the row is inside `MAX_AGE_DAYS`; stale rows are deleted on the next write. |
-
 **Model usage / cost** — `ensureUsageSchema()`
 
 | Table | Columns | Personal data |
@@ -366,8 +360,9 @@ an individual by workstation.
 
 ## 8. How a question is answered — the main data flow
 
-`POST /api/agent` (`app/api/agent/route.js`). Streams newline-delimited JSON to
-the browser so each tool call is visible as it happens.
+`POST /api/agent` (`app/api/agent/route.js`). **One model call, not a research
+loop.** Streams newline-delimited JSON to the browser (`status`, `tool-start`,
+`tool-result`, `answer`, `error`) so the field sees which step is running.
 
 ```mermaid
 sequenceDiagram
@@ -375,27 +370,25 @@ sequenceDiagram
   participant A as /api/agent
   participant PG as Postgres
   participant OR as OpenRouter
-  B->>A: question, history, customGuides, images
-  A->>PG: notebookFingerprint()
-  A->>PG: answer_cache lookup by exact key
-  alt exact miss
-    A->>OR: embed the question (Azure-pinned)
-    A->>PG: nearest stored question by cosine distance
-  end
-  Note over A,PG: the Notebook load runs ALONGSIDE the cache lookup,<br/>not after it — nothing above depends on it
-  alt cache hit — same model, same Notebook fingerprint, still fresh
-    A-->>B: stored answer, marked "Answered from cache"
+  B->>A: question, history, images, attachments, template (a slash command)
+  A->>A: identifier redaction, then the safety scan of the whole message — no model
+  A->>A: practice directory match — no model
+  alt the directory answers it
+    A-->>B: contacts card
   else
     A->>PG: load EVERY non-empty Notebook page in full
-    A->>OR: RESEARCH loop — fast role, max 6 steps, tools
-    Note over A,OR: search_practice, list_practice_sources,<br/>outline_practice_sources, open_practice_sources,<br/>search_web, read_web_page, find_contact,<br/>check_rota, suggest_ers_referral_route, hand_off
-    A->>OR: COMPOSE — reasoning model, structured answer
-    A->>A: VALIDATE — every claim needs a verbatim quote<br/>that really appears in what a tool returned
-    A->>OR: one repair attempt; still-unverified claims are dropped
-    A->>A: redact any phone number no source vouches for
-    A-->>B: answer payload
-    A->>PG: write ai_usage rows, then save to answer_cache
+    A->>OR: SELECT — fast role, one generateObject call:<br/>a template (or a Notebook page title) and its variables
+    opt the page's folder is tagged with an output shape
+      A->>OR: FORMAT — one focused read of that page
+    end
+    A->>A: RENDER the template in code (lib/templates)
+    alt no template fits
+      A->>OR: PROSE — fast role, the whole Notebook as system prompt
+      A->>A: redact any number the Notebook, question or attachment does not contain
+    end
+    A-->>B: answer payload — or a question back with options
   end
+  A->>PG: question_log row, ai_usage rows (after the answer has gone out)
 ```
 
 **Phase detail**
@@ -404,62 +397,68 @@ sequenceDiagram
    path: names and addresses are stripped out of the question
    (`lib/safety/identifiers.mjs`). The browser did this already as the message
    was sent, so in the ordinary case nothing changes here; the endpoint repeats
-   it so a request made any other way is held to the same rule.
-1. **Cache read** — before the Notebook is even loaded. Exact match on a hash of
-   the canonicalised question; failing that, one embedding call and a
-   nearest-neighbour search. A row is only served if the model and the Notebook
-   fingerprint both still match.
-2. **Notebook load** — `fullNotebookContext()` reads *every* non-empty Notebook
-   page from the live tables, in full, on every uncached request. Nothing is
-   chunked, truncated or selected by similarity. If the Notebook cannot be read
-   the request fails with 503 rather than answering without it.
-3. **Research** — a Vercel AI SDK tool loop on the **fast role**, capped at
-   `MAX_RESEARCH_STEPS = 6`, `temperature: 0.2`, extended reasoning explicitly
-   disabled (`reasoning: { enabled: false, exclude: true }` — as it is on every
-   path in the app, including the web role). The model chooses which sources to
-   open; nothing is pre-selected by embedding similarity. The practice's own
-   material always gets first refusal — `search_web` triggers a practice lookup
-   automatically if none has run, alongside the web searches rather than in
-   front of them.
+   it so a request made any other way is held to the same rule. The one
+   exception is document coding, whose input *is* a letter about a patient
+   (`checksPatientData`, `lib/commands.mjs`).
+1. **Safety scan** — deterministic and message-wide, before any model runs
+   (`lib/safety/scan.mjs`): red flags, NICE NG12 suspected-cancer features,
+   safeguarding, and the acuity band the message belongs to. The findings become
+   the bands above whatever card is rendered, on every path below including a
+   failed turn.
+2. **The directory is asked before the model is** — a message asking for a
+   contact detail that the practice directory holds is answered from it
+   verbatim (`lib/templates/directory.mjs`): no model, no tokens.
+3. **A slash command skips the choosing** — `/accurx`, `/coding`, `/practice`,
+   `/form`, `/template` name the template outright (`lib/commands.mjs`), so the
+   model is asked for that one template's values and nothing else. `/practice`
+   is the only path that retrieves: a hybrid lexical + vector search over the
+   practice documents (`searchKnowledge`, `lib/knowledge.js`), answered in prose
+   with each part quote-checked against the passage it cites
+   (`lib/agent/practice-answer.mjs`); a part whose quote is not found is dropped.
+4. **Notebook load** — `fullNotebookContext()` reads *every* non-empty Notebook
+   page from the live tables, in full. Nothing is chunked, truncated or selected
+   by similarity; the block goes first in the prompt so a provider that caches
+   prefixes pays for it once. A Notebook that has outgrown
+   `NOTEBOOK_FULL_MAX_CHARS` falls back to a title catalogue.
+5. **Selection** — one `generateObject` call on the **fast role** (the images
+   role when a picture is attached), `temperature: 0`, output capped at
+   `READ_MAX_TOKENS`, against `SELECTION_SCHEMA` (`lib/templates/route.mjs`).
+   The model returns which template fits — a closed enum, or a Notebook page
+   title — and that template's variables. It does not write the answer. A
+   message that looks multi-intent is also asked where each separate ask starts
+   and ends, and code decides everything after that (acuity is a table, not the
+   model's opinion). A provider that refuses structured output is asked again as
+   plain text and the first JSON object in the reply is parsed and re-validated.
+6. **Render** — the template is filled in code (`lib/templates/`). A Notebook
+   page is rendered from the database exactly as the practice wrote it. Where the
+   page's folder carries an output tag (Notebook sidebar → *Format answers as*),
+   one more focused read lifts that tag's values from the page and draws them
+   above it; the page is still shown underneath, so a thin read costs nothing.
+7. **Asking back** — when the message reads two ways and the two ways go
+   different places, the turn ends in a question with the readings as options;
+   tapping one asks the original question again with the ambiguity settled.
+8. **Prose fallback** — only when no template fits. The fast role writes an
+   answer with the whole Notebook as its system prompt; the card is marked as
+   the assistant's own work (`general: true`), and any digit run that does not
+   appear in the Notebook, the question or an attachment is redacted
+   (`redactUnverifiedNumbers`).
+9. **Log** — after the answer has been sent: one `question_log` row (the
+   question, the answer as text, the template that built it, the model that
+   ran) and one `ai_usage` row per model call.
 
-   The loop is optimised for round trips, not for cleverness. Every tool takes a
-   list and runs it concurrently, so four searches, four outlines or four
-   sources opened together cost one wait rather than four; a document's parsed
-   parts are cached as an in-flight *promise*, so two sources wanting the same
-   file share one read. What comes back is deliberately thin: a search result
-   shows `SEARCH_EXCERPT = 600` characters, enough to decide what to open and no
-   more, because **the research model never quotes** — the writer is handed each
-   source's full text from the evidence registry, which stores what the tool was
-   given rather than what it returned. Every character above that would be paid
-   for again on each remaining step, since the loop re-sends the whole
-   conversation every time.
-4. **Selection** — `lib/agent/select.mjs` ranks what the loop found and holds the
-   weakest sources back from the writer, because the loop reads sources for the
-   price of a database query while the writer pays the reasoning model's input
-   rate. Nothing is lost: the full set stays in the evidence registry, which is
-   what quotes are validated against.
-5. **Compose** — **always on the reasoning model**, deliberately and not
-   configurable (`lib/agent/compose.mjs`).
-6. **Validate** — each section must carry a verbatim quote that genuinely appears
-   in the source it names, checked in code (`lib/ai/quote-match.js`,
-   `lib/agent/evidence.mjs`) against what the tools actually returned. One repair
-   attempt; anything still unverified is dropped rather than shown.
-7. **Number redaction** — any digit run the model wrote that does not appear in
-   the practice directory, in a returned source, or in a `find_contact` result is
-   stripped before display (`redactUnverifiedNumbers`).
-8. **Cache write and usage accounting** — after the answer has been sent, never
-   before.
-
-Two message shapes are recognised and handed off to `POST /api/ask` unchanged: a
-pasted medical document to file, and an incoming patient request to triage.
+**What is not here.** There is no research tool loop, no evidence registry, no
+compose/validate/repair cycle and no answer cache. Those were the previous
+generation of this endpoint; `ANSWER-PIPELINE-REDESIGN.md` records how it worked
+and why it was replaced.
 
 ### Contacts
 
-`find_contact` tries three sources in order: the practice directory, then the CQC
-register, then the open web (the page is *fetched and read*, and `tel:`/`mailto:`
-links and visible numbers are lifted verbatim). **No digit on any of these paths
-is written by a model.** Results are rendered in a structured contacts card, not
-through the model's prose.
+A contact question is answered from structured data, never through the model's
+prose: the practice directory first (`lib/contacts.data.json`, matched in
+`lib/contacts.fuzzy.mjs`), then the CQC register at `/lookup`, then — for
+Instant Lookup only — the open web, where the page is *fetched and read* and
+`tel:`/`mailto:` links and visible numbers are lifted verbatim. **No digit on
+any of these paths is written by a model.**
 
 ### Referral routing
 
@@ -467,22 +466,17 @@ Where the Notebook records a Specialty and Clinic Type, the Notebook wins. Where
 it does not, `lib/referrals/` matches the condition to a SNOMED concept and then
 scores that concept's wording against the closed list of 406 e-RS pairings. There
 is no published SNOMED-to-e-RS mapping, so the join is textual and everything it
-returns is labelled a suggestion to check against the doctor's task
-(`route-determination.mjs` relabels a determined pairing that the writer wrongly
-claimed as the practice's own).
+returns is labelled a suggestion to check against the doctor's task.
 
 **The card is narrow on purpose.** `scope.mjs` decides whether there is an e-RS
-form behind the question at all, and the same rule gates every stage: whether the
-lookup runs, whether the research model may call `suggest_ers_referral_route`,
-whether the composer shows the writer's card, and whether a pairing is filled in
-after the answer is written. A question is only a referral request when somebody
-is *making* one — not a referral arriving from a hospital or from 111, not one
-already sent that is being chased or cancelled, not a waiting time, and not a
-policy that merely uses the word. On top of that, a pairing the practice never
-wrote down needs positive evidence in the answer's own steps that the referral
-goes on e-RS, plus a match confident enough to act on; without both, no card. A
-pairing the practice *did* record is shown unless the answer routes the reader
-somewhere else (email, Accurx).
+form behind the question at all, and the same rule gates every stage: whether
+the lookup runs at all, and whether a pairing is filled in after the answer is
+rendered. A question is only a referral request when somebody is *making* one —
+not a referral arriving from a hospital or from 111, not one already sent that is
+being chased or cancelled, not a waiting time, and not a policy that merely uses
+the word. A pairing the practice never wrote down needs a match confident enough
+to act on; without that, no card. A pairing the practice *did* record is shown
+unless the answer routes the reader somewhere else (email, Accurx).
 
 ---
 
@@ -493,7 +487,7 @@ somewhere else (email, Accurx).
 | Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. **Not on the Coding mode** (`checked: false` in `lib/commands.mjs`): a discharge summary identifies a patient by definition, so screening it would refuse the one thing that mode is for — the same reason an attached document is not screened either. **The name-and-address redaction does not run on it either**, in the browser or at `/api/agent`: one flag answers for both guards, so a letter pasted into that mode reaches the model as it was pasted. Like the standalone reception helpers, that paste carries the duty to remove identifiers first. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
 | Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the practice's destinations (`lib/triage/destinations.mjs`), to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
-| Document coding | `POST /api/docfile` (and the `docfile` branch of `/api/ask`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
+| Document coding | `POST /api/docfile` (and the `/coding` command on `/api/agent`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
 | Medication check | `POST /api/medication` | Medicine name + optional question, to OpenRouter with the `openrouter:web_search` server tool (Exa). | The result is cached in `medications`; the question text is stored in the `queries` jsonb. |
 | Medicine extraction | `POST /api/medication/extract` | A pasted list or prescription snippet. | Nothing. Audit records the size only. |
 | Notebook format / organise | `POST /api/notebook/format`, `/organize` | The note's text, to OpenRouter. Returned as a diff/plan the user must confirm — nothing is saved unseen. | The confirmed result is saved as note text. Audit records the action only. |
@@ -542,7 +536,7 @@ the cleverest.
 used to be no vision role — whichever model was answering read pasted images —
 which meant a practice that chose a text-only model above could not paste a
 screenshot. A message carrying an image now runs on the images role on every
-path through `/api/agent` (and `/api/ask`), and an unset images role is a small
+path through `/api/agent`, and an unset images role is a small
 vision model of its own rather than "whatever is answering". The document
 ingester still reads images with the reasoning model.
 
@@ -595,7 +589,7 @@ reset or deleted.
 | --- | --- | --- |
 | **Staff names, roles, hours, leave, mobile numbers** | `staff`, `rotas`, `lib/contacts.data.json`, practice documents in `rag/sources/` and `public/assets/rag/` | Yes |
 | **Staff and third-party names inside practice documents** | `knowledge_entries.content`, `knowledge_passages.content`; sent to OpenRouter as answer context | Yes — DPIA risk #3 |
-| **Patient data pasted into a question** | `audit_events.detail`, `answer_cache.question`; sent to OpenRouter | **No — DPIA risk #1, rated High.** The on-screen warning is the only control; automatic screening is listed as "to do". |
+| **Patient data pasted into a question** | `audit_events.detail`, `question_log`; sent to OpenRouter | **No — DPIA risk #1, rated High.** The on-screen warning is the only control; automatic screening is listed as "to do". |
 | **Patient data typed into a Notebook note** | `notes.body`, `knowledge_entries`, `knowledge_passages`, `knowledge_claims`, attachments in Blob; sent to OpenRouter for claim extraction | **No — DPIA risk #2, rated High.** |
 | **Patient consultation text (AccurX)** | Transits `/signpost`, `/reason`, `/docfile` to OpenRouter. **Not stored anywhere**; the audit log records size only. | Yes, by design — the tools exist for it. The UI states identifiers should be removed first; nothing enforces it. |
 | **Patient data inside a Notebook attachment** | Vercel Blob, at a **public URL** | No |
@@ -614,7 +608,6 @@ prevents it arriving in free text.
 | `notes`, `note_attachments` | Until staff delete them | `DELETE /api/notebook` cascades the subtree, archives the knowledge entries, and deletes the Blob objects. |
 | `notebook_snapshots` | Saves taken by staff: until deleted from `/notebook/saves`. Saves taken automatically before a load: the last ten, older ones pruned on the next load. | `DELETE /api/notebook/snapshots?id=`. Deleting a note does **not** remove it from saves taken before the deletion. |
 | `knowledge_*` | Follows the source entry; an archived entry cascades its passages, claims and conflicts | Automatic on note delete / document removal |
-| `answer_cache` | `MAX_AGE_DAYS`, and invalidated by any Notebook edit or model change | Pruned on the next write. `clearAnswerCache()` exists but is not exposed by any route. |
 | `ai_usage` | **Indefinite — never reset or deleted, by design** | None. Contains no personal data. |
 | `audit_machines`, `audit_events` | **Indefinite. No retention policy, no purge job, no delete endpoint.** | None in code. Open item for the DPIA. |
 | `medications`, `medication_aliases` | Indefinite; `queries` capped at 50 per medicine, oldest evicted | None |
@@ -682,17 +675,19 @@ without overriding real environment variables.
 These matter to the DPIA's "wrong answer leads to an incorrect administrative
 action" risk.
 
-- **Grounding.** Answers may only be written from what the tools actually
-  returned. Every practice-backed section carries a verbatim quote, verified in
-  code against the evidence registry; failures get one repair attempt and are
-  then dropped rather than shown.
+- **Grounding.** The model does not write a practice-backed answer: it names
+  the template or Notebook page that fits, and the card is rendered in code
+  from what the practice wrote. The one written answer over practice material
+  (`/practice`) carries a verbatim quote per part, verified in code against the
+  passage it cites; a part whose quote is not found is dropped rather than
+  shown. The prose fallback is marked as the assistant's own work.
 - **Provenance is explicit.** Practice-backed sections carry an openable
   citation. Web-derived content is marked "from the web" with a link and is never
   presented as practice policy. Gaps are stated plainly with who to ask, rather
   than filled from model knowledge.
-- **Numbers are never authored by a model.** They are verified against the
-  directory, the CQC extract, returned sources and `find_contact` results;
-  anything else is redacted.
+- **Numbers are never authored by a model.** A rendered card carries only what
+  the practice recorded; prose is checked against the directory, the Notebook,
+  the question and any attachment, and every other digit run is redacted.
 - **Referral pairings** determined from the e-RS list rather than the Notebook are
   labelled as such, with the concept, the list, the closeness of the match and the
   near alternatives shown, under a heading saying they must be checked against
@@ -717,7 +712,7 @@ action" risk.
   (`lib/safety/identifiers.mjs`). The check is local — regex, a forename list
   and a token scan, no model and no network — and runs in the browser as the
   message is sent, so an identifier it catches never leaves the machine it was
-  typed on; `/api/agent` and `/api/ask` run it again on arrival, so the guard
+  typed on; `/api/agent` runs it again on arrival, so the guard
   belongs to the endpoint rather than to the page. What was removed is shown as
   a count, in a warning beside the question and in a toast; the identifier is
   never quoted back and never reaches the model, the question log or the audit
@@ -873,9 +868,10 @@ should record explicitly:
 8. **The audit log has no retention policy** and stores staff question text
    verbatim for the unguarded routes. Now a DPIA risk with a retention decision
    as its measure; no purge job exists yet.
-9. **The answer cache stores question text verbatim** in `answer_cache.question`,
-   plus its embedding, and is invalidated but not otherwise time-limited beyond
-   `MAX_AGE_DAYS`. Recorded in DPIA steps 2 and 4.
+9. ~~**The answer cache stores question text verbatim**~~ — closed in 6.2.8: the
+   answer cache was removed and its table dropped. The question log
+   (`question_log`) is now the only store of question text in full, and is
+   recorded in DPIA steps 2 and 4.
 10. **Exa** receives model-composed web-search queries via OpenRouter's
     `web_search` server tool. Now named in the DPIA and drawn in its diagram.
 11. **Withdrawn tools still hold data.** `staff`, `rotas` and `medications` remain

@@ -4,7 +4,13 @@ Working document. Written 2026-08-09, before any code was changed. Captures how
 the answer pipeline works today, why it is being replaced, and the design of the
 router-and-templates system that replaces it.
 
-Nothing here is built yet.
+**Status.** Parts 1–3 are historical: Part 1 describes the research-loop
+pipeline as it stood on 2026-08-09 (since deleted, including `/api/ask`), and
+the template router of Part 3 is what `app/api/agent/route.js` now runs — see
+`ARCHITECTURE.md` §8 for the pipeline that exists. **Part 4 is the live
+design** for the confidence-scored retrieval router in `lib/routing/`, and
+Part 5 (a wrong template is nastier than no answer) is why that router ships
+disabled.
 
 ---
 

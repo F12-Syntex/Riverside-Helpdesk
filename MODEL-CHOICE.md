@@ -1,5 +1,13 @@
 # Which model each role should run on
 
+> **Historical.** Written against the research-loop generation of the answer
+> pipeline (`lib/agent/compose.mjs`, `MAX_RESEARCH_STEPS`, `/api/ask`), none of
+> which exists any more. The role *requirements* below are out of date — the
+> assistant is now one structured read on the fast role and a deterministic
+> render (`ARCHITECTURE.md` §8), so the fast role needs reliable JSON output
+> and vision, and no longer needs tool calling. The catalogue method and the
+> cost arithmetic are still the way to redo this.
+
 Worked out against OpenRouter's live catalogue (338 models, fetched from
 `https://openrouter.ai/api/v1/models` — the same endpoint
 `app/api/settings/models/route.js` serves to the settings page) and against what

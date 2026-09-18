@@ -32,7 +32,7 @@ Never commit secrets. `.env.local` is git-ignored and must stay that way; use
 ## Project notes
 
 - Next.js (App Router) app implementing the Riverside Practice Q&A reception
-  assistant. AI answers go through OpenRouter via `app/api/ask/route.js`, using
+  assistant. AI answers go through OpenRouter via `app/api/agent/route.js`, using
   `OPENROUTER_API_KEY` from `.env.local`. The MODEL is not an environment
   variable: it is stored in Postgres (`app_settings`, see `lib/settings.js`) and
   changed at `/settings`, defaulting to `google/gemini-3.5-flash-lite`.
