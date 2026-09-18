@@ -99,6 +99,7 @@ const colX = (i) => COL_X0 + COL_STEP * i;
 const FEATURES = [
   { p: '/', name: 'Practice Q&A', routes: ['/api/agent', '+ select · render', '/api/kb'], deps: ['A', 'D'], hero: true },
   { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory', '/api/cqc', '/api/lookup-web'], deps: ['D', 'A'] },
+  { p: '/questions', name: 'Questions', routes: ['/api/questions/open', '+ filed by the log'], deps: ['D'] },
   { p: '/tools', name: 'Tools index', routes: ['the index list'], deps: [] },
   { p: '/signpost', name: 'Signpost', routes: ['/api/signpost'], deps: ['A', 'D'] },
   { p: '/reason', name: 'Reason', routes: ['/api/reason'], deps: ['A', 'D'] },
