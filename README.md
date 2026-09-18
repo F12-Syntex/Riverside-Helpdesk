@@ -44,8 +44,10 @@ clickable sources they can open in-browser.
   matches the question against short *trigger phrases* per Notebook page — how
   staff would ask for it, generated once (`npm run routing:seed`) and learned
   from taps on a "which did you mean?" card — by exact form, tsvector and
-  embedding, fused by reciprocal rank, and decides on a confidence and a
-  margin. A confident, clear match renders the page with no model call; a
+  embedding, fused by reciprocal rank, and decides on two numbers: how alike
+  the best phrasing is (cosine), and how far ahead of the runner-up page it is
+  (the same cosine units — a gap between fused ranking scores says nothing
+  about content). A confident, clear match renders the page with no model call; a
   close call asks back; anything else falls through to the picker unchanged.
   Switch and thresholds live at `/settings`; `npm run routing:stats` shows
   coverage and the fall-through rate; `evals/routing/bench-pages.mjs` measures

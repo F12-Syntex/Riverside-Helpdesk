@@ -16,7 +16,7 @@ guessed.
 - Application name: Riverside Helpdesk (package `riverside-emis-helper`)
 - Controller: The Riverside Practice (a UK NHS GP surgery)
 - Users: practice staff only (reception, admin, clinical staff)
-- Document status: current as of commit `21a2c40`
+- Document status: current as of commit `9b8d6b4`, package version `6.4.0`
 
 ---
 
@@ -195,14 +195,15 @@ Every third party the system sends data to, and what reaches each one.
 
 | Recipient | Reached from | What is sent | Controls in code |
 | --- | --- | --- | --- |
-| **OpenRouter** (`openrouter.ai/api/v1`) | Server | Staff questions; extracts of practice documents and Notebook pages; whole Notebook pages when opened; pasted AccurX consultation text (`/signpost`, `/reason`); pasted document text and screenshots (`/coding`); medicine names and questions; note text for AI formatting/organising; passage text for claim extraction; **all text embedded for search** (contacts, answer-cache questions). Attached images are sent as base64 data URLs. | Every call sets `provider: { data_collection: 'deny' }`. Embedding calls additionally pin `provider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' }`. `HTTP-Referer: https://riverside-practice.local` and `X-Title` headers are sent for attribution. |
+| **OpenRouter** (`openrouter.ai/api/v1`) | Server | Staff questions; extracts of practice documents and Notebook pages; whole Notebook pages when opened; pasted AccurX consultation text (`/signpost`, `/reason`); pasted document text and screenshots (`/coding`); medicine names and questions; note text for AI formatting/organising; passage text for claim extraction; **all text embedded for search** — contact passages, practice-document passages, the router's trigger phrases, and, when the router is switched on, **the staff question itself on every turn** (`lib/routing/router.mjs` embeds it for the vector arm). Attached images are sent as base64 data URLs. | Every call sets `provider: { data_collection: 'deny' }`. Embedding calls additionally pin `provider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' }`. `HTTP-Referer: https://riverside-practice.local` and `X-Title` headers are sent for attribution. |
 | **Downstream model providers** | Via OpenRouter | Whatever OpenRouter forwards. Which company actually receives a prompt depends on which model is selected at `/settings` and on OpenRouter's routing. | `data_collection: 'deny'` restricts routing to providers that do not retain or train on prompts. The *geographic location* of those providers is not constrained by any code here — **[to confirm]**, and material for the international-transfer section of the DPIA. |
 | **Exa** (search engine) | Via OpenRouter's `openrouter:web_search` server tool | The **web search query text**, which the model composes from the staff question. `lib/agent/web-search.mjs` requests `engine: 'exa'`. The same server tool is used by `/api/medication`. | Query only; no practice documents. But the query is model-generated from the question, so a poorly-worded question could carry content into it. |
 | **Arbitrary web hosts** | Server (`lib/lookup/web-contact.mjs`, `contact-extract.mjs`) | An HTTP GET for the page. The server's IP is exposed to the site owner. No practice data is sent in the body. | Pages are fetched to extract `tel:`/`mailto:` links and visible numbers verbatim. |
 | **Neon** (PostgreSQL) | Server | All stored application data (§7). | TLS (`sslmode=require` in the example connection string). Region is in the connection string, which lives in the git-ignored `.env.local` — **[to confirm]**. |
 | **Vercel Blob** | Server (upload/delete) and browser (read) | Notebook file attachments, whatever they contain. | Uploaded with `access: 'public'` and `addRandomSuffix: true`. See §6. |
 | **Vercel Analytics** | Browser | Page views and standard web-analytics signals from every staff device, including IP address, on every page (`<Analytics />` in `app/layout.js`). | None configured. Not mentioned in the current DPIA text. |
-| **Google Fonts** (`fonts.googleapis.com`) | Browser | An HTTP request per page load: IP address, user agent, referrer. | None. `app/layout.js` preconnects and links the stylesheet. Self-hosting the font would remove this recipient entirely. |
+| **Google Fonts** (`fonts.googleapis.com`, and `fonts.gstatic.com` for the font files the stylesheet then references) | Browser | An HTTP request per page load to each: IP address, user agent, referrer. | None. `app/layout.js` preconnects to `fonts.googleapis.com` and links the Hanken Grotesk stylesheet. Self-hosting the font would remove both recipients entirely. |
+| **GitHub Releases + the practice's shared drive** | Developer machines and staff PCs | The signed Chrome extension package (`.crx`) and `updates.xml`. No practice or patient data. | `.github/workflows/build.yml` signs with the `CRX_PRIVATE_KEY` repository secret and attaches the package to a GitHub release; a script on the practice network copies it to the shared drive, and Chrome only ever fetches from that drive (`extension/README.md`). **Release assets on a public repository are downloadable by anyone** — the same repository-visibility question as §5's GitHub row. |
 | **GitHub** | Developer machines | The entire repository, **including `rag/sources/` — every practice policy and protocol document — and `lib/contacts.data.json`, the practice telephone directory.** | `.gitignore` excludes only `node_modules`, build output, `.env*.local` and logs. Repository visibility is **[to confirm]**; `gh` could not authenticate from this environment. If the repository is public, every committed practice document is public. |
 
 ---
@@ -253,13 +254,18 @@ versioning. Tables, grouped by the feature that owns them:
 | `notes` | `id, parent_id, title, body, position, is_section, created_at, updated_at` | **Free text written by staff.** Intended for procedures; nothing in the code prevents patient or staff details being typed in. This is risk #2 in the DPIA. |
 | `note_attachments` | `id, note_id, url, pathname, filename, content_type, size, created_at` | Whatever is in the uploaded file. `url` is a public Blob URL. |
 | `notebook_snapshots` | `id, label, kind, note_count, attachment_count, payload, created_at` | **A copy of every note's free text** at the moment the save was taken — the same exposure as `notes`, held for as long as the save is. |
+| `note_revisions` | `id, note_id, title, body, reason, proposal_id, turn_id, created_at` | **A copy of a page's free text as it stood before a rewrite.** Written before every apply and every revert on the defragmentation path, so a change can be undone. Same exposure as `notes`. Cascades when the note is deleted. |
+| `note_proposals` | `id, note_id, source_hash, body, map (jsonb), validation (jsonb), meaning (jsonb), status, turn_id, created_at, updated_at` | **A model-written rewrite of a page**, held server-side so the apply step trusts its own record rather than a flag from the browser. Same exposure as `notes`. |
+| `note_defrag_runs` | `id, status, candidates (jsonb), cursor, stats (jsonb), turn_id, created_at, updated_at` | A whole-Notebook defragmentation run. `candidates` holds the contradictions found, which quote page text. |
+| `note_defrag_items` | `id, run_id, note_id, title, path, status, proposal_id, detail, position, updated_at` | One page of one run. Titles and paths only. |
+| `note_contradictions` | `id, run_id, pair_key, kind, verdict, severity, note_a, note_b, side_a (jsonb), side_b (jsonb), subject, why, reason, question, status, resolution, decided_at, created_at` | **Quotes both sides of a disagreement between two pages**, so it carries page text. `pair_key` lets a decision survive into the next run. |
 
 **Canonical knowledge** — `ensureKnowledgeSchema()`
 
 | Table | Purpose | Notes |
 | --- | --- | --- |
 | `knowledge_entries` | One row per document / Notebook page / contact: `kind ('document' \| 'note' \| 'contact'), title, content, data (jsonb), source_ref, authority, status, content_hash, claims_stale`. | Holds the **full text** of every practice document and every Notebook page. |
-| `knowledge_passages` | Chunked passages: `heading, content, content_hash, embedding vector(1536), location (jsonb), search_doc tsvector` (generated, GIN-indexed). | Only **contact** passages are embedded. `fillMissingKnowledgeEmbeddings` returns early for `kind === 'note'` and `kind === 'document'`, because the agent chooses documents by title and receives Notebook pages whole. |
+| `knowledge_passages` | Chunked passages: `heading, content, content_hash, embedding vector(1536), location (jsonb), search_doc tsvector` (generated, GIN-indexed). | **Contact and document passages are embedded; Notebook pages are not.** `fillMissingKnowledgeEmbeddings` returns early only for `kind === 'note'`, because a Notebook page is supplied to the prompt whole. Documents are embedded as they are synced (changed in `a46bb33`) so a document added since the last `rag:ingest` does not silently drop out of the semantic arm of `/practice`. Embedding means the passage text is sent to OpenRouter's embeddings endpoint. |
 | `knowledge_claims` | Atomic claims extracted from passages: `subject, predicate, value, normalized_key, quote, fingerprint, confidence`. | Extracted by a model (`lib/ai/claims.js`, fast role) from passage text. |
 | `knowledge_conflicts`, `knowledge_conflict_decisions` | Detected contradictions between claims, and the decisions taken on them. | — |
 | `knowledge_claim_cache` | `content_hash → claims (jsonb)`. | Avoids re-sending unchanged text to the model. |
@@ -284,6 +290,12 @@ versioning. Tables, grouped by the feature that owns them:
 | Table | Columns | Personal data |
 | --- | --- | --- |
 | `ai_usage` | `turn_id, role, phase, model, input_tokens, output_tokens, at` | **None.** No question text, no machine id, no user. `turn_id` is random per turn and is not stored beside the question. |
+
+**Answer feedback** — `ensureFeedbackSchema()`
+
+| Table | Columns | Personal data |
+| --- | --- | --- |
+| `answer_feedback` | `id, machine_id, question, verdict, template, answer_kind, turn_id, at` | **Stores the staff question whole** (capped at 2,000 characters, *not* truncated to 400 the way the audit log is) beside the device identifier, whenever somebody presses a verdict button on an answer. A row exists only when a button was pressed, so this is a list of judged answers rather than traffic. Read back at `/feedback`. Written best-effort: a failed write is logged on the server and reported to the browser as accepted. |
 
 **Activity audit log** — `ensureAuditSchema()`
 
@@ -310,7 +322,7 @@ versioning. Tables, grouped by the feature that owns them:
 
 | Table | Purpose |
 | --- | --- |
-| `app_settings` | `key, value, updated_at`. Currently three keys: `ai_model`, `ai_model_fast`, `ai_model_web`. |
+| `app_settings` | `key, value, updated_at`. One row per setting. The model roles: `ai_model` (reasoning), `ai_model_fast`, `ai_model_web`, `ai_model_accurx`, `ai_model_super_speed`, `ai_model_images`. The router: `routing_enabled` (**defaults to off**), `routing_hit_cos` (0.82), `routing_ask_cos` (0.70), `routing_min_margin` (0.15) — `lib/routing/thresholds.mjs`. No personal data; anyone who can reach `PUT /api/settings` can change all of them. |
 
 #### The audit content rule
 
@@ -320,6 +332,7 @@ versioning. Tables, grouped by the feature that owns them:
 /api/signpost   /api/reason   /api/docfile
 /api/medication/extract
 /api/notebook/format   /api/notebook/organize   /api/notebook/import
+/api/notebook/snapshots/import
 /api/knowledge
 ```
 
@@ -436,8 +449,12 @@ sequenceDiagram
    taps. The question is normalised and matched exactly, then by tsvector and
    by embedding over those phrases, fused by reciprocal rank (the same `1/(60 +
    rank)` as `searchKnowledge`). The decision reads two numbers the picker
-   never had: the cosine similarity of the best phrase (confidence) and the
-   gap to the runner-up (margin). Confident and clear → the page is rendered
+   never had: the cosine similarity of the best phrase (confidence) and how far
+   ahead of the runner-up page it is, in the same cosine units (margin). The
+   fusion orders the candidates — that is what lets a rare token like 2WW
+   outrank a paraphrase — but it never sets the margin: a gap between fused
+   scores is about 0.016 for any runner-up one rank behind, whatever the two
+   pages say. Confident and clear → the page is rendered
    with **no model call**; confident but close → a question back with the
    pages as options, and a tap teaches the router (`POST /api/routing/learn`);
    anything else → the picker, with its inputs untouched. A wrong page
@@ -525,6 +542,16 @@ unless the answer routes the reader somewhere else (email, Accurx).
 | Audit | `POST/GET/PATCH /api/audit` | Nothing external. | `audit_machines`, `audit_events`. |
 | Close an unresolved item | `POST /api/questions/dismiss` | Nothing external. | Appends to `question_log.dismissed` on the turn the panel was shown for. Best-effort: nothing in the app waits on it. |
 | Knowledge admin | `/api/knowledge/**` | Passage text to the fast-role model for claim extraction. | The knowledge tables. Localhost-only. |
+| Read a dropped file | `POST /api/attach` | **Nothing external.** The bytes are parsed to text in the function (`mammoth`, `pdfjs-dist`, `word-extractor`, `jszip`) and returned to the browser that dropped them. | **Nothing.** Not written to disk, not stored in the database, not embedded. The text lives in the browser until the question it came with is asked, and is then sent to OpenRouter as context with that question. Images never take this path — the model looks at those directly. |
+| Verdict on an answer | `POST /api/feedback`, `GET /api/feedback` | Nothing external. | `answer_feedback` — the question whole (≤2,000 chars) beside the machine id. Read back at `/feedback`. |
+| Read the question log | `GET /api/questions` | Nothing external. | Reads `question_log`. Rendered at `/stats`. |
+| Teach the router | `POST /api/routing/learn` | **The staff question to OpenRouter's embeddings endpoint**, to vectorise it as a trigger phrase. | `routing_triggers` — the question as typed (≤400 chars, already identifier-redacted) with `source = 'tap'`, plus its embedding. This is a second store of question text, separate from `question_log`, and the machine-level logging opt-out does **not** cover it. |
+| Router, on every turn (when switched on) | inside `POST /api/agent` | **The staff question to OpenRouter's embeddings endpoint** for the vector arm, on any question over 8 normalised characters. | `routing_decisions` — the decision, confidence, margin and page id per routed turn. No text. |
+| Defragment the Notebook | `GET/POST /api/notebook/defrag`, `/defrag/run` | **Notebook page text to OpenRouter** — to propose rewrites and to find contradictions between pages. | `note_defrag_runs`, `note_defrag_items`, `note_contradictions`, `note_proposals`, and `note_revisions` before every apply. |
+| Undo a page rewrite | `POST/GET /api/notebook/revert` | Nothing external. | Restores from `note_revisions`, writing a further revision first. |
+| Notebook map | `GET /api/notebook/map` | Nothing external. | Reads the notes; renders the treemap at `/notebook`. |
+| Knowledge bootstrap | `GET /api/directory`, `GET /api/kb` | Nothing external at request time. | Reads the committed bundle (`rag/processed`, `rag/context`) from disk and reconciles it into the knowledge tables. |
+| Model catalogue | `GET /api/settings/models` | A catalogue fetch to `openrouter.ai/api/v1/models`. No practice data. | Nothing. |
 
 ---
 
@@ -564,7 +591,21 @@ path through `/api/agent`, and an unset images role is a small
 vision model of its own rather than "whatever is answering". The document
 ingester still reads images with the reasoning model.
 
-**The answer is always written by the reasoning model.** That is architectural,
+**Which role actually runs `/api/agent` — read this before quoting the table
+above.** As of `9b8d6b4` the assistant endpoint resolves one model for the whole
+turn and it is the **fast** role (`const model = roles.fast.model`,
+`app/api/agent/route.js`), with the **images** role substituted for any message
+carrying a picture. The reasoning role (`ai_model`) is what an unset fast role
+falls back to, and it is still the model named on the settings page and used by
+the document ingester — but on an install that has set a fast model, no part of
+an assistant turn runs on the reasoning model. The paragraph below describes the
+design intent of the previous pipeline and is retained because the DPIA's
+supplier and cost sections were written against it; **the code is the fast
+role**, and the intent and the code should be reconciled deliberately rather
+than by reading one and assuming the other.
+
+**Design intent, as previously recorded: the answer is always written by the
+reasoning model.** That was architectural,
 not a tunable: writing is the one job that needs the whole context held at once.
 The cheaper roles exist to keep work *away* from that model, never to take the
 writing off it.
@@ -585,8 +626,14 @@ the build if any file writes the completions URL, a `data_collection` key or a
   allow_fallbacks: false, data_collection: 'deny' }` — a single zero-retention
   provider with no fallback. (Embeddings are the one endpoint that does not go
   through `chatBody`; there is nothing to reason about.)
-- **Extended reasoning is disabled everywhere** (`reasoning: { enabled: false,
-  exclude: true }`), not only on the agent. Nothing this app asks a model to do
+- **Extended reasoning is held to the minimum everywhere** (`reasoning: {
+  effort: 'minimal', exclude: true }` — `NO_REASONING` in
+  `lib/ai/openrouter.mjs`), not only on the agent. It asks for minimal effort
+  rather than `enabled: false` because a growing number of endpoints — including
+  the app's own default model — reject an explicit disable outright ("Reasoning
+  is mandatory for this endpoint and cannot be disabled"), which failed every
+  call carrying it. `exclude: true` keeps the reasoning tokens out of the
+  response. Nothing this app asks a model to do
   is a puzzle: the thinking has already been done by the staff who wrote the
   Notebook, by the prompts, and by the code that checks each claim against its
   source afterwards. On a model that deliberates first, that wait is most of what

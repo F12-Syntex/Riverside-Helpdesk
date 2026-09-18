@@ -9,6 +9,8 @@ import test from 'node:test';
 import { CLARIFY_OPTIONS, RRF_K, decide, fuseCandidates } from '../lib/routing/decision.mjs';
 
 const T = { hitCos: 0.82, askCos: 0.70, minMargin: 0.15 };
+// Deliberately NOT the shipped defaults (see lib/routing/thresholds.mjs): the
+// policy is what is under test here, not the numbers chosen for the practice.
 const cand = (ref, score, similarity) => ({ targetKind: 'note', targetRef: ref, phrase: ref, score, similarity, matches: 1 });
 
 test('an empty candidate set is a miss with nothing to say', () => {
@@ -26,14 +28,39 @@ test('a confident, clear lead is a hit', () => {
 });
 
 test('the boundaries are inclusive: exactly hitCos and exactly minMargin still hit', () => {
-  // margin = (1 - 0.85) / 1, which floating point puts a hair ABOVE 0.15;
-  // scores are synthetic here, so the boundary is what is being read.
-  const v = decide([cand('a', 1, 0.82), cand('b', 0.85, 0.5)], T);
+  // confidence 0.82 is exactly hitCos; the cosine gap 0.90 - 0.75 is exactly
+  // minMargin once rounded, which is why decide rounds before comparing.
+  assert.equal(decide([cand('a', 0.03, 0.82), cand('b', 0.02, 0.67)], T).decision, 'hit');
+  const v = decide([cand('a', 0.03, 0.9), cand('b', 0.02, 0.75)], T);
+  assert.equal(v.margin, 0.15);
   assert.equal(v.decision, 'hit');
 });
 
+test('the margin is a cosine gap, not a gap between fused scores', () => {
+  // THIS IS THE BUG THIS TEST EXISTS FOR. Fused scores sit a hair apart by
+  // construction: a runner-up one rank behind in both arms scores
+  // 1/62 + 1/62 against 1/61 + 1/61, a normalised gap of 0.016 whatever the
+  // two pages actually say. Judged that way, nothing could ever be a hit.
+  const top = 1 / (RRF_K + 1) + 1 / (RRF_K + 1);
+  const next = 1 / (RRF_K + 2) + 1 / (RRF_K + 2);
+  assert.ok((top - next) / top < 0.02, 'fused scores are structurally almost equal');
+
+  // Same two fused scores, two very different cosine pictures, two different
+  // answers — which is the whole point of reading the calibrated number.
+  assert.equal(decide([cand('a', top, 0.93), cand('b', next, 0.61)], T).decision, 'hit');
+  assert.equal(decide([cand('a', top, 0.93), cand('b', next, 0.92)], T).decision, 'ambiguous');
+});
+
+test('a fused winner that is behind on cosine is ambiguity, not a hit', () => {
+  // The lexical arm put "a" first; the vectors disagree. A disagreement
+  // between the two arms is exactly when a question should be asked back.
+  const v = decide([cand('a', 0.03, 0.84), cand('b', 0.02, 0.95)], T);
+  assert.equal(v.margin, 0);
+  assert.equal(v.decision, 'ambiguous');
+});
+
 test('a confident lead with a close runner-up asks back instead of guessing', () => {
-  const v = decide([cand('a', 0.0300, 0.9), cand('b', 0.0299, 0.88)], T);
+  const v = decide([cand('a', 0.0300, 0.9), cand('b', 0.0299, 0.89)], T);
   assert.equal(v.decision, 'ambiguous');
   assert.equal(v.target, null);
   assert.equal(v.candidates.length, 2);
@@ -45,7 +72,7 @@ test('below askCos is a miss whatever the margin', () => {
 });
 
 test('between askCos and hitCos with a clear margin is a miss — the picker decides, not the router', () => {
-  const v = decide([cand('a', 0.03, 0.75), cand('b', 0.01, 0.3)], T);
+  const v = decide([cand('a', 0.03, 0.75), cand('b', 0.01, 0.2)], T);
   assert.equal(v.decision, 'miss');
 });
 
