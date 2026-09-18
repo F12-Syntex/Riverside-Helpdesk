@@ -557,7 +557,7 @@ unless the answer routes the reader somewhere else (email, Accurx).
 | Read a dropped file | `POST /api/attach` | **Nothing external.** The bytes are parsed to text in the function (`mammoth`, `pdfjs-dist`, `word-extractor`, `jszip`) and returned to the browser that dropped them. | **Nothing.** Not written to disk, not stored in the database, not embedded. The text lives in the browser until the question it came with is asked, and is then sent to OpenRouter as context with that question. Images never take this path — the model looks at those directly. |
 | Verdict on an answer | `POST /api/feedback`, `GET /api/feedback` | Nothing external. | `answer_feedback` — the question whole (≤2,000 chars) beside the machine id. Read back at `/feedback`. |
 | Read the question log | `GET /api/questions` | Nothing external. | Reads `question_log`. Rendered at `/stats`. |
-| Teach the router | `POST /api/routing/learn` | **The staff question to OpenRouter's embeddings endpoint**, to vectorise it as a trigger phrase. | `routing_triggers` — the question as typed (≤400 chars, already identifier-redacted) with `source = 'tap'`, plus its embedding. This is a second store of question text, separate from `question_log`, and the machine-level logging opt-out does **not** cover it. |
+| Teach the router | `POST /api/routing/learn` | **The staff question to OpenRouter's embeddings endpoint**, to vectorise it as a trigger phrase. | `routing_triggers` — the question as typed (≤400 chars, already identifier-redacted) with `source = 'tap'`, plus its embedding. This is a second store of question text, separate from `question_log`; the machine-level logging opt-out covers it (`188334b`), so a desk with logging off is answered but teaches nothing. |
 | Router, on every turn (when switched on) | inside `POST /api/agent` | **The staff question to OpenRouter's embeddings endpoint** for the vector arm, on any question over 8 normalised characters. | `routing_decisions` — the decision, confidence, margin and page id per routed turn. No text. |
 | Defragment the Notebook | `GET/POST /api/notebook/defrag`, `/defrag/run` | **Notebook page text to OpenRouter** — to propose rewrites and to find contradictions between pages. | `note_defrag_runs`, `note_defrag_items`, `note_contradictions`, `note_proposals`, and `note_revisions` before every apply. |
 | Undo a page rewrite | `POST/GET /api/notebook/revert` | Nothing external. | Restores from `note_revisions`, writing a further revision first. |
@@ -1083,11 +1083,14 @@ should record explicitly:
     (≤2,000 chars) whenever a verdict button is pressed, and
     `routing_triggers` keeps it as a trigger phrase (≤400 chars) whenever
     somebody taps a clarify option. Both are additional to `question_log` and to
-    the audit log's truncated copy. **The per-machine logging switch
-    (`riva_nolog`) suppresses only the `question_log` row** — a machine with
-    logging off still writes `answer_feedback` and `routing_triggers` rows. The
-    DPIA's "what is stored" answer, and anything the practice tells staff about
-    that switch, needs to say all four.
+    the audit log's truncated copy. **Half of this is now closed** (`188334b`):
+    the per-machine logging switch (`riva_nolog`) stops the `routing_triggers`
+    row as well as the `question_log` row, on the principle that a record kept
+    under another name is still a record. **`answer_feedback` is still
+    outstanding** — a machine with logging off still writes the question whole
+    there when somebody presses a verdict button, and nothing in
+    `/api/feedback` reads the cookie. The DPIA's "what is stored" answer, and
+    anything the practice tells staff about that switch, needs to say so.
 16. **The router sends the question to an embeddings endpoint on every turn.**
     When `routing_enabled` is on, `lib/routing/router.mjs` embeds any question
     over eight normalised characters before the template picker runs — so the
