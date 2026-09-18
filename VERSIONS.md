@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.5.2` | 2026-09-18 | docs | `7b34fc4` | docs: draw the questions page on the system map |
+| `6.5.1` | 2026-09-18 | docs | `56fbb32` | docs: record 6.5.0 in the versions table |
 | `6.5.0` | 2026-09-18 | feat | `aca7067` | feat: collect the questions the assistant could not answer |
 | `6.4.13` | 2026-09-18 | docs | `e39dc58` | docs: record 6.4.12 in the versions table |
 | `6.4.12` | 2026-09-18 | test | `4f168f3` | test: measure the picker on the same cases, or say why it could not be |
