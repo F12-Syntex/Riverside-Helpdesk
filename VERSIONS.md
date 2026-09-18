@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.4.9` | 2026-09-18 | docs | `8d7c19a` | docs: record what the router measured, and what it does not say |
+| `6.4.8` | 2026-09-18 | docs | `8ad9561` | docs: the logging switch now covers the router's learning too |
+| `6.4.7` | 2026-09-18 | docs | `def833e` | docs: record 6.4.5 in the versions table |
 | `6.4.6` | 2026-09-18 | fix | `188334b` | fix: logging off at a desk stops the router learning from it too |
 | `6.4.5` | 2026-09-18 | docs | `bde7a9f` | docs: bring the architecture document up to the current code |
 | `6.4.4` | 2026-09-18 | test | `eced25c` | test: label the golden set for page routing |
