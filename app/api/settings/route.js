@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getAiModelSetting, getModelRoleSettings, setAiModel, setModelRole, ROLE_SETTING_KEY } from '@/lib/settings';
 import { readUsageAverages } from '@/lib/ai/usage';
+import { getRoutingThresholds, setRoutingThresholds } from '@/lib/routing/thresholds.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,8 +29,8 @@ async function usage() {
 async function state() {
   const setting = await getAiModelSetting();
   try {
-    const [roles, measured] = await Promise.all([getModelRoleSettings(), usage()]);
-    return { ...setting, roles: roles.roles, roleStored: roles.stored, roleResolved: roles.resolved, usage: measured };
+    const [roles, measured, routing] = await Promise.all([getModelRoleSettings(), usage(), getRoutingThresholds()]);
+    return { ...setting, roles: roles.roles, roleStored: roles.stored, roleResolved: roles.resolved, usage: measured, routing };
   } catch (e) {
     // The roles are an addition to a page that worked without them. If they
     // cannot be read, the model picker must still load.
@@ -63,13 +64,16 @@ export async function PUT(request) {
     for (const role of Object.keys(ROLE_SETTING_KEY)) {
       if (typeof roles[role] === 'string') await setModelRole(role, roles[role]);
     }
+    // The router's switch and thresholds, sent as { enabled, hitCos, askCos,
+    // minMargin }. Fields left out keep their stored value.
+    if (body?.routing && typeof body.routing === 'object') await setRoutingThresholds(body.routing);
     // Read it back rather than echoing what was sent: the page then shows what
     // is actually stored, including when it was stored.
     return NextResponse.json(await state(), { headers: noStore });
   } catch (e) {
     const message = String(e.message || e);
     // A bad slug is the caller's mistake; anything else is the server's.
-    const bad = /OpenRouter model id|model role/.test(message);
+    const bad = /OpenRouter model id|model role|^routing /.test(message);
     return NextResponse.json({ error: message }, { status: bad ? 400 : 500, headers: noStore });
   }
 }

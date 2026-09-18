@@ -49,6 +49,7 @@ import { needsAppointmentMode } from '@/lib/triage/destinations.mjs';
 import { looksMultiIntent } from '@/lib/safety/requests.mjs';
 import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
+import { routeQuestion } from '@/lib/routing/router.mjs';
 import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
@@ -1020,7 +1021,66 @@ export async function POST(request) {
         // schema and exactly the prompt it was asked with before any of this
         // existed, and costs exactly what it used to.
         const decompose = looksMultiIntent(question);
-        try {
+
+        // THE FOLDER'S OWN SHAPE, when the practice has given it one.
+        //
+        // A Notebook page normally answers as itself — the page, as they
+        // wrote it. Where the practice has tagged the folder it sits in (the
+        // notebook sidebar, right-click → Format answers as), the values on
+        // that screen are lifted out of the page and the screen is drawn
+        // above it. ONE focused read, of one page, and only for a tagged
+        // page: every other turn costs exactly what it did before.
+        //
+        // The page is still shown underneath, so a read that comes back thin
+        // — or does not come back at all — leaves the reader with what they
+        // had before the tag existed. That is why this is allowed to fail
+        // quietly. Shared by the router's hit and the picker's choice, so a
+        // page reached either way is drawn the same.
+        const applyOutputTag = async (selection) => {
+          const tagged = templateAnswer ? taggedNotebookPage(selection, notebookPages) : null;
+          if (!tagged) return;
+          try {
+            const values = await readValues({
+              model,
+              schema: tagged.tag.schema,
+              text: outputTagPrompt({ tag: tagged.tag, page: tagged.page, question }),
+              role: 'fast',
+              phase: 'format',
+            });
+            templateAnswer = withTaggedOutput(templateAnswer, tagged.tag, values);
+          } catch (e) {
+            console.warn('[agent] tagged output read failed:', String(e).slice(0, 160));
+          }
+        };
+
+        // THE ROUTER, IN FRONT OF THE PICKER. Strictly additive: a miss (and
+        // the switch being off, which is the default) falls through to the
+        // picker below, which behaves exactly as it did before the router
+        // existed. A confident, clear match on the trigger index renders the
+        // page with no model call at all; a close call between two pages asks
+        // back, with the pages as the options. See lib/routing/router.mjs.
+        //
+        // Not on a message with a picture — the picture has to be read — and
+        // not on a message that looks like several asks, because the picker's
+        // split into requests is what the unresolved panel is built from.
+        // The safety scan has already run over the whole message above, so a
+        // red flag is banded on the router path exactly as on every other.
+        const routed = (seeing || decompose)
+          ? null
+          : await routeQuestion(question, { pages: notebookPages, turnId }).catch(() => null);
+        if (routed && routed.decision === 'hit' && routed.page) {
+          picked = 'notebook:router';
+          const selection = { template: 'notebook', pages: [routed.page.docTitle] };
+          templateAnswer = renderSelection(selection, question, notebookPages, {});
+          if (templateAnswer) await applyOutputTag(selection);
+        } else if (routed && routed.decision === 'ambiguous' && routed.clarify) {
+          clarify = routed.clarify;
+        }
+
+        // The picker, unchanged — skipped only when the router has already
+        // answered or asked. (`if … try` is deliberate: the block is the
+        // picker as it was, brace for brace.)
+        if (!templateAnswer && !clarify) try {
           // With a picture attached the picker runs on the images role and is
           // shown the picture, so a screenshot of a letter can be recognised
           // as a document to file rather than read as an empty message.
@@ -1048,34 +1108,9 @@ export async function POST(request) {
             gist: (scan.routed && scan.routed.gist) || '',
           });
 
-          // THE FOLDER'S OWN SHAPE, when the practice has given it one.
-          //
-          // A Notebook page normally answers as itself — the page, as they
-          // wrote it. Where the practice has tagged the folder it sits in (the
-          // notebook sidebar, right-click → Format answers as), the values on
-          // that screen are lifted out of the page and the screen is drawn
-          // above it. ONE focused read, of one page, and only for a tagged
-          // page: every other turn costs exactly what it did before.
-          //
-          // The page is still shown underneath, so a read that comes back thin
-          // — or does not come back at all — leaves the reader with what they
-          // had before the tag existed. That is why this is allowed to fail
-          // quietly.
-          const tagged = templateAnswer ? taggedNotebookPage(selection.object, notebookPages) : null;
-          if (tagged) {
-            try {
-              const values = await readValues({
-                model,
-                schema: tagged.tag.schema,
-                text: outputTagPrompt({ tag: tagged.tag, page: tagged.page, question }),
-                role: 'fast',
-                phase: 'format',
-              });
-              templateAnswer = withTaggedOutput(templateAnswer, tagged.tag, values);
-            } catch (e) {
-              console.warn('[agent] tagged output read failed:', String(e).slice(0, 160));
-            }
-          }
+          // The folder's own shape, when the practice has given it one — see
+          // applyOutputTag above.
+          await applyOutputTag(selection.object);
         } catch (e) {
           // A router that cannot answer is not a turn that cannot answer — and
           // the scan already ran over the whole message, so a turn that ends in
@@ -1109,7 +1144,9 @@ export async function POST(request) {
           });
           const writtenAsk = logTurn({
             outcome: 'template',
-            template: 'ask',
+            // The router's question back is logged under its own name, so the
+            // two kinds of asking can be told apart on the stats page.
+            template: routed && routed.decision === 'ambiguous' ? 'ask:router' : 'ask',
             answer: shownText(safety.alerts, null) + '\n\n'
               + [clarify.question, ...clarify.options.map((o) => '- ' + o)].join('\n'),
             provenance: buildProvenance({ scan }),

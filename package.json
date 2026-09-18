@@ -1,6 +1,6 @@
 {
   "name": "riverside-emis-helper",
-  "version": "6.2.10",
+  "version": "6.3.0",
   "private": true,
   "description": "Riverside Practice Q&A: a document-grounded reception assistant for The Riverside Practice, using OpenRouter.",
   "scripts": {
@@ -15,6 +15,9 @@
     "rag:prune": "node rag/prune.mjs",
     "rag:sync": "node rag/ingest.mjs && node rag/prune.mjs",
     "rag:migrate-legacy": "node rag/migrate-legacy.mjs",
+    "routing:seed": "node scripts/routing-seed.mjs",
+    "routing:embed": "node scripts/routing-embed.mjs",
+    "routing:stats": "node scripts/routing-stats.mjs",
     "db:reset-rota": "node scripts/reset-and-seed-rota.mjs",
     "data:cqc": "node scripts/build-cqc-directory.mjs",
     "data:one-templates": "node scripts/build-one-templates.mjs",

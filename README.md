@@ -38,6 +38,18 @@ clickable sources they can open in-browser.
   with the answer assembled in code from a page and a template, there was
   nothing left worth caching, and its question normaliser now lives in
   `lib/routing/` as the first rung of the router.
+- **A router sits in front of the picker, off by default** (`lib/routing/`).
+  The picker returns one of an enum with no score, so a near-miss on wording
+  and a total miss look the same to it and the failure is a cliff. The router
+  matches the question against short *trigger phrases* per Notebook page — how
+  staff would ask for it, generated once (`npm run routing:seed`) and learned
+  from taps on a "which did you mean?" card — by exact form, tsvector and
+  embedding, fused by reciprocal rank, and decides on a confidence and a
+  margin. A confident, clear match renders the page with no model call; a
+  close call asks back; anything else falls through to the picker unchanged.
+  Switch and thresholds live at `/settings`; `npm run routing:stats` shows
+  coverage and the fall-through rate; `evals/routing/bench-pages.mjs` measures
+  it against a golden set the judging agent writes (`evals/routing/pages.md`).
 - **A message that asks for five things gets five things acknowledged.** The
   selection call returns exactly one template, which is why an eConsult listing
   a knee, a hoarse voice, a repeat prescription, a fit note and a question about

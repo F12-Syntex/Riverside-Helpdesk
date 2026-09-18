@@ -148,6 +148,9 @@ export default function SettingsPage() {
   const [setting, setSetting] = React.useState(null);
   const [model, setModel] = React.useState('');
   const [roles, setRoles] = React.useState({});
+  // The router's switch and thresholds (lib/routing/thresholds.mjs). Null
+  // until read, so the section does not draw with made-up numbers.
+  const [routing, setRouting] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [note, setNote] = React.useState('');
   const [error, setError] = React.useState('');
@@ -179,6 +182,7 @@ export default function SettingsPage() {
         setSetting(d);
         setModel(d.model);
         setRoles(d.roleStored || {});
+        setRouting(d.routing || null);
       })
       .catch((e) => live && setError('Could not read the settings: ' + e.message));
     fetch('/api/settings/models')
@@ -210,11 +214,17 @@ export default function SettingsPage() {
 
   const roleValue = (key) => String(roles[key] || '');
   const setRole = (key, value) => { setRoles((cur) => ({ ...cur, [key]: value })); setNote(''); };
+  const setRoutingField = (key, value) => { setRouting((cur) => ({ ...(cur || {}), [key]: value })); setNote(''); };
+  const unit = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 && n <= 1; };
+  const routingValid = !routing || (unit(routing.hitCos) && unit(routing.askCos) && unit(routing.minMargin)
+    && Number(routing.hitCos) >= Number(routing.askCos));
 
   const valid = isModelSlug(model)
-    && ROLE_KEYS.every((k) => !roleValue(k) || isModelSlug(roleValue(k)));
+    && ROLE_KEYS.every((k) => !roleValue(k) || isModelSlug(roleValue(k)))
+    && routingValid;
   const dirty = !!setting && (model !== setting.model
-    || ROLE_KEYS.some((k) => roleValue(k) !== String((setting.roleStored || {})[k] || '')));
+    || ROLE_KEYS.some((k) => roleValue(k) !== String((setting.roleStored || {})[k] || ''))
+    || (!!routing && JSON.stringify(routing) !== JSON.stringify(setting.routing || null)));
 
   // What each role resolves to, and what that model charges. The catalogue is
   // keyed by base id, so a ":nitro" variant is priced as the model it decorates.
@@ -262,13 +272,14 @@ export default function SettingsPage() {
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, roles }),
+        body: JSON.stringify({ model, roles, routing }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'That could not be saved.');
       setSetting(data);
       setModel(data.model);
       setRoles(data.roleStored || {});
+      setRouting(data.routing || null);
       setNote('Saved.');
     } catch (e) {
       setError(e.message);
@@ -396,6 +407,46 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* THE ROUTER, IN FRONT OF THE PICKER. Off by default. A question
+              whose wording is a confident, clear match for one Notebook page
+              is answered with that page and no model call; a close call
+              between two pages asks which was meant; anything else goes to
+              the model exactly as before. The three numbers are the bar for
+              each of those, and they are tuned here rather than in code:
+              watch the fall-through rate in npm run routing:stats. */}
+          {routing && (
+            <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding-top:14px;')}>
+              <div style={s('display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;')}>
+                <span style={s('flex:1 1 260px;min-width:0;')}>
+                  <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>Answer straight from the Notebook on a confident match</span>
+                  <span style={s('display:block;font-size:13.5px;color:#4c6272;margin-top:3px;line-height:1.45;')}>
+                    {routing.enabled
+                      ? 'On. A question whose wording clearly matches one page gets that page with no model call; a close call between pages asks which was meant.'
+                      : 'Off. Every question goes to the model as before.'}
+                  </span>
+                </span>
+                <Hover tag='button' type='button' onClick={() => setRoutingField('enabled', !routing.enabled)}
+                  base={'flex:none;border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:2px solid '
+                    + (routing.enabled ? '#007f3b;color:#fff;background:#007f3b;' : '#768692;color:#4c6272;background:#fff;')}
+                  hover={routing.enabled ? 'background:#00662f;border-color:#00662f;' : 'background:#f0f4f5;'}>
+                  {routing.enabled ? 'Router on' : 'Router off'}
+                </Hover>
+              </div>
+              <div style={s('display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:12px;')}>
+                {[['hitCos', 'Answer at'], ['askCos', 'Ask at'], ['minMargin', 'Clear lead']].map(([key, label]) => (
+                  <label key={key} style={s('display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:#4c6272;')}>
+                    {label}
+                    <input type='number' step='0.01' min='0' max='1' value={routing[key]} onChange={(e) => setRoutingField(key, e.target.value)}
+                      style={s('font:inherit;font-size:15px;font-weight:400;color:#212b32;padding:7px 10px;border:1px solid #d8e1e5;border-radius:8px;width:110px;')} />
+                  </label>
+                ))}
+              </div>
+              <p style={s('margin:8px 0 0;font-size:12.5px;color:#768692;line-height:1.45;')}>
+                Answer at and Ask at are how alike the wording must be (0–1) to render a page, or to ask; Clear lead is how far ahead of the runner-up it must be. A wrong page shown confidently is worse than a question back, so lower Answer at slowly.
+              </p>
+            </div>
+          )}
+
           <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
             <Hover tag="button" type="button" disabled={!dirty || !valid || saving} onClick={save}
               base={'border:none;border-radius:10px;padding:11px 20px;font:inherit;font-size:15.5px;font-weight:600;color:#fff;background:'
@@ -410,7 +461,12 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {!valid && (
+          {!routingValid && (
+            <p style={s('margin:12px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
+              Router thresholds are numbers between 0 and 1, and Answer at cannot be below Ask at.
+            </p>
+          )}
+          {!valid && routingValid && (
             <p style={s('margin:12px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
               An id looks like vendor/model, with an optional :variant.
             </p>

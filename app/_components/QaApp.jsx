@@ -775,6 +775,23 @@ class RiversidePracticeQA extends React.Component {
     }
   }
 
+  // A tap on a "which did you mean?" option teaches the router which page that
+  // wording meant — when the card came from the router and carries a target
+  // for the option. Fire-and-forget: the re-ask is the answer, and this must
+  // never delay or fail it. The picker's own clarify carries no targets and so
+  // teaches nothing.
+  learnRoute(question, target) {
+    if (!target || !question) return;
+    try {
+      fetch('/api/routing/learn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, target }),
+        keepalive: true,
+      }).catch(() => { /* the re-ask still goes */ });
+    } catch (e) { /* the re-ask still goes */ }
+  }
+
   async ask(text) {
     // A second Enter while the first message is still being screened would send
     // the same words twice — once past the screen and once around it.
@@ -1728,7 +1745,13 @@ class RiversidePracticeQA extends React.Component {
           clarifyOptions: (m.clarify ? m.clarify.options : []).map((opt, i) => ({
             key: i,
             label: opt,
-            onPick: () => self.ask(m.question + ' — ' + opt),
+            onPick: () => {
+              // The tap is a labelled example when the card came from the
+              // router: this wording, this page, from a person. Taught before
+              // the re-ask, and never allowed to delay or fail it.
+              self.learnRoute(m.question, m.clarify.targets && m.clarify.targets[i]);
+              self.ask(m.question + ' — ' + opt);
+            },
           })),
           hasClarify: !!(m.clarify && m.clarify.question && m.clarify.options.length),
           // The deterministic bands, above the card. Cards in their own right,

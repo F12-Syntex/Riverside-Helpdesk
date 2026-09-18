@@ -272,6 +272,13 @@ versioning. Tables, grouped by the feature that owns them:
 | --- | --- | --- |
 | `question_log` | `turn_id, machine_id, question, outcome, template, source, answer, model, duration_ms, images, attachments, error, provenance (jsonb), dismissed (jsonb), at` | **Stores the staff question verbatim and the answer as text.** `provenance` additionally holds the message split into its separate requests — each with the acuity code gave it and, where a span was quoted, **the patient's own words** — plus every deterministic rule that fired with the text that matched it, and the revision of each Notebook page the card stood in for. `dismissed` records which panel items reception closed, when, and from which machine. Written by `/api/agent` as each answer goes out; `provenance` and `dismissed` are added by `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, so an existing install picks them up on the next schema check. |
 
+**Routing** — `ensureRoutingSchema()`
+
+| Table | Columns | Personal data |
+| --- | --- | --- |
+| `routing_triggers` | `id, target_kind ('note'), target_ref (the page's docId), phrase, phrase_norm, source ('generated' \| 'tap'), source_hash, embedding vector(1536), search_doc tsvector, created_at` | A `tap` row is a staff question as typed (≤400 chars), kept as the wording that meant that page. Same terms as `question_log`; the identifier redaction has already run on it. |
+| `routing_decisions` | `turn_id, decision ('hit' \| 'ambiguous' \| 'miss'), confidence, margin, target_kind, target_ref, at` | None — numbers and a page id per routed turn, for the fall-through rate. |
+
 **Model usage / cost** — `ensureUsageSchema()`
 
 | Table | Columns | Personal data |
@@ -377,6 +384,8 @@ sequenceDiagram
     A-->>B: contacts card
   else
     A->>PG: load EVERY non-empty Notebook page in full
+    A->>PG: ROUTE — the trigger index: exact, lexical, vector, fused (lib/routing; off by default)
+    Note over A,PG: a confident, clear match renders that page with no model call;<br/>a close call asks back; anything else falls through to SELECT unchanged
     A->>OR: SELECT — fast role, one generateObject call:<br/>a template (or a Notebook page title) and its variables
     opt the page's folder is tagged with an output shape
       A->>OR: FORMAT — one focused read of that page
@@ -420,7 +429,22 @@ sequenceDiagram
    by similarity; the block goes first in the prompt so a provider that caches
    prefixes pays for it once. A Notebook that has outgrown
    `NOTEBOOK_FULL_MAX_CHARS` falls back to a title catalogue.
-5. **Selection** — one `generateObject` call on the **fast role** (the images
+5. **Routing** — in front of the picker, and **off by default**
+   (`lib/routing/`, switch and thresholds at `/settings`). Each Notebook page
+   carries trigger phrases — how reception staff would ask for it, generated
+   once by the fast role (`npm run routing:seed`) and learned from clarify
+   taps. The question is normalised and matched exactly, then by tsvector and
+   by embedding over those phrases, fused by reciprocal rank (the same `1/(60 +
+   rank)` as `searchKnowledge`). The decision reads two numbers the picker
+   never had: the cosine similarity of the best phrase (confidence) and the
+   gap to the runner-up (margin). Confident and clear → the page is rendered
+   with **no model call**; confident but close → a question back with the
+   pages as options, and a tap teaches the router (`POST /api/routing/learn`);
+   anything else → the picker, with its inputs untouched. A wrong page
+   rendered confidently is the failure to watch: it is the headline metric of
+   `evals/routing/bench-pages.mjs`, and the reason the hit threshold starts
+   conservative.
+6. **Selection** — one `generateObject` call on the **fast role** (the images
    role when a picture is attached), `temperature: 0`, output capped at
    `READ_MAX_TOKENS`, against `SELECTION_SCHEMA` (`lib/templates/route.mjs`).
    The model returns which template fits — a closed enum, or a Notebook page
@@ -429,20 +453,20 @@ sequenceDiagram
    and ends, and code decides everything after that (acuity is a table, not the
    model's opinion). A provider that refuses structured output is asked again as
    plain text and the first JSON object in the reply is parsed and re-validated.
-6. **Render** — the template is filled in code (`lib/templates/`). A Notebook
+7. **Render** — the template is filled in code (`lib/templates/`). A Notebook
    page is rendered from the database exactly as the practice wrote it. Where the
    page's folder carries an output tag (Notebook sidebar → *Format answers as*),
    one more focused read lifts that tag's values from the page and draws them
    above it; the page is still shown underneath, so a thin read costs nothing.
-7. **Asking back** — when the message reads two ways and the two ways go
+8. **Asking back** — when the message reads two ways and the two ways go
    different places, the turn ends in a question with the readings as options;
    tapping one asks the original question again with the ambiguity settled.
-8. **Prose fallback** — only when no template fits. The fast role writes an
+9. **Prose fallback** — only when no template fits. The fast role writes an
    answer with the whole Notebook as its system prompt; the card is marked as
    the assistant's own work (`general: true`), and any digit run that does not
    appear in the Notebook, the question or an attachment is redacted
    (`redactUnverifiedNumbers`).
-9. **Log** — after the answer has been sent: one `question_log` row (the
+10. **Log** — after the answer has been sent: one `question_log` row (the
    question, the answer as text, the template that built it, the model that
    ran) and one `ai_usage` row per model call.
 
