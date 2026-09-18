@@ -1,0 +1,65 @@
+# The gate the app never had.
+#
+# Nothing ran the app's tests before this: .github/workflows/build.yml builds
+# the Chrome extension and only when extension/** changed, so every app change
+# reached main on the word of whoever pushed it. TODO.md has carried "add CI
+# with an automated test gate" as a P1 for exactly that reason.
+#
+# Three things, in the order that fails cheapest first:
+#
+#   npm test                  the whole suite, Node's own runner, no database
+#                             and no API key — every test here is pure
+#                             functions over fixtures, which is why it takes
+#                             under a second and can gate every push.
+#   npm run versions -- --check   package.json against what the commit history
+#                             says it should be. CLAUDE.md requires the version
+#                             to be bumped BY HAND in the commit that earns it;
+#                             this is the only thing that notices when it was
+#                             not. Needs the full history, hence fetch-depth 0.
+#   npm run build             the real Next build, which is what catches an
+#                             import of something that was deleted. No secrets:
+#                             every page is a client component and no route is
+#                             evaluated at build time, so the build needs
+#                             neither DATABASE_URL nor OPENROUTER_API_KEY.
+#
+# Lint is deliberately absent: the repository has no ESLint configuration, so
+# `next lint` opens an interactive setup prompt and would hang the runner.
+name: App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push while the first is still building makes the first irrelevant.
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The version check walks the history from the first versioned commit,
+          # so a shallow clone would restart the numbering and fail every run.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Check the version was bumped
+        run: npm run versions -- --check
+
+      - name: Build
+        run: npm run build

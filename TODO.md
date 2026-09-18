@@ -118,8 +118,11 @@ Priority is shown as `P0` (blocking), `P1` (needed before wider rollout) or
 
 ## Engineering
 
-- [ ] **Add CI with an automated test gate before deploy** — there is none
-      today. *(marked "to confirm" in the source.)*
+- [x] **Add CI with an automated test gate before deploy** — done in 6.4.1.
+      `.github/workflows/app.yml` runs the suite, the version check and the
+      real Next build on every push to `main` and every pull request. Lint is
+      not in it: the repository has no ESLint configuration, so `next lint`
+      would open an interactive prompt and hang the runner.
       <br>`infra` `P1` · Source: `ARCHITECTURE.md` §15.13
 
 - [ ] **Introduce schema migrations** — the schema is created lazily with

@@ -71,7 +71,7 @@ at `/index`. `lib/dpia.js` records them all as live processing on that basis.
 | File storage client | `@vercel/blob` | `^2.5.0` | Notebook attachments. |
 | Analytics | `@vercel/analytics` | `^2.0.1` | Mounted globally in `app/layout.js`. |
 | Document parsing | `mammoth` (DOCX), `pdfjs-dist` (PDF), `word-extractor` (legacy `.doc`), `jszip` (PPTX/RTF helpers), `@napi-rs/canvas` (PDF page rendering) | — | Offline ingest only; `pdfjs-dist` also runs in-browser for the document viewer. |
-| Tests | `node --test` | — | 20 test files in `test/`. No CI configuration in the repository **[to confirm]**. |
+| Tests | `node --test` | — | Pure functions over fixtures, no database and no API key, which is why the whole suite runs in under a second. Gated on every push by `.github/workflows/app.yml`. |
 
 ### Data layer
 
@@ -649,7 +649,19 @@ npm install
 npm run dev            # copies the PDF worker, then next dev -H 127.0.0.1
 npm run build && npm run start
 npm test               # node --test over test/
+npm run versions -- --check   # package.json against the commit history
 ```
+
+**Every push is gated.** `.github/workflows/app.yml` runs those three on every
+push to `main` and every pull request: the suite, the version check (the
+version is bumped by hand in the commit that earns it, and this is the only
+thing that notices when it was not), then the real build, which is what
+catches an import of something that was deleted. It needs no secrets — every
+page is a client component and no route is evaluated at build time, so neither
+`DATABASE_URL` nor `OPENROUTER_API_KEY` is required to build.
+
+`.github/workflows/build.yml` is separate and unrelated: it signs and publishes
+the Chrome extension, and only when `extension/**` changed.
 
 **Document ingestion** is an offline, developer-run pipeline — not something the
 running application does:
@@ -921,6 +933,8 @@ should record explicitly:
     building an eval set from it is outstanding. The unresolved items panel is
     the backstop that makes a miss visible rather than silent, and is not a
     substitute for the measurement.
-14. **No CI and no schema migrations.** Schema is created lazily with
-    `IF NOT EXISTS`; there is no migration history and no automated test gate
-    before deploy **[to confirm]**.
+14. **No schema migrations.** Schema is created lazily with `IF NOT EXISTS`
+    and there is no migration history. The other half of this item is closed:
+    `.github/workflows/app.yml` (6.4.1) gates every push to `main` and every
+    pull request on the test suite, the hand-bumped version and the real Next
+    build.
