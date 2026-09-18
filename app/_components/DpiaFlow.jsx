@@ -36,13 +36,13 @@ const STORES = [
     x: 60, w: 250, title: 'Neon (PostgreSQL)', lines: [
       'Notebook notes, and the',
       'knowledge built from them',
-      'answer cache — the question,',
-      'stored verbatim',
+      'question log — the question,',
+      'stored verbatim, with the answer',
       'audit log — question text,',
       'first 400 characters, kept',
       'with no purge job',
       'staff and rotas · medicines',
-      'cache · settings · token counts',
+      'settings · token counts',
     ],
   },
   {

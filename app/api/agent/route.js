@@ -28,10 +28,6 @@
 // about ten output tokens, and no way for a procedure to be paraphrased on its
 // way to somebody following it.
 //
-// WHAT IS DELIBERATELY UNWIRED, NOT DELETED
-//   • The answer cache (lib/answer-cache/). With the answer now assembled in
-//     code from a page and a template, there is very little left to cache.
-//
 // EVERY TURN IS WRITTEN DOWN. As the answer goes out, the question, the answer
 // as text, the template that built it and the model that ran are recorded in
 // question_log (lib/questions/log.js) and read back at /stats. That is how the

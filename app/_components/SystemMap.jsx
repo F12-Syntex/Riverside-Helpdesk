@@ -113,11 +113,11 @@ const FEATURES = [
   { p: '/diagram', name: 'System map', routes: ['this page'], deps: [] },
   { p: '/knowledge', name: 'Knowledge admin', routes: ['/api/knowledge', '+ analyse · conflicts', '+ status · sync'], deps: ['L', 'D', 'A'] },
 ];
-const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'answer-cache', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
+const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'routing', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
 // The four services the engine talks to. Everything that leaves the practice
 // leaves through one of the three on the right; see /dpia for what each holds.
 const DATA_NODES = [
-  { cx: 260, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · knowledge · staff · answer cache · audit log · settings', icon: Icons.book, dep: 'D', hot: true },
+  { cx: 260, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · knowledge · staff · audit log · settings', icon: Icons.book, dep: 'D', hot: true },
   { cx: 778, w: 420, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis · web search tool', icon: Icons.sparkle, dep: 'A', hot: true },
   { cx: 1296, w: 420, label: 'Exa · web hosts', sub: 'search query text, then the pages read for a number', icon: Icons.globe, dep: 'A' },
   { cx: 1814, w: 420, label: 'Vercel Blob', sub: 'Notebook attachments, at public URLs', icon: Icons.paperclip, dep: 'B' },

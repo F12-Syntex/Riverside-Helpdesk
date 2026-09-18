@@ -79,11 +79,6 @@ Priority is shown as `P0` (blocking), `P1` (needed before wider rollout) or
       stores staff question text verbatim for the unguarded routes.
       <br>`data-protection` `P1` · Source: `ARCHITECTURE.md` §15.8
 
-- [ ] **Time-limit the answer cache** — `answer_cache.question` holds question
-      text verbatim plus its embedding, and is invalidated but not otherwise
-      time-limited beyond `MAX_AGE_DAYS`.
-      <br>`data-protection` `P2` · Source: `ARCHITECTURE.md` §15.9
-
 - [ ] **Record Vercel Analytics and Google Fonts in the DPIA** — both receive
       staff device data, including IP, on every page load. Google Fonts is
       removable by self-hosting the font.
