@@ -11,6 +11,7 @@
 // card must not teach the router a page the practice has since deleted.
 import { NextResponse } from 'next/server';
 import { ensureNotebookSchema, getSql } from '@/lib/db';
+import { loggingOffIn } from '@/lib/questions/opt-out.mjs';
 import { addTapTrigger } from '@/lib/routing/triggers.mjs';
 import { normaliseQuestion } from '@/lib/routing/normalise.mjs';
 import { MIN_NORMALISED_CHARS } from '@/lib/routing/router.mjs';
@@ -23,6 +24,17 @@ const TARGET = /^note:([A-Za-z0-9_-]{1,80})$/;
 const MAX_QUESTION_CHARS = 400;
 
 export async function POST(request) {
+  // LOGGING OFF AT THIS DESK MEANS THIS TOO.
+  //
+  // A tap-learned trigger is the staff question stored verbatim, in a second
+  // table, for ever — which is the thing the switch at /settings says is not
+  // happening on this machine. A record kept under another name is still a
+  // record, so the tap is answered and taught nothing. The re-ask still
+  // happens in the browser; only the learning stops.
+  if (loggingOffIn(request.headers.get('cookie') || '')) {
+    return NextResponse.json({ ok: true, learned: false, reason: 'logging off at this machine' }, { headers: noStore });
+  }
+
   let body;
   try {
     body = await request.json();
