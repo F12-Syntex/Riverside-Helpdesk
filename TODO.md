@@ -79,6 +79,12 @@ Priority is shown as `P0` (blocking), `P1` (needed before wider rollout) or
       stores staff question text verbatim for the unguarded routes.
       <br>`data-protection` `P1` · Source: `ARCHITECTURE.md` §15.8
 
+- [ ] **Give the open questions list a retention policy** — `open_questions`
+      stores a staff question whole, and an answered one stays on the list until
+      somebody removes it by hand. It is the one store of typed text with a
+      deletion route in the interface, which is not the same as a policy.
+      <br>`data-protection` `P2` · Source: `ARCHITECTURE.md` §15.8, `lib/dpia.js` step 5
+
 - [ ] **Record Vercel Analytics and Google Fonts in the DPIA** — both receive
       staff device data, including IP, on every page load. Google Fonts is
       removable by self-hosting the font.

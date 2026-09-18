@@ -36,13 +36,14 @@ It provides:
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
 | Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/accurx` command, which puts that line, and the booking notes reception needs, on the same card as where the patient goes. |
 | Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. Also available in the assistant as the **Coding** mode (the `/coding` command), which is the one mode the patient-data screen does not run on. |
+| Questions | `/questions` | The questions nobody has an answer for yet: the ones staff ask because the practice has not written the answer down, and — filed on their own, off the question log — the ones the assistant was asked and could not answer. |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |
 | Staff rota | `/rota` | Builds and balances a week's rota from staff records. |
 | Settings | `/settings` | Which AI model each role runs on, and measured cost per question. |
 | Activity audit log | `/stats` | What was done in the app, grouped by machine. Not linked from the menu. |
 | Knowledge admin | `/knowledge` | Canonical-knowledge editor. Localhost-only; 404 everywhere else. |
-| DPIA | `/dpia` | The practice's data protection impact assessment, rendered from `lib/dpia.js`. |
+| DPIA | `/dpia` | The practice's data protection impact assessment, rendered from `lib/dpia.js`. **Off the dock** since 6.5.0 — a document read once by whoever does the IG review, not a tool reception reaches for; still at the same address and still listed at `/index`. |
 | Tools index | `/tools` | The short list of tools staff reach for. Lists the Q&A and Instant lookup only. |
 | Notebook saves | `/notebook/saves` | Take, download, delete and **load** a whole-Notebook save. Loading one replaces the Notebook. |
 | Answer feedback review | `/feedback` | Every answer a verdict was left on, newest first, with the question whole. **Not in the route registry** (`lib/routes.js`), so it is not listed at `/index` and `lib/dpia.js` does not record it. |
@@ -289,6 +290,12 @@ versioning. Tables, grouped by the feature that owns them:
 | --- | --- | --- |
 | `question_log` | `turn_id, machine_id, question, outcome, template, source, answer, model, duration_ms, images, attachments, error, provenance (jsonb), dismissed (jsonb), at` | **Stores the staff question verbatim and the answer as text.** `provenance` additionally holds the message split into its separate requests — each with the acuity code gave it and, where a span was quoted, **the patient's own words** — plus every deterministic rule that fired with the text that matched it, and the revision of each Notebook page the card stood in for. `dismissed` records which panel items reception closed, when, and from which machine. Written by `/api/agent` as each answer goes out; `provenance` and `dismissed` are added by `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, so an existing install picks them up on the next schema check. |
 
+**Open questions** — `ensureOpenQuestionsSchema()`
+
+| Table | Columns | Personal data |
+| --- | --- | --- |
+| `open_questions` | `id, question, question_key, origin ('asked' \| 'assistant'), reason ('not-recorded' \| 'no-page' \| 'failed'), turn_id, machine_id, detail, status ('open' \| 'answered'), answer, answered_by, answered_at, asked_count, last_at, at` | **Stores the staff question whole** (≤400 chars) beside the device identifier, plus anything the asker typed under it and whatever answer somebody wrote back. One row per question, not per asking: the wording is normalised into `question_key`, which is uniquely indexed, and a repeat bumps `asked_count` and `last_at`. Two writers — `POST /api/questions/open` when somebody asks, and `recordQuestion` (`lib/questions/log.js`) when a turn could not be answered. The second inherits the machine-level logging opt-out, because it hangs off the log that the opt-out switches off. Read back at `/questions`. |
+
 **Routing** — `ensureRoutingSchema()`
 
 | Table | Columns | Personal data |
@@ -365,7 +372,7 @@ staff member's own words about practice business.
 | `riva.machine.id` | `localStorage` | Until cleared | Random machine identifier, `m-` + 24 hex. |
 | `riva_machine` | Cookie, `Max-Age` 1 year, `Path=/`, `SameSite=Lax` | 1 year | Mirror of the same identifier, so clearing one store does not split a machine's history. |
 | `riva.machine.session` | `sessionStorage` | Tab lifetime | Random visit identifier, `s-` + 16 hex. |
-| `riva_nolog` cookie + `riva.questions.nolog` | Cookie and `localStorage` | Until cleared | This machine's answer to "record what I ask here?", set at `/settings`. Held per computer, on purpose, so switching it off at the back office does not stop the front desk being logged. When set, `/api/agent` writes **no `question_log` row** for that machine, and `POST /api/routing/learn` stores **no trigger phrase** — a tap-learned phrase is the same question text under another name. It does **not** switch off the audit log, `ai_usage` or `answer_feedback` (`lib/questions/opt-out.mjs`). |
+| `riva_nolog` cookie + `riva.questions.nolog` | Cookie and `localStorage` | Until cleared | This machine's answer to "record what I ask here?", set at `/settings`. Held per computer, on purpose, so switching it off at the back office does not stop the front desk being logged. When set, `/api/agent` writes **no `question_log` row** for that machine, **no `open_questions` row** for a turn it could not answer (that filing hangs off the log row, so it is switched off with it), and `POST /api/routing/learn` stores **no trigger phrase** — a tap-learned phrase is the same question text under another name. It does **not** switch off the audit log, `ai_usage` or `answer_feedback` (`lib/questions/opt-out.mjs`). |
 | Chat history and custom guides | `localStorage` (`app/page.js`) | Until cleared | **Whatever staff typed, including anything pasted into the chat.** This never leaves the browser except as part of the `history` string sent with the next question. |
 
 The machine identifier is random and locally minted. It is not derived from the
@@ -557,6 +564,7 @@ unless the answer routes the reader somewhere else (email, Accurx).
 | Read a dropped file | `POST /api/attach` | **Nothing external.** The bytes are parsed to text in the function (`mammoth`, `pdfjs-dist`, `word-extractor`, `jszip`) and returned to the browser that dropped them. | **Nothing.** Not written to disk, not stored in the database, not embedded. The text lives in the browser until the question it came with is asked, and is then sent to OpenRouter as context with that question. Images never take this path — the model looks at those directly. |
 | Verdict on an answer | `POST /api/feedback`, `GET /api/feedback` | Nothing external. | `answer_feedback` — the question whole (≤2,000 chars) beside the machine id. Read back at `/feedback`. |
 | Read the question log | `GET /api/questions` | Nothing external. | Reads `question_log`. Rendered at `/stats`. |
+| Open questions | `GET/POST/PATCH/DELETE /api/questions/open` | Nothing external. | `open_questions` — ask one, write the answer to one, reopen or remove one. Rendered at `/questions`. **Not best-effort:** unlike `/api/feedback`, a failed write is reported, because somebody typing out a question they need answering must not have it silently dropped. |
 | Teach the router | `POST /api/routing/learn` | **The staff question to OpenRouter's embeddings endpoint**, to vectorise it as a trigger phrase. | `routing_triggers` — the question as typed (≤400 chars, already identifier-redacted) with `source = 'tap'`, plus its embedding. This is a second store of question text, separate from `question_log`; the machine-level logging opt-out covers it (`188334b`), so a desk with logging off is answered but teaches nothing. |
 | Router, on every turn (when switched on) | inside `POST /api/agent` | **The staff question to OpenRouter's embeddings endpoint** for the vector arm, on any question over 8 normalised characters. | `routing_decisions` — the decision, confidence, margin and page id per routed turn. No text. |
 | Defragment the Notebook | `GET/POST /api/notebook/defrag`, `/defrag/run` | **Notebook page text to OpenRouter** — to propose rewrites and to find contradictions between pages. | `note_defrag_runs`, `note_defrag_items`, `note_contradictions`, `note_proposals`, and `note_revisions` before every apply. |
@@ -575,7 +583,7 @@ never its text.
 
 | Endpoint | Methods | Postgres | OpenRouter | Blob | Open web | Audit content |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/api/agent` | POST | yes — `notes`, `knowledge_*`, `routing_*`, `question_log`, `ai_usage` | yes — selection, format, prose, `/accurx` reading, and embeddings when the router is on | no | no | recorded (≤400 chars) |
+| `/api/agent` | POST | yes — `notes`, `knowledge_*`, `routing_*`, `question_log`, `open_questions` (only a turn it could not answer), `ai_usage` | yes — selection, format, prose, `/accurx` reading, and embeddings when the router is on | no | no | recorded (≤400 chars) |
 | `/api/screen` | POST | yes — `ai_usage` | yes — superSpeed role | no | no | not described |
 | `/api/attach` | POST | no | **no** | no | no | not described |
 | `/api/signpost` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
@@ -603,6 +611,7 @@ never its text.
 | `/api/notebook/snapshots/import` | POST | yes | no | no | no | **guarded** |
 | `/api/routing/learn` | POST | yes — `routing_triggers` | **yes — embeds the question** | no | no | recorded |
 | `/api/questions` | GET | yes — `question_log` | no | no | no | recorded |
+| `/api/questions/open` | GET POST PATCH DELETE | yes — `open_questions` | no | no | no | recorded |
 | `/api/questions/dismiss` | POST | yes — `question_log.dismissed` | no | no | no | recorded |
 | `/api/feedback` | POST GET | yes — `answer_feedback` | no | no | no | recorded |
 | `/api/audit` | POST GET PATCH | yes — `audit_machines`, `audit_events` | no | no | no | never (logging the log) |

@@ -38,6 +38,16 @@ clickable sources they can open in-browser.
   with the answer assembled in code from a page and a template, there was
   nothing left worth caching, and its question normaliser now lives in
   `lib/routing/` as the first rung of the router.
+- **A question it cannot answer becomes a question somebody can.** Every turn
+  that comes back without an answer — a card flagged as a pathway the practice
+  has not recorded, a prose answer standing on general knowledge with no
+  Notebook page behind it, or a turn that fell over — is filed on the open
+  questions list at `/questions` as it is logged (`lib/questions/gaps.mjs`).
+  Staff can add a question there themselves, which is what the list was asked
+  for; the assistant's own arrive without anybody having to notice them. Same
+  wording twice is one row with a count, so the gap being hit five times a week
+  is visible as the thing to write down next. The switch that turns the question
+  log off at a desk turns this off with it.
 - **A router sits in front of the picker, off by default** (`lib/routing/`).
   The picker returns one of an enum with no score, so a near-miss on wording
   and a total miss look the same to it and the failure is a cliff. The router
@@ -624,6 +634,14 @@ clickable sources they can open in-browser.
   `app/site-index/` and is rewritten onto `/index` in `next.config.mjs`:
   `index` is a reserved route name in the App Router.) Add a route here and it
   appears on the index and reads properly in the audit log.
+- **`lib/questions/`** + **`/questions`** — the question log (`log.js`), the
+  per-machine logging switch (`opt-out.mjs`), and the open questions list:
+  `gaps.mjs` decides which turns the assistant failed to answer and when two
+  askings are one question, `open.js` is the store behind
+  `/api/questions/open`, and the page is where staff ask what the practice has
+  not written down and write the answers back. An answer there is readable the
+  same afternoon; the Notebook page is still what makes it citable, which is
+  why every row links to it.
 - **`lib/audit/`** + **`/stats`** — the activity audit log: pages opened,
   questions asked, actions taken and requests that failed, **grouped by machine
   rather than by IP address**. Every machine at the practice shares one public

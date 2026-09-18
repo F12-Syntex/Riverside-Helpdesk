@@ -63,6 +63,12 @@ const GROUPS = [
     items: [
       { href: '/', label: 'Ask a question', icon: Icons.chat },
       { href: '/lookup', label: 'Contact numbers', icon: Icons.search },
+      // The other half of asking: the questions the assistant CANNOT answer,
+      // because nothing in the practice's material covers them. It sits beside
+      // the Q&A rather than under Reference because that is the moment it is
+      // wanted — a question came back empty, and the next thing to do with it
+      // is put it somewhere the person who knows will see it.
+      { href: '/questions', label: 'Questions', icon: Icons.question },
     ],
   },
   {
@@ -74,7 +80,6 @@ const GROUPS = [
   {
     label: 'Reference',
     items: [
-      { href: '/dpia', label: 'Data protection', icon: Icons.shield },
       { href: '/feedback', label: 'Answer feedback', icon: Icons.chat },
     ],
   },
@@ -91,6 +96,13 @@ const GROUPS = [
  * tool the row deliberately leaves out would be the row's decision
  * undone by the box next to it. Their routes still answer, so a
  * bookmarked address still works; nothing in the app links to them.
+ *
+ * The data protection check (/dpia) is now one of them. It is a document
+ * that is read once, by whoever is doing the information-governance
+ * review, and it held a place in a row of five things reception uses
+ * every hour of every day. It is still the same page at the same
+ * address, still listed at /index, and still where the DPIA review is
+ * done; it is simply not a tool, and the row is for tools.
  *
  * /knowledge is behind the knowledge-admin check in middleware.js, so
  * for nearly everyone a row for it would be a row that 404s.
