@@ -16,7 +16,7 @@ guessed.
 - Application name: Riverside Helpdesk (package `riverside-emis-helper`)
 - Controller: The Riverside Practice (a UK NHS GP surgery)
 - Users: practice staff only (reception, admin, clinical staff)
-- Document status: current as of commit `9b8d6b4`, package version `6.4.0`
+- Document status: current as of commit `9b8d6b4`, package version `6.4.5`
 
 ---
 
@@ -44,7 +44,18 @@ It provides:
 | Knowledge admin | `/knowledge` | Canonical-knowledge editor. Localhost-only; 404 everywhere else. |
 | DPIA | `/dpia` | The practice's data protection impact assessment, rendered from `lib/dpia.js`. |
 | Tools index | `/tools` | The short list of tools staff reach for. Lists the Q&A and Instant lookup only. |
+| Notebook saves | `/notebook/saves` | Take, download, delete and **load** a whole-Notebook save. Loading one replaces the Notebook. |
+| Answer feedback review | `/feedback` | Every answer a verdict was left on, newest first, with the question whole. **Not in the route registry** (`lib/routes.js`), so it is not listed at `/index` and `lib/dpia.js` does not record it. |
+| Template debug page | `/templates` | Renders the answer templates for inspection. **Not in the route registry** either. |
 | System map / index | `/diagram`, `/index` | Documentation pages. The system map is drawn in `app/_components/SystemMap.jsx`. |
+
+**The route registry is not the whole app.** `lib/routes.js` is what `/index`
+lists and what `lib/dpia.js` enumerates as live processing, and three live
+surfaces are absent from it: the pages `/feedback` and `/templates`, and the
+endpoints `POST /api/feedback`, `POST /api/screen` and `POST /api/attach`. All
+five answer. `/api/feedback` is the one that matters for the assessment, because
+it stores question text (§7.1). §9.1 is the inventory taken from the filesystem
+rather than from the registry, and is the one to assess against.
 
 Only the Q&A and Instant lookup appear on the tool index at `/tools`. Everything
 else — the Notebook, the reception helpers, the medication check, the rota, the
@@ -121,7 +132,7 @@ flowchart LR
   end
 
   subgraph Browser3P["Third parties reached from the browser"]
-    GF["fonts.googleapis.com"]
+    GF["fonts.googleapis.com<br/>fonts.gstatic.com"]
   end
 
   B -->|HTTPS, no authentication| N
@@ -354,6 +365,7 @@ staff member's own words about practice business.
 | `riva.machine.id` | `localStorage` | Until cleared | Random machine identifier, `m-` + 24 hex. |
 | `riva_machine` | Cookie, `Max-Age` 1 year, `Path=/`, `SameSite=Lax` | 1 year | Mirror of the same identifier, so clearing one store does not split a machine's history. |
 | `riva.machine.session` | `sessionStorage` | Tab lifetime | Random visit identifier, `s-` + 16 hex. |
+| `riva_nolog` cookie + `riva.questions.nolog` | Cookie and `localStorage` | Until cleared | This machine's answer to "record what I ask here?", set at `/settings`. Held per computer, on purpose, so switching it off at the back office does not stop the front desk being logged. When set, `/api/agent` writes **no `question_log` row** for that machine. It does **not** switch off the audit log, `ai_usage`, `answer_feedback` or `routing_triggers` (`lib/questions/opt-out.mjs`). |
 | Chat history and custom guides | `localStorage` (`app/page.js`) | Until cleared | **Whatever staff typed, including anything pasted into the chat.** This never leaves the browser except as part of the `history` string sent with the next question. |
 
 The machine identifier is random and locally minted. It is not derived from the
@@ -553,6 +565,80 @@ unless the answer routes the reader somewhere else (email, Accurx).
 | Knowledge bootstrap | `GET /api/directory`, `GET /api/kb` | Nothing external at request time. | Reads the committed bundle (`rag/processed`, `rag/context`) from disk and reconciles it into the knowledge tables. |
 | Model catalogue | `GET /api/settings/models` | A catalogue fetch to `openrouter.ai/api/v1/models`. No practice data. | Nothing. |
 
+### 9.1 Every endpoint, and who it talks to
+
+The complete server surface, from `find app/api -name route.js`. Every one of
+them declares `runtime = 'nodejs'` and `dynamic = 'force-dynamic'`; none runs on
+the Edge runtime. **None of them authenticates.** "Guarded" means the path is in
+`CONTENT_NEVER_RECORDED`, so the audit log records the size of the paste and
+never its text.
+
+| Endpoint | Methods | Postgres | OpenRouter | Blob | Open web | Audit content |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/api/agent` | POST | yes — `notes`, `knowledge_*`, `routing_*`, `question_log`, `ai_usage` | yes — selection, format, prose, `/accurx` reading, and embeddings when the router is on | no | no | recorded (≤400 chars) |
+| `/api/screen` | POST | yes — `ai_usage` | yes — superSpeed role | no | no | not described |
+| `/api/attach` | POST | no | **no** | no | no | not described |
+| `/api/signpost` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
+| `/api/reason` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
+| `/api/docfile` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
+| `/api/medication` | POST | yes — `medications`, `medication_aliases` | yes, **with the `openrouter:web_search` server tool (Exa)** | no | via the tool | recorded |
+| `/api/medication/extract` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
+| `/api/cqc` | GET | no | no | no | no | recorded |
+| `/api/lookup-web` | GET | no | yes — web role, plus the search tool | no | **yes — direct GETs to up to 4 pages found** | recorded |
+| `/api/directory` | GET | yes — `knowledge_*` | yes (embeddings, on sync) | no | no | not described |
+| `/api/kb` | GET | yes — `knowledge_*` | yes (embeddings, on sync) | no | no | not described |
+| `/api/knowledge` | GET POST PATCH DELETE | yes | yes — claim extraction | no | no | **guarded** |
+| `/api/knowledge/analyse`, `/conflicts`, `/status`, `/sync` | POST GET PATCH | yes | yes — claim extraction, embeddings | no | no | **guarded** (`/api/knowledge` prefix) |
+| `/api/notebook` | GET POST PATCH DELETE | yes — `notes`, `note_attachments`, `knowledge_*` | queues claim extraction on edit | **deletes blobs on note delete** | no | recorded |
+| `/api/notebook/attachments` | POST DELETE | yes — `note_attachments` | no | **yes — uploads and deletes, `access: 'public'`** | no | recorded |
+| `/api/notebook/format` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
+| `/api/notebook/organize` | POST | yes | yes | no | no | **guarded** |
+| `/api/notebook/defrag`, `/defrag/run` | GET POST | yes — the defrag tables | yes | no | no | recorded |
+| `/api/notebook/revert` | POST GET | yes — `note_revisions` | no | no | no | recorded |
+| `/api/notebook/map` | GET | yes — `notes` | no | no | no | recorded |
+| `/api/notebook/export` | GET | yes | no | no | no | recorded |
+| `/api/notebook/import` | POST | yes | no | no | no | **guarded** |
+| `/api/notebook/snapshots` | GET POST DELETE | yes — `notebook_snapshots` | no | no | no | recorded |
+| `/api/notebook/snapshots/load` | POST | yes | no | no | no | recorded |
+| `/api/notebook/snapshots/import` | POST | yes | no | no | no | **guarded** |
+| `/api/routing/learn` | POST | yes — `routing_triggers` | **yes — embeds the question** | no | no | recorded |
+| `/api/questions` | GET | yes — `question_log` | no | no | no | recorded |
+| `/api/questions/dismiss` | POST | yes — `question_log.dismissed` | no | no | no | recorded |
+| `/api/feedback` | POST GET | yes — `answer_feedback` | no | no | no | recorded |
+| `/api/audit` | POST GET PATCH | yes — `audit_machines`, `audit_events` | no | no | no | never (logging the log) |
+| `/api/staff` | GET POST PATCH DELETE | yes — `staff` | no | no | no | recorded |
+| `/api/rota` | GET POST PUT DELETE | yes — `staff`, `rotas` | yes — plain-English rota rules | no | no | recorded |
+| `/api/settings` | GET PUT | yes — `app_settings`, `ai_usage` | no | no | no | recorded |
+| `/api/settings/models` | GET | no | yes — catalogue only | no | no | recorded |
+
+**Read this table alongside §4.** Every row is reachable without credentials by
+anyone who can reach the deployment URL. The DELETE on `/api/notebook`, the POST
+on `/api/notebook/snapshots/load` (which replaces the whole Notebook) and the
+PUT on `/api/settings` (which changes which company processes every future
+question) are the three with the largest blast radius.
+
+### 9.2 The Chrome extension
+
+`extension/` builds a Manifest V3 Chrome extension, "Riverside Practice Helper".
+For the DPIA it is currently a **distribution mechanism with no data flow**:
+
+- Its only permission is `storage`. It declares no host permissions, no content
+  scripts and no background service worker, and its two source files
+  (`popup.js`, `counter.js`) make no network request of any kind — the counter
+  writes to `chrome.storage.local` and nothing else.
+- It is **not published**: no Chrome Web Store listing, no public hosting. CI
+  signs the `.crx` with the `CRX_PRIVATE_KEY` repository secret, attaches it to
+  a GitHub release, and a script on the practice network copies it to the
+  practice's shared drive. Chrome fetches updates only from that drive
+  (`update_url` is a `file:///` path on it).
+- `extension/README.md` states the requirement plainly: **the repository must be
+  private**, because releases on a public repository are downloadable by anyone.
+  That is the same open item as §15.3.
+- It does nothing yet by design — the build exists to prove the update pipeline.
+  When a real feature lands in the popup this section must be rewritten, because
+  the first version that reads a page or calls the app becomes a processing
+  activity in its own right.
+
 ---
 
 ## 10. AI configuration
@@ -686,6 +772,12 @@ prevents it arriving in free text.
 | Browser chat history and guides | Until the staff member clears the browser | Client-side only |
 | `riva_machine` cookie | 1 year, refreshed on use | Clearing browser data |
 | `snomed_terms`, `ers_directory` | Reference data, replaced by re-running `npm run data:ers` | — |
+| `question_log` | **Indefinite. No retention policy, no purge job, no delete endpoint.** Holds the question and answer in full. | None in code. The per-machine `riva_nolog` switch stops new rows; it deletes nothing. |
+| `answer_feedback` | **Indefinite.** Holds the question whole. | None in code. |
+| `routing_triggers` | Indefinite. `tap` rows are staff questions as typed. | Rows are replaced when a page is re-seeded (`npm run routing:seed`); there is no delete endpoint. |
+| `routing_decisions` | Indefinite. No text. | None. |
+| `note_revisions`, `note_proposals` | Until the note is deleted, which cascades both. | Cascade on note delete. |
+| `note_defrag_runs`, `note_defrag_items`, `note_contradictions` | Indefinite; a run is long-lived by design because it waits for a reader. | Items and contradictions cascade with the run and with the note; runs are not pruned. |
 
 ---
 
@@ -982,6 +1074,40 @@ should record explicitly:
     substitute for the measurement.
 14. **No schema migrations.** Schema is created lazily with `IF NOT EXISTS`
     and there is no migration history. The other half of this item is closed:
-    `.github/workflows/app.yml` (6.4.1) gates every push to `main` and every
-    pull request on the test suite, the hand-bumped version and the real Next
-    build.
+    `.github/workflows/app.yml` (landed at `9b8d6b4`) gates every push to
+    `main` and every pull request on the test suite, the hand-bumped version and
+    the real Next build. It needs no secrets.
+15. **Question text now lives in four places, not one.** Item 9 recorded
+    `question_log` as the only full-text store after the answer cache was
+    removed. That is no longer true: `answer_feedback` keeps the question whole
+    (≤2,000 chars) whenever a verdict button is pressed, and
+    `routing_triggers` keeps it as a trigger phrase (≤400 chars) whenever
+    somebody taps a clarify option. Both are additional to `question_log` and to
+    the audit log's truncated copy. **The per-machine logging switch
+    (`riva_nolog`) suppresses only the `question_log` row** — a machine with
+    logging off still writes `answer_feedback` and `routing_triggers` rows. The
+    DPIA's "what is stored" answer, and anything the practice tells staff about
+    that switch, needs to say all four.
+16. **The router sends the question to an embeddings endpoint on every turn.**
+    When `routing_enabled` is on, `lib/routing/router.mjs` embeds any question
+    over eight normalised characters before the template picker runs — so the
+    question reaches OpenRouter (Azure-pinned, `data_collection: 'deny'`,
+    `allow_fallbacks: false`) even on turns that are then answered with no chat
+    call at all. The switch **ships off**; turning it on adds a recipient for
+    every question and should be a recorded decision, not a settings tweak.
+17. **The assistant runs on the fast role, not the reasoning role.** §10 records
+    the discrepancy in full. For the DPIA this matters because the model named on
+    `/settings` as "the model the practice runs on" is not, on an install with a
+    fast model set, the model that reads and writes staff answers — and the two
+    may be served by different companies in different countries. Decide which is
+    intended, then make the code and the settings page say the same thing.
+18. **Practice documents and the staff directory are committed to git, and the
+    counts are large.** 197 files under `rag/sources/` (the originals), 587 under
+    `public/assets/rag/` (the display copies), plus `lib/contacts.data.json`.
+    `.gitignore` now excludes `scripts/notebook-backup.json` — a live Notebook
+    backup that would carry practice content and, per the ignore rule's own
+    comment, shared credentials — and `evals/routing/questions*.txt`, real staff
+    questions dumped from `question_log` for labelling. Neither has ever been
+    committed (`git log --all` returns nothing for the backup path). The
+    repository-visibility question (item 3) governs all of it, and now governs
+    the signed Chrome extension release as well (§9.2).
