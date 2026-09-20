@@ -425,6 +425,68 @@ test('the siblings on the dermatology page are all offered, rules and all', () =
   assert.match(text, /First hospital that is a community hospital/);
 });
 
+// THE ROW THE MODEL READ, COPIED OFF THE PAGE. The page is in its prompt in
+// full, so where it hands back the heading it took the answer from, nothing has
+// to be reconstructed from the bare service name — and the heading wins even
+// when every other signal points at the page's plainest pathway.
+test('the heading copied off the page decides it', () => {
+  const entry = findPathwayReferral({
+    name: 'dermatology', question: 'dermatology referral', variant: 'Normal Community Dermatology', pages: [DERM],
+  });
+  assert.equal(entry.name, 'Normal Community');
+  assert.equal(entry.hospitalRule, 'First hospital that is a community hospital');
+
+  // A heading that names nothing on the page changes nothing: the question is
+  // read as it always was, rather than the card answering about a pathway the
+  // practice does not record.
+  const bogus = findPathwayReferral({
+    name: 'dermatology', question: 'dermatology referral', variant: 'Sunshine Dermatology', pages: [DERM],
+  });
+  assert.equal(bogus.name, 'Normal Dermatology');
+});
+
+// NOTHING IN THE QUESTION CHOSE BETWEEN THEM. Two pathways, both fitting every
+// word the reader wrote, each sending the referral somewhere different: the sort
+// still puts one first, on the length of its name, which is not a reason. The
+// card has to say so rather than present the toss-up as the answer.
+const PHYSIO_AGES = {
+  docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Physiotherapy',
+  text: `## Adult physiotherapy
+
+| Category | Specialty | Clinic Type |
+| --- | --- | --- |
+| Adult physiotherapy | Physiotherapy | Adult |
+
+## Child physiotherapy
+
+| Category | Specialty | Clinic Type |
+| --- | --- | --- |
+| Child physiotherapy | Physiotherapy | Paediatric |
+`,
+};
+
+test('a question that chose neither pathway is answered saying so', () => {
+  const entry = findPathwayReferral({ name: 'physiotherapy', question: 'physiotherapy referral', pages: [PHYSIO_AGES] });
+  assert.ok(entry.ambiguous, 'the tie must be reported');
+
+  const card = referralAnswer({ name: 'physiotherapy', question: 'physiotherapy referral', pages: [PHYSIO_AGES] });
+  const text = flat(card);
+  assert.match(text, /records more than one version of this referral/);
+  assert.match(text, /Child physiotherapy|Adult physiotherapy/);
+});
+
+test('a question that did choose is answered without the caveat', () => {
+  const adult = findPathwayReferral({ name: 'physiotherapy', question: 'adult physiotherapy referral', pages: [PHYSIO_AGES] });
+  assert.equal(adult.name, 'Adult physiotherapy');
+  assert.ok(!adult.ambiguous);
+
+  // And the page of five dermatology pathways does not nag on the plain
+  // question: the normal card is the one with the fewest words nobody asked for.
+  const plain = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
+  assert.doesNotMatch(flat(plain), /records more than one version/);
+});
+
+
 test('a hospital written as an instruction is a rule, not a name in the dropdown', () => {
   const PAGE = {
     docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Skin lesion',
