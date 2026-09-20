@@ -103,31 +103,43 @@ workspace "Riverside Helpdesk - program flow" "One turn, start to finish" {
             autolayout lr
         }
 
+        // Light theme: white cards, colour carried by the stroke, ink text.
         styles {
             element "Element" {
                 shape roundedbox
-                color #ffffff
-                background #005eb8
+                background #ffffff
+                stroke #005eb8
+                strokeWidth 4
+                color #231f20
                 fontSize 22
             }
             element "Person" {
                 shape person
-                background #003087
+                background #ffffff
+                stroke #003087
+                color #231f20
             }
             element "Container" {
-                background #0072ce
+                background #ffffff
+                stroke #0072ce
+                color #231f20
             }
             element "Web" {
                 shape webbrowser
-                background #41b6e6
+                background #f0f7fc
+                stroke #41b6e6
                 color #231f20
             }
             element "Database" {
                 shape cylinder
-                background #009639
+                background #f2faf5
+                stroke #009639
+                color #231f20
             }
             element "External" {
-                background #330072
+                background #f7f4fb
+                stroke #330072
+                color #231f20
             }
             relationship "Relationship" {
                 thickness 2
@@ -135,7 +147,5 @@ workspace "Riverside Helpdesk - program flow" "One turn, start to finish" {
                 fontSize 20
             }
         }
-
-        theme default
     }
 }
