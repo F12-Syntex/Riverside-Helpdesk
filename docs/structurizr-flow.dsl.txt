@@ -1,0 +1,141 @@
+/*
+ * Riverside Helpdesk - the program flow, one diagram.
+ *
+ * A single dynamic view: a question typed at / becomes a checked, sourced
+ * card. Every numbered step is one hop; the number is the order it runs in.
+ * Paste into https://structurizr.com/dsl (or structurizr-lite) and open the
+ * only view, "flow".
+ *
+ * Counted from the repository at v6.6.2.
+ */
+
+workspace "Riverside Helpdesk - program flow" "One turn, start to finish" {
+
+    !identifiers hierarchical
+
+    model {
+
+        staff = person "Reception staff" "Types a question. Never types patient data." "Staff"
+
+        app = softwareSystem "Riverside Helpdesk" "Next.js 14.2 on Vercel" {
+
+            ui       = container "Q&A page" "/ - React 18.3 client" "React" "Web"
+            screen   = container "Patient-data screen" "Holds the send before anything leaves the desk" "lib/safety + superSpeed role"
+            redact   = container "Redaction" "Identifier regex. No model call" "lib/safety"
+            safety   = container "Safety scan" "Red flags, NG12, acuity. Deterministic, 0 model calls" "lib/safety x11"
+            router   = container "Router" "Trigger index, lexical + vector. Ships OFF" "lib/routing x6"
+            retrieve = container "Retrieval" "Notebook first, then corpus + knowledge passages" "lib/knowledge"
+            tools    = container "Research loop" "Directory, CQC, medication, one web search - only if still unanswered" "lib/lookup + referrals"
+            picker   = container "Template picker" "Reasoning model returns a template NAME, not prose" "lib/templates x24"
+            render   = container "Renderer" "Card assembled from blocks in code. 8 commands" "lib/agent"
+            quotes   = container "Quote check" "Unquoted claim is dropped, not softened" "lib/ai/quote-match"
+            log      = container "Audit + log" "question_log, audit_events, ai_usage" "lib/audit"
+
+            store    = container "Neon Postgres" "31 tables, pgvector + pg_trgm" "Postgres" "Database"
+            corpus   = container "RAG corpus" "188 docs, 2,047 chunks, committed artefacts" "Files" "Database"
+        }
+
+        openrouter = softwareSystem "OpenRouter" "One key, 8 model roles, zero retention" "External"
+        web        = softwareSystem "Exa + web hosts" "Only when nothing local answers" "External"
+
+        // Every hop the flow uses. Order lives in the dynamic view below.
+        staff -> app.ui "Types a question"
+        app.ui -> app.screen "Submits"
+        app.screen -> app.ui "Holds the send if it sees patient data"
+        app.screen -> app.redact "Passes clean text to"
+        app.redact -> app.safety "Redacted text to"
+        app.safety -> app.ui "Emergency backstop - 999 card, straight back"
+        app.safety -> app.router "Cleared question to"
+        app.router -> app.store "Matches triggers in" "routing_triggers, pgvector"
+        app.router -> app.render "Direct hit >= 0.82 - straight to the card"
+        app.router -> app.retrieve "No hit - hand to"
+        app.retrieve -> app.store "Reads Notebook notes"
+        app.retrieve -> app.corpus "Cosine search over chunks"
+        app.retrieve -> app.picker "Enough evidence - go straight to"
+        app.retrieve -> app.tools "Thin evidence - escalate to"
+        app.tools -> app.store "Directory, CQC, medications"
+        app.tools -> web "One open-internet search"
+        app.tools -> openrouter "Reads pages with the fast role"
+        app.tools -> app.picker "Evidence pack to"
+        app.picker -> openrouter "Asks the reasoning role for a template name"
+        app.picker -> app.render "Template name + slots to"
+        app.render -> app.quotes "Rendered card to"
+        app.quotes -> app.render "Sends the card back with unquoted claims dropped"
+        app.quotes -> app.log "Passes the final card to"
+        app.log -> app.store "Writes 3 tables"
+        app.log -> app.ui "Card, with its source"
+        app.ui -> staff "Shows the answer and what it quoted"
+    }
+
+    views {
+
+        dynamic app flow "Program flow - one question, one checked card" {
+            title "Riverside Helpdesk - program flow"
+            description "Deterministic steps are 2-4 and 11: no model is called until step 8. Steps 3a, 4a, 6a and 7b are the early exits."
+
+            staff -> app.ui "1. Types a question at /"
+            app.ui -> app.screen "2. Submit is intercepted before any network call"
+            app.screen -> app.ui "3a. EXIT - patient data seen, send held, staff edits"
+            app.screen -> app.redact "3. Clean - hand on"
+            app.redact -> app.safety "4. Identifiers stripped by regex, no model"
+            app.safety -> app.ui "4a. EXIT - red flag or NG12 acuity, deterministic 999 card"
+            app.safety -> app.router "5. Cleared"
+            app.router -> app.store "6. Lexical + vector match against routing_triggers"
+            app.router -> app.render "6a. EXIT - hit >= 0.82 cosine, margin >= 0.05, skip the model (ships OFF)"
+            app.router -> app.retrieve "6b. Ask-back >= 0.70, or no hit - retrieve"
+            app.retrieve -> app.store "7. Notebook first - notes read in full"
+            app.retrieve -> app.corpus "7a. Then cosine over 2,047 chunks + catalogue"
+            app.retrieve -> app.picker "7b. Evidence is enough - skip the tools"
+            app.retrieve -> app.tools "8. Thin evidence - research loop"
+            app.tools -> app.store "8a. Directory, CQC, medications"
+            app.tools -> web "8b. At most one open-internet search"
+            app.tools -> openrouter "8c. Fast role reads the pages it found"
+            app.tools -> app.picker "9. Evidence pack"
+            app.picker -> openrouter "10. Reasoning role returns a template NAME, not prose - 24 templates"
+            app.picker -> app.render "11. Card assembled from blocks in code, 8 commands"
+            app.render -> app.quotes "12. Every claim checked against its quote"
+            app.quotes -> app.render "12a. Unquoted claim dropped, card rebuilt"
+            app.quotes -> app.log "13. Final card"
+            app.log -> app.store "13a. question_log, audit_events, ai_usage"
+            app.log -> app.ui "14. Card returned"
+            app.ui -> staff "15. Answer shown with its source"
+
+            autolayout lr
+        }
+
+        styles {
+            element "Element" {
+                shape roundedbox
+                color #ffffff
+                background #005eb8
+                fontSize 22
+            }
+            element "Person" {
+                shape person
+                background #003087
+            }
+            element "Container" {
+                background #0072ce
+            }
+            element "Web" {
+                shape webbrowser
+                background #41b6e6
+                color #231f20
+            }
+            element "Database" {
+                shape cylinder
+                background #009639
+            }
+            element "External" {
+                background #330072
+            }
+            relationship "Relationship" {
+                thickness 2
+                color #425563
+                fontSize 20
+            }
+        }
+
+        theme default
+    }
+}
