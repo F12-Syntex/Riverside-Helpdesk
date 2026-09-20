@@ -51,10 +51,14 @@ export const ShellPresence = React.createContext(false);
  *
  * WHAT THE ROW SHOWS, AND WHERE THE REST IS
  * -----------------------------------------
- * The row is the five tools reception reaches for on an ordinary day.
- * Everything else — Settings, the build — is in the menu at the right,
- * and the whole list is one ⌘K away in the palette. On a phone the row
- * folds into that same menu.
+ * The row is the three tools reception reaches for on an ordinary day.
+ * Everything else — Questions, Answer feedback, Settings, the build — is
+ * in the menu at the right, and the whole list is one ⌘K away in the
+ * palette. On a phone the row folds into that same menu.
+ *
+ * Questions and Answer feedback are marked menuOnly: both are read in a
+ * quiet half hour rather than with a patient waiting, and a row that
+ * offers them beside the Q&A spends two of its places on the day after.
  * ------------------------------------------------------------------ */
 
 const GROUPS = [
@@ -64,11 +68,11 @@ const GROUPS = [
       { href: '/', label: 'Ask a question', icon: Icons.chat },
       { href: '/lookup', label: 'Contact numbers', icon: Icons.search },
       // The other half of asking: the questions the assistant CANNOT answer,
-      // because nothing in the practice's material covers them. It sits beside
-      // the Q&A rather than under Reference because that is the moment it is
-      // wanted — a question came back empty, and the next thing to do with it
-      // is put it somewhere the person who knows will see it.
-      { href: '/questions', label: 'Questions', icon: Icons.question },
+      // because nothing in the practice's material covers them. It stays in
+      // the Ask group because that is where it is understood from — a question
+      // came back empty — but it is menuOnly, because putting it somewhere the
+      // person who knows will see it is done later, not at the desk.
+      { href: '/questions', label: 'Questions', icon: Icons.question, menuOnly: true },
     ],
   },
   {
@@ -80,7 +84,7 @@ const GROUPS = [
   {
     label: 'Reference',
     items: [
-      { href: '/feedback', label: 'Answer feedback', icon: Icons.chat },
+      { href: '/feedback', label: 'Answer feedback', icon: Icons.chat, menuOnly: true },
     ],
   },
 ];
@@ -119,8 +123,11 @@ const EXTRA = [
   { href: '/settings', label: 'Settings', group: 'Reference', icon: Icons.settings },
 ];
 
-const ROW = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
-const ALL = ROW.concat(EXTRA);
+const ITEMS = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
+// menuOnly keeps an entry out of the row without taking it off the
+// navigation: the menu and the palette still list it in its group.
+const ROW = ITEMS.filter((i) => !i.menuOnly);
+const ALL = ITEMS.concat(EXTRA);
 
 // One address the router sees under two names. /index is served by the
 // page in app/site-index (see the rewrite in next.config.mjs), so the
