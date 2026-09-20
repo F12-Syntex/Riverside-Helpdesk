@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.8.0` | 2026-09-20 | feat | `31a50dc` | feat: rebuild the database explorer as a proper console |
+| `6.7.1` | 2026-09-20 | docs | `97c479f` | docs: record 6.7.0 in the versions table |
 | `6.7.0` | 2026-09-20 | feat | `fbf862d` | feat: add a read-only database and file explorer |
 | `6.6.9` | 2026-09-20 | docs | `dfcea1c` | docs: record 6.6.8 in the versions table |
 | `6.6.8` | 2026-09-20 | refactor | `9a90558` | refactor: move Questions and Answer feedback into the menu |
