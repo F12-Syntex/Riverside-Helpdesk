@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.9.1` | 2026-09-20 | style | `1a5f5c2` | style: draw the rest of the notebook with the same kit |
+| `6.9.0` | 2026-09-20 | feat | `e278633` | feat: rebuild the notebook UI on a single kit |
+| `6.8.2` | 2026-09-20 | chore | `3d84ba3` | chore: remove the database and file explorer |
+| `6.8.1` | 2026-09-20 | docs | `9461875` | docs: record 6.8.0 in the versions table |
 | `6.8.0` | 2026-09-20 | feat | `31a50dc` | feat: rebuild the database explorer as a proper console |
 | `6.7.1` | 2026-09-20 | docs | `97c479f` | docs: record 6.7.0 in the versions table |
 | `6.7.0` | 2026-09-20 | feat | `fbf862d` | feat: add a read-only database and file explorer |
