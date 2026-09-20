@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.6.4` | 2026-09-20 | docs | `7cc5daf` | docs: add a single-view Structurizr diagram of the program flow |
+| `6.6.3` | 2026-09-20 | docs | `19c32a7` | docs: record 6.6.2 in the versions table |
 | `6.6.2` | 2026-09-20 | docs | `c4166af` | docs: add Structurizr DSL workspace for the whole stack |
 | `6.6.1` | 2026-09-19 | docs | `429c548` | docs: record 6.6.0 in the versions table |
 | `6.6.0` | 2026-09-19 | feat | `b0f87ae` | feat: draw the whole stack on one page at /stack |
