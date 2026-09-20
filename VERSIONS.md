@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.7.0` | 2026-09-20 | feat | `fbf862d` | feat: add a read-only database and file explorer |
+| `6.6.9` | 2026-09-20 | docs | `dfcea1c` | docs: record 6.6.8 in the versions table |
 | `6.6.8` | 2026-09-20 | refactor | `9a90558` | refactor: move Questions and Answer feedback into the menu |
 | `6.6.7` | 2026-09-20 | docs | `8248f9b` | docs: record 6.6.6 in the versions table |
 | `6.6.6` | 2026-09-20 | style | `2f0415e` | style: light theme for both Structurizr workspaces |
