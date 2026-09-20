@@ -398,6 +398,25 @@ test('the heading above a table names its rows, so telederm and community are fi
   assert.equal(community.hospitalRule, 'First hospital that is a community hospital');
 });
 
+// THE QUALIFIER IS IN THE QUESTION EVEN WHEN IT IS NOT IN THE NAME. The model
+// reads the bare service off a message — "dermatology" — so the word that told
+// the five dermatology pathways apart was thrown away before the lookup, the
+// shortest name won, and a reader asking for a community referral was sent to
+// the first hospital that is NOT a community one.
+test('a qualifier the extracted name dropped still picks the pathway', () => {
+  const community = findPathwayReferral({ name: 'dermatology', question: 'community dermatology referral', pages: [DERM] });
+  assert.equal(community.name, 'Normal Community');
+  assert.equal(community.hospitalRule, 'First hospital that is a community hospital');
+
+  const tele = findPathwayReferral({ name: 'dermatology', question: 'teledermatology referral', pages: [DERM] });
+  assert.equal(tele.name, 'Normal Telederm');
+  assert.equal(tele.hospitalRule, 'First hospital that is a telederm');
+
+  // And the plain question still gets the plain pathway.
+  const plain = findPathwayReferral({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
+  assert.equal(plain.name, 'Normal Dermatology');
+});
+
 test('the siblings on the dermatology page are all offered, rules and all', () => {
   const card = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
   const text = flat(card);
