@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.9.5` | 2026-09-20 | fix | `cbc0518` | fix: answer the referral the qualifier asked for |
+| `6.9.4` | 2026-09-20 | docs | `7ea488c` | docs: record 6.9.3 in the versions table |
 | `6.9.3` | 2026-09-20 | fix | `b4b516d` | fix: open the notebook menu where it fits |
 | `6.9.2` | 2026-09-20 | docs | `f39adbe` | docs: record 6.9.1 in the versions table |
 | `6.9.1` | 2026-09-20 | style | `1a5f5c2` | style: draw the rest of the notebook with the same kit |
