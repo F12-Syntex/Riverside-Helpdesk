@@ -925,13 +925,14 @@ export default function NotebookPage() {
   function openMenu(e, id, fromButton = false) {
     e.preventDefault();
     e.stopPropagation(); // keep the window-level close handler from eating the new menu
-    const width = 232;
+    // Where it would like to be, and where its bottom goes if there is no room
+    // below. The menu measures itself against the window and does the rest.
     if (fromButton && e.currentTarget && e.currentTarget.getBoundingClientRect) {
       const r = e.currentTarget.getBoundingClientRect();
-      setMenu({ id, x: Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8)), y: r.bottom + 6 });
+      setMenu({ id, x: r.right - 232, y: r.bottom + 6, flipY: r.top - 6 });
       return;
     }
-    setMenu({ id, x: Math.min(e.clientX, window.innerWidth - width - 8), y: Math.min(e.clientY, window.innerHeight - 160) });
+    setMenu({ id, x: e.clientX, y: e.clientY, flipY: e.clientY });
   }
 
   React.useEffect(() => {
@@ -1206,7 +1207,7 @@ export default function NotebookPage() {
       </div>
       {/* ---------------------------- The note menu --------------------------- */}
       {menu && menuNote && (
-        <Menu x={menu.x} y={menu.y} width={232}>
+        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={232}>
           <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
           <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
           {canOrganize(menuNote) && (

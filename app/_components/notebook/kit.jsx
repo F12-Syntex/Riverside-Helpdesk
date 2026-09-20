@@ -483,9 +483,61 @@ export function ProgressModal({ title, message, done, total, unit = '', footnote
 
 /* --------------------------------- menu --------------------------------- */
 
-export function Menu({ x, y, width = 216, children, onMouseDown }) {
+/**
+ * A floating menu, placed where it actually fits.
+ *
+ * `x`/`y` is where it would like its top-left corner to be - the pointer for
+ * a right-click, the bottom-left of the button for a "..." - and `flipY` is
+ * where its BOTTOM goes when there is no room below: the pointer again, or
+ * the top of the button, so a flipped menu never lands on top of the thing
+ * that opened it. Off the right-hand edge it slides left, and a menu taller
+ * than the window keeps its own scrollbar rather than running off the bottom.
+ *
+ * It is measured after mounting rather than guessed at, because the list is a
+ * different height on a page than on a section, and offsetHeight is read
+ * rather than a rect so the open animation's scale cannot skew it. Until that
+ * measurement it is hidden: one frame in the wrong place is a jump.
+ */
+export function Menu({ x, y, flipY, width = 216, children, onMouseDown }) {
+  const ref = React.useRef(null);
+  const [box, setBox] = React.useState(null);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const place = () => {
+      const m = 8; // the gap it keeps from every window edge
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      let left = x;
+      if (left + w > vw - m) left = vw - w - m;
+      if (left < m) left = m;
+      let top = y;
+      if (top + h > vh - m) {
+        const above = (flipY == null ? y : flipY) - h;
+        // Above if it fits there; otherwise sit on the bottom edge and let the
+        // menu scroll inside itself.
+        top = above >= m ? above : Math.max(m, vh - h - m);
+      }
+      if (top < m) top = m;
+      setBox({ left, top, maxHeight: vh - m * 2 });
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [x, y, flipY, children]);
+
   return (
-    <div className="nbk-menu" style={{ left: x + 'px', top: y + 'px', minWidth: width + 'px' }}
+    <div ref={ref} className="nbk-menu"
+      style={{
+        left: (box ? box.left : x) + 'px',
+        top: (box ? box.top : y) + 'px',
+        minWidth: width + 'px',
+        maxHeight: box ? box.maxHeight + 'px' : undefined,
+        visibility: box ? 'visible' : 'hidden',
+      }}
       onClick={(e) => e.stopPropagation()} onMouseDown={onMouseDown}>
       {children}
     </div>
