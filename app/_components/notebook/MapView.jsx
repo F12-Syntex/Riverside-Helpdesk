@@ -26,6 +26,7 @@ import { layoutTree } from '@/lib/notebook/treemap.mjs';
 import { healthOf } from '@/lib/notebook/rules.mjs';
 import SplitDiff from './SplitDiff';
 import RunPanel from './RunPanel';
+import { Modal, Button, Toast } from './kit';
 
 const BAND = { green: '#007f3b', amber: '#a4610a', red: '#d5281b', grey: '#8f9ba3' };
 const BAND_INK = { green: '#00612f', amber: '#7a4708', red: '#8a1509', grey: '#4c6272' };
@@ -218,7 +219,12 @@ function Crumbs({ report, rootId, onRoot }) {
   );
 }
 
-const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;gap:6px;background:' + bg + ';color:' + fg + ';border:1px solid ' + (bg === '#fff' ? '#d5dee2' : bg) + ';border-radius:8px;padding:8px 14px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;' + extra;
+// The kit's button as a style string, so every control in here is the same
+// shape as the buttons in the notebook itself (see notebook/kit.jsx).
+const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;'
+  + 'border:1px solid ' + (bg === '#fff' ? '#dde5e9' : bg) + ';border-radius:9px;background:' + bg + ';color:' + fg
+  + ';font:inherit;font-size:13.5px;font-weight:600;line-height:1;letter-spacing:-.005em;white-space:nowrap;cursor:pointer;'
+  + 'box-shadow:0 1px 2px rgba(20,40,55,.07);transition:background-color .14s ease,border-color .14s ease,color .14s ease;' + extra;
 
 function History({ noteId, onChanged, refreshKey }) {
   const [rows, setRows] = React.useState(null);
@@ -308,21 +314,26 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
   const changed = (meaning.changed || []).length;
   const canApply = validation.ok && meaning.ok && (!unsure || ack) && !editing && !busy;
   return (
-    <div className="riva-modal-overlay" style={s('position:fixed;inset:0;z-index:50;background:rgba(33,43,50,.45);display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow:auto;')} onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
-      <div className="riva-sheet" style={s('width:100%;max-width:1240px;background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.25);padding:18px 22px 20px;')}>
-        <div style={s('display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;')}>
-          <div style={s('flex:1;min-width:240px;')}>
-            <div style={s('font-size:12px;color:' + MUTED + ';')}>{before.path}</div>
-            <div style={s('font-size:20px;font-weight:700;color:' + INK + ';letter-spacing:-0.01em;')}>Proposed rewrite</div>
-            <div style={s('margin-top:6px;font-size:13px;color:' + MUTED + ';')}>
-              Health <strong style={s('color:' + BAND_INK[hBefore.band] + ';')}>{hBefore.score}</strong> → <strong style={s('color:' + BAND_INK[hAfter.band] + ';')}>{hAfter.score}</strong>
-              {' · '}{validation.pairs.length} sentences, {validation.pairs.filter((p) => !p.same).length} reworded
-            </div>
-          </div>
-          <div style={s('display:flex;flex-wrap:wrap;gap:6px;max-width:640px;')}>
-            {Object.entries(validation.checks || {}).map(([k, c]) => <Chip key={k} ok={c.ok} label={CHECK_TITLES[k] || k} count={c.problems.filter((p) => p.severity === 'error').length || 0} />)}
-            <Chip ok={meaning.ok} label={meaning.skipped ? 'Meaning not checked' : changed ? 'Meaning changed' : unsure ? 'Meaning: some unsure' : 'Meaning unchanged'} count={changed || unsure || 0} />
-          </div>
+    <Modal size="xl" icon={Icons.sparkle} title="Proposed rewrite" subtitle={before.path}
+      onClose={busy ? undefined : onClose} dismissable={!busy}
+      footer={<>
+        <Button variant="quiet-danger" onClick={onReject} disabled={busy}>Reject</Button>
+        {!editing && <Button icon={Icons.edit} onClick={() => onDraft(proposal.body, true)} disabled={busy}>Edit</Button>}
+        {editing && <Button variant="primary" onClick={onRecheck} disabled={busy}>{busy ? 'Checking...' : 'Re-check'}</Button>}
+        <span style={{ flex: 1 }} />
+        <Button variant="success" icon={Icons.check} onClick={onApply} disabled={!canApply}>
+          {busy && !editing ? 'Applying...' : 'Apply to the page'}
+        </Button>
+      </>}>
+      <div>
+        <div style={s('font-size:13px;color:' + MUTED + ';')}>
+          Health <strong style={s('color:' + BAND_INK[hBefore.band] + ';')}>{hBefore.score}</strong>
+          {' → '}<strong style={s('color:' + BAND_INK[hAfter.band] + ';')}>{hAfter.score}</strong>
+          {' · '}{validation.pairs.length} sentences, {validation.pairs.filter((p) => !p.same).length} reworded
+        </div>
+        <div style={s('display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;')}>
+          {Object.entries(validation.checks || {}).map(([k, c]) => <Chip key={k} ok={c.ok} label={CHECK_TITLES[k] || k} count={c.problems.filter((p) => p.severity === 'error').length || 0} />)}
+          <Chip ok={meaning.ok} label={meaning.skipped ? 'Meaning not checked' : changed ? 'Meaning changed' : unsure ? 'Meaning: some unsure' : 'Meaning unchanged'} count={changed || unsure || 0} />
         </div>
 
         {(errors.length > 0 || changed > 0) && (
@@ -345,17 +356,8 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
           <SplitDiff before={before.body} after={editing ? draft : proposal.body} pairs={validation.pairs} verdicts={meaning.verdicts || {}} problems={problems} editing={editing} draft={draft} onDraft={onDraft} />
         </div>
 
-        <div style={s('display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center;')}>
-          <Hover tag="button" onClick={onReject} disabled={busy} base={btn('#fff', BAND_INK.red)} hover="background:#fdf4f3;">Reject</Hover>
-          {!editing && <Hover tag="button" onClick={() => onDraft(proposal.body, true)} disabled={busy} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;"><Svg w={14} sw={2.4}>{Icons.edit}</Svg>Edit</Hover>}
-          {editing && <Hover tag="button" onClick={onRecheck} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;">{busy ? 'Checking…' : 'Re-check'}</Hover>}
-          <span style={s('flex:1;')} />
-          <Hover tag="button" onClick={onApply} disabled={!canApply} base={btn(canApply ? '#007f3b' : '#c9d3d8', '#fff') + (canApply ? '' : 'cursor:default;')} hover={canApply ? 'background:#00542b;' : ''}>
-            <Svg w={14} sw={2.6}>{Icons.check}</Svg>{busy && !editing ? 'Applying…' : 'Apply to the page'}
-          </Hover>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -702,14 +704,17 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
           onRecheck={recheck} onApply={apply} onReject={reject} />
       )}
       {defrag && defrag.status === 'loading' && (
-        <div style={s('position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:40;background:#212b32;color:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);')}>Rewriting, checking, and asking a second model whether the meaning held…</div>
+        <Toast>Rewriting, checking, and asking a second model whether the meaning held...</Toast>
       )}
       {toast && (
-        <div style={s('position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:12px;background:#212b32;color:#fff;border-radius:999px;padding:9px 10px 9px 18px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);')}>
+        <Toast onClose={() => setToast(null)}
+          actions={toast.revisionId ? (
+            <Hover tag="button" onClick={undo}
+              base="flex:none;background:#fff;color:#17252e;border:none;border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;"
+              hover="background:#e9f2fa;">Undo</Hover>
+          ) : null}>
           {toast.text}
-          {toast.revisionId && <Hover tag="button" onClick={undo} base="background:#fff;color:#212b32;border:none;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;" hover="background:#e8f1f8;">Undo</Hover>}
-          <Hover tag="button" onClick={() => setToast(null)} aria-label="Dismiss" base="background:none;border:none;color:#fff;padding:4px;cursor:pointer;display:inline-flex;" hover="opacity:.7;"><Svg w={14} sw={2.4}>{Icons.close}</Svg></Hover>
-        </div>
+        </Toast>
       )}
     </div>
   );

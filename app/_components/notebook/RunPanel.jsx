@@ -25,8 +25,12 @@ const BAND_TINT = { green: '#e6f4ec', amber: '#fdf3e7', red: '#fde8e9', grey: '#
 const INK = '#212b32';
 const MUTED = '#4c6272';
 
-const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;gap:6px;background:' + bg + ';color:' + fg
-  + ';border:1px solid ' + (bg === '#fff' ? '#d5dee2' : bg) + ';border-radius:8px;padding:7px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;' + extra;
+// The kit's button as a style string, so every control in here is the same
+// shape as the buttons in the notebook itself (see notebook/kit.jsx).
+const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;'
+  + 'border:1px solid ' + (bg === '#fff' ? '#dde5e9' : bg) + ';border-radius:9px;background:' + bg + ';color:' + fg
+  + ';font:inherit;font-size:13.5px;font-weight:600;line-height:1;letter-spacing:-.005em;white-space:nowrap;cursor:pointer;'
+  + 'box-shadow:0 1px 2px rgba(20,40,55,.07);transition:background-color .14s ease,border-color .14s ease,color .14s ease;' + extra;
 
 const LABEL = 'font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + MUTED + ';';
 
