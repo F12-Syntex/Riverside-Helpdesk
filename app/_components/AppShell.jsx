@@ -85,6 +85,11 @@ const GROUPS = [
     label: 'Reference',
     items: [
       { href: '/feedback', label: 'Answer feedback', icon: Icons.chat, menuOnly: true },
+      // Everything the app has stored, read-only: every table and every
+      // uploaded file. Reference because it is looked up rather than used,
+      // menuOnly for the same reason, and a development machine is the only
+      // place it answers at all (middleware.js).
+      { href: '/database', label: 'Database', icon: Icons.database, menuOnly: true },
     ],
   },
 ];

@@ -13,5 +13,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/knowledge/:path*', '/api/knowledge/:path*'],
+  matcher: ['/knowledge/:path*', '/api/knowledge/:path*', '/database/:path*', '/api/database/:path*'],
 };
