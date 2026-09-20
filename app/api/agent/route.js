@@ -52,6 +52,7 @@ import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { routeQuestion } from '@/lib/routing/router.mjs';
 import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
+import { groundedIn } from '@/lib/questions/grounding.mjs';
 import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import {
@@ -1224,17 +1225,36 @@ export async function POST(request) {
         const redact = (t) => redactUnverifiedNumbers(t, verified);
         const prose = redact(markdown);
 
+        // AND WHETHER IT IS THE PRACTICE'S OWN WORDS, MEASURED.
+        //
+        // This path is handed the whole Notebook and told to use its exact
+        // wording, so an answer off this path is routinely the practice's own
+        // page — and the card was telling the reader, in so many words, that no
+        // practice document was used and they should go and check. A warning
+        // that fires on the answers that do not need it is a warning nobody
+        // reads on the ones that do.
+        //
+        // So the claim is no longer a flag set by which branch we came down.
+        // The answer is compared against the pages it was written from, run of
+        // words by run of words: where it is demonstrably made of a page, the
+        // page is named and the banner goes. Where it is not, the banner is
+        // exactly what it always was. See lib/questions/grounding.mjs.
+        const madeOf = groundedIn(prose, notebookPages);
+
         send({
           type: 'answer',
           payload: payload({
-            // No passage of a practice DOCUMENT was retrieved and cited for this,
-            // whatever the Notebook in the prompt contributed, so nothing here
-            // carries a citation the reader can open. The card says that once at
-            // the top rather than leaving it to be assumed — and says less than
-            // the turn now knows, which is the right direction to be wrong in.
-            // The bands above it are the exception and are not the model's work
-            // at all — which is precisely why they still apply here.
-            general: true,
+            // WHAT THIS ANSWER IS MADE OF, rather than which branch produced
+            // it. Nothing here was retrieved and cited as a document passage,
+            // so there is no citation to open — but where the words are
+            // demonstrably the Notebook's, the pages are named and the reader
+            // is not told to go and check the practice's own writing. The bands
+            // above are not the model's work at all, which is why they apply on
+            // this path exactly as on every other.
+            general: !madeOf.length,
+            // The pages it was made of, for the line under the answer. Empty
+            // on an answer that really is the assistant's own work.
+            sources: madeOf.map((m) => m.docTitle),
             alerts: safety.alerts,
             panel: safety.panel,
             sections: [{
@@ -1251,7 +1271,7 @@ export async function POST(request) {
         const written = logTurn({
           outcome: 'prose',
           answer: shownText(safety.alerts, null) + (safety.alerts.length ? '\n\n---\n\n' : '') + prose,
-          provenance: buildProvenance({ scan }),
+          provenance: buildProvenance({ scan, pages: notebookPages.filter((page) => madeOf.some((m) => m.docTitle === page.docTitle)) }),
         });
         controller.close();
         await written;

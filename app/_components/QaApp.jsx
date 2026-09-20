@@ -1100,7 +1100,7 @@ class RiversidePracticeQA extends React.Component {
       }
       // turnId identifies this answer to the server, so a verdict pressed under
       // it is stored against the answer it was actually about.
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, sources: data.sources || [], template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
     } catch (e) {
       // An abort is this conversation being left, not a failed answer: there is
       // no card left to mark as broken.
@@ -1314,9 +1314,14 @@ class RiversidePracticeQA extends React.Component {
     }
     if (m.tip) lines.push('Tip: ' + plainText(m.tip));
     lines.push(...this.contactLines(m));
+    // The same sentence the card shows, so a pasted answer carries where it
+    // came from rather than losing it on the clipboard.
+    const madeOf = Array.isArray(m.sources) ? m.sources : [];
     lines.push('', m.general
       ? 'Written by the assistant for this request; no practice document was used.'
-      : 'From the practice’s documents; AI judgement marked where used.');
+      : madeOf.length
+        ? 'Written by the assistant from: ' + madeOf.join(' · ')
+        : 'From the practice’s documents; AI judgement marked where used.');
     try { navigator.clipboard.writeText(lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()); } catch (e) {}
     this.flagCopied(idx);
   }
@@ -1720,7 +1725,15 @@ class RiversidePracticeQA extends React.Component {
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
             : '',
-          hasProvenanceNote: usedJudgement || usedReasoning || usedWeb || dropped > 0 || !!m.general,
+          // THE PAGES IT WAS MADE OF. On the prose path the answer is written
+          // by the model from the Notebook in its prompt, so it is measured
+          // against those pages rather than declared to come from nowhere
+          // (lib/questions/grounding.mjs). Where it is the practice's own
+          // words, they are named here and the general banner does not show.
+          sources: Array.isArray(m.sources) ? m.sources : [],
+          hasSources: !!(Array.isArray(m.sources) && m.sources.length),
+          sourceLine: 'From: ' + (Array.isArray(m.sources) ? m.sources : []).join(' · '),
+          hasProvenanceNote: usedJudgement || usedReasoning || usedWeb || dropped > 0 || !!m.general || !!(Array.isArray(m.sources) && m.sources.length),
           message: m.message || '',
           hasMessage: !!(m.message && m.message.length),
           onCopyMessage: () => self.copyMessage(m, idx),
