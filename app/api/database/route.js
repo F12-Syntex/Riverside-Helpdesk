@@ -69,6 +69,11 @@ function ok(payload) {
   return NextResponse.json(payload, { headers: { 'Cache-Control': 'no-store' } });
 }
 
+// A view returns a plain object; only fail() short-circuits with a response.
+function isResponse(x) {
+  return x instanceof NextResponse;
+}
+
 // Make sure the tables exist before reporting on them, so a fresh database
 // reads as empty rather than as missing. Best effort: the catalogue queries
 // below are still worth running if this fails.
@@ -173,7 +178,7 @@ function cell(value, plan, limit) {
 
 async function overview(sql) {
   const tables = await listTables(sql);
-  if (!tables.length) return ok({ tables: [] });
+  if (!tables.length) return { tables: [] };
 
   // One round trip for every count. These tables are a practice's worth of
   // rows, not a warehouse's, so an exact count is affordable and an estimate
@@ -200,7 +205,7 @@ async function overview(sql) {
   `;
   const columns = new Map(columnRows.map((r) => [r.name, Number(r.n)]));
 
-  return ok({
+  return {
     tables: tables.map((t) => ({
       name: t.name,
       rows: counts.has(t.name) ? counts.get(t.name) : null,
@@ -208,7 +213,7 @@ async function overview(sql) {
       bytes: Number(t.bytes || 0),
       comment: t.comment || '',
     })),
-  });
+  };
 }
 
 async function structure(sql, table) {
@@ -240,7 +245,7 @@ async function structure(sql, table) {
   ]);
 
   const pkSet = new Set(pk);
-  return ok({
+  return {
     table: table.name,
     comment: table.comment || '',
     bytes: Number(table.bytes || 0),
@@ -258,12 +263,12 @@ async function structure(sql, table) {
     constraints: constraints.map((c) => ({ name: c.name, definition: c.definition, kind: c.kind })),
     indexes: indexes.map((i) => ({ name: i.name, definition: i.definition })),
     referencedBy: referencedBy.map((r) => ({ table: r.table, name: r.name, definition: r.definition })),
-  });
+  };
 }
 
 async function rows(sql, table, params) {
   const columns = await listColumns(sql, table.name);
-  if (!columns.length) return ok({ columns: [], rows: [], total: 0 });
+  if (!columns.length) return { columns: [], rows: [], total: 0 };
 
   const limit = Math.min(Math.max(parseInt(params.get('limit'), 10) || DEFAULT_LIMIT, 1), MAX_LIMIT);
   const offset = Math.max(parseInt(params.get('offset'), 10) || 0, 0);
@@ -298,7 +303,7 @@ async function rows(sql, table, params) {
     + ' LIMIT ' + limit + ' OFFSET ' + offset;
   const data = await sql.query(text, args);
 
-  return ok({
+  return {
     table: table.name,
     total,
     limit,
@@ -316,7 +321,7 @@ async function rows(sql, table, params) {
       id: r.__rowid,
       cells: plans.map((p) => (p.plan.omitted ? { omitted: true } : cell(r[p.column.name], p.plan, CELL_CHARS))),
     })),
-  });
+  };
 }
 
 async function oneRow(sql, table, rowid) {
@@ -328,7 +333,7 @@ async function oneRow(sql, table, rowid) {
   const found = await sql.query(text, [rowid]);
   if (!found.length) return fail('That row is no longer there.', 404);
   const row = found[0];
-  return ok({
+  return {
     table: table.name,
     id: rowid,
     values: plans.map((p) => ({
@@ -336,7 +341,7 @@ async function oneRow(sql, table, rowid) {
       type: p.column.type,
       ...cell(row[p.column.name], p.plan, DETAIL_CHARS),
     })),
-  });
+  };
 }
 
 /* The other store. Blobs are listed straight from Vercel Blob rather than from
@@ -348,11 +353,11 @@ async function files(sql, params) {
   try {
     page = await list({ limit: 200, cursor });
   } catch (e) {
-    return ok({
+    return {
       blobs: [],
       hasMore: false,
       error: 'The blob store could not be read: ' + String(e.message || e).slice(0, 200),
-    });
+    };
   }
 
   const owners = new Map();
@@ -369,7 +374,7 @@ async function files(sql, params) {
     // No attachments table yet: every blob simply reads as unattached.
   }
 
-  return ok({
+  return {
     cursor: page.cursor || '',
     hasMore: !!page.hasMore,
     // So the page can say when a row points at a file the store no longer has.
@@ -388,7 +393,7 @@ async function files(sql, params) {
           : null,
       };
     }),
-  });
+  };
 }
 
 export async function GET(request) {
@@ -403,16 +408,21 @@ export async function GET(request) {
   }
   await readySchemas();
 
+  const started = Date.now();
   try {
-    if (view === 'overview') return await overview(sql);
-    if (view === 'files') return await files(sql, params);
-
-    const table = await resolveTable(sql, params.get('table'));
-    if (!table) return fail('No table by that name.', 404);
-    if (view === 'table') return await structure(sql, table);
-    if (view === 'rows') return await rows(sql, table, params);
-    if (view === 'row') return await oneRow(sql, table, params.get('rowid'));
-    return fail('Unknown view.', 400);
+    let payload;
+    if (view === 'overview') payload = await overview(sql);
+    else if (view === 'files') payload = await files(sql, params);
+    else {
+      const table = await resolveTable(sql, params.get('table'));
+      if (!table) return fail('No table by that name.', 404);
+      if (view === 'table') payload = await structure(sql, table);
+      else if (view === 'rows') payload = await rows(sql, table, params);
+      else if (view === 'row') payload = await oneRow(sql, table, params.get('rowid'));
+      else return fail('Unknown view.', 400);
+    }
+    if (isResponse(payload)) return payload;
+    return ok({ ...payload, ms: Date.now() - started });
   } catch (e) {
     return fail(String(e.message || e).slice(0, 400), 500);
   }

@@ -20,9 +20,12 @@ import DatabaseExplorer from '../_components/database/DatabaseExplorer';
 
 export default function DatabasePage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f4f5', display: 'flex', flexDirection: 'column' }}>
+    // riva-page-fill: inside the shell the screen is the top bar shorter
+    // than 100vh, and a grid that scrolls inside its own card has to know
+    // exactly how tall it may be or it grows and takes the page with it.
+    <div className="riva-page-fill" style={{ height: '100vh', minHeight: '100vh', background: 'var(--rv-page)', display: 'flex', flexDirection: 'column' }}>
       <AppHeader subtitle="Database" />
-      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 1480, margin: '0 auto', padding: '24px 24px 28px', boxSizing: 'border-box' }}>
+      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 1560, margin: '0 auto', padding: '18px 20px 20px', boxSizing: 'border-box' }}>
         <DatabaseExplorer />
       </main>
     </div>
