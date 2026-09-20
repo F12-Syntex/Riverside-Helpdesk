@@ -36,6 +36,7 @@ const MUTED = '#4c6272';
 
 const RULE_TITLES = {
   'one-procedure': 'More than one procedure',
+  'variants-one-page': 'Several versions on one page',
   'label-vocab': 'Label the parsers do not read',
   'inline-html': 'Inline HTML',
   'stray-bold': 'Stray bold markers',

@@ -73,3 +73,39 @@ test('health bands follow the weights', () => {
   assert.equal(healthOf([{ weight: 45 }]).band, 'red');
   assert.equal(healthOf([{ weight: 500 }]).score, 0);
 });
+
+
+// THE ONE PAGE SHAPE THAT CAN ANSWER WITH THE OPPOSITE OF THE ANSWER. Four
+// dermatology pathways typing the same speciality and clinic type, told apart
+// only by which hospital to pick: the page cannot be addressed by its title, so
+// which version a reader gets comes down to how their question was worded.
+test('several versions of one referral on one page are flagged', () => {
+  const page = {
+    docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Dermatology and Telederm',
+    text: `## Normal Dermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| Normal Dermatology | Dermatology | Not otherwise specified | First hospital that isn't a telederm |
+
+## Normal Community Dermatology
+
+| Category | Specialty | Clinic Type | Hospital Selection Rule |
+| --- | --- | --- | --- |
+| Normal Community | Dermatology | Not otherwise specified | First hospital that is a community hospital |
+`,
+  };
+  const hit = runRules({ page, typed: typedOf(page), sentences: [] })
+    .find((x) => x.rule === 'variants-one-page');
+  assert.ok(hit, 'the clash must be reported');
+  assert.match(hit.message, /Normal Dermatology, Normal Community/);
+
+  // One pathway per page is what the rule is asking for, so it says nothing.
+  const single = {
+    docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Hernia',
+    text: `Speciality: Not Otherwise Specified
+Clinic type: Hernias`,
+  };
+  assert.ok(!runRules({ page: single, typed: typedOf(single), sentences: [] })
+    .some((x) => x.rule === 'variants-one-page'));
+});
