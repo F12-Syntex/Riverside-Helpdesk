@@ -18,108 +18,97 @@ import TipTapImage from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
 import { Mark, mergeAttributes } from '@tiptap/core';
-import { s, Hover, Svg, Icons } from '../_components/ui';
+import { Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
+import {
+  NotebookStyles, T, NBIcons, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
+  EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
+  MenuOption, Spinner,
+} from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
 import { OUTPUT_TAGS, outputTag } from '@/lib/templates/output-tags.mjs';
 import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 
 /* ------------------------------------------------------------------ *
- * Notebook — practice notes the assistant uses automatically.
+ * Notebook - the practice's notes, which the assistant reads to answer.
  *
- * Sidebar on the far left holds the section tree; the entire right
- * side is the notes area with its own header bar (breadcrumb, save
- * state, attach/delete). Sections are name-only containers: content
- * lives in pages beneath them, so creating a section also creates its
- * first page and opens that page for writing. Pages can be dragged
- * onto another section in the sidebar to move them. Files upload by
- * drag-and-drop onto a page (or the paperclip button). Notes persist
- * to Postgres (/api/notebook); files go to Vercel Blob
- * (/api/notebook/attachments). Destructive actions confirm through the
- * shared NHS-style sheet (riva-modal-overlay / riva-sheet).
+ * The screen is two columns and nothing else: the tree of sections and
+ * pages on the left, the page itself on the right with its own header,
+ * toolbar and writing surface. Everything that interrupts - a deletion,
+ * a reformat to review, a backup being restored - arrives as the same
+ * modal, from the kit next door (kit.jsx), so a dialogue in the Notebook
+ * always looks like the last dialogue in the Notebook.
+ *
+ * What is stored and how has not moved: notes and their tree live in
+ * Postgres (/api/notebook), files in Vercel Blob
+ * (/api/notebook/attachments), bodies are markdown plus the small HTML
+ * subset TipTap round-trips, and saving is still the quiet-period
+ * autosave below. This file is the presentation of all that, rewritten.
  * ------------------------------------------------------------------ */
 
-const C = {
-  ink: '#212b32', mut: '#4c6272', dim: '#768692', line: '#d8dde0',
-  soft: '#eef1f2', blue: '#005eb8', navy: '#003087', sel: '#e8f1f8',
-  bg: '#f0f4f5', red: '#d5281b', green: '#007f3b',
-};
+// Layout and the handful of page-only shapes. Everything reusable - buttons,
+// tabs, modals, menus, rows, the writing surface - is in kit.jsx.
+const PAGE_CSS = `
+.nbk-shell{display:flex;flex-direction:column;height:100vh;min-height:100vh;background:var(--nbk-canvas);}
+.nbk-body{flex:1;min-height:0;display:flex;width:100%;}
 
-// Hover-reveal row actions + the parent→child connector lines live in real
-// CSS. Each nested level is indented inside .nb-kids, which draws a vertical
-// guide; each row in it draws a short horizontal tick joining the guide.
-const CSS = `
-.nb-row .nb-actions{opacity:0;transition:opacity .12s;}
-.nb-row:hover .nb-actions,.nb-row:focus-within .nb-actions{opacity:1;}
-.nb-row:hover{background:#f7fbff;}
-/* The guide line down a folder's contents, and the tick joining each row to
-   it. Both read --nb-edge, which a tagged folder sets to its own colour — so
-   a tag is visible all the way down its subtree without a chip on every row.
-   Untagged folders never set it and get the plain line they always had. */
-.nb-kids{margin-left:13px;padding-left:6px;border-left:var(--nb-edge-w,1.5px) solid var(--nb-edge,${C.line});}
-.nb-kids>div>.nb-row{position:relative;}
-.nb-kids>div>.nb-row::before{content:"";position:absolute;left:-6px;top:50%;width:5px;height:var(--nb-edge-w,1.5px);background:var(--nb-edge,${C.line});}
-.nb-row.nb-dragging{opacity:.45;}
-/* The import bar in the moment before a phase knows how big it is. A bar
-   sitting still at zero reads as stuck, which is the thing this whole
-   indicator exists to stop. */
-.nb-bar-idle{animation:nb-bar-slide 1.1s ease-in-out infinite;}
-@keyframes nb-bar-slide{0%{margin-left:-38%;}100%{margin-left:100%;}}
-@media (prefers-reduced-motion:reduce){.nb-bar-idle{animation:none;margin-left:0;width:100% !important;opacity:.45;}}
-.nb-row.nb-drop-ok{background:${C.sel} !important;box-shadow:inset 0 0 0 2px ${C.blue};}
-.nb-crumb{border:none;background:none;font:inherit;font-size:15.5px;font-weight:600;color:${C.ink};cursor:pointer;padding:4px 0;border-bottom:1.5px dashed transparent;}
-.nb-crumb:hover{color:${C.blue};}
-.nb-scroll{scrollbar-width:none;-ms-overflow-style:none;}
-.nb-scroll::-webkit-scrollbar{display:none;}
-.nb-title{border-bottom:1.5px dashed transparent;transition:border-color .12s;}
-.nb-title:hover{border-bottom-color:${C.blue};}
-.nb-title:focus{border-bottom:1.5px solid ${C.blue};}
-/* Notion-style writing surface (TipTap). Same visual language the old
-   markdown preview used, applied to the always-rendered editor. */
-.nb-prose{flex:1;outline:none;padding:22px 28px 140px;font-size:16px;line-height:1.65;color:${C.ink};caret-color:${C.blue};}
-/* The global NHS focus style (yellow bg on [tabindex]:focus-visible) is for
-   buttons/controls — the editor is a writing surface, keep it white. */
-.nb-prose:focus-visible{background:#fff !important;color:${C.ink} !important;box-shadow:none !important;}
-.nb-prose>:first-child{margin-top:0;}
-.nb-prose p{margin:0 0 10px;}
-.nb-prose h1,.nb-prose h2,.nb-prose h3,.nb-prose h4{margin:22px 0 10px;font-weight:700;letter-spacing:-0.01em;color:${C.ink};}
-.nb-prose h1{font-size:26px;padding-bottom:6px;border-bottom:1px solid ${C.soft};}
-.nb-prose h2{font-size:22px;padding-bottom:6px;border-bottom:1px solid ${C.soft};}
-.nb-prose h3{font-size:18.5px;}
-.nb-prose h4{font-size:16.5px;}
-.nb-prose ul,.nb-prose ol{margin:0 0 12px;padding-left:24px;}
-.nb-prose ul ul,.nb-prose ol ol,.nb-prose ul ol,.nb-prose ol ul{margin-bottom:0;}
-.nb-prose li{margin:3px 0;}
-.nb-prose li>p{margin:0;}
-.nb-prose ul>li::marker{color:${C.blue};}
-.nb-prose ol>li::marker{color:${C.blue};font-weight:600;font-variant-numeric:tabular-nums;}
-.nb-prose ul[data-type="taskList"]{list-style:none;padding-left:2px;}
-.nb-prose ul[data-type="taskList"] li{display:flex;gap:9px;align-items:flex-start;}
-.nb-prose ul[data-type="taskList"] li>label{flex:none;margin-top:4.5px;}
-.nb-prose ul[data-type="taskList"] li>label input{width:15px;height:15px;accent-color:${C.blue};cursor:pointer;margin:0;}
-.nb-prose ul[data-type="taskList"] li>div{flex:1;min-width:0;}
-.nb-prose li[data-checked="true"]>div{text-decoration:line-through;color:${C.dim};}
-.nb-prose blockquote{margin:0 0 12px;border-left:4px solid ${C.blue};background:${C.sel};padding:10px 14px;border-radius:0 8px 8px 0;font-size:15.5px;}
-.nb-prose blockquote p{margin:0;}
-.nb-prose code{font-family:Consolas,Menlo,monospace;font-size:.9em;background:${C.soft};border-radius:4px;padding:1px 5px;}
-.nb-prose pre{margin:0 0 12px;background:${C.soft};border-radius:8px;padding:12px 14px;overflow-x:auto;}
-.nb-prose pre code{background:none;padding:0;}
-.nb-prose mark{background:#fff6cc;border-radius:3px;padding:0 2px;}
-.nb-prose kbd{font-family:Consolas,Menlo,monospace;font-size:.85em;background:${C.soft};border:1px solid ${C.line};border-bottom-width:2px;border-radius:5px;padding:1px 6px;}
-.nb-prose img{max-width:100%;height:auto;display:block;margin:6px 0 14px;border-radius:9px;border:1px solid ${C.soft};}
-.nb-prose img.ProseMirror-selectednode{outline:2.5px solid ${C.blue};outline-offset:1px;}
-.nb-prose hr{border:none;border-top:1px solid ${C.line};margin:18px 0;}
-.nb-prose hr.ProseMirror-selectednode{border-top:2px solid ${C.blue};}
-.nb-prose a{color:${C.blue};}
-.nb-prose s{color:${C.dim};}
-.nb-prose .tableWrapper{margin:0 0 14px;overflow-x:auto;}
-.nb-prose table{border-collapse:collapse;min-width:50%;}
-.nb-prose th,.nb-prose td{border:1px solid ${C.line};padding:8px 12px;font-size:15px;line-height:1.5;text-align:left;vertical-align:top;position:relative;min-width:48px;}
-.nb-prose th{background:${C.soft};font-weight:700;}
-.nb-prose th p,.nb-prose td p{margin:0;}
-.nb-prose .selectedCell::after{content:"";position:absolute;inset:0;background:rgba(0,94,184,.08);pointer-events:none;}
-.nb-prose p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:${C.dim};float:left;height:0;pointer-events:none;white-space:pre-wrap;}
+.nbk-sidebar{flex:none;width:320px;display:flex;flex-direction:column;min-height:0;background:#fff;
+  border-right:1px solid var(--nbk-line);}
+.nbk-sidebar__top{flex:none;display:flex;flex-direction:column;gap:9px;padding:14px 14px 10px;
+  border-bottom:1px solid var(--nbk-line-soft);}
+.nbk-sidebar__row{display:flex;align-items:center;gap:8px;}
+.nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:10px 10px 18px;display:flex;flex-direction:column;gap:1px;}
+.nbk-sidebar__foot{flex:none;display:flex;flex-direction:column;gap:9px;padding:12px 14px 14px;
+  border-top:1px solid var(--nbk-line-soft);background:#fcfdfe;}
+.nbk-sidebar__note{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.45;color:var(--nbk-dim);}
+.nbk-foot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+
+.nbk-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;background:#fff;}
+.nbk-head{flex:none;display:flex;align-items:center;gap:14px;min-height:68px;padding:11px 20px;
+  background:#fff;border-bottom:1px solid var(--nbk-line);}
+.nbk-head__left{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.nbk-head__crumbs{display:flex;align-items:center;gap:5px;padding-left:6px;font-size:12.5px;color:var(--nbk-dim);
+  overflow:hidden;white-space:nowrap;}
+.nbk-crumb{border:none;background:none;padding:0;font:inherit;font-size:12.5px;font-weight:600;
+  color:var(--nbk-mut);cursor:pointer;border-radius:4px;}
+.nbk-crumb:hover{color:var(--nbk-blue);text-decoration:underline;}
+.nbk-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
+
+.nbk-section{flex:1;min-height:0;overflow-y:auto;background:var(--nbk-canvas);padding:22px 24px 40px;}
+.nbk-section__inner{width:100%;max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+.nbk-page-card{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;
+  border:1px solid var(--nbk-line);border-radius:var(--nbk-r-md);box-shadow:var(--nbk-sh-1);padding:13px 15px;
+  font:inherit;font-size:14.5px;font-weight:600;color:var(--nbk-ink);cursor:pointer;
+  transition:border-color .14s ease,background-color .14s ease,transform .08s ease;}
+.nbk-page-card:hover{border-color:#a9c3d6;background:#fafdff;}
+.nbk-page-card:active{transform:translateY(1px);}
+.nbk-add-card{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  border:1.5px dashed var(--nbk-line);border-radius:var(--nbk-r-md);background:none;padding:13px 15px;
+  font:inherit;font-size:14px;font-weight:600;color:var(--nbk-mut);cursor:pointer;
+  transition:border-color .14s ease,color .14s ease,background-color .14s ease;}
+.nbk-add-card:hover{border-color:var(--nbk-blue);color:var(--nbk-blue);background:#f8fcff;}
+
+.nbk-editor{flex:1;min-height:0;overflow-y:auto;background:#fff;cursor:text;display:flex;flex-direction:column;}
+.nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 20px 13px;
+  border-top:1px solid var(--nbk-line-soft);background:#fcfdfe;}
+.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:5px 6px 5px 11px;
+  background:#fff;border:1px solid var(--nbk-line);border-radius:999px;box-shadow:var(--nbk-sh-1);}
+.nbk-attach a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;
+  font-weight:600;color:var(--nbk-ink);text-decoration:none;}
+.nbk-attach a:hover{color:var(--nbk-blue);text-decoration:underline;}
+
+.nbk-dropzone{position:absolute;inset:12px;z-index:5;display:flex;align-items:center;justify-content:center;
+  gap:10px;border:2px dashed var(--nbk-blue);border-radius:var(--nbk-r-lg);background:rgba(233,242,250,.88);
+  font-size:16px;font-weight:700;color:var(--nbk-navy);pointer-events:none;}
+
+.nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
+.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 24px;}
+
+@media (max-width:820px){
+  .nbk-sidebar{width:260px;}
+  .nbk-prose{padding:22px 20px 140px;}
+}
 `;
 
 const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
@@ -130,12 +119,8 @@ function fmtSize(n) {
   if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
-
-const actBtn = 'flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;color:' + C.mut + ';border-radius:6px;';
-
-// Formatting-toolbar glyphs (same 24×24 stroke style as Icons in ui.js —
-// geometry from the Lucide set). Local to the notebook: no other page
-// needs them.
+// Formatting-toolbar glyphs (the same 24x24 stroke style as the shared set,
+// geometry from Lucide). Local to the notebook: no other page needs them.
 const TIcons = {
   h1: (<><path d="M4 12h8" /><path d="M4 18V6" /><path d="M12 18V6" /><path d="m17 12 3-2v8" /></>),
   h2: (<><path d="M4 12h8" /><path d="M4 18V6" /><path d="M12 18V6" /><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1" /></>),
@@ -165,13 +150,13 @@ const TEXT_COLORS = [
 
 /* --------------------------- Page editor ----------------------------- *
  * Notion-style writing surface: the note is always rendered formatted and
- * edited in place — no raw-markdown flip. TipTap drives the editing (with
+ * edited in place - no raw-markdown flip. TipTap drives the editing (with
  * live shortcuts: "## ", "- ", "1. ", "> ", "**bold**", "---"); the
- * Markdown extension keeps the stored format exactly what it was before —
- * markdown plus the small HTML subset — so autosave, the AI formatter,
+ * Markdown extension keeps the stored format exactly what it was before -
+ * markdown plus the small HTML subset - so autosave, the AI formatter,
  * export/import and the assistant's RAG chunking are all untouched.      */
 
-// <kbd> mark — a couple of notes use it for keyboard keys; supporting it
+// <kbd> mark - a couple of notes use it for keyboard keys; supporting it
 // keeps the editor lossless for existing content.
 const Kbd = Mark.create({
   name: 'kbd',
@@ -188,18 +173,18 @@ const EXTENSIONS = [
   // Inline images ("![alt](url)" in the stored markdown). inline:true matches
   // how markdown treats images (inside paragraphs), so the body round-trips
   // cleanly; CSS still displays them as blocks. Pasted pictures are uploaded
-  // to blob storage first (see PageEditor's handlePaste) — data URLs would
+  // to blob storage first (see PageEditor's handlePaste) - data URLs would
   // bloat the note body and the assistant's index.
   TipTapImage.configure({ inline: true, allowBase64: false }),
   Placeholder.configure({ placeholder: 'Write here. Headings, lists and tables format as you type ("## ", "- ", "1. ", "> "). Everything you write is used by the assistant to answer and triage.' }),
-  // html:true keeps the <mark>/<u>/<span style="color:…">/<kbd> subset intact
-  // in both directions (stored markdown → editor, editor → stored markdown).
+  // html:true keeps the <mark>/<u>/<span style="color:...">/<kbd> subset intact
+  // in both directions (stored markdown to editor, editor to stored markdown).
   Markdown.configure({ html: true, linkify: true }),
 ];
 
 // Keyed by note id in the parent, so switching pages gets a fresh editor and
 // its own undo history. onChange receives the serialized markdown on every
-// edit and feeds the existing dirty → interval-save pipeline.
+// edit and feeds the existing dirty -> interval-save pipeline.
 function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
@@ -211,7 +196,7 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
     extensions: EXTENSIONS,
     content: initialBody || '',
     editorProps: {
-      attributes: { class: 'nb-prose' },
+      attributes: { class: 'nbk-prose' },
       // Pasted pictures: upload to blob storage (tracked as attachments of
       // this note), then insert inline at the caret as an image node.
       handlePaste: (view, event) => {
@@ -238,76 +223,32 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
     return () => onReady(null);
   }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;background:#fff;cursor:text;display:flex;flex-direction:column;')}
+    <div className="nbk-editor nbk-scroll"
       onMouseDown={(e) => { if (e.target === e.currentTarget && editor) { e.preventDefault(); editor.chain().focus('end').run(); } }}>
       <EditorContent editor={editor} style={{ flex: 1, display: 'flex', flexDirection: 'column' }} />
     </div>
   );
 }
 
-// The line diff for the AI-format preview lives in lib/notebook/diff.mjs now,
-// shared with the Map tab's side-by-side review.
-
-// NHS-style confirmation sheet — same pattern as the rota system so popups
-// stay consistent across the app.
-function Sheet({ maxWidth = 420, onClose, children }) {
-  return (
-    <div className="riva-modal-overlay" onClick={onClose}>
-      <div className="riva-sheet" style={{ maxWidth: maxWidth + 'px' }} onClick={(e) => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ConfirmSheet({ confirm, onClose }) {
-  return (
-    <Sheet onClose={onClose}>
-      <div style={s('padding:26px 26px 8px;')}>
-        <h2 style={s('font-size:21px;font-weight:700;margin:0 0 8px;color:' + C.ink + ';')}>{confirm.title}</h2>
-        <p style={s('font-size:16px;line-height:1.5;margin:0;color:' + C.mut + ';')}>{confirm.message}</p>
-      </div>
-      <div style={s('display:flex;align-items:center;gap:10px;padding:20px 26px 24px;')}>
-        <Hover tag="button" onClick={confirm.onConfirm}
-          base="font-family:inherit;font-size:16px;font-weight:700;color:#fff;background:#d5281b;border:none;border-radius:8px;padding:11px 22px;cursor:pointer;box-shadow:0 4px 0 #7a160d;"
-          active="transform:translateY(4px);box-shadow:none;">{confirm.confirmLabel || 'Delete'}</Hover>
-        <Hover tag="button" onClick={onClose}
-          base="font-family:inherit;font-size:16px;font-weight:600;color:#4c6272;background:transparent;border:none;border-radius:8px;padding:11px 16px;cursor:pointer;"
-          hover="color:#212b32;">Cancel</Hover>
-      </div>
-    </Sheet>
-  );
-}
-
 /**
  * The tag a row sets, as a chip.
  *
- * A swatch and the short name, in the tag's own colour. `full` spells the whole
- * name out — used in the menu, where there is room and where the reader is
- * choosing between them; the sidebar uses the short one so a chip never pushes
- * a page title out of view.
- *
- * The name is always on it. Colour is the thing that makes a tagged folder
- * findable at a glance, but it is never the only thing saying which tag it is.
+ * A swatch and the short name, in the tag's own colour. `full` spells the
+ * whole name out - used in the menu, where there is room and where the
+ * reader is choosing between them; the tree uses the short one so a chip
+ * never pushes a page title out of view.
  */
 function TagChip({ tag, full = false }) {
   return (
-    <span title={'Answers from here are drawn as the ' + tag.label + '.'}
-      style={s('flex:none;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;'
-        + 'letter-spacing:.02em;white-space:nowrap;border-radius:999px;padding:2px 8px;'
-        + 'color:' + tag.colour.ink + ';background:' + tag.colour.tint + ';box-shadow:inset 0 0 0 1px ' + tag.colour.edge + ';')}>
-      {/* The swatch is the menu's, where the colour is being learned. In the
-          sidebar the chip's own tint already carries it, and twelve pixels
-          there is twelve pixels off the end of a folder's name. */}
-      {full && <span style={s('flex:none;width:7px;height:7px;border-radius:2px;background:' + tag.colour.ink + ';')} />}
+    <Chip colour={tag.colour} dot={full} title={'Answers from here are drawn as the ' + tag.label + '.'}>
       {full ? tag.label : tag.short}
-    </span>
+    </Chip>
   );
 }
 
-// One tree row; children render recursively inside .nb-kids, which draws the
-// parent→child connector lines. Defined at module level (not inside the page
-// component) so React keeps the same component identity across renders —
+// One tree row; children render recursively inside .nbk-kids, which draws the
+// parent-to-child connector lines. Defined at module level (not inside the page
+// component) so React keeps the same component identity across renders -
 // defining it inline remounted the whole tree on every state change, which is
 // what made the sidebar blink.
 function SideRow({ n, depth, ctx }) {
@@ -322,9 +263,13 @@ function SideRow({ n, depth, ctx }) {
   // Drag a note (anything below the root) onto a section row to move it there.
   const draggable = !!n.parentId;
   const dropOk = dragId != null && canDropOn(dragId, n.id);
+  const cls = ['nbk-row',
+    isSel ? 'nbk-row--on' : onPath ? 'nbk-row--path' : '',
+    dragId === n.id ? 'nbk-row--drag' : '',
+    dropOk && dropId === n.id ? 'nbk-row--drop' : ''].filter(Boolean).join(' ');
   return (
     <div>
-      <div className={'nb-row' + (dragId === n.id ? ' nb-dragging' : '') + (dropOk && dropId === n.id ? ' nb-drop-ok' : '')}
+      <div className={cls}
         onContextMenu={(e) => openMenu(e, n.id)}
         draggable={draggable}
         onDragStart={draggable ? (e) => {
@@ -348,33 +293,29 @@ function SideRow({ n, depth, ctx }) {
           setDropId(null);
           setDragId(null);
           moveNoteTo(dragId, n.id);
-        }}
-        style={s('display:flex;align-items:center;gap:2px;border-radius:9px;padding:0 4px;' +
-        (isSel ? 'background:' + C.sel + ';' : onPath ? 'background:#f7fbff;' : ''))}>
+        }}>
         {kids.length > 0 ? (
-          <Hover tag="button" onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} aria-label={open ? 'Collapse' : 'Expand'}
-            base={actBtn + 'width:24px;height:24px;'} hover={'background:' + C.soft + ';'}>
-            <Svg w={16} sw={2.4} style={s('transform:rotate(' + (open ? 90 : 0) + 'deg);transition:transform .15s;')}>{Icons.chevronRight}</Svg>
-          </Hover>
-        ) : (<span style={s('flex:none;width:24px;')} />)}
-        <button onClick={() => selectNote(n.id)}
-          style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;text-align:left;border:none;background:none;font:inherit;font-size:14.5px;cursor:pointer;padding:8px 4px;color:' + (isSel ? C.navy : C.ink) + ';' + (isSel ? 'font-weight:600;' : ''))}>
-          <Svg w={17} sw={2} style={s('flex:none;color:' + (isSel ? C.blue : C.mut) + ';')}>{depth === 0 || n.isSection ? Icons.book : Icons.fileLines}</Svg>
-          <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{n.title || 'Untitled'}</span>
-          {fileCount > 0 && <Svg w={13} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.paperclip}</Svg>}
+          <IconButton plain size="sm" label={open ? 'Collapse' : 'Expand'} icon={Icons.chevronRight}
+            style={{ transform: 'rotate(' + (open ? 90 : 0) + 'deg)', transition: 'transform .15s ease' }}
+            onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} />
+        ) : (<span style={{ flex: 'none', width: '28px' }} />)}
+        <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)}>
+          <Svg w={16} sw={2} style={{ flex: 'none', color: isSel ? T.blue : T.dim }}>
+            {depth === 0 || n.isSection ? Icons.book : Icons.fileLines}
+          </Svg>
+          <span className="nbk-row__name">{n.title || 'Untitled'}</span>
+          {fileCount > 0 && <Svg w={13} sw={2.2} style={{ flex: 'none', color: T.dim }}>{Icons.paperclip}</Svg>}
           {/* The shape answers from here come back in. The CHIP is only on the
-              row that sets it — the same chip twenty times down a folder would
-              be noise — and what everything below inherits is shown instead by
+              row that sets it - the same chip twenty times down a folder would
+              be noise - and what everything below inherits is shown instead by
               the coloured line running down their indent. */}
           {tag && <TagChip tag={tag} />}
         </button>
-        <span className="nb-actions" style={s('flex:none;display:flex;align-items:center;gap:1px;')}>
+        <span className="nbk-row__actions">
           {depth < MAX_DEPTH - 1 && (
-            <Hover tag="button" onClick={() => newNote(n.id)} aria-label="Add page" title="Add page"
-              base={actBtn} hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-              <Svg w={16} sw={2.2}>{Icons.plus}</Svg>
-            </Hover>
+            <IconButton plain size="sm" icon={Icons.plus} label="Add page" onClick={() => newNote(n.id)} />
           )}
+          <IconButton plain size="sm" icon={NBIcons.dots} label="More" onClick={(e) => openMenu(e, n.id, true)} />
         </span>
       </div>
       {open && kids.length > 0 && (
@@ -382,59 +323,19 @@ function SideRow({ n, depth, ctx }) {
         // the folder sets one. That is what makes a tag visible at a glance
         // without a chip on every page: the whole subtree is drawn in it, and a
         // sub-folder that overrides the tag changes colour from there down.
-        <div className="nb-kids" style={tag ? { '--nb-edge': tag.colour.edge, '--nb-edge-w': '2px' } : undefined}>
+        <div className="nbk-kids" style={tag ? { '--nbk-edge': tag.colour.edge, '--nbk-edge-w': '2px' } : undefined}>
           {kids.map((k) => <SideRow key={k.id} n={k} depth={depth + 1} ctx={ctx} />)}
         </div>
       )}
     </div>
   );
 }
-
-/**
- * The bar an import runs under.
- *
- * Determinate wherever the step knows its total — restoring pages does, and so
- * does indexing once it has counted them — and a moving stripe in the moment
- * before a phase knows its size, rather than a bar sitting at zero looking
- * stuck. The count is spelled out underneath, because "312 of 312 pages" is the
- * thing that tells somebody it is working.
- */
-function ImportProgress({ step }) {
-  const total = Number(step.total) || 0;
-  const done = Math.min(Number(step.done) || 0, total || Infinity);
-  const known = total > 0;
-  const pct = known ? Math.round((done / total) * 100) : 0;
-  return (
-    <div role="status" aria-live="polite"
-      style={s('position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:rgba(33,43,50,.32);')}>
-      <div style={s('width:min(420px,calc(100vw - 32px));background:#fff;border-radius:14px;box-shadow:0 18px 48px rgba(33,43,50,.28);padding:22px 24px 20px;')}>
-        <div style={s('font-size:17px;font-weight:700;color:' + C.navy + ';margin:0 0 3px;')}>Restoring the notebook</div>
-        <div style={s('font-size:14px;color:' + C.mut + ';margin:0 0 14px;')}>{phaseLabel(step.phase)}</div>
-        <div style={s('height:8px;border-radius:999px;background:' + C.soft + ';overflow:hidden;')}>
-          <div className={known ? '' : 'nb-bar-idle'}
-            style={s('height:100%;border-radius:999px;background:' + C.blue + ';'
-              + (known ? 'width:' + pct + '%;transition:width .25s ease;' : 'width:38%;'))} />
-        </div>
-        <div style={s('margin-top:9px;font-size:13px;color:' + C.dim + ';')}>
-          {known ? done + ' of ' + total + (step.phase === 'attachments' ? ' files' : ' pages') : 'Working…'}
-        </div>
-        {step.phase === 'indexing' && (
-          <div style={s('margin-top:8px;font-size:12.5px;line-height:1.5;color:' + C.dim + ';')}>
-            Your pages are already back and the assistant can read them. This last step files them for the
-            knowledge tools.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function NotebookPage() {
   const [notes, setNotes] = React.useState([]);
   const [attachments, setAttachments] = React.useState([]);
   const [status, setStatus] = React.useState('loading'); // loading | ready | error
   const [selectedId, setSelectedId] = React.useState(null);
-  // Which sections are open — persisted so the tree doesn't collapse on reload.
+  // Which sections are open - persisted so the tree doesn't collapse on reload.
   const [expanded, setExpanded] = React.useState(() => {
     if (typeof window === 'undefined') return {};
     try { return JSON.parse(window.localStorage.getItem('nb-expanded') || '{}') || {}; } catch (e) { return {}; }
@@ -444,22 +345,22 @@ export default function NotebookPage() {
   }, [expanded]);
   const [search, setSearch] = React.useState('');
   const [saveState, setSaveState] = React.useState('');     // '' | 'saving' | 'saved' | 'unsaved'
-  const [view, setView] = React.useState('pages');           // 'pages' — the editor; 'map' — the treemap and fragmentation report
+  const [view, setView] = React.useState('pages');           // 'pages' - the editor; 'map' - the treemap
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState('');
-  // Where an import has got to: { phase, done, total, note } or null when none
-  // is running. The import used to finish in silence — a file was posted and
+  // Where an import has got to: { phase, done, total } or null when none is
+  // running. The import used to finish in silence - a file was posted and
   // nothing happened on screen until it was over, which looked broken on a big
   // notebook and got clicked twice. See /api/notebook/import, which streams.
   const [importing, setImporting] = React.useState(null);
   const [dragging, setDragging] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
-  const [menu, setMenu] = React.useState(null);              // { id, x, y } — sidebar right-click menu
+  const [menu, setMenu] = React.useState(null);              // { id, x, y } - the note menu
   const [dragId, setDragId] = React.useState(null);           // note being dragged in the sidebar
   const [dropId, setDropId] = React.useState(null);           // section row currently hovered as a drop target
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
-  const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections): null | {status:'loading'|'applying'} | {status:'error',message} | {status:'ready',plan} | {status:'done',applied}
-  const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page (from PageEditor)
+  const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections)
+  const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
@@ -471,7 +372,7 @@ export default function NotebookPage() {
   notesRef.current = notes;
 
   // Re-render on every editor transaction so the toolbar's active states
-  // (bold on, "in a table", …) track the caret.
+  // (bold on, "in a table", ...) track the caret.
   const [, onEditorTx] = React.useReducer((x) => x + 1, 0);
   React.useEffect(() => {
     if (!editor) return;
@@ -503,12 +404,10 @@ export default function NotebookPage() {
   }, []);
 
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
-  // The tag in force for a row — its own, or the nearest tagged folder above
-  // it. The same walk the assistant does server-side (noteOutputTag in
-  // lib/knowledge-context.mjs), so the chip in the sidebar and the shape of the
-  // answer cannot disagree.
-  // WHICH ROW a tag is coming from — the row itself, or the nearest folder
-  // above it that sets one. Null when nothing on the path does.
+  // WHICH ROW a tag is coming from - the row itself, or the nearest folder
+  // above it that sets one. Null when nothing on the path does. The same walk
+  // the assistant does server-side (noteOutputTag in lib/knowledge-context.mjs),
+  // so the chip in the tree and the shape of the answer cannot disagree.
   const tagSource = React.useCallback((note) => {
     const seen = new Set();
     let cur = note;
@@ -527,7 +426,7 @@ export default function NotebookPage() {
   const selected = byId.get(selectedId) || null;
   const isSection = !!selected && (!selected.parentId || !!selected.isSection);
   // Files docked below the page. Images embedded inline in the text are shown
-  // there, not repeated here — a chip reappears if its image is deleted from
+  // there, not repeated here - a chip reappears if its image is deleted from
   // the text, so the file can still be removed (or re-embedded) from the strip.
   const selectedFiles = attachments.filter((a) => a.noteId === selectedId
     && !(selected && (selected.body || '').includes(a.url)));
@@ -563,8 +462,8 @@ export default function NotebookPage() {
 
   /* ------------------------------ Saving ------------------------------ *
    * Time-based, not per-keystroke: edits mark the note dirty; after 1.8s quiet
-   * the interval diffs it against its last persisted snapshot and
-   * PATCHes only the fields that actually changed — no change, no request. */
+   * the interval diffs it against its last persisted snapshot and PATCHes only
+   * the fields that actually changed - no change, no request.             */
 
   async function flush() {
     for (const id of Array.from(dirty.current)) {
@@ -619,7 +518,7 @@ export default function NotebookPage() {
 
   const chain = () => editor.chain().focus();
   const listKind = () => (editor.isActive('taskItem') ? 'taskItem' : 'listItem');
-  // The DOM normalises hex colours to rgb(…) on save, so match either form
+  // The DOM normalises hex colours to rgb(...) on save, so match either form
   // when deciding whether a swatch is active (and should toggle off).
   const hexToRgb = (hex) => {
     const n = parseInt(hex.slice(1), 16);
@@ -632,7 +531,7 @@ export default function NotebookPage() {
   };
 
   // AI format: send the body off, then show the proposed change as a diff the
-  // user must confirm — nothing is applied (or saved) until they accept.
+  // user must confirm - nothing is applied (or saved) until they accept.
   async function runAiFormat() {
     const original = (selected && selected.body) || '';
     if (!original.trim() || (aiFmt && aiFmt.status === 'loading')) return;
@@ -652,12 +551,7 @@ export default function NotebookPage() {
     }
   }
 
-  // AI organise: for a section (typically "Uncategorised"), ask the server for
-  // a plan of where every page's content belongs — existing sections, new ones
-  // or sub-sections — then show the plan for review. Nothing moves until the
-  // user applies it; applying redistributes the content (formatted for its new
-  // home), moves attachments along, and removes the emptied pages.
-  // AI organise applies only to the "Uncategorised" holding section — other
+  // AI organise applies only to the "Uncategorised" holding section - other
   // sections are already where their content belongs.
   const canOrganize = (n) => !!n && (!n.parentId || !!n.isSection) && /^\s*uncategori[sz]ed\s*$/i.test(n.title || '');
 
@@ -665,7 +559,7 @@ export default function NotebookPage() {
     const n = byId.get(id);
     if (!canOrganize(n)) return;
     if (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')) return;
-    await selectNote(id); // the plan shows in the section view (also flushes edits)
+    await selectNote(id); // the plan is about this section (also flushes edits)
     setAiOrg({ status: 'loading' });
     try {
       const res = await fetch('/api/notebook/organize', {
@@ -701,7 +595,7 @@ export default function NotebookPage() {
   function applyAiFormat() {
     if (!aiFmt || aiFmt.status !== 'ready') return;
     // Load the formatted markdown into the editor; emitting the update runs
-    // the normal onChange → dirty → interval-save path.
+    // the normal onChange -> dirty -> interval-save path.
     if (editor) editor.commands.setContent(aiFmt.formatted, true);
     else {
       setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, body: aiFmt.formatted } : n)));
@@ -710,7 +604,6 @@ export default function NotebookPage() {
     }
     setAiFmt(null);
   }
-
   /* --------------------------- Note actions --------------------------- */
 
   async function selectNote(id) {
@@ -738,7 +631,7 @@ export default function NotebookPage() {
     return note;
   }
 
-  // New page under a parent — or, with no parent, a new section. A section is
+  // New page under a parent - or, with no parent, a new section. A section is
   // a name-only container, so it is always created together with its first
   // page, and the page (the writing surface) is what opens.
   async function newNote(parentId) {
@@ -900,7 +793,7 @@ export default function NotebookPage() {
       const { note } = await res.json();
       setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, parentId: note.parentId } : n)));
       setExpanded((e) => ({ ...e, [parentId]: true }));
-    } catch (e) { /* ignore — the note simply stays where it was */ }
+    } catch (e) { /* ignore - the note simply stays where it was */ }
   }
 
   // Rename = select the note, then put the caret in the header title input.
@@ -913,7 +806,7 @@ export default function NotebookPage() {
    * Tag a folder (or one page) with the shape its answers come back in.
    *
    * The tag is inherited by everything beneath it, so this is normally done
-   * once on a section — "Referrals is the e-RS screen" — rather than page by
+   * once on a section - "Referrals is the e-RS screen" - rather than page by
    * page. '' clears it, which means "whatever the folder above says", not
    * "plain": see setNoteOutputTag in lib/notebook.js.
    */
@@ -971,13 +864,14 @@ export default function NotebookPage() {
       try { data = JSON.parse(String(reader.result)); } catch (err) { data = null; }
       const count = data && Array.isArray(data.notes) ? data.notes.length : 0;
       if (!count) {
-        setConfirm({ title: 'Import failed', message: 'That file is not a notebook backup (no notes found).', confirmLabel: 'OK', onConfirm: () => setConfirm(null) });
+        setConfirm({ title: 'Import failed', message: 'That file is not a notebook backup (no notes found).', confirmLabel: 'OK', tone: 'info', soleButton: true, onConfirm: () => setConfirm(null) });
         return;
       }
       setConfirm({
         title: 'Import backup',
         message: 'Import ' + count + ' note(s) from "' + file.name + '"? They are added alongside your existing notes. Nothing is overwritten.',
         confirmLabel: 'Import',
+        tone: 'info',
         onConfirm: async () => {
           setConfirm(null);
           await runImport(data, count);
@@ -992,8 +886,8 @@ export default function NotebookPage() {
    *
    * The route streams one JSON object per step (see /api/notebook/import). Two
    * of them change what is on screen rather than just the number: `ready` means
-   * the pages are in and the tree can be reloaded — so the reader has their
-   * notebook back before the indexing that follows it has finished — and
+   * the pages are in and the tree can be reloaded - so the reader has their
+   * notebook back before the indexing that follows it has finished - and
    * `error` is the failure, which arrives as a line because by then the
    * response has already started and cannot be a status code.
    */
@@ -1021,15 +915,23 @@ export default function NotebookPage() {
     }
     if (!reloaded) await reloadAll();
     setImporting(null);
-    if (failed) setConfirm({ title: 'Import failed', message: failed, confirmLabel: 'OK', onConfirm: () => setConfirm(null) });
+    if (failed) setConfirm({ title: 'Import failed', message: failed, confirmLabel: 'OK', tone: 'danger', soleButton: true, onConfirm: () => setConfirm(null) });
   }
 
-  /* -------------------- Sidebar right-click menu ---------------------- */
+  /* ---------------------------- The note menu -------------------------- */
 
-  function openMenu(e, id) {
+  // Right-click a row, or click the "..." on a row or in the page header:
+  // one menu, opened at the pointer or under the button that asked for it.
+  function openMenu(e, id, fromButton = false) {
     e.preventDefault();
     e.stopPropagation(); // keep the window-level close handler from eating the new menu
-    setMenu({ id, x: Math.min(e.clientX, window.innerWidth - 180), y: Math.min(e.clientY, window.innerHeight - 110) });
+    const width = 232;
+    if (fromButton && e.currentTarget && e.currentTarget.getBoundingClientRect) {
+      const r = e.currentTarget.getBoundingClientRect();
+      setMenu({ id, x: Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8)), y: r.bottom + 6 });
+      return;
+    }
+    setMenu({ id, x: Math.min(e.clientX, window.innerWidth - width - 8), y: Math.min(e.clientY, window.innerHeight - 160) });
   }
 
   React.useEffect(() => {
@@ -1051,506 +953,451 @@ export default function NotebookPage() {
   const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu,
     dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo };
   const sectionPages = isSection ? childrenOf(selected.id) : [];
+  /* ---------------------------- Toolbar model -------------------------- */
+
+  const toolbar = [
+    { title: 'Undo (Ctrl+Z)', run: () => chain().undo().run(), icon: Icons.undo },
+    { title: 'Redo (Ctrl+Y)', run: () => chain().redo().run(), icon: Icons.redo },
+    null,
+    { title: 'Heading 1', run: () => chain().toggleHeading({ level: 1 }).run(), icon: TIcons.h1, active: editor && editor.isActive('heading', { level: 1 }) },
+    { title: 'Heading 2', run: () => chain().toggleHeading({ level: 2 }).run(), icon: TIcons.h2, active: editor && editor.isActive('heading', { level: 2 }) },
+    { title: 'Heading 3', run: () => chain().toggleHeading({ level: 3 }).run(), icon: TIcons.h3, active: editor && editor.isActive('heading', { level: 3 }) },
+    null,
+    { title: 'Bold (Ctrl+B)', run: () => chain().toggleBold().run(), icon: TIcons.bold, active: editor && editor.isActive('bold') },
+    { title: 'Italic (Ctrl+I)', run: () => chain().toggleItalic().run(), icon: TIcons.italic, active: editor && editor.isActive('italic') },
+    { title: 'Strikethrough', run: () => chain().toggleStrike().run(), icon: TIcons.strike, active: editor && editor.isActive('strike') },
+    { title: 'Inline code', run: () => chain().toggleCode().run(), icon: TIcons.code, active: editor && editor.isActive('code') },
+    null,
+    { title: 'Bulleted list', run: () => chain().toggleBulletList().run(), icon: TIcons.list, active: editor && editor.isActive('bulletList') },
+    { title: 'Numbered list', run: () => chain().toggleOrderedList().run(), icon: TIcons.listOrdered, active: editor && editor.isActive('orderedList') },
+    { title: 'Task list', run: () => chain().toggleTaskList().run(), icon: TIcons.listChecks, active: editor && editor.isActive('taskList') },
+    null,
+    { title: 'Decrease indent', run: () => chain().liftListItem(listKind()).run(), icon: TIcons.outdent },
+    { title: 'Increase indent', run: () => chain().sinkListItem(listKind()).run(), icon: TIcons.indent },
+    { title: 'Quote', run: () => chain().toggleBlockquote().run(), icon: TIcons.quote, active: editor && editor.isActive('blockquote') },
+    { title: 'Divider', run: () => chain().setHorizontalRule().run(), icon: TIcons.divider },
+    null,
+    { title: 'Underline (Ctrl+U)', run: () => chain().toggleUnderline().run(), icon: TIcons.underline, active: editor && editor.isActive('underline') },
+    { title: 'Highlight', run: () => chain().toggleHighlight().run(), icon: TIcons.highlighter, active: editor && editor.isActive('highlight') },
+    ...TEXT_COLORS.map((c2) => ({
+      title: c2.name + ' text',
+      run: () => (colorActive(c2.hex) ? chain().unsetColor().run() : chain().setColor(c2.hex).run()),
+      swatch: c2.hex,
+      active: colorActive(c2.hex),
+    })),
+    { title: 'Insert table', run: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), icon: TIcons.table },
+    // Table controls appear only while the caret is inside a table.
+    ...(editor && editor.isActive('table') ? [
+      null,
+      { title: 'Add row below', run: () => chain().addRowAfter().run(), label: '+ Row' },
+      { title: 'Add column right', run: () => chain().addColumnAfter().run(), label: '+ Col' },
+      { title: 'Delete row', run: () => chain().deleteRow().run(), label: 'Row off' },
+      { title: 'Delete column', run: () => chain().deleteColumn().run(), label: 'Col off' },
+      { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
+    ] : []),
+    null,
+    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true, label: 'AI format' },
+  ];
 
   /* ------------------------------ Render ------------------------------- */
 
+  const menuNote = menu ? byId.get(menu.id) : null;
+
   return (
-    <div className="riva-page-fill" style={s('display:flex;flex-direction:column;height:100vh;min-height:100vh;background:' + C.bg + ';')}>
-      {/* dangerouslySetInnerHTML: a plain {CSS} text child gets HTML-escaped
-          on the server (> and ") but not on the client — hydration mismatch. */}
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+    <div className="riva-page-fill nbk-shell">
+      <NotebookStyles />
+      {/* dangerouslySetInnerHTML: a plain text child is HTML-escaped on the
+          server and not on the client, which is a hydration mismatch. */}
+      <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       <AppHeader subtitle="Notebook" />
-      <div style={s('flex:1;min-height:0;display:flex;width:100%;')}>
 
-      {/* --------------------------- Sidebar --------------------------- */}
-      <aside style={s('flex:none;width:290px;border-right:1px solid ' + C.line + ';background:#fff;display:flex;flex-direction:column;min-height:0;')}>
-        <div style={s('flex:none;padding:12px 14px 6px;display:flex;flex-direction:column;gap:10px;')}>
-          <div style={s('display:flex;align-items:center;gap:8px;')}>
+      <div className="nbk-body">
+        {/* ------------------------- Sidebar ------------------------- */}
+        <aside className="nbk-sidebar">
+          <div className="nbk-sidebar__top">
             {/* Pages is the editor; Map is the treemap of every page and what
-                the assistant makes of it. Same sidebar, same notes. */}
-            <div role="tablist" style={s('flex:1;display:inline-flex;background:' + C.bg + ';border:1px solid ' + C.line + ';border-radius:8px;padding:2px;')}>
-              {[['pages', 'Pages'], ['map', 'Map']].map(([id, label]) => (
-                <button key={id} role="tab" type="button" aria-selected={view === id} onClick={() => setView(id)}
-                  style={s('flex:1;border:none;border-radius:6px;padding:5px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;' + (view === id ? 'background:#fff;color:' + C.ink + ';box-shadow:0 1px 2px rgba(0,0,0,.08);' : 'background:none;color:' + C.mut + ';'))}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            <Hover tag="button" onClick={() => newNote(null)} aria-label="New section" title="New section (with its first page)"
-              base={'flex:none;display:inline-flex;align-items:center;gap:6px;background:' + C.blue + ';color:#fff;border:none;border-radius:8px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;'}
-              hover={'background:' + C.navy + ';'}>
-              <Svg w={14} sw={2.4}>{Icons.plus}</Svg>New
-            </Hover>
-          </div>
-          <div style={s('display:flex;align-items:center;gap:8px;border:1px solid ' + C.line + ';border-radius:9px;padding:7px 10px;background:' + C.bg + ';')}>
-            <Svg w={16} sw={2} style={s('flex:none;color:' + C.mut + ';')}>{Icons.search}</Svg>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes"
-              style={s('flex:1;min-width:0;border:none;outline:none;background:none;font:inherit;font-size:14px;color:' + C.ink + ';')} />
-            {search && (
-              <Hover tag="button" onClick={() => setSearch('')} aria-label="Clear search" base={actBtn + 'width:18px;height:18px;'} hover={'color:' + C.ink + ';'}>
-                <Svg w={12} sw={2.4}>{Icons.close}</Svg>
-              </Hover>
-            )}
-          </div>
-        </div>
-
-        <div className="nb-scroll" style={s('flex:1;overflow-y:auto;padding:4px 10px 14px;display:flex;flex-direction:column;gap:1px;')}>
-          {status === 'loading' && <p style={s('color:' + C.mut + ';font-size:14px;padding:8px 10px;')}>Loading…</p>}
-          {status === 'error' && <p style={s('color:' + C.red + ';font-size:14px;padding:8px 10px;')}>Could not load notes. Is the database configured?</p>}
-          {status === 'ready' && sections.length === 0 && (
-            <p style={s('color:' + C.dim + ';font-size:14px;padding:8px 10px;line-height:1.5;')}>
-              {q ? 'No notes match your search.' : 'No sections yet. Create one, for example “Instructions” with pages like “How to book appointments”.'}
-            </p>
-          )}
-          {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
-        </div>
-
-        <div style={s('flex:none;border-top:1px solid ' + C.soft + ';padding:10px 14px;display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:' + C.dim + ';line-height:1.45;')}>
-          <span style={s('display:inline-flex;align-items:center;gap:6px;')}>
-            <Svg w={13} sw={2.2} stroke={C.green}>{Icons.shield}</Svg>Notes are used by the assistant automatically.
-          </span>
-          {/* Backup: export downloads every note as JSON; import restores it. */}
-          <div style={s('display:flex;align-items:center;gap:6px;')}>
-            <input ref={importInput} type="file" accept=".json,application/json" style={s('display:none;')} onChange={onImportFile} />
-            <Hover tag="button" onClick={() => { window.location.href = '/api/notebook/export'; }} title="Download all notes as a JSON backup"
-              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
-              hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-              <Svg w={13} sw={2.2}>{Icons.external}</Svg>Export
-            </Hover>
-            <Hover tag="button" onClick={() => importInput.current && importInput.current.click()} title="Restore notes from a JSON backup (added alongside existing notes)"
-              base={'flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;'}
-              hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-              <Svg w={13} sw={2.2}>{Icons.refresh}</Svg>Import
-            </Hover>
-          </div>
-          {/* Saves: the whole notebook at a moment, and the way back to one.
-              Export/Import above are per-file and additive; that page is the
-              stored list, and loading from it replaces the notebook. */}
-          <Hover tag="a" href="/notebook/saves" title="Saves of the whole notebook — take one, or roll back to one"
-            base={'display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid ' + C.line + ';background:#fff;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;padding:6px 10px;text-decoration:none;'}
-            hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-            <Svg w={13} sw={2.2}>{Icons.undo}</Svg>Saves &amp; rollback
-          </Hover>
-        </div>
-      </aside>
-
-      {/* ------------------------- Notes area --------------------------- */}
-      <main style={s('flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;')} {...dropHandlers}>
-        {view === 'map' && (
-          <MapView notes={notes} onOpenPage={(id) => { setView('pages'); selectNote(id); }} onChanged={reloadAll} />
-        )}
-        {view !== 'map' && (<>
-        {/* Notes header — breadcrumb, save state and actions for the open note. */}
-        <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:#fff;border-bottom:1px solid ' + C.line + ';padding:10px 22px;min-height:56px;')}>
-          <div style={s('flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:14px;color:' + C.mut + ';overflow:hidden;white-space:nowrap;')}>
-            {!selected && <span>Notebook</span>}
-            {selected && (
-              <>
-                {ancestors.map((a) => (
-                  <React.Fragment key={a.id}>
-                    <button className="nb-crumb" onClick={() => selectNote(a.id)}>
-                      {a.title || 'Untitled'}
-                    </button>
-                    <Svg w={12} sw={2.2} style={s('flex:none;color:' + C.dim + ';')}>{Icons.chevronRight}</Svg>
-                  </React.Fragment>
-                ))}
-                <input
-                  ref={titleInput}
-                  className="nb-title"
-                  value={selected.title || ''}
-                  onChange={(e) => editSelected({ title: e.target.value })}
-                  placeholder={isSection ? 'Section name' : 'Page title'}
-                  aria-label={isSection ? 'Section name' : 'Page title'}
-                  title="Click to rename"
-                  style={s('flex:1;min-width:60px;font:inherit;font-size:15.5px;font-weight:600;border:none;outline:none;background:none;color:' + C.ink + ';padding:4px 0;')}
-                />
-              </>
-            )}
-          </div>
-          <span style={s('flex:none;font-size:13px;min-width:64px;text-align:right;color:' + (saveState === 'unsaved' ? C.red : C.dim) + ';')}>
-            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsaved' ? 'Not saved' : ''}
-          </span>
-          {selected && canOrganize(selected) && (
-            <Hover tag="button" onClick={() => runAiOrganize()} aria-label="AI organise" title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)"
-              base={'flex:none;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;color:' + C.blue + ';' + (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') ? 'opacity:.55;' : '')}
-              hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
-              <Svg w={15} sw={2}>{Icons.sparkle}</Svg>AI organise
-            </Hover>
-          )}
-          {selected && !isSection && (
-            <>
-              <input ref={fileInput} type="file" multiple style={s('display:none;')} onChange={(e) => uploadFiles(e.target.files)} />
-              <Hover tag="button" onClick={() => fileInput.current && fileInput.current.click()} disabled={uploading} aria-label="Attach files" title="Attach files (or drag and drop onto the page)"
-                base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';' + (uploading ? 'opacity:.6;' : '')}
-                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-                <Svg w={16} sw={2}>{Icons.paperclip}</Svg>
-              </Hover>
-            </>
-          )}
-          {selected && (
-            <Hover tag="button" onClick={() => askRemoveNote(selected.id)} aria-label={isSection ? 'Delete section' : 'Delete page'} title={isSection ? 'Delete section' : 'Delete page'}
-              base={'flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid ' + C.line + ';background:#fff;border-radius:9px;cursor:pointer;color:' + C.mut + ';'}
-              hover={'border-color:' + C.red + ';color:' + C.red + ';'}>
-              <Svg w={16} sw={2}>{Icons.trash}</Svg>
-            </Hover>
-          )}
-        </div>
-
-        {!selected && (
-          <div style={s('flex:1;display:flex;align-items:center;justify-content:center;color:' + C.dim + ';font-size:16px;text-align:center;padding:24px;')}>
-            <div>
-              <div style={s('margin-bottom:8px;')}><Svg w={30} stroke="#a3b1ba" sw={1.8}>{Icons.book}</Svg></div>
-              Select a note, or create one to get started.
+                the assistant makes of it. Same notes, two readings of them. */}
+            <Tabs block ariaLabel="Notebook view" value={view} onChange={setView}
+              items={[{ id: 'pages', label: 'Pages', icon: Icons.fileLines }, { id: 'map', label: 'Map', icon: NBIcons.layers }]} />
+            <div className="nbk-sidebar__row">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchField value={search} onChange={setSearch} placeholder="Search notes" />
+              </div>
+              <Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}
+                title="New section (with its first page)">New</Button>
             </div>
           </div>
-        )}
 
-        {/* Section view — name only; content lives in the pages beneath it. */}
-        {selected && isSection && (
-          <div className="nb-scroll" style={s('flex:1;min-height:0;overflow-y:auto;width:100%;max-width:1000px;margin:0 auto;padding:26px 28px;')}>
-            <p style={s('margin:0 0 20px;font-size:14.5px;color:' + C.dim + ';line-height:1.5;')}>
-              Sections only have a name. They organise pages, and the assistant uses this grouping to navigate the notebook. Write content in a page below.
-            </p>
+          <div className="nbk-tree nbk-scroll">
+            {status === 'loading' && <div style={{ padding: '10px 8px', fontSize: '13.5px', color: T.dim }}>Loading...</div>}
+            {status === 'error' && <div style={{ padding: '10px 8px', fontSize: '13.5px', color: T.red }}>Could not load notes. Is the database configured?</div>}
+            {status === 'ready' && sections.length === 0 && (
+              <div style={{ padding: '10px 8px', fontSize: '13.5px', lineHeight: 1.55, color: T.dim }}>
+                {q ? 'No notes match your search.' : 'No sections yet. Create one, for example "Instructions", with pages like "How to book appointments".'}
+              </div>
+            )}
+            {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
+          </div>
 
-            {/* AI organise — status banner and, when ready, the reviewable plan. */}
-            {aiOrg && (
-              <div style={s('margin:0 0 20px;border:1px solid ' + C.line + ';border-radius:12px;background:#fff;overflow:hidden;')}>
-                <div style={s('display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:10px 16px;')}>
-                  <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
-                  <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
-                    {aiOrg.status === 'loading' && 'Reading every page in this section and deciding where each part belongs…'}
-                    {aiOrg.status === 'applying' && 'Moving the content into place…'}
-                    {aiOrg.status === 'error' && aiOrg.message}
-                    {aiOrg.status === 'ready' && 'Review where each page’s content will go. Every fact is kept; emptied pages are removed and their files move with the content. Nothing changes until you apply.'}
-                    {aiOrg.status === 'done' && ('Done: moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
-                      + ((aiOrg.applied.newSections || 0) ? ', created ' + aiOrg.applied.newSections + ' section(s)' : '')
-                      + ((aiOrg.applied.newPages || 0) ? ', created ' + aiOrg.applied.newPages + ' page(s)' : '')
-                      + ((aiOrg.applied.removed || 0) ? ', removed ' + aiOrg.applied.removed + ' emptied page(s)' : '') + '.')}
-                  </span>
-                  {aiOrg.status === 'ready' && (
-                    <Hover tag="button" onClick={applyAiOrganize}
-                      base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
-                      hover="background:#00542b;">Apply plan</Hover>
-                  )}
-                  {(aiOrg.status === 'ready' || aiOrg.status === 'error' || aiOrg.status === 'done') && (
-                    <Hover tag="button" onClick={() => setAiOrg(null)}
-                      base={'flex:none;font:inherit;font-size:13.5px;font-weight:600;color:' + C.mut + ';background:none;border:none;border-radius:7px;padding:7px 10px;cursor:pointer;'}
-                      hover={'color:' + C.ink + ';'}>{aiOrg.status === 'ready' ? 'Cancel' : 'Dismiss'}</Hover>
-                  )}
-                </div>
-                {aiOrg.status === 'ready' && (
-                  <div style={s('padding:6px 16px 14px;display:flex;flex-direction:column;gap:2px;')}>
-                    {aiOrg.plan.allocations.map((a) => (
-                      <div key={a.noteId} style={s('padding:10px 0 4px;border-bottom:1px solid ' + C.soft + ';')}>
-                        <div style={s('display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:' + C.ink + ';')}>
-                          <Svg w={15} sw={2} style={s('flex:none;color:' + C.mut + ';')}>{Icons.fileLines}</Svg>
-                          {a.noteTitle || 'Untitled'}
-                        </div>
-                        {a.parts.map((p, i) => (
-                          <div key={i} style={s('display:flex;gap:9px;align-items:flex-start;margin:8px 0 8px 23px;')}>
-                            <Svg w={14} sw={2.2} style={s('flex:none;margin-top:3px;color:' + C.blue + ';')}>{Icons.arrow}</Svg>
-                            <div style={s('flex:1;min-width:0;')}>
-                              <div style={s('font-size:13.5px;font-weight:600;color:' + C.navy + ';')}>
-                                {p.section}{p.isNewSection ? ' (new section)' : ''}
-                                <span style={s('color:' + C.dim + ';margin:0 5px;')}>›</span>
-                                {p.page || a.noteTitle || 'Untitled'}{p.isNewPage ? ' (new page)' : ''}
-                              </div>
-                              {/* A title that names a container rather than a
-                                  question. Said here because renaming it now
-                                  costs nothing, and renaming it after the page
-                                  has grown for six months costs a morning. */}
-                              {p.isVagueTitle && (
-                                <div style={s('margin-top:3px;font-size:12px;font-weight:600;color:#8a6100;')}>
-                                  Vague title — rename it to the question staff would ask, or search will never pick it precisely
-                                </div>
-                              )}
-                              <div style={s('margin-top:3px;font-size:12.5px;line-height:1.5;color:' + C.mut + ';overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;')}>
-                                {p.markdown.replace(/<[^>]+>/g, '').replace(/[#*>`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 240)}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+          <div className="nbk-sidebar__foot">
+            <span className="nbk-sidebar__note">
+              <Svg w={13} sw={2.2} stroke={T.green} style={{ flex: 'none' }}>{Icons.shield}</Svg>
+              Notes are used by the assistant automatically.
+            </span>
+            {/* Backup: export downloads every note as JSON; import restores it
+                alongside what is here. Saves is the whole notebook at a moment. */}
+            <input ref={importInput} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={onImportFile} />
+            <div className="nbk-foot-grid">
+              <Button size="sm" icon={NBIcons.download} onClick={() => { window.location.href = '/api/notebook/export'; }}
+                title="Download all notes as a JSON backup">Export</Button>
+              <Button size="sm" icon={NBIcons.upload} onClick={() => importInput.current && importInput.current.click()}
+                title="Restore notes from a JSON backup (added alongside existing notes)">Import</Button>
+            </div>
+            <Button size="sm" block icon={Icons.undo} onClick={() => { window.location.href = '/notebook/saves'; }}
+              title="Saves of the whole notebook - take one, or roll back to one">Saves and rollback</Button>
+          </div>
+        </aside>
+
+        {/* -------------------------- Notes area -------------------------- */}
+        <main className="nbk-main" {...dropHandlers}>
+          {view === 'map' && (
+            <MapView notes={notes} onOpenPage={(id) => { setView('pages'); selectNote(id); }} onChanged={reloadAll} />
+          )}
+
+          {view !== 'map' && (<>
+            <div className="nbk-head">
+              <div className="nbk-head__left">
+                {selected && ancestors.length > 0 && (
+                  <div className="nbk-head__crumbs">
+                    {ancestors.map((a, i) => (
+                      <React.Fragment key={a.id}>
+                        {i > 0 && <Svg w={11} sw={2.4} style={{ flex: 'none', color: '#b6c2c9' }}>{Icons.chevronRight}</Svg>}
+                        <button type="button" className="nbk-crumb" onClick={() => selectNote(a.id)}>{a.title || 'Untitled'}</button>
+                      </React.Fragment>
                     ))}
                   </div>
                 )}
+                {selected ? (
+                  <input
+                    ref={titleInput}
+                    className="nbk-title-input"
+                    value={selected.title || ''}
+                    onChange={(e) => editSelected({ title: e.target.value })}
+                    placeholder={isSection ? 'Section name' : 'Page title'}
+                    aria-label={isSection ? 'Section name' : 'Page title'}
+                    title="Click to rename"
+                  />
+                ) : (
+                  <span style={{ padding: '4px 6px', fontSize: '17px', fontWeight: 700, color: T.dim }}>Notebook</span>
+                )}
+              </div>
+
+              <div className="nbk-head__actions">
+                <StatusPill state={saveState} />
+                {selected && canOrganize(selected) && (
+                  <Button icon={Icons.sparkle} onClick={() => runAiOrganize()}
+                    disabled={!!aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')}
+                    title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)">
+                    AI organise
+                  </Button>
+                )}
+                {selected && !isSection && (
+                  <>
+                    <input ref={fileInput} type="file" multiple style={{ display: 'none' }} onChange={(e) => uploadFiles(e.target.files)} />
+                    <IconButton icon={Icons.paperclip} label="Attach files" disabled={uploading}
+                      onClick={() => fileInput.current && fileInput.current.click()} />
+                  </>
+                )}
+                {selected && (
+                  <IconButton icon={NBIcons.dots} label="More actions" onClick={(e) => openMenu(e, selected.id, true)} />
+                )}
+              </div>
+            </div>
+
+            {!selected && (
+              <EmptyState icon={Icons.book} title="Nothing open"
+                body="Pick a page on the left, or create a section to start writing. Everything written here is what the assistant answers from."
+                action={<Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}>New section</Button>} />
+            )}
+
+            {/* Section view - name only; content lives in the pages beneath it. */}
+            {selected && isSection && (
+              <div className="nbk-section nbk-scroll">
+                <div className="nbk-section__inner">
+                  <p style={{ margin: '0 0 2px', fontSize: '13.5px', lineHeight: 1.6, color: T.dim }}>
+                    Sections only have a name. They organise pages, and the assistant uses this grouping to navigate
+                    the notebook. Write the content in a page below.
+                  </p>
+                  {sectionPages.map((p) => (
+                    <button key={p.id} type="button" className="nbk-page-card" onClick={() => selectNote(p.id)}>
+                      <Svg w={17} sw={2} style={{ flex: 'none', color: T.blue }}>{Icons.fileLines}</Svg>
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.title || 'Untitled'}
+                      </span>
+                      {(p.body || '').trim() ? null : <span style={{ flex: 'none', fontSize: '12px', fontWeight: 600, color: T.dim }}>Empty</span>}
+                      <Svg w={15} sw={2.2} style={{ flex: 'none', color: '#b6c2c9' }}>{Icons.chevronRight}</Svg>
+                    </button>
+                  ))}
+                  <button type="button" className="nbk-add-card" onClick={() => newNote(selected.id)}>
+                    <Svg w={15} sw={2.4}>{Icons.plus}</Svg>New page
+                  </button>
+                </div>
               </div>
             )}
 
-            <div style={s('display:flex;flex-direction:column;gap:8px;')}>
-              {sectionPages.map((p) => (
-                <Hover key={p.id} tag="button" onClick={() => selectNote(p.id)}
-                  base={'display:flex;align-items:center;gap:10px;text-align:left;border:1px solid ' + C.line + ';border-radius:11px;background:#fff;padding:13px 16px;font:inherit;font-size:15px;font-weight:600;color:' + C.ink + ';cursor:pointer;'}
-                  hover={'border-color:' + C.blue + ';background:#f7fbff;'}>
-                  <Svg w={17} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{Icons.fileLines}</Svg>
-                  <span style={s('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{p.title || 'Untitled'}</span>
-                  {(p.body || '').trim() ? null : <span style={s('flex:none;font-size:12.5px;font-weight:500;color:' + C.dim + ';')}>Empty</span>}
-                </Hover>
-              ))}
-              <Hover tag="button" onClick={() => newNote(selected.id)}
-                base={'display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed ' + C.line + ';border-radius:11px;background:none;padding:13px 16px;font:inherit;font-size:14.5px;font-weight:600;color:' + C.mut + ';cursor:pointer;'}
-                hover={'border-color:' + C.blue + ';color:' + C.blue + ';'}>
-                <Svg w={15} sw={2.4}>{Icons.plus}</Svg>New page
-              </Hover>
-            </div>
-          </div>
-        )}
+            {/* Page view - the title is in the header above; everything here is
+                the writing surface, with files docked underneath it. */}
+            {selected && !isSection && (
+              <>
+                <div className="nbk-toolbar" onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
+                  {toolbar.map((btn, i) => btn === null
+                    ? <span key={'sep' + i} className="nbk-tsep" />
+                    : (
+                      <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
+                        aria-pressed={btn.active ? true : undefined}
+                        onClick={() => { if (!editor && !btn.accent) return; btn.run(); }}
+                        className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '') + (btn.accent ? ' nbk-tbtn--accent' : '')}>
+                        {btn.swatch
+                          ? <span className="nbk-swatch" style={{ background: btn.swatch, boxShadow: '0 0 0 1px ' + (btn.active ? T.blue : T.line) }} />
+                          : btn.icon ? <Svg w={16} sw={2}>{btn.icon}</Svg> : null}
+                        {btn.label ? <span>{btn.label}</span> : null}
+                      </button>
+                    ))}
+                </div>
 
-        {/* Page view — the title lives in the header; the whole content area
-            is the note body, with attachments docked below. */}
-        {selected && !isSection && (
-          <div style={s('flex:1;min-height:0;display:flex;flex-direction:column;width:100%;background:#fff;')}>
-            {/* Formatting toolbar — drives the TipTap editor in place. */}
-            <div style={s('flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px;background:#fff;border-bottom:1px solid ' + C.soft + ';padding:5px 20px;')}
-              onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
-              {[
-                { title: 'Undo (Ctrl+Z)', run: () => chain().undo().run(), icon: Icons.undo },
-                { title: 'Redo (Ctrl+Y)', run: () => chain().redo().run(), icon: Icons.redo },
-                null,
-                { title: 'Heading 1', run: () => chain().toggleHeading({ level: 1 }).run(), icon: TIcons.h1, active: editor && editor.isActive('heading', { level: 1 }) },
-                { title: 'Heading 2', run: () => chain().toggleHeading({ level: 2 }).run(), icon: TIcons.h2, active: editor && editor.isActive('heading', { level: 2 }) },
-                { title: 'Heading 3', run: () => chain().toggleHeading({ level: 3 }).run(), icon: TIcons.h3, active: editor && editor.isActive('heading', { level: 3 }) },
-                null,
-                { title: 'Bold (Ctrl+B)', run: () => chain().toggleBold().run(), icon: TIcons.bold, active: editor && editor.isActive('bold') },
-                { title: 'Italic (Ctrl+I)', run: () => chain().toggleItalic().run(), icon: TIcons.italic, active: editor && editor.isActive('italic') },
-                { title: 'Strikethrough', run: () => chain().toggleStrike().run(), icon: TIcons.strike, active: editor && editor.isActive('strike') },
-                { title: 'Inline code', run: () => chain().toggleCode().run(), icon: TIcons.code, active: editor && editor.isActive('code') },
-                null,
-                { title: 'Bulleted list', run: () => chain().toggleBulletList().run(), icon: TIcons.list, active: editor && editor.isActive('bulletList') },
-                { title: 'Numbered list', run: () => chain().toggleOrderedList().run(), icon: TIcons.listOrdered, active: editor && editor.isActive('orderedList') },
-                { title: 'Task list', run: () => chain().toggleTaskList().run(), icon: TIcons.listChecks, active: editor && editor.isActive('taskList') },
-                null,
-                { title: 'Decrease indent', run: () => chain().liftListItem(listKind()).run(), icon: TIcons.outdent },
-                { title: 'Increase indent', run: () => chain().sinkListItem(listKind()).run(), icon: TIcons.indent },
-                { title: 'Quote', run: () => chain().toggleBlockquote().run(), icon: TIcons.quote, active: editor && editor.isActive('blockquote') },
-                { title: 'Divider', run: () => chain().setHorizontalRule().run(), icon: TIcons.divider },
-                null,
-                { title: 'Underline (Ctrl+U)', run: () => chain().toggleUnderline().run(), icon: TIcons.underline, active: editor && editor.isActive('underline') },
-                { title: 'Highlight', run: () => chain().toggleHighlight().run(), icon: TIcons.highlighter, active: editor && editor.isActive('highlight') },
-                ...TEXT_COLORS.map((c2) => ({
-                  title: c2.name + ' text',
-                  run: () => (colorActive(c2.hex) ? chain().unsetColor().run() : chain().setColor(c2.hex).run()),
-                  swatch: c2.hex,
-                  active: colorActive(c2.hex),
-                })),
-                { title: 'Insert table', run: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), icon: TIcons.table },
-                // Table controls appear only while the caret is inside a table.
-                ...(editor && editor.isActive('table') ? [
-                  null,
-                  { title: 'Add row below', run: () => chain().addRowAfter().run(), label: '+ Row' },
-                  { title: 'Add column right', run: () => chain().addColumnAfter().run(), label: '+ Col' },
-                  { title: 'Delete row', run: () => chain().deleteRow().run(), label: '− Row' },
-                  { title: 'Delete column', run: () => chain().deleteColumn().run(), label: '− Col' },
-                  { title: 'Delete table', run: () => chain().deleteTable().run(), label: '✕ Table' },
-                ] : []),
-                null,
-                { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true },
-              ].map((btn, i) => btn === null
-                ? <span key={'sep' + i} style={s('flex:none;width:1px;height:18px;background:' + C.line + ';margin:0 7px;')} />
-                : (
-                  <Hover key={btn.title} tag="button" onClick={() => { if (!editor && !btn.accent) return; btn.run(); }} aria-label={btn.title} title={btn.title}
-                    base={'flex:none;height:32px;display:flex;align-items:center;justify-content:center;border:none;border-radius:7px;cursor:pointer;font:inherit;' +
-                      (btn.label ? 'padding:0 10px;font-size:12.5px;font-weight:700;' : 'width:32px;') +
-                      'background:' + (btn.active ? C.sel : 'none') + ';color:' + (btn.active || btn.accent ? C.blue : C.mut) + ';' +
-                      (btn.accent && aiFmt && aiFmt.status === 'loading' ? 'opacity:.5;' : '')}
-                    hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-                    {btn.swatch
-                      ? <span style={s('width:14px;height:14px;border-radius:99px;background:' + btn.swatch + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + (btn.active ? C.blue : C.line) + ';')} />
-                      : btn.label ? btn.label : <Svg w={16} sw={2}>{btn.icon}</Svg>}
-                  </Hover>
-                ))}
-            </div>
+                <PageEditor
+                  key={selected.id}
+                  initialBody={selected.body || ''}
+                  onChange={(md) => editSelected({ body: md })}
+                  onReady={setEditor}
+                  uploadImage={uploadInlineImage}
+                />
 
-            {/* AI-format status bar — the diff below replaces the editor until
-                the user applies or cancels. */}
-            {aiFmt && (
-              <div style={s('flex:none;display:flex;align-items:center;gap:10px;background:' + C.sel + ';border-bottom:1px solid ' + C.line + ';padding:9px 20px;')}>
-                <Svg w={16} sw={2} stroke={C.blue}>{Icons.sparkle}</Svg>
-                <span style={s('flex:1;min-width:0;font-size:14.5px;color:' + C.navy + ';')}>
-                  {aiFmt.status === 'loading' && 'Restructuring the note into headings, lists, tables and highlights…'}
-                  {aiFmt.status === 'error' && aiFmt.message}
-                  {aiFmt.status === 'ready' && 'Review the full reformat below: headings, lists, tables and highlights. Every fact is kept. Nothing is saved until you apply.'}
-                </span>
-                {aiFmt.status === 'ready' && (
-                  <Hover tag="button" onClick={applyAiFormat}
-                    base={'flex:none;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:' + C.green + ';border:none;border-radius:7px;padding:7px 15px;cursor:pointer;'}
-                    hover="background:#00542b;">Apply changes</Hover>
-                )}
-                {aiFmt.status !== 'loading' && (
-                  <Hover tag="button" onClick={() => setAiFmt(null)}
-                    base={'flex:none;font:inherit;font-size:13.5px;font-weight:600;color:' + C.mut + ';background:none;border:none;border-radius:7px;padding:7px 10px;cursor:pointer;'}
-                    hover={'color:' + C.ink + ';'}>{aiFmt.status === 'ready' ? 'Cancel' : 'Dismiss'}</Hover>
-                )}
-              </div>
-            )}
-
-            {/* Body — the entire content area is the writing surface (or the
-                AI diff while reviewing); attachments dock below and never
-                push it down. */}
-            {aiFmt && aiFmt.status === 'ready' ? (
-              <div className="nb-scroll" style={s('flex:1;min-height:0;overflow:auto;background:#fafcfd;font-family:Consolas,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:14px 0;')}>
-                {aiFmt.diff.map((l, i) => (
-                  <div key={i} style={s('display:flex;gap:10px;padding:1px 20px;white-space:pre-wrap;word-break:break-word;' +
-                    (l.t === '-' ? 'background:#fbe9e7;color:#8a1206;text-decoration:line-through;' :
-                     l.t === '+' ? 'background:#e7f5ec;color:#00542b;' : 'color:' + C.mut + ';'))}>
-                    <span style={s('flex:none;width:12px;user-select:none;opacity:.7;')}>{l.t === ' ' ? '' : l.t}</span>
-                    <span style={s('flex:1;min-width:0;')}>{l.s || ' '}</span>
+                {(selectedFiles.length > 0 || uploadErr || uploading) && (
+                  <div className="nbk-dock">
+                    {selectedFiles.map((a) => (
+                      <span key={a.id} className="nbk-attach">
+                        <Svg w={14} sw={2} style={{ flex: 'none', color: T.blue }}>
+                          {(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}
+                        </Svg>
+                        <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' - ' + fmtSize(a.size) : '')}>
+                          {a.filename}
+                        </a>
+                        <IconButton plain size="sm" tone="danger" icon={Icons.close} label={'Remove ' + a.filename}
+                          onClick={() => askRemoveAttachment(a)} />
+                      </span>
+                    ))}
+                    {uploading && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: T.dim }}><Spinner w={13} />Uploading...</span>}
+                    {uploadErr && <span style={{ fontSize: '13px', fontWeight: 600, color: T.red }}>{uploadErr}</span>}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <PageEditor
-                key={selected.id}
-                initialBody={selected.body || ''}
-                onChange={(md) => editSelected({ body: md })}
-                onReady={setEditor}
-                uploadImage={uploadInlineImage}
-              />
+                )}
+              </>
             )}
 
-            {/* Attachments — docked at the bottom of the page. */}
-            {(selectedFiles.length > 0 || uploadErr || uploading) && (
-              <div style={s('flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 28px 14px;border-top:1px solid ' + C.soft + ';')}>
-                {selectedFiles.map((a) => (
-                  <span key={a.id} style={s('display:inline-flex;align-items:center;gap:7px;border:1px solid ' + C.line + ';border-radius:99px;background:#fff;padding:5px 6px 5px 11px;max-width:280px;')}>
-                    <Svg w={14} sw={2} style={s('flex:none;color:' + C.blue + ';')}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' · ' + fmtSize(a.size) : '')}
-                      style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600;color:' + C.ink + ';text-decoration:none;')}>
-                      {a.filename}
-                    </a>
-                    <Hover tag="button" onClick={() => askRemoveAttachment(a)} aria-label={'Remove ' + a.filename} title="Remove"
-                      base={'flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:none;background:' + C.soft + ';border-radius:99px;cursor:pointer;color:' + C.mut + ';'}
-                      hover={'background:#fbe9e7;color:' + C.red + ';'}>
-                      <Svg w={12} sw={2.6}>{Icons.close}</Svg>
-                    </Hover>
-                  </span>
-                ))}
-                {uploading && <span style={s('font-size:13px;color:' + C.dim + ';')}>Uploading…</span>}
-                {uploadErr && <span style={s('font-size:13px;color:' + C.red + ';')}>{uploadErr}</span>}
+            {/* Drop overlay */}
+            {dragging && selected && !isSection && (
+              <div className="nbk-dropzone">
+                <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
+                Drop files to attach to &ldquo;{selected.title || 'Untitled'}&rdquo;
               </div>
             )}
-          </div>
-        )}
-
-        {/* Drop overlay */}
-        {dragging && selected && !isSection && (
-          <div style={s('position:absolute;inset:10px;border:2.5px dashed ' + C.blue + ';border-radius:14px;background:rgba(232,241,248,.85);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;')}>
-            <div style={s('display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;color:' + C.navy + ';')}>
-              <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
-              Drop files to attach to “{selected.title || 'Untitled'}”
-            </div>
-          </div>
-        )}
-        </>)}
-      </main>
+          </>)}
+        </main>
       </div>
-
-      {/* Sidebar right-click menu — rename / delete. */}
-      {menu && (
-        <div style={s('position:fixed;left:' + menu.x + 'px;top:' + menu.y + 'px;z-index:90;min-width:168px;background:#fff;border:1px solid ' + C.line + ';border-radius:10px;box-shadow:0 8px 24px rgba(33,43,50,.18);padding:5px;display:flex;flex-direction:column;')}
-          onClick={(e) => e.stopPropagation()}>
-          <Hover tag="button" onClick={() => { setMenu(null); renameNote(menu.id); }}
-            base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.ink + ';cursor:pointer;padding:9px 11px;text-align:left;'}
-            hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-            <Svg w={15} sw={2.2}>{Icons.edit}</Svg>Rename
-          </Hover>
-          {canOrganize(byId.get(menu.id)) && (
-            <Hover tag="button" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}
-              base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.blue + ';cursor:pointer;padding:9px 11px;text-align:left;'}
-              hover={'background:' + C.sel + ';'}>
-              <Svg w={15} sw={2.2}>{Icons.sparkle}</Svg>AI organise
-            </Hover>
+      {/* ---------------------------- The note menu --------------------------- */}
+      {menu && menuNote && (
+        <Menu x={menu.x} y={menu.y} width={232}>
+          <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
+          <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
+          {canOrganize(menuNote) && (
+            <MenuItem icon={Icons.sparkle} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
           )}
-          {(() => { const n = byId.get(menu.id); return n && n.parentId ? (
-            <Hover tag="button" onClick={() => { setMenu(null); toggleSection(menu.id, !n.isSection); }}
-              base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.ink + ';cursor:pointer;padding:9px 11px;text-align:left;'}
-              hover={'background:' + C.sel + ';color:' + C.blue + ';'}>
-              <Svg w={15} sw={2.2}>{n.isSection ? Icons.fileLines : Icons.book}</Svg>{n.isSection ? 'Convert to page' : 'Convert to section'}
-            </Hover>
-          ) : null; })()}
+          {menuNote.parentId ? (
+            <MenuItem icon={menuNote.isSection ? Icons.fileLines : Icons.book}
+              onClick={() => { setMenu(null); toggleSection(menu.id, !menuNote.isSection); }}>
+              {menuNote.isSection ? 'Convert to page' : 'Convert to section'}
+            </MenuItem>
+          ) : null}
+
           {/* What shape the answers from here come back in.
               Set on a folder and everything beneath it inherits it, so this
               reads as a property of the folder: the tag in force is named at
               the top, the one this row sets is ticked, and where those differ
               the difference is the whole point of the panel. */}
+          <MenuSeparator />
+          <MenuLabel>Format answers as</MenuLabel>
           {(() => {
-            const n = byId.get(menu.id);
-            if (!n) return null;
-            const own = String(n.outputTag || '');
-            const inherited = inheritedTag(n);
-            const from = !own && inherited ? tagSource(n) : null;
+            const own = String(menuNote.outputTag || '');
+            const inherited = inheritedTag(menuNote);
+            const from = !own && inherited ? tagSource(menuNote) : null;
             return (
               <>
-                <div style={s('margin:6px 4px 2px;padding:8px 8px 0;border-top:1px solid ' + C.line + ';')}>
-                  <div style={s('font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + C.dim + ';')}>
-                    Format answers as
-                  </div>
-                  {/* WHAT IS IN FORCE, and where it comes from. Without this the
-                      panel is a list of choices with no statement of the current
-                      one — and on a page that inherits, the ticked row would be
-                      the only thing on screen, reading as "nothing" about pages
-                      that are in fact drawn as something. */}
-                  <div style={s('margin-top:6px;display:flex;align-items:center;gap:6px;font-size:12px;color:' + C.mut + ';')}>
-                    {inherited
-                      ? <TagChip tag={outputTag(inherited)} />
-                      : <span style={s('font-weight:600;color:' + C.ink + ';')}>The page itself</span>}
-                    <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>
-                      {own ? 'set here' : from ? 'from ' + from.title : 'nothing set'}
-                    </span>
-                  </div>
+                {/* WHAT IS IN FORCE, and where it comes from. Without this the
+                    panel is a list of choices with no statement of the current
+                    one - and on a page that inherits, the ticked row would be
+                    the only thing on screen, reading as "nothing" about pages
+                    that are in fact drawn as something. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 10px 6px', fontSize: '12px', color: T.mut }}>
+                  {inherited
+                    ? <TagChip tag={outputTag(inherited)} />
+                    : <span style={{ fontWeight: 600, color: T.ink }}>The page itself</span>}
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {own ? 'set here' : from ? 'from ' + from.title : 'nothing set'}
+                  </span>
                 </div>
                 {[{
                   id: '',
-                  // Clearing a page's own tag does NOT mean "plain" — it means
+                  // Clearing a page's own tag does NOT mean "plain" - it means
                   // "whatever the folder says", and where a folder says
                   // something, saying "the page itself" here would be a lie
                   // with a tick next to it.
-                  label: from ? 'Use the folder’s format' : 'The page itself',
+                  label: from ? 'Use the folder\u2019s format' : 'The page itself',
                   help: from
-                    ? 'Answers follow ' + from.title + ' — the ' + outputTag(inherited).label + '.'
+                    ? 'Answers follow ' + from.title + ' - the ' + outputTag(inherited).label + '.'
                     : 'Answers are the page exactly as it is written.',
-                }, ...OUTPUT_TAGS].map((t) => {
-                  const on = own === t.id;
-                  const colour = t.colour || { ink: C.mut, tint: C.soft, edge: C.line };
-                  return (
-                    <Hover key={t.id || 'plain'} tag="button"
-                      onClick={() => { setMenu(null); setOutputTag(menu.id, t.id); }}
-                      base={'display:flex;align-items:flex-start;gap:9px;border:none;border-radius:8px;font:inherit;text-align:left;cursor:pointer;'
-                        + 'padding:7px 10px;margin:1px 0;color:' + C.ink + ';background:' + (on ? colour.tint : 'none') + ';'}
-                      hover={'background:' + (on ? colour.tint : C.soft) + ';'}>
-                      {/* The swatch is the same square the chip carries, so the
-                          colour is learned here and recognised in the tree. */}
-                      <span style={s('flex:none;margin-top:3px;width:11px;height:11px;border-radius:3px;background:'
-                        + (t.id ? colour.ink : '#fff') + ';box-shadow:inset 0 0 0 1px ' + (t.id ? colour.ink : C.line) + ';')} />
-                      <span style={s('flex:1;min-width:0;')}>
-                        <span style={s('display:block;font-size:14px;font-weight:' + (on ? '700' : '500') + ';color:'
-                          + (on ? colour.ink : C.ink) + ';')}>{t.label}</span>
-                        <span style={s('display:block;margin-top:1px;font-size:11.5px;line-height:1.4;color:' + C.dim + ';')}>{t.help}</span>
-                      </span>
-                      <span style={s('flex:none;width:14px;margin-top:2px;display:flex;color:' + colour.ink + ';')}>
-                        {on ? <Svg w={14} sw={2.8}>{Icons.check}</Svg> : null}
-                      </span>
-                    </Hover>
-                  );
-                })}
-                <div style={s('margin:4px 4px 0;border-top:1px solid ' + C.line + ';')} />
+                }, ...OUTPUT_TAGS].map((t) => (
+                  <MenuOption key={t.id || 'plain'} label={t.label} help={t.help} colour={t.colour}
+                    hollow={!t.id} swatch={t.colour && t.colour.ink} selected={own === t.id}
+                    onClick={() => { setMenu(null); setOutputTag(menu.id, t.id); }} />
+                ))}
               </>
             );
           })()}
-          <Hover tag="button" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}
-            base={'display:flex;align-items:center;gap:9px;border:none;background:none;border-radius:7px;font:inherit;font-size:14.5px;color:' + C.red + ';cursor:pointer;padding:9px 11px;text-align:left;'}
-            hover={'background:#fbe9e7;'}>
-            <Svg w={15} sw={2.2}>{Icons.trash}</Svg>Delete
-          </Hover>
-        </div>
+
+          <MenuSeparator />
+          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
+            {menuNote.parentId && !menuNote.isSection ? 'Delete page' : 'Delete section'}
+          </MenuItem>
+        </Menu>
       )}
 
-      {/* An import in progress. A sheet rather than a corner toast: restoring a
+      {/* --------------------------- AI format review -------------------------- */}
+      {aiFmt && aiFmt.status === 'loading' && (
+        <Modal size="sm" icon={Icons.sparkle} title="Reformatting the page" dismissable={false}
+          subtitle="Restructuring it into headings, lists, tables and highlights. Nothing is saved until you have read it.">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
+            <Spinner />Working...
+          </div>
+        </Modal>
+      )}
+      {aiFmt && aiFmt.status === 'error' && (
+        <Modal size="sm" tone="warn" icon={Icons.alertCircle} title="Could not reformat" onClose={() => setAiFmt(null)}
+          footer={<Button variant="primary" onClick={() => setAiFmt(null)}>Close</Button>}>
+          <p style={{ margin: 0 }}>{aiFmt.message}</p>
+        </Modal>
+      )}
+      {aiFmt && aiFmt.status === 'ready' && (
+        <Modal size="lg" icon={Icons.sparkle} title="Proposed reformat"
+          subtitle="Headings, lists, tables and highlights. Every fact is kept, and nothing is saved until you apply."
+          onClose={() => setAiFmt(null)} flush
+          footer={<>
+            <Button variant="ghost" onClick={() => setAiFmt(null)}>Cancel</Button>
+            <Button variant="success" icon={Icons.check} onClick={applyAiFormat}>Apply changes</Button>
+          </>}>
+          <div className="nbk-diff" style={{ padding: '12px 0' }}>
+            {aiFmt.diff.map((l, i) => (
+              <div key={i} className={'nbk-diff__line' + (l.t === '-' ? ' nbk-diff__line--del' : l.t === '+' ? ' nbk-diff__line--add' : '')}>
+                <span className="nbk-diff__gutter">{l.t === ' ' ? '' : l.t}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{l.s || ' '}</span>
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {/* --------------------------- AI organise plan -------------------------- */}
+      {aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') && (
+        <Modal size="sm" icon={Icons.sparkle} dismissable={false}
+          title={aiOrg.status === 'loading' ? 'Reading this section' : 'Moving the content'}
+          subtitle={aiOrg.status === 'loading'
+            ? 'Every page in it is read and each part is matched to the section it belongs in.'
+            : 'Putting each part where the plan says, and moving its files with it.'}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
+            <Spinner />Working...
+          </div>
+        </Modal>
+      )}
+      {aiOrg && aiOrg.status === 'error' && (
+        <Modal size="sm" tone="warn" icon={Icons.alertCircle} title="Could not organise" onClose={() => setAiOrg(null)}
+          footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Close</Button>}>
+          <p style={{ margin: 0 }}>{aiOrg.message}</p>
+        </Modal>
+      )}
+      {aiOrg && aiOrg.status === 'done' && (
+        <Modal size="sm" tone="success" icon={Icons.check} title="Organised" onClose={() => setAiOrg(null)}
+          footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Done</Button>}>
+          <p style={{ margin: 0 }}>
+            {'Moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
+              + ((aiOrg.applied.newSections || 0) ? ', created ' + aiOrg.applied.newSections + ' section(s)' : '')
+              + ((aiOrg.applied.newPages || 0) ? ', created ' + aiOrg.applied.newPages + ' page(s)' : '')
+              + ((aiOrg.applied.removed || 0) ? ', removed ' + aiOrg.applied.removed + ' emptied page(s)' : '') + '.'}
+          </p>
+        </Modal>
+      )}
+      {aiOrg && aiOrg.status === 'ready' && (
+        <Modal size="lg" icon={Icons.sparkle} title="Where each page's content will go"
+          subtitle="Every fact is kept; emptied pages are removed and their files move with the content. Nothing changes until you apply."
+          onClose={() => setAiOrg(null)}
+          footer={<>
+            <Button variant="ghost" onClick={() => setAiOrg(null)}>Cancel</Button>
+            <Button variant="success" icon={Icons.check} onClick={applyAiOrganize}>Apply plan</Button>
+          </>}>
+          <div>
+            {aiOrg.plan.allocations.map((a) => (
+              <div key={a.noteId} className="nbk-plan__note">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', fontWeight: 700, color: T.ink }}>
+                  <Svg w={15} sw={2} style={{ flex: 'none', color: T.dim }}>{Icons.fileLines}</Svg>
+                  {a.noteTitle || 'Untitled'}
+                </div>
+                {a.parts.map((p, i) => (
+                  <div key={i} className="nbk-plan__part">
+                    <Svg w={14} sw={2.2} style={{ flex: 'none', marginTop: '3px', color: T.blue }}>{Icons.arrow}</Svg>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13.5px', fontWeight: 600, color: T.navy }}>
+                        {p.section}{p.isNewSection ? ' (new section)' : ''}
+                        <span style={{ color: T.dim, margin: '0 6px' }}>/</span>
+                        {p.page || a.noteTitle || 'Untitled'}{p.isNewPage ? ' (new page)' : ''}
+                      </div>
+                      {/* A title that names a container rather than a question.
+                          Said here because renaming it now costs nothing, and
+                          renaming it after the page has grown for six months
+                          costs a morning. */}
+                      {p.isVagueTitle && (
+                        <div style={{ marginTop: '4px', fontSize: '12px', fontWeight: 600, color: '#8a6100' }}>
+                          Vague title - rename it to the question staff would ask, or search will never pick it precisely
+                        </div>
+                      )}
+                      <div style={{ marginTop: '4px', fontSize: '12.5px', lineHeight: 1.55, color: T.mut, overflow: 'hidden',
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {p.markdown.replace(/<[^>]+>/g, '').replace(/[#*>`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 240)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {/* An import in progress. A modal rather than a corner toast: restoring a
           backup rewrites what is on the left of the screen, and clicking about
           in the tree while that happens is how a second import gets started. */}
-      {importing && <ImportProgress step={importing} />}
+      {importing && (
+        <ProgressModal title="Restoring the notebook" message={phaseLabel(importing.phase)}
+          done={Math.min(Number(importing.done) || 0, Number(importing.total) || Infinity)}
+          total={Number(importing.total) || 0}
+          unit={importing.phase === 'attachments' ? 'files' : 'pages'}
+          footnote={importing.phase === 'indexing'
+            ? 'Your pages are already back and the assistant can read them. This last step files them for the knowledge tools.'
+            : null} />
+      )}
 
-      {confirm && <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} />}
+      {confirm && (
+        <ConfirmModal title={confirm.title} message={confirm.message} confirmLabel={confirm.confirmLabel}
+          tone={confirm.tone || 'danger'} soleButton={confirm.soleButton} onConfirm={confirm.onConfirm}
+          onClose={() => setConfirm(null)} />
+      )}
     </div>
   );
 }
