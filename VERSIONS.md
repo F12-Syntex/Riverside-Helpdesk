@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.6.8` | 2026-09-20 | refactor | `9a90558` | refactor: move Questions and Answer feedback into the menu |
+| `6.6.7` | 2026-09-20 | docs | `8248f9b` | docs: record 6.6.6 in the versions table |
 | `6.6.6` | 2026-09-20 | style | `2f0415e` | style: light theme for both Structurizr workspaces |
 | `6.6.5` | 2026-09-20 | docs | `af98033` | docs: record 6.6.4 in the versions table |
 | `6.6.4` | 2026-09-20 | docs | `7cc5daf` | docs: add a single-view Structurizr diagram of the program flow |
