@@ -1,0 +1,312 @@
+/*
+ * Riverside Helpdesk - whole tech stack as a Structurizr DSL workspace.
+ *
+ * Paste into https://structurizr.com/dsl (or run structurizr-lite) to render.
+ * Views, in order: System Landscape, System Context, Containers, four
+ * Component views (API, domain libraries, data plane, corpus), one Dynamic
+ * view (a single turn), one Deployment view, and a filtered "egress only"
+ * view. Numbers are counted from the repository at version 6.6.0
+ * (639 commits, 65,684 lines).
+ */
+
+workspace "Riverside Helpdesk" "Reception Q&A assistant for Riverside Practice - full stack, v6.6.0" {
+
+    !identifiers hierarchical
+
+    model {
+
+        // ---------- people ------------------------------------------------
+        reception  = person "Reception staff" "Asks the question, reads the card, never types patient data." "Staff"
+        admin      = person "Practice admin" "Curates Notebook + knowledge, sets model roles at /settings." "Staff"
+
+        // ---------- outside -----------------------------------------------
+        openrouter = softwareSystem "OpenRouter" "One API key, eight model roles. Zero data retention." "External"
+        exa        = softwareSystem "Exa + web hosts" "One open-internet search, only when the corpus cannot answer." "External"
+        azure      = softwareSystem "Azure OpenAI Embeddings" "text-embedding-3-small. No retention." "External"
+        cqc        = softwareSystem "CQC register" "Provider + location lookup." "External"
+        refdata    = softwareSystem "SNOMED + eRS directory" "Coding terms and e-Referral services." "External"
+        github     = softwareSystem "GitHub Actions" "Tests, version check, build, extension release." "External"
+        vercelplat = softwareSystem "Vercel platform" "Hosting, Blob storage, Analytics." "External"
+
+        // ---------- the system --------------------------------------------
+        helpdesk = softwareSystem "Riverside Helpdesk" "Next.js 14.2 App Router. 20 pages, 40 API routes, 122 lib modules, 51 components, 31 tables." {
+
+            // ===== containers =============================================
+            browser = container "Browser client" "React 18.3 client components, Tiptap 2.27 editor, pdf.js 6, @napi-rs/canvas, Vercel Analytics. 51 components, 11,900 lines." "React 18.3" "Web"
+
+            extension = container "Chrome extension" "Built with esbuild, signed .crx, released on GitHub, distributed via the practice share drive. Chrome self-updates." "JavaScript" "Web"
+
+            pages = container "App Router pages" "20 routes: / /lookup /tools /questions /signpost /reason /coding /notebook /medications /rota /templates /stats /settings /knowledge /dpia /diagram /stack /site-index /helpbot" "Next.js 14.2" "Web"
+
+            gate = container "Middleware gate" "middleware.js - localhost-only admin surfaces, machine identity for audit." "Next.js middleware"
+
+            api = container "Route handlers" "40 endpoints, 4,736 lines, app/api/**." "Next.js route handlers" {
+                agentRoute     = component "agent" "The answering turn. Redact, screen, safety, route, pick, render, log."
+                reasonRoute    = component "reason" "Long-form reasoning surface."
+                signpostRoute  = component "signpost" "Where does this request go."
+                screenRoute    = component "screen" "Pre-send patient-data screen (superSpeed role)."
+                medicationRoute= component "medication + extract" "Medication Check, verified sources only, deterministic 999 backstop."
+                notebookRoute  = component "notebook x13" "Notes, revisions, proposals, attachments, contradictions, defrag, snapshots."
+                knowledgeRoute = component "knowledge x5" "Entries, passages, claims, conflicts, sync."
+                routingRoute   = component "routing/learn" "Trigger learning for the router (ships OFF)."
+                questionsRoute = component "questions + open + dismiss" "Question log and open questions."
+                lookupRoute    = component "lookup-web" "One outbound search."
+                directoryRoute = component "directory + cqc" "eRS directory and CQC register lookups."
+                docfileRoute   = component "docfile + attach + kb" "File read, upload, knowledge base fetch."
+                opsRoute       = component "rota + staff + settings + models" "Practice ops and model-role settings."
+                auditRoute     = component "audit + feedback" "Audit events, machines, answer feedback."
+            }
+
+            lib = container "Domain libraries" "122 modules, 28,170 lines, lib/**. All judgement lives here, not in the routes." "JavaScript (ESM)" {
+                safety     = component "safety x11" "Red flags, NG12, acuity. Deterministic - zero model calls."
+                routing    = component "routing x6" "Trigger index, lexical + vector match, thresholds from app_settings."
+                templates  = component "templates x24" "The answer shapes. The model returns a name, code renders the blocks."
+                agentLib   = component "agent" "Turn orchestration, quote check, command dispatch (8 commands)."
+                aiLib      = component "ai" "OpenRouter client, model-role resolution, model-id helpers."
+                knowledge  = component "knowledge + knowledge-context" "Retrieval, claim cache, admin access, bootstrap."
+                notebookLib= component "notebook" "Notes, proposals, defrag, contradictions."
+                medsLib    = component "medications" "Verified-source-only display, emergency backstop."
+                lookupLib  = component "lookup" "Web search loop and page reading."
+                referrals  = component "referrals" "eRS and referral routing."
+                triage     = component "triage" "Acuity and signposting logic."
+                guides     = component "guides" "Staff guidance content."
+                rotaLib    = component "rota + staff + contacts" "Practice ops data and fuzzy contact match."
+                auditLib   = component "audit + questions + feedback" "Everything written after an answer."
+                attachments= component "attachments" "Parse and store uploads."
+                settingsLib= component "settings + routes + version + dpia" "app_settings, route table, version strip, DPIA content."
+            }
+
+            db = container "Neon Postgres" "Serverless HTTP driver, one fetch per query. 31 tables, 36 indexes (1 unique, 3 vector/trigram), pgvector + pg_trgm. Tables created on first use." "Postgres + pgvector" "Database" {
+                tNotebook  = component "Notebook (8)" "notes, note_revisions, note_proposals, note_attachments, note_contradictions, note_defrag_runs, note_defrag_items, notebook_snapshots"
+                tKnowledge = component "Knowledge (8)" "knowledge_entries, knowledge_passages, knowledge_claims, knowledge_claim_cache, knowledge_conflicts, knowledge_conflict_decisions, knowledge_analysis_jobs, knowledge_sync_state"
+                tAudit     = component "Audit + usage (6)" "audit_events, audit_machines, question_log, open_questions, answer_feedback, ai_usage"
+                tRef       = component "Reference data (4)" "medications, medication_aliases, snomed_terms, ers_directory"
+                tOps       = component "Practice ops (3)" "staff, rotas, app_settings"
+                tRouting   = component "Routing (2)" "routing_triggers, routing_decisions"
+            }
+
+            blob = container "Vercel Blob" "Notebook attachments at public URLs. Practice documents." "Object storage" "Database"
+
+            corpus = container "RAG corpus" "Committed artefacts - no database, no redeploy to change an answer." "Files in repo" "Database" {
+                sources    = component "rag/sources" "196 files, 54.5 MB. doc 116, docx 54, rtf 9, pdf 8, pptx 1."
+                parsers    = component "7 parsers" "pdf, docx, doc, pptx, rtf, text, image."
+                chunker    = component "Chunker" "Headings kept, tables kept whole. 1,627 lines across rag/**."
+                embedder   = component "Embedder" "text-embedding-3-small."
+                processed  = component "rag/processed" "188 docs, 2,047 chunks. catalog.json + embeddings.json."
+                searcher   = component "Search" "Cosine over chunks plus catalogue summaries."
+            }
+
+            tests = container "Test + eval suite" "66 test files, 9,848 lines, node --test. No DB and no API key needed. evals/ 672 lines: routing bench + golden set (run with --repeats 5)." "node:test" "Build"
+
+            scripts = container "Scripts" "21 build and data scripts, 3,428 lines. npm run rag:sync, npm run versions." "Node scripts" "Build"
+        }
+
+        // ---------- relationships: people ---------------------------------
+        reception -> helpdesk.browser "Asks a question, reads the card"
+        admin     -> helpdesk.browser "Curates knowledge, sets model roles"
+        reception -> helpdesk.extension "Pastes a request from the clinical system"
+
+        // ---------- relationships: front to back --------------------------
+        helpdesk.browser   -> helpdesk.pages "Renders" "React Server Components"
+        helpdesk.extension -> helpdesk.api "Calls" "HTTPS/JSON"
+        helpdesk.pages     -> helpdesk.gate "Passes through"
+        helpdesk.gate      -> helpdesk.api "Admits, tagged with machine identity"
+        helpdesk.browser   -> helpdesk.api "Fetches" "HTTPS/JSON"
+        helpdesk.api       -> helpdesk.lib "Delegates every judgement to"
+
+        helpdesk.lib -> helpdesk.db "Reads and writes" "Neon HTTP driver"
+        helpdesk.lib -> helpdesk.blob "Stores attachments in"
+        helpdesk.lib -> helpdesk.corpus "Searches"
+        helpdesk.lib -> openrouter "Calls, 8 model roles" "HTTPS"
+        helpdesk.lib -> exa "One open-internet search, only if unanswered" "HTTPS"
+        helpdesk.lib -> cqc "Looks up providers" "HTTPS"
+        helpdesk.lib -> refdata "Looks up SNOMED terms + eRS services" "HTTPS"
+
+        helpdesk.corpus  -> azure "Embeds chunks with" "HTTPS"
+        helpdesk.scripts -> helpdesk.corpus "Ingests and prunes (npm run rag:sync)"
+        helpdesk.tests   -> helpdesk.lib "Exercises"
+        github -> helpdesk.tests "Runs npm test, versions --check, next build"
+        github -> helpdesk.extension "Builds, signs .crx, releases"
+        github -> vercelplat "Deploys to"
+        vercelplat -> helpdesk.pages "Serves"
+
+        // ---------- relationships: components -----------------------------
+        helpdesk.api.agentRoute -> helpdesk.lib.safety "Screens with (deterministic)"
+        helpdesk.api.agentRoute -> helpdesk.lib.routing "Asks for a direct hit"
+        helpdesk.api.agentRoute -> helpdesk.lib.templates "Picks a template name via"
+        helpdesk.api.agentRoute -> helpdesk.lib.agentLib "Renders and quote-checks with"
+        helpdesk.api.agentRoute -> helpdesk.lib.knowledge "Retrieves passages from"
+        helpdesk.api.agentRoute -> helpdesk.lib.auditLib "Logs the turn with"
+        helpdesk.api.screenRoute -> helpdesk.lib.safety "Holds the send using"
+        helpdesk.api.medicationRoute -> helpdesk.lib.medsLib "Answers from verified sources only"
+        helpdesk.api.notebookRoute -> helpdesk.lib.notebookLib "Uses"
+        helpdesk.api.knowledgeRoute -> helpdesk.lib.knowledge "Uses"
+        helpdesk.api.routingRoute -> helpdesk.lib.routing "Teaches triggers to"
+        helpdesk.api.lookupRoute -> helpdesk.lib.lookupLib "Uses"
+        helpdesk.api.signpostRoute -> helpdesk.lib.triage "Uses"
+        helpdesk.api.directoryRoute -> helpdesk.lib.referrals "Uses"
+        helpdesk.api.opsRoute -> helpdesk.lib.rotaLib "Uses"
+        helpdesk.api.opsRoute -> helpdesk.lib.settingsLib "Reads and writes model roles through"
+        helpdesk.api.auditRoute -> helpdesk.lib.auditLib "Uses"
+        helpdesk.api.docfileRoute -> helpdesk.lib.attachments "Uses"
+
+        helpdesk.lib.aiLib -> openrouter "Every model call goes through one key"
+        helpdesk.lib.routing -> helpdesk.db.tRouting "Trigger vectors + decisions"
+        helpdesk.lib.knowledge -> helpdesk.db.tKnowledge "Entries, passages, claims"
+        helpdesk.lib.notebookLib -> helpdesk.db.tNotebook "Notes and revisions"
+        helpdesk.lib.auditLib -> helpdesk.db.tAudit "3 tables written per answered turn"
+        helpdesk.lib.medsLib -> helpdesk.db.tRef "Medications + aliases"
+        helpdesk.lib.referrals -> helpdesk.db.tRef "snomed_terms + ers_directory (pg_trgm)"
+        helpdesk.lib.rotaLib -> helpdesk.db.tOps "staff + rotas"
+        helpdesk.lib.settingsLib -> helpdesk.db.tOps "app_settings - model + thresholds, no redeploy"
+
+        helpdesk.corpus.sources -> helpdesk.corpus.parsers "Read by"
+        helpdesk.corpus.parsers -> helpdesk.corpus.chunker "Feed"
+        helpdesk.corpus.chunker -> helpdesk.corpus.embedder "Chunks to"
+        helpdesk.corpus.embedder -> helpdesk.corpus.processed "Writes 2,047 chunks to"
+        helpdesk.corpus.processed -> helpdesk.corpus.searcher "Served by"
+        helpdesk.corpus.embedder -> azure "Calls"
+
+        // ---------- deployment --------------------------------------------
+        deploymentEnvironment "Production" {
+            practice = deploymentNode "The practice" "Surgery desktops" {
+                chrome = deploymentNode "Chrome" "Managed browser" {
+                    containerInstance helpdesk.browser
+                    containerInstance helpdesk.extension
+                }
+                sharedrive = deploymentNode "Practice share drive" "Extension pickup point"
+            }
+            vercel = deploymentNode "Vercel" "Serverless, edge middleware" {
+                deploymentNode "Next.js runtime" "Node" {
+                    containerInstance helpdesk.pages
+                    containerInstance helpdesk.gate
+                    containerInstance helpdesk.api
+                    containerInstance helpdesk.lib
+                    containerInstance helpdesk.corpus
+                }
+                deploymentNode "Blob store" "" {
+                    containerInstance helpdesk.blob
+                }
+            }
+            neon = deploymentNode "Neon" "Serverless Postgres" {
+                deploymentNode "Postgres 16 + pgvector" "" {
+                    containerInstance helpdesk.db
+                }
+            }
+            ci = deploymentNode "GitHub Actions" "CI" {
+                containerInstance helpdesk.tests
+                containerInstance helpdesk.scripts
+            }
+        }
+    }
+
+    views {
+
+        systemLandscape landscape "Landscape" {
+            include *
+            autolayout lr
+        }
+
+        systemContext helpdesk context "Context" {
+            include *
+            autolayout lr
+        }
+
+        container helpdesk containers "Containers" {
+            include *
+            autolayout tb
+        }
+
+        component helpdesk.api apiComponents "Route handlers - 40 endpoints" {
+            include *
+            autolayout lr
+        }
+
+        component helpdesk.lib libComponents "Domain libraries - 122 modules" {
+            include *
+            autolayout lr
+        }
+
+        component helpdesk.db dbComponents "Postgres - 31 tables in 6 groups" {
+            include *
+            autolayout lr
+        }
+
+        component helpdesk.corpus corpusComponents "Corpus - 196 sources to 2,047 chunks" {
+            include *
+            autolayout lr
+        }
+
+        dynamic helpdesk.api oneTurn "One turn - typing to card" {
+            helpdesk.api.screenRoute -> helpdesk.lib.safety "1. Patient-data screen holds the send (superSpeed role)"
+            helpdesk.api.agentRoute -> helpdesk.lib.safety "2. Redact identifiers (regex) then red flags / NG12 / acuity - 0 model calls"
+            helpdesk.api.agentRoute -> helpdesk.lib.routing "3. Router: lexical + vector. hit >= 0.82, ask-back >= 0.70, margin 0.05. Ships OFF"
+            helpdesk.api.agentRoute -> helpdesk.lib.knowledge "4. Retrieve quotable passages"
+            helpdesk.api.agentRoute -> helpdesk.lib.templates "5. Reasoning model returns a template name, not prose (24 templates)"
+            helpdesk.api.agentRoute -> helpdesk.lib.agentLib "6. Card assembled from blocks in code (8 commands)"
+            helpdesk.api.agentRoute -> helpdesk.lib.auditLib "7. Quote check - unquoted claim dropped - then 3 tables written"
+            autolayout lr
+        }
+
+        deployment helpdesk "Production" prod "Deployment" {
+            include *
+            autolayout lr
+        }
+
+        // Every outbound path, and the ones that do not exist.
+        systemContext helpdesk egress "Egress - what leaves the building" {
+            include helpdesk openrouter exa azure cqc refdata vercelplat
+            description "OpenRouter: question text, Notebook extracts, screenshots - zero retention. Web hosts: a query, only if unanswered. Vercel Blob: practice documents at public URLs. Neon: everything the app remembers. Nothing else - no third-party scripts, no content analytics. See /dpia."
+            autolayout lr
+        }
+
+        styles {
+            element "Element" {
+                shape roundedbox
+                color #ffffff
+                background #005eb8
+                fontSize 22
+            }
+            element "Person" {
+                shape person
+                background #003087
+            }
+            element "Staff" {
+                background #003087
+            }
+            element "Software System" {
+                background #005eb8
+            }
+            element "External" {
+                background #330072
+            }
+            element "Container" {
+                background #0072ce
+            }
+            element "Web" {
+                shape webbrowser
+                background #41b6e6
+                color #231f20
+            }
+            element "Database" {
+                shape cylinder
+                background #009639
+            }
+            element "Build" {
+                shape folder
+                background #ed8b00
+                color #231f20
+            }
+            element "Component" {
+                background #00a499
+            }
+            relationship "Relationship" {
+                thickness 2
+                color #425563
+                fontSize 20
+            }
+        }
+
+        theme default
+    }
+}
