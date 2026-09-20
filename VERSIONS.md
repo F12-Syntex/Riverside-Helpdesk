@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.10.1` | 2026-09-20 | fix | `67b5d35` | fix: show the page shape that can answer backwards |
+| `6.10.0` | 2026-09-20 | feat | `2c178bf` | feat: let the model name the row it read |
+| `6.9.6` | 2026-09-20 | docs | `3efa9f8` | docs: record 6.9.5 in the versions table |
 | `6.9.5` | 2026-09-20 | fix | `cbc0518` | fix: answer the referral the qualifier asked for |
 | `6.9.4` | 2026-09-20 | docs | `7ea488c` | docs: record 6.9.3 in the versions table |
 | `6.9.3` | 2026-09-20 | fix | `b4b516d` | fix: open the notebook menu where it fits |
