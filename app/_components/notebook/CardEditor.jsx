@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 // A typed note, edited as the screen it is about.
 //

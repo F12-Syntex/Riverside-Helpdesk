@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 // The controls that make a drawn screen into an editable one.
 //
