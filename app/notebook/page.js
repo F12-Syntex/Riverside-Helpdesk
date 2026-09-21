@@ -21,6 +21,7 @@ import { Mark, mergeAttributes } from '@tiptap/core';
 import { Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
+import CardEditor from '../_components/notebook/CardEditor';
 import {
   NotebookStyles, T, NBIcons, Banner, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
   EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
@@ -104,24 +105,13 @@ const PAGE_CSS = `
   gap:10px;border:2px dashed var(--nbk-blue);border-radius:var(--nbk-r-lg);background:rgba(233,242,250,.88);
   font-size:16px;font-weight:700;color:var(--nbk-navy);pointer-events:none;}
 
-/* The typed card, editable. Its own colour runs down the left edge so the kind
-   is visible without reading the chip, and the boxes sit two to a row at any
-   sensible width - a referral is a dozen short values, and one per row turned
-   it into a page of scrolling. */
-.nbk-card{margin:18px 20px 6px;border:1px solid var(--nbk-kind-edge);border-left:3px solid var(--nbk-kind);
-  border-radius:var(--nbk-r-md);background:var(--nbk-kind-tint);box-shadow:var(--nbk-sh-1);overflow:hidden;}
-.nbk-card__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 14px 0;}
-.nbk-card__note{font-size:12.5px;color:var(--nbk-mut);}
-.nbk-card__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2px 14px;padding:10px 14px 14px;}
-.nbk-fbox{display:flex;flex-direction:column;gap:3px;padding:6px 0;min-width:0;}
-.nbk-fbox__label{font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--nbk-mut);}
-.nbk-fbox__input{width:100%;box-sizing:border-box;border:1px solid var(--nbk-line);border-radius:var(--nbk-r-sm);
-  background:#fff;padding:7px 9px;font:inherit;font-size:14px;color:var(--nbk-ink);resize:vertical;}
-.nbk-fbox__input:focus{outline:none;border-color:var(--nbk-kind);box-shadow:0 0 0 3px var(--nbk-kind-tint);}
-.nbk-fbox__input--bad{border-color:#d5281b;}
-.nbk-fbox__hint{font-size:11.5px;line-height:1.45;color:var(--nbk-dim);min-height:1px;}
-.nbk-fbox__bad{color:#d5281b;font-weight:600;}
-.nbk-card__prose{margin:0 20px;padding:12px 0 0;border-top:1px solid var(--nbk-line-soft);
+/* The typed card. The screen itself is drawn by the same components the chat
+   uses (app/_components/templates), which carry their own styling - there is
+   deliberately no second set of card styles here to drift from them. What is
+   left is the space the screen sits in and the heading over the page's own
+   writing underneath it. */
+.nbk-card-wrap{padding:18px 20px 0;}
+.nbk-card__prose{margin:16px 20px 0;padding:12px 0 0;border-top:1px solid var(--nbk-line-soft);
   font-size:12.5px;font-weight:700;color:var(--nbk-mut);}
 
 .nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
@@ -276,76 +266,6 @@ function KindChip({ kind, draft = false, full = false }) {
   );
 }
 
-/**
- * One box on a typed note, drawn from its field descriptor.
- *
- * THE FORM IS THE SCREEN, not a description of it. The boxes are in the order
- * they are typed into e-RS, AccurX or EMIS, they are labelled with those
- * screens' own words, and what is missing is said IN the box it belongs to
- * rather than in a list at the top.
- *
- * A list field is one value per line. That is how the practice already writes
- * them down, it survives a paste out of a screen, and it does not need a
- * control nobody at a front desk has used before.
- */
-function FieldBox({ field, value, issue, onChange }) {
-  const id = 'nbf-' + field.key;
-  const shown = field.type === 'list' ? (value || []).join('\n') : (value || '');
-  const common = {
-    id,
-    value: shown,
-    onChange: (e) => onChange(field.type === 'list' ? e.target.value.split('\n') : e.target.value),
-    placeholder: field.placeholder || '',
-    'aria-describedby': id + '-hint',
-    'aria-invalid': issue ? true : undefined,
-    className: 'nbk-fbox__input' + (issue ? ' nbk-fbox__input--bad' : ''),
-  };
-  return (
-    <div className="nbk-fbox">
-      <label className="nbk-fbox__label" htmlFor={id}>{field.label}</label>
-      {field.type === 'enum' ? (
-        <select {...common}>
-          {field.options.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
-      ) : field.type === 'text' ? (
-        <input {...common} type="text" />
-      ) : (
-        <textarea {...common} rows={field.type === 'list' ? Math.max(2, (value || []).length + 1) : 4} />
-      )}
-      <div className="nbk-fbox__hint" id={id + '-hint'}>
-        {issue ? <span className="nbk-fbox__bad">{issue.message}</span> : field.hint}
-      </div>
-    </div>
-  );
-}
-
-/**
- * The whole card, editable.
- *
- * Above the page's own writing, because the values are what the reader came
- * for and the prose is what is different about this one. Nothing here is
- * chosen by a model, at any point: the boxes come from the kind, the values
- * come from the practice, and what the assistant is shown is these values in
- * this order.
- */
-function FieldsForm({ kind, fields, issues, onChange }) {
-  const def = noteKind(kind);
-  const byField = new Map((issues || []).map((i) => [i.field, i]));
-  return (
-    <div className="nbk-card" style={{ '--nbk-kind': def.colour.ink, '--nbk-kind-tint': def.colour.tint, '--nbk-kind-edge': def.colour.edge }}>
-      <div className="nbk-card__head">
-        <Chip colour={def.colour} dot>{def.label}</Chip>
-        <span className="nbk-card__note">{def.summary}</span>
-      </div>
-      <div className="nbk-card__grid">
-        {def.fields.map((field) => (
-          <FieldBox key={field.key} field={field} value={fields[field.key]} issue={byField.get(field.key)}
-            onChange={(next) => onChange({ ...fields, [field.key]: next })} />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // One tree row; children render recursively inside .nbk-kids, which draws the
 // parent-to-child connector lines. Defined at module level (not inside the page
@@ -1316,8 +1236,16 @@ export default function NotebookPage() {
                         </Banner>
                       </div>
                     )}
-                    <FieldsForm kind={selected.kind} fields={selectedFields} issues={selectedIssues}
-                      onChange={(next) => editSelected({ fields: normaliseFields(selected.kind, next) })} />
+                    <div className="nbk-card-wrap">
+                      {/* NOT NORMALISED ON EVERY KEYSTROKE. normaliseFields
+                          drops empty values, which is right for what is stored
+                          and wrong for what is being typed: an empty row added
+                          to a list was deleted before anybody could type into
+                          it. The server coerces on save (updateNote), which is
+                          the one place it has to be true. */}
+                      <CardEditor kind={selected.kind} fields={selectedFields} issues={selectedIssues}
+                        onChange={(next) => editSelected({ fields: next })} />
+                    </div>
                     <div className="nbk-card__prose">Differences from the standard process, and anything else worth saying</div>
                     <PageEditor
                       key={selected.id}
