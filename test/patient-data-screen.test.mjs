@@ -34,7 +34,11 @@ test('adding the role left the others exactly where they were', () => {
   assert.equal(roles.reasoning.model, 'a/reasoning');
   assert.equal(roles.fast.model, 'b/fast');
   assert.equal(roles.web.model, 'c/web');
-  assert.equal(roles.accurx.model, 'd/accurx');
+  // A role stored by a build that had one this build does not is ignored
+  // rather than resolved: accurx went with the /accurx command, and a value
+  // left behind in app_settings must not come back as a model nothing asked
+  // for.
+  assert.equal(roles.accurx, undefined);
 });
 
 /* -------------------------------------------------------------- the schema */
