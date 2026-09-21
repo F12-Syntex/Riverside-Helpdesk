@@ -55,6 +55,8 @@ import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { groundedIn } from '@/lib/questions/grounding.mjs';
 import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
+import { referralCardFromRead } from '@/lib/templates/referrals.mjs';
+import { REFERRAL_READ_SCHEMA, groundReferralRead, referralReadPrompt } from '@/lib/agent/referral-read.mjs';
 import {
   PRACTICE_ANSWER_SCHEMA, groundPracticeAnswer, practiceAnswerPrompt, practiceSources,
 } from '@/lib/agent/practice-answer.mjs';
@@ -1051,6 +1053,53 @@ export async function POST(request) {
           }
         };
 
+        // THE REFERRAL PAIRING, READ BY THE MODEL RATHER THAN PARSED.
+        //
+        // A referral card lives or dies on three values — is this sent on
+        // e-RS or by email, what goes in Speciality, what goes in Clinic
+        // type — and they are written on the practice's own pathway pages.
+        // Getting them out of those pages was a parser: three recognised
+        // page shapes and a word-overlap score, right about the pages it was
+        // written against and blind to every other way of writing the same
+        // thing down. Its two failure modes both reach the reader as a
+        // confident card: a page it cannot read is reported as a referral
+        // the practice has no process for, and a near miss on the score is
+        // the wrong pairing drawn exactly like a right one.
+        //
+        // So the model reads the page. It is NOT writing the answer: the
+        // card is the same card built from the same blocks, and every value
+        // it returns is checked against the page it named, character for
+        // character, before any of it is drawn
+        // (lib/agent/referral-read.mjs). What the check deletes becomes a
+        // GAP the card names, because an open box with "the page does not
+        // record this" against it is something a receptionist can act on.
+        //
+        // The parser still runs first and its card is what stands if this
+        // read fails, comes back empty or names a page the Notebook does not
+        // have. One extra call, on referral turns only.
+        const applyReferralRead = async (selection) => {
+          if (!selection || selection.template !== 'referral') return;
+          if (!notebookPages.length) return;
+          try {
+            const read = await readValues({
+              model: seeing ? imageModel : model,
+              schema: REFERRAL_READ_SCHEMA,
+              text: referralReadPrompt({
+                name: selection.referralName || '',
+                question,
+                notebook: notebookText,
+              }),
+              role: seeing ? 'images' : 'fast',
+              phase: 'referralRead',
+            });
+            const grounded = groundReferralRead({ read, pages: notebookPages });
+            const card = grounded && referralCardFromRead(grounded);
+            if (card) templateAnswer = card;
+          } catch (e) {
+            console.warn('[agent] referral read failed:', String(e).slice(0, 160));
+          }
+        };
+
         // THE ROUTER, IN FRONT OF THE PICKER. Strictly additive: a miss (and
         // the switch being off, which is the default) falls through to the
         // picker below, which behaves exactly as it did before the router
@@ -1109,6 +1158,9 @@ export async function POST(request) {
           // The folder's own shape, when the practice has given it one — see
           // applyOutputTag above.
           await applyOutputTag(selection.object);
+          // And the referral pairing, read off the page rather than parsed
+          // out of it — see applyReferralRead above.
+          await applyReferralRead(selection.object);
         } catch (e) {
           // A router that cannot answer is not a turn that cannot answer — and
           // the scan already ran over the whole message, so a turn that ends in
