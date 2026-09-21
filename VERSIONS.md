@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `8.0.1` | 2026-09-21 | fix | `db41b75` | fix: strip the UTF-8 BOM that broke the Vercel build |
+| `8.0.0` | 2026-09-21 | fix | `9bdaca1` | fix!: never drop a column from ensureNotebookSchema |
+| `7.0.3` | 2026-09-21 | test | `8cae656` | test: a stored accurx model resolves to nothing |
+| `7.0.2` | 2026-09-21 | docs | `29e078d` | docs: record 7.0.1 in the versions table |
 | `7.0.1` | 2026-09-21 | docs | `e6ddb93` | docs: describe the turn that runs now, and drop the dead accurx role |
 | `7.0.0` | 2026-09-21 | refactor | `b630002` | refactor!: answer in one model call, and drop the modes with it |
 | `6.14.0` | 2026-09-21 | feat | `c2f6f0f` | feat: create and fill in typed notes from the notebook |
