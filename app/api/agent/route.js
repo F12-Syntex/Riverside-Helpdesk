@@ -39,7 +39,7 @@ import { generateObject, generateText, zodSchema } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
-  commandPrompt, notebookCatalogue, notebookFits, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
+  commandPrompt, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
   taggedNotebookPage,
 } from '@/lib/templates/route.mjs';
 import { outputTagPrompt, withTaggedOutput } from '@/lib/templates/output-tags.mjs';
@@ -1001,10 +1001,7 @@ export async function POST(request) {
         // memoised `notebook()` declared at the top of this stream, so a turn
         // that already loaded it for a list command does not load it twice.
         const notebookPages = await notebook();
-        const notebookInFull = notebookPages.length > 0 && notebookFits(notebookPages);
-        const notebookText = !notebookPages.length ? ''
-          : notebookInFull ? notebookFullText(notebookPages)
-            : notebookCatalogue(notebookPages);
+        const notebookText = notebookPages.length ? notebookFullText(notebookPages) : '';
 
         let templateAnswer = null;
         let clarify = null;
@@ -1090,7 +1087,7 @@ export async function POST(request) {
             object: await readValues({
               model: selectModel,
               schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
-              text: selectionPrompt({ question, attached, notebook: notebookText, full: notebookInFull, decompose, images: images.length }),
+              text: selectionPrompt({ question, attached, notebook: notebookText, decompose, images: images.length }),
               role: seeing ? 'images' : 'fast',
               phase: 'select',
             }),
@@ -1191,7 +1188,7 @@ export async function POST(request) {
         const generated = await generateText({
           model: openrouter(proseModel),
           // The whole Notebook, the same text the picker read — see systemFor.
-          system: proseSystemPrompt(notebookText, notebookInFull),
+          system: proseSystemPrompt(notebookText),
           // Capped for the same reason as readValues: an uncapped call reserves
           // the model's whole window and is refused when the balance is low.
           maxOutputTokens: PROSE_MAX_TOKENS,

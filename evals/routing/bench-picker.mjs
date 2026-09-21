@@ -65,7 +65,7 @@ const { buildFullNotebookSources } = await import('../../lib/knowledge-context.m
 const { getSql, ensureNotebookSchema } = await import('../../lib/db.js');
 const { getModelRoles } = await import('../../lib/settings.js');
 const { AI_SDK_EXTRA_BODY } = await import('../../lib/ai/openrouter.mjs');
-const { SELECTION_SCHEMA, selectionPrompt, notebookFullText, notebookFits, notebookCatalogue } = await import('../../lib/templates/route.mjs');
+const { SELECTION_SCHEMA, selectionPrompt, notebookFullText } = await import('../../lib/templates/route.mjs');
 const { pagePath } = await import('../../lib/routing/router.mjs');
 
 await ensureNotebookSchema();
@@ -76,8 +76,7 @@ const notes = await sql`
   FROM notes ORDER BY position ASC, id ASC
 `;
 const pages = buildFullNotebookSources(notes, []);
-const full = pages.length > 0 && notebookFits(pages);
-const notebookText = !pages.length ? '' : full ? notebookFullText(pages) : notebookCatalogue(pages);
+const notebookText = pages.length ? notebookFullText(pages) : '';
 const model = opt('--model', '') || (await getModelRoles()).fast.model;
 const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, extraBody: AI_SDK_EXTRA_BODY });
 
@@ -95,7 +94,7 @@ function expectedId(expected) {
   return resolvePage(expected) || `unresolved:${expected}`;
 }
 
-console.log(`${cases.length} cases x ${repeats} repeat${repeats === 1 ? '' : 's'} on ${model}; Notebook ${full ? 'in full' : 'as a catalogue'}`);
+console.log(`${cases.length} cases x ${repeats} repeat${repeats === 1 ? '' : 's'} on ${model}`);
 
 const jobs = [];
 for (let r = 0; r < repeats; r++) for (const c of cases) jobs.push({ r: r + 1, c });
@@ -109,7 +108,7 @@ async function worker() {
     const want = expectedId(c.expected);
     const t0 = Date.now();
     let picked = 'error', named = '', usage = null, error = '', retried = false;
-    const text = selectionPrompt({ question: c.question, attached: '', notebook: notebookText, full, decompose: false, images: 0 });
+    const text = selectionPrompt({ question: c.question, attached: '', notebook: notebookText, decompose: false, images: 0 });
     try {
       const out = await generateObject({
         model: openrouter(model),
