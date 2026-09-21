@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.12.4` | 2026-09-21 | refactor | `405acbf` | refactor: drop the dead answer-cache path from the chat |
+| `6.12.3` | 2026-09-21 | docs | `1eb9c23` | docs: record 6.12.2 in the versions table |
 | `6.12.2` | 2026-09-21 | docs | `be1f64f` | docs: hand off the typed-notes answer-system redesign |
 | `6.12.1` | 2026-09-21 | docs | `a9cb670` | docs: record 6.12.0 in the versions table |
 | `6.12.0` | 2026-09-21 | feat | `557f2da` | feat: let the model read the referral pairing off the page |
