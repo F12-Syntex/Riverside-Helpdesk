@@ -4,7 +4,6 @@ import {
   findTemplatePages, oneTemplates, templateByName, templatePages,
 } from '../lib/referrals/one-templates.mjs';
 import { templatePageAnswer } from '../lib/templates/template-pages.mjs';
-import { templateCommandAnswer } from '../lib/templates/lookup-command.mjs';
 import { contractReasonedAnswer, splitTemplateName } from '../lib/templates/contracts.mjs';
 
 const flat = (card) => JSON.stringify(card);
@@ -126,32 +125,8 @@ test('naming a template answers with its page list', () => {
 // The order is the argument: a commissioned contract answers as a contract,
 // with the status and the date only the Sitrep can give. Everything else
 // answers as a page.
-test('Contract template searches the contract list first, then the pages', () => {
-  const contract = templateCommandAnswer({ query: 'ADHD shared pathway' });
-  assert.match(contract.subtitle, /as at 28 July 2026/);
-  assert.match(flat(contract), /OneTemplate Prescriber/);
-
-  const page = templateCommandAnswer({ query: 'firearms request' });
-  assert.equal(page.title, 'Firearm Requests');
-});
-
-test('a miss says both of PCIT’s documents were searched, and still never reaches prose', () => {
-  const card = templateCommandAnswer({ query: 'printer toner' });
-  assert.match(card.title, /no contract by that name/);
-  assert.match(flat(card), /OneTemplate page specifications/);
-  for (const q of ['', '   ', 'zzzz']) {
-    assert.ok(templateCommandAnswer({ query: q }).title, `"${q}" produced no card`);
-  }
-});
-
 // The mode reads Primary Care IT's documents. It does not read the practice's
 // Notebook, and it does not cross to the referral tree.
-test('the page lookup is still PCIT only', () => {
-  const card = flat(templateCommandAnswer({ query: 'wound care' }));
-  assert.doesNotMatch(card, /Referral Tree/);
-  assert.doesNotMatch(card, /From the Notebook/);
-});
-
 /* --------------------------------------------------- where to find it */
 
 // The complaint this answers: being handed a template name and left to scroll.

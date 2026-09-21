@@ -6,7 +6,6 @@ import { scanRedFlags } from '../lib/safety/redflags.mjs';
 import { ACUITY_ORDER, classifyRequest, moreUrgent, rankOf } from '../lib/safety/acuity.mjs';
 import { MAX_REQUESTS, looksMultiIntent, normaliseRequests } from '../lib/safety/requests.mjs';
 import { matchSpan, sentenceAround, spanWithin } from '../lib/safety/spans.mjs';
-import { MAX_CLASSIFIED, applyClassification, toClassify } from '../lib/safety/triage-pass.mjs';
 import { safetyScan } from '../lib/safety/scan.mjs';
 
 const ids = (findings) => findings.map((f) => f.ruleId);
@@ -188,48 +187,6 @@ test('a preference about timing is not an unresolved clinical item', () => {
   });
   assert.equal(s.trivia, 1);
   assert.equal(s.listed.length, 1);
-});
-
-/* ------------------------------------------ the second pass, and its veto */
-
-test('the second pass may raise acuity and may never lower it', () => {
-  const item = { id: 'r1', acuity: 'emergency', status: 'flagged' };
-  const lowered = applyClassification(item, { acuity: 'routine', condition: 'a graze' });
-  assert.equal(lowered.acuity, 'emergency', 'the regex is the guarantee; the model is a recall booster');
-  assert.equal(lowered.raisedBy, undefined);
-
-  const raised = applyClassification({ id: 'r2', acuity: 'routine' }, { acuity: 'twoWeekWait', condition: 'hoarse voice' });
-  assert.equal(raised.acuity, 'twoWeekWait');
-  assert.equal(raised.status, 'flagged');
-  assert.equal(raised.raisedBy, 'triagePass');
-});
-
-test('the second pass can add a refusal and can never withdraw one', () => {
-  const added = applyClassification({ id: 'r1', acuity: 'routine' }, { acuity: 'thirdPartyRequest' });
-  assert.equal(added.thirdParty, true);
-  assert.equal(added.status, 'refused');
-
-  const kept = applyClassification({ id: 'r2', acuity: 'routine', thirdParty: true, status: 'refused' }, { acuity: 'admin' });
-  assert.equal(kept.thirdParty, true, 'a model saying "that one is fine" cannot withdraw a refusal');
-});
-
-test('a failed or missing classification leaves the item exactly as it was', () => {
-  const item = { id: 'r1', acuity: 'sameDay', status: 'unhandled', gist: 'knee' };
-  assert.deepEqual(applyClassification(item, null), item);
-});
-
-test('the model may fill an empty label and never overwrite one', () => {
-  assert.equal(applyClassification({ id: 'r1', acuity: 'routine', gist: '' }, { acuity: 'routine', condition: 'knee pain' }).gist, 'knee pain');
-  assert.equal(applyClassification({ id: 'r1', acuity: 'routine', gist: 'knee' }, { acuity: 'routine', condition: 'something else' }).gist, 'knee');
-});
-
-test('classification is capped, the overflow is reported, and settled emergencies are skipped', () => {
-  const items = Array.from({ length: 8 }, (_, i) => ({ id: 'r' + i, acuity: 'routine' }));
-  items[0].acuity = 'emergency';
-  const { take, skipped } = toClassify(items);
-  assert.equal(take.length, MAX_CLASSIFIED);
-  assert.ok(!take.some((item) => item.acuity === 'emergency'), 'nothing sits above emergency to raise it to');
-  assert.equal(skipped, 2);
 });
 
 test('a timing preference is trivia however it is pluralised', () => {

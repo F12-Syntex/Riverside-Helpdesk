@@ -7,7 +7,6 @@ import SuggestBubble from './chat/SuggestBubble';
 import AiAnswer from './chat/AiAnswer';
 import TriageAnswer from './chat/TriageAnswer';
 import DocFileAnswer from './chat/DocFileAnswer';
-import ContactResults from './ContactResults';
 
 /* ------------------------------------------------------------------ *
  * One question at a time.
@@ -85,16 +84,6 @@ function TurnQuestion({ question }) {
 }
 
 export default function ChatView({ v }) {
-  // Contact mode: the directory is the page. The conversation is still held
-  // and comes straight back when the mode is dropped.
-  if (v.isContactMode) {
-    return (
-      <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
-        <ContactResults v={v} />
-      </div>
-    );
-  }
-
   return (
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
 
@@ -141,16 +130,6 @@ export default function ChatView({ v }) {
                 pasted consultation is not a heading — see TurnQuestion. */}
             <TurnQuestion question={v.turn.question} />
             <div style={s('width:68px;height:4px;border-radius:2px;background:#005eb8;margin:14px 0 0;transform-origin:left center;animation:rivaRuleIn .5s cubic-bezier(.2,.7,.3,1) .12s both;')} />
-            {/* WHICH KIND OF ANSWER THIS WAS ASKED FOR, when it was chosen with
-                a button rather than typed. A typed "/form knee" stays in the
-                reader's own words above; this is the same record for the other
-                way of saying it, and without it a wrong answer has nothing on
-                screen explaining which list it came from. */}
-            {v.turn.askedAs && (
-              <div style={s('display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:#e8f1f8;border:1px solid #bcd9f0;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700;color:#005eb8;')}>
-                <span>Asked as {v.turn.askedAs}</span>
-              </div>
-            )}
             {v.turn.imageNote && (
               <div style={s('font-size:13.5px;color:#4c6272;margin-top:12px;')}>{v.turn.imageNote}</div>
             )}

@@ -4,8 +4,7 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, isLocalCommand, isMode, matchCommands, modePlaceholder, parseCommand, checksPatientData } from '../../lib/commands.mjs';
-import { prepareContacts, searchPrepared } from '../../lib/contacts.fuzzy.mjs';
+import { prepareContacts } from '../../lib/contacts.fuzzy.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -19,8 +18,6 @@ import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
-import CommandMenu from './CommandMenu';
-import ModeSwitch from './ModeSwitch';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
@@ -39,12 +36,19 @@ const MAX_IMAGES = 4;
 // letter and the form that came with it; more than this is a knowledge-base job.
 const MAX_DOCUMENTS = 4;
 
-// Where the armed mode is kept. The transcript is deliberately NOT kept — it is
-// practice questions typed at a shared reception machine and it is cleared on
-// every load — but the kind of answer the field is set to carries no question
-// and no patient in it, and having to re-arm it after every reload is the
-// friction the picker was added to remove.
-const MODE_KEY = 'riva-mode-v1';
+// THERE IS ONE KIND OF QUESTION AGAIN.
+//
+// The field used to carry a picker: seven slash commands, each naming the
+// template the server was to render, and a disc that armed one of them for
+// every message until it was changed. They existed because the answer was a
+// template chosen by a model, and the two cases where being wrong cost most
+// were the two where the reader already knew.
+//
+// The templates are gone (see app/api/agent/route.js), so what a command named
+// no longer exists to be named. Everything typed here is now one question,
+// answered out of the Notebook. The modes will come back when there is
+// something for them to select.
+const PLACEHOLDER = 'Ask a question, or paste something to work out what to do with it';
 
 // Whether what is being dragged is a file at all. Dragging selected text or a
 // link over the page must not put the whole window into "drop a document here".
@@ -165,41 +169,13 @@ class RiversidePracticeQA extends React.Component {
       // carries the question up out of the field.
       emitting: false,
       // The practice's own telephone list. It is the allow list for the
-      // identifier redaction (a colleague's name is not a patient's), it is
-      // listed under Sources, and under Contact mode it is what the field
-      // searches. `prepared` is the same list in the shape the fuzzy matcher
-      // reads (lib/contacts.fuzzy.mjs), built once when it arrives.
+      // identifier redaction (a colleague's name is not a patient's) and it is
+      // listed under Sources. `prepared` is the same list in the shape the
+      // fuzzy matcher reads (lib/contacts.fuzzy.mjs), built once when it
+      // arrives, and it is what the directory sheet searches.
       directory: [],
       prepared: [],
       notes: [],          // the notebook's notes, listed under Sources
-      // The CQC register — every service registered in England — searched on
-      // the server for what is typed under Contact mode. Far too large to
-      // hold here, so the browser asks for the top matches and shows them
-      // under the practice's own numbers. `cqcFor` is the query the rows
-      // answer, so a slow reply for an earlier query is never shown against
-      // a later one.
-      cqc: [],
-      cqcFor: '',
-      cqcLoading: false,
-      // Which contact row the arrow keys are on under Contact mode. -1 until
-      // somebody moves into the list, when Enter takes the top match.
-      dirSel: -1,
-      // The slash commands, offered while a command name is being typed. -1
-      // until the arrow keys move into the list, so Enter on "/accurx some
-      // text" asks it rather than re-picking the command.
-      cmdSel: -1,
-      // The kind of answer chosen from the disc in the field, as a command
-      // name — '' is Q&A, which is what almost every message is. It LASTS
-      // UNTIL IT IS CHANGED, including across a reload: three referral forms
-      // are three questions, and re-arming the picker between each one is the
-      // friction the picker exists to remove. See app/_components/ModeSwitch.jsx
-      // for what pays for a mode that stays put. Restored in componentDidMount
-      // rather than here, because localStorage does not exist on the server and
-      // the first render has to match the one the server sent.
-      mode: '',
-      // Whether the kept mode has been read back yet. The pill in the field
-      // stays blank until it has (see ModeSwitch).
-      modeReady: false,
       copiedNumber: '',
       // The Super speed screen: `screening` while a message is being checked
       // (the send is held, so the dock says so rather than looking dead), and
@@ -249,20 +225,11 @@ class RiversidePracticeQA extends React.Component {
       const g = JSON.parse(localStorage.getItem('riva-guides-v1') || '[]');
       this.setState({ customGuides: Array.isArray(g) ? g : [] });
     } catch (e) {}
-    // The kind of answer the field was left on. Read after the first render,
-    // never during it: this component is server-rendered, and a state that
-    // depends on localStorage before hydration is a mismatch.
-    //
-    // `isMode` guards it. What comes back out of storage is a string somebody
-    // could have edited, and a mode name reaches the server as the template to
-    // force — a name no command claims is dropped rather than carried.
-    try {
-      const kept = localStorage.getItem(MODE_KEY) || '';
-      if (kept && isMode(kept)) this.setState({ mode: kept });
-    } catch (e) {}
-    // Only now may the pill show a glyph: drawn any earlier it flashes the
-    // default and then swaps to the kept mode.
-    this.setState({ modeReady: true });
+    // A MODE LEFT BEHIND, FORGOTTEN. Somebody whose browser still holds the
+    // key from the version with the picker in it should not carry a setting
+    // nothing reads; it is removed rather than ignored, so it does not come
+    // back if the modes do under a different meaning.
+    try { localStorage.removeItem('riva-mode-v1'); } catch (e) {}
     // Arrived with a question already chosen in ?ask=. It is asked here,
     // through the ordinary path, so a link is a way in rather than a page
     // about the assistant. The parameter is dropped from the URL afterwards,
@@ -326,9 +293,8 @@ class RiversidePracticeQA extends React.Component {
   // still carrying two dropped documents and a half-typed question is not the
   // empty page the button promises.
   //
-  // `mode` and the saved guides are deliberately kept: the kind of answer
-  // outlives a question by design (see ModeSwitch.jsx), and the guides are not
-  // part of this conversation at all.
+  // The saved guides are deliberately kept: they are not part of this
+  // conversation at all.
   reset() {
     this.cancelRun();
     clearTimeout(this.emitTimer);
@@ -345,85 +311,21 @@ class RiversidePracticeQA extends React.Component {
       blocked: null,
       copiedNumber: '',
       copiedIdx: null,
-      dirSel: -1,
-      cmdSel: -1,
       viewer: null,
     }, () => this.save());
   }
 
-  /* ---------------------------- Contact mode ---------------------------- *
-   * Reception's most common question is "what's the number for…", and it
-   * should not need a second page. With Contact chosen on the disc, the
-   * field is a search: the practice's own list is matched fuzzily as
-   * each letter goes in (lib/contacts.fuzzy.mjs) and the results are the
-   * page, with the CQC register beneath them. Numbers are shown verbatim
-   * from the directory — nothing here is written by a model, and nothing
-   * typed under this mode leaves the browser except the register query.
-   *
-   * IT USED TO BE A PANEL THAT APPEARED ON ITS OWN, over the field, as
-   * soon as a few letters that "looked like a lookup" were typed. The
-   * guess was wrong both ways, and a panel that opens uninvited is a
-   * panel somebody is always closing. Now the list only appears because
-   * the reader said that is what they are typing for — see `contact` in
-   * lib/commands.mjs.
-   * ----------------------------------------------------------------- */
+  /* ------------------------------ The field ------------------------------ *
+   * One kind of typing. There was a Contact mode here — the field became a
+   * search over the practice directory and the CQC register, and the results
+   * were the page — and it went with the rest of the modes. The directory is
+   * still one press away, from the pill under the box and from the bar on
+   * every page (ContactsSheet), and that is where it lives until the modes
+   * come back.
+   * ------------------------------------------------------------------- */
 
-  inContactMode() {
-    return this.state.mode === 'contact';
-  }
-
-  // Every keystroke matches the practice's own list — it is a few dozen rows
-  // already in memory — and asks the register once the typing settles.
   onInput(value) {
-    this.setState({ input: value, dirSel: -1, cmdSel: -1 });
-    clearTimeout(this.dirTimer);
-    this.dirTimer = setTimeout(() => this.searchCqc(value), 110);
-  }
-
-  // The register is ~57k services, so it is searched on the server, and only
-  // under Contact mode: nowhere else shows it. Replies are stamped with the
-  // query they answer: a slow one for an earlier query can arrive after a fast
-  // one for the current query, and must not replace it.
-  searchCqc(value) {
-    const q = String(value || '').trim();
-    if (!this.inContactMode() || q.length < 2) {
-      this.cqcToken = '';
-      if (this.state.cqc.length || this.state.cqcLoading) this.setState({ cqc: [], cqcFor: '', cqcLoading: false });
-      return;
-    }
-    this.cqcToken = q;
-    this.setState({ cqcLoading: true });
-    fetch('/api/cqc?q=' + encodeURIComponent(q), { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (this.cqcToken !== q) return;
-        this.setState({ cqc: Array.isArray(d.entries) ? d.entries.slice(0, 12) : [], cqcFor: q, cqcLoading: false });
-      })
-      .catch(() => { if (this.cqcToken === q) this.setState({ cqc: [], cqcFor: q, cqcLoading: false }); });
-  }
-
-  // The practice's own list first — it is what the practice actually uses —
-  // and the register beneath it, marked as what it is. A service already in
-  // the practice's list is not repeated from the register. Built here rather
-  // than in the view model so the keyboard and the page walk the same rows.
-  //
-  // An empty query is the whole directory, alphabetically: the mode was just
-  // chosen and the list is the page, so it shows what can be searched.
-  contactRows() {
-    if (!this.inContactMode()) return [];
-    // A command line is not a name. "/accurx …" typed under Contact is the
-    // reader choosing a different command, and matching numbers against it
-    // is noise.
-    if (/^\s*\//.test(this.state.input)) return [];
-    const q = String(this.state.input || '').trim();
-    const practice = searchPrepared(this.state.prepared, q)
-      .filter((r) => phoneParts(r.entry).length);
-    const seen = new Set(practice.map((r) => phoneDigits(r.entry)).filter(Boolean));
-    const register = (q && this.state.cqcFor === q ? this.state.cqc : [])
-      .filter((e) => phoneParts(e).length && !seen.has(phoneDigits(e)));
-    return practice
-      .map((r) => ({ entry: r.entry, indices: r.indices, group: 'Practice directory' }))
-      .concat(register.map((e) => ({ entry: e, indices: [], group: 'CQC register' })));
+    this.setState({ input: value });
   }
 
   // One number onto the clipboard, and the row and the dock both say so. The
@@ -438,101 +340,13 @@ class RiversidePracticeQA extends React.Component {
     this.copyTimer = setTimeout(() => this.setState({ copiedNumber: '' }), 2400);
   }
 
-  // Choosing a command puts it in the field with the space already typed, so
-  // the next keystroke is the message. Focus goes back to the field: the list
-  // is usually walked with the keyboard, and a click should not end there.
-  pickCommand(name) {
-    this.setState({ input: '/' + name + ' ', cmdSel: -1, dirSel: -1 }, () => {
-      const field = this.inputRef && this.inputRef.current;
-      if (field) field.focus();
-    });
-  }
-
-  // The same choice, made with the button in the field rather than by typing.
-  // It sets a mode rather than writing "/form " into the box, so the reader
-  // types their question and nothing else — and the box stays readable.
-  //
-  // Every route into or out of a mode goes through here, so there is one place
-  // that writes it down: the picker, Escape in the field, and the Q&A row in
-  // the list, which is how a mode is dropped with the mouse.
-  pickMode(name) {
-    const mode = name || '';
-    this.rememberMode(mode);
-    // Into Contact mode: whatever is already in the field is the first search,
-    // so the register is asked for it straight away. Out of it: the register's
-    // rows are dropped, because nothing else shows them.
-    this.setState({ mode, dirSel: -1 }, () => {
-      this.searchCqc(this.state.input);
-      const field = this.inputRef && this.inputRef.current;
-      if (field) field.focus();
-    });
-  }
-
-  // The armed mode, kept for the next page as well as the next message. Q&A is
-  // stored as the absence of the key rather than as an empty string, so a
-  // browser that has never been in a mode and one that has just left one look
-  // the same on the way back in.
-  rememberMode(mode) {
-    try {
-      if (mode) localStorage.setItem(MODE_KEY, mode);
-      else localStorage.removeItem(MODE_KEY);
-    } catch (e) {}
-  }
-
-  // Arrow keys move into the list; Enter only takes a number once someone
-  // has, so typing a question and pressing Enter still asks it. The command
-  // list has the keys first while it is open — it is directly under the
-  // cursor, and nothing else can be meant by an arrow key at that moment.
+  // Escape clears the field. There is no list to walk and no mode to back out
+  // of any more, so the arrow keys belong to the text, which is where anybody
+  // typing a sentence expects them.
   onInputKey(e) {
-    // Escape backs out of the mode, one step at a time: the open list first,
-    // then the mode itself. Somebody who chose the wrong one gets out of it
-    // without reaching for the mouse.
-    // Escape backs out of a mode without reaching for the mouse.
-    if (e.key === 'Escape' && this.state.mode) {
+    if (e.key === 'Escape' && this.state.input) {
       e.preventDefault();
-      this.pickMode('');
-      return;
-    }
-    const commands = matchCommands(this.state.input);
-    if (commands.length) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        this.setState((st) => ({ cmdSel: (st.cmdSel + 1) % commands.length }));
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        this.setState((st) => ({ cmdSel: (st.cmdSel <= 0 ? commands.length : st.cmdSel) - 1 }));
-        return;
-      }
-      // Tab takes the highlighted command, or the first one when nothing has
-      // been highlighted — "/tri" and Tab is the whole interaction.
-      if (e.key === 'Tab' || (e.key === 'Enter' && this.state.cmdSel >= 0)) {
-        e.preventDefault();
-        this.pickCommand(commands[Math.max(0, this.state.cmdSel)].name);
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        this.setState({ input: '', cmdSel: -1 });
-        return;
-      }
-    }
-
-    // Under Contact mode the arrow keys walk the results on the page, and
-    // Enter copies the row they are on — or the top match, when they have not
-    // moved. Escape has already left the mode above.
-    const matches = this.contactRows();
-    if (!matches.length) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      this.setState((st) => ({ dirSel: (st.dirSel + 1) % matches.length }));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      this.setState((st) => ({ dirSel: (st.dirSel <= 0 ? matches.length : st.dirSel) - 1 }));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      this.copyContact(matches[Math.min(Math.max(0, this.state.dirSel), matches.length - 1)].entry);
+      this.setState({ input: '' });
     }
   }
 
@@ -797,42 +611,7 @@ class RiversidePracticeQA extends React.Component {
     // the same words twice — once past the screen and once around it.
     if (this.state.screening || this.state.blocked) return;
 
-    // WHICH COMMAND THIS IS, BEFORE A WORD OF IT IS EDITED. It used to be read
-    // off the redacted text, which was harmless while every message was
-    // redacted and is not now: Coding is not checked at all, and a guard cannot
-    // decide whether to run by looking at what it has already done. The command
-    // token is "/coding" or nothing, so nothing the redactor does could change
-    // this answer — it is the ORDER that matters, not the input.
-    //
-    // A slash command says which card to render, so the message goes up without
-    // it and the template goes up beside it. "/accurx" with nothing after it is
-    // a command still being written, not a question — the field keeps it.
     const raw = (text || '').trim();
-    const parsed = parseCommand(raw);
-    if (parsed && !parsed.rest) {
-      this.setState({ input: '/' + parsed.command.name + ' ', cmdSel: -1 });
-      return;
-    }
-    // A TYPED COMMAND BEATS THE BUTTON. It is the more specific thing the
-    // reader just did, and it is what the muscle memory of anyone already
-    // using the commands reaches for. The button only decides the kind of
-    // answer when nothing was typed to decide it.
-    const command = parsed ? parsed.command : (commandByName(this.state.mode) || null);
-
-    // A LOCAL COMMAND IS ANSWERED HERE AND SENT NOWHERE. "/contact homerton"
-    // arms Contact mode with "homerton" as the search; Enter under the mode
-    // copies the top match. Either way no request is built, nothing is
-    // screened, and nothing goes on the transcript — it was a lookup.
-    if (isLocalCommand(command)) {
-      if (parsed) {
-        this.pickMode(command.name);
-        this.onInput(parsed.rest);
-        return;
-      }
-      const rows = this.contactRows();
-      if (rows.length) this.copyContact(rows[Math.min(Math.max(0, this.state.dirSel), rows.length - 1)].entry);
-      return;
-    }
 
     // NAMES AND ADDRESSES DO NOT LEAVE THIS MACHINE. The check is local and
     // deterministic (lib/safety/identifiers.mjs) and it runs here, before the
@@ -849,23 +628,20 @@ class RiversidePracticeQA extends React.Component {
     // Wade" is a lookup of a colleague the practice has written down, and a
     // check that eats that question is a check that gets ignored.
     //
-    // ON CODING IT DOES NOT RUN, and neither does the screen below. What is
-    // pasted there is a letter about a patient by definition, and both guards
-    // are switched off together — see `checked` in lib/commands.mjs for why
-    // half of one would be worse than neither.
-    const guard = checksPatientData(command)
-      ? redactIdentifiers(raw, { allow: this.state.directory })
-      : { text: raw, changed: false, findings: [] };
+    // IT RUNS ON EVERY MESSAGE NOW. Coding was the one exemption — a pasted
+    // discharge summary is a letter about a patient by definition, and
+    // redacting it ate the words the filing title was built out of — and
+    // Coding was a slash command, which no longer exists. The page at /coding
+    // is untouched and still takes a pasted letter; this field is ordinary
+    // questions, and every one of them is checked.
+    const guard = redactIdentifiers(raw, { allow: this.state.directory });
     if (guard.changed) {
       notify(identifierWarning(guard.findings), { type: 'warn', duration: 11000 });
     }
-    // The whole message as typed, redacted or not: what the transcript shows,
-    // command word and all. The message the ASSISTANT is asked is that minus
-    // the command, read back off the same string — nothing the redactor does
-    // can touch a leading "/coding", so this parses exactly as `parsed` did.
+    // What the transcript shows and what the assistant is asked are now the
+    // same string: there is no command word to take off the front of it.
     const typed = guard.text;
-    const sent = parseCommand(typed);
-    const t = sent ? sent.rest : typed;
+    const t = typed;
     const images = this.state.pendingImages.map((im) => im.dataUrl);
     // Only documents that finished reading go up. One still being read, or one
     // that could not be read, keeps its row in the dock and is not sent.
@@ -876,35 +652,20 @@ class RiversidePracticeQA extends React.Component {
 
     // THE SEND IS HELD HERE, and this is the only place in the app where a
     // reader waits on a model with nothing on the screen yet. It runs after the
-    // redaction (so it screens what was going to be sent, not what was typed),
-    // after the "command still being written" return above (there is nothing to
-    // screen in "/triage " on its own), and before a single word reaches the
-    // transcript — a message that is refused was never asked, so it must not
-    // appear to have been.
+    // redaction (so it screens what was going to be sent, not what was typed)
+    // and before a single word reaches the transcript — a message that is
+    // refused was never asked, so it must not appear to have been.
     //
-    // Only the TYPED message is screened, and not even that under Coding. A
-    // dropped document is the reader's own material and is very often a letter
-    // about a patient by definition; screening it would refuse the one thing
-    // the coding card is for. A letter PASTED into the box is the same letter,
-    // so the mode that asks for one is exempt from both guards — see `checked`
-    // in lib/commands.mjs.
+    // Only the TYPED message is screened. A dropped document is the reader's
+    // own material and is very often a letter about a patient by definition;
+    // screening it would refuse the thing they came to do with it.
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
-    // Shown as it was typed, command and all: the reader chose the command and
-    // the transcript should not quietly drop it.
     // `redacted` is a count, not a copy — see lib/safety/identifiers.mjs. It
     // rides along on the message so the transcript says why the question has a
     // hole in it long after the toast has gone.
-    // `askedAs` is the kind of answer this question was sent as, and it is
-    // recorded because the button erased the only trace there used to be.
-    // "/form knee" typed into the box stays in the reader's own message for
-    // ever; choosing Referral form and typing "knee" leaves "knee", so the one artefact
-    // that would explain a confidently wrong answer had been deleted by moving
-    // from typing to a button. Empty for an ordinary question, and for a typed
-    // command, which still says so itself.
-    const askedAs = !parsed && command ? command.label : '';
-    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings), askedAs };
+    const userMsg = { role: 'user', text: typed, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings) };
     // answerKind is filled in from the reply — the server decides whether this
     // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
@@ -912,9 +673,7 @@ class RiversidePracticeQA extends React.Component {
     // the letter the question was asked about, or it asks a different question.
     // `steps` and `statusText` are filled in live from the agent's stream: each
     // search it runs appears in the card while it is still working.
-    // `commandTemplate` rides along so a retry asks the same way: retrying a
-    // /accurx as an ordinary question would answer a different thing.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null, alerts: [], panel: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null, alerts: [], panel: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
@@ -928,26 +687,17 @@ class RiversidePracticeQA extends React.Component {
     // interface. What they typed is on screen the moment they press Enter, with
     // the loading card under it, and a message the screen refuses is taken back
     // off again below.
-    // `mode` IS NOT CLEARED HERE, and it used to be. The kind of answer lasted
-    // exactly one message; it now lasts until it is changed, because looking
-    // something up is rarely a thing done once — see app/_components/ModeSwitch.jsx
-    // for what makes a mode that stays put safe to leave armed.
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true, dirSel: -1, cmdSel: -1 }, async () => {
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, emitting: true }, async () => {
       this.save();
       // The conversation this question belongs to. The patient-data screen
       // below is awaited, so Back can land in the middle of it; without this
       // the refusal path would put the abandoned question back in the field.
       const run = this.runId;
 
-      // Only the TYPED message is screened, and only when the command it was
-      // sent under is checked at all. A dropped document is the reader's own
-      // material and is very often a letter about a patient by definition, and
-      // under Coding so is the pasted text: a discharge summary carries a date
-      // of birth and a hospital number because that is what a discharge summary
-      // is, and a screen that refuses it refuses the mode. The same flag turned
-      // the redaction above off, so on that path nothing has read the message
-      // for patient data and nothing will.
-      if (t && checksPatientData(command)) {
+      // Only the TYPED message is screened. A dropped document is the reader's
+      // own material and is very often a letter about a patient by definition;
+      // screening it would refuse the thing they came to do with it.
+      if (t) {
         this.setState({ screening: true });
         const verdict = await this.screen(t);
         if (this.runId !== run) return;
@@ -1041,7 +791,7 @@ class RiversidePracticeQA extends React.Component {
     if (ctrl) this.aiAborts.add(ctrl);
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images, attachments, refresh, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
+        { question, history, customGuides: this.state.customGuides, images, attachments, refresh, signal: ctrl ? ctrl.signal : null },
         (ev) => { if (this.runId === run) this.onAgentEvent(idx, ev); },
       );
       if (this.runId !== run) return;
@@ -1830,7 +1580,6 @@ class RiversidePracticeQA extends React.Component {
           // What the local identifier check took out of this question before
           // it was sent, if anything.
           redactedNote: m.redacted || '',
-          askedAs: m.askedAs || '',
           idxs: [],
         });
       } else {
@@ -1852,16 +1601,6 @@ class RiversidePracticeQA extends React.Component {
         onOpen: () => self.setState({ activeTurn: i }),
       }))
       .filter((t) => t.key !== activeTurn);
-
-    const contactMode = this.inContactMode();
-
-    const contactQuery = contactMode ? String(this.state.input || '').trim() : '';
-
-    const contactRows = this.contactRows();
-
-    const practiceCount = contactRows.filter((r) => r.group === 'Practice directory').length;
-
-    const registerCount = contactRows.length - practiceCount;
 
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
@@ -1908,10 +1647,8 @@ class RiversidePracticeQA extends React.Component {
       kbMatchCount,
       onKbSearch: (e) => self.setState({ kbQuery: e.target.value }),
       onSetView: (vw) => self.setView(vw),
-      // Under Contact mode the page is never "empty": the dock drops to the
-      // foot so the list has the page above it, exactly as an answer would.
-      isEmpty: this.state.messages.length === 0 && !contactMode,
-      notEmpty: this.state.messages.length > 0 || contactMode,
+      isEmpty: this.state.messages.length === 0,
+      notEmpty: this.state.messages.length > 0,
       input: this.state.input,
       pendingImages: this.state.pendingImages.map((im, i) => ({
         name: im.name,
@@ -1949,49 +1686,7 @@ class RiversidePracticeQA extends React.Component {
       isGenerating: this.state.messages.some((m) => m.status === 'loading'),
       copiedNumber: this.state.copiedNumber,
       hasCopied: !!this.state.copiedNumber,
-      // Contact mode: the directory, searched with what is in the field, as
-      // the page. See app/_components/ContactResults.jsx.
-      isContactMode: contactMode,
-      contactQuery: contactQuery,
-      contactSelected: this.state.dirSel,
-      contactRegisterSearching: contactMode && this.state.cqcLoading,
-      contactSummary: contactMode
-        ? (practiceCount + (practiceCount === 1 ? ' contact' : ' contacts') + (contactQuery ? ' here' : '')
-          + (registerCount ? ' · ' + registerCount + ' on the register' : '')
-          + ' · ↑↓ to choose, Enter to copy, Esc to leave')
-        : '',
-      contacts: contactRows.map((row, i) => ({
-        key: (row.entry.id || row.entry.label) + ':' + i,
-        group: row.group,
-        label: row.entry.label,
-        indices: row.indices || [],
-        // The register's rows carry an address, which is what tells one branch
-        // from another; the practice's own carry the area they sit under.
-        detail: row.group === 'CQC register'
-          ? (row.entry.note || '')
-          : [row.entry.category, row.entry.note].filter(Boolean).join(' · '),
-        phones: phoneParts(row.entry).map((p) => ({
-          display: p.display || p.tel,
-          tel: p.tel || p.display,
-          isCopied: self.state.copiedNumber === (p.display || p.tel),
-          onCopy: () => self.copyContact(row.entry, p),
-        })),
-        emails: (row.entry.emails || []).map((e) => String(e)),
-        isSelected: i === self.state.dirSel,
-      })),
       onInputKey: (e) => self.onInputKey(e),
-      // The commands, while a command name is being typed and no longer.
-      commands: matchCommands(this.state.input).map((c, i) => ({
-        name: c.name,
-        summary: c.summary,
-        isSelected: i === self.state.cmdSel,
-        onPick: () => self.pickCommand(c.name),
-      })),
-      // The kind of answer, chosen with the button in the field rather than by
-      // typing a slash. See app/_components/ModeSwitch.jsx.
-      mode: this.state.mode,
-      modeReady: this.state.modeReady,
-      onPickMode: (name) => self.pickMode(name),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
       canReset: this.state.messages.length > 0,
@@ -2022,7 +1717,6 @@ class RiversidePracticeQA extends React.Component {
         docNames: active.docNames || [],
         hasDocs: !!(active.docNames && active.docNames.length),
         redactedNote: active.redactedNote || '',
-        askedAs: active.askedAs || '',
         items: active.idxs.map((i) => messages[i]),
       } : null,
       history: earlier,
@@ -2176,28 +1870,21 @@ class RiversidePracticeQA extends React.Component {
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
             <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
-              {/* The commands hang off the field — under it on the opening
-                  screen, where anything above would cover the heading, and
-                  over it once the page has an answer on it. Either way it is
-                  out of the flow, so the dock stays put and nothing on the
-                  page moves to make room. The telephone list used to float
-                  here too; it is a mode now, and the page itself. */}
-              <CommandMenu rows={v.commands} place={v.isEmpty ? 'below' : 'above'} />
-
-              {/* The composer. The shape of the 21st.dev Agent Elements
-                  "Input Bar", in this project's idiom: one card, the question
-                  on its top row and a toolbar under it — the kind of answer as
-                  a labelled pill (see ModeSwitch) and the ask button. Enter still asks; a picture can still be
-                  pasted into the box, and a document dropped anywhere on the
-                  page. The pill also carries the one moment the field is busy
-                  on its own account — the message being checked for patient
-                  details before it goes anywhere (lib/safety/patient-data.mjs)
-                  — as a spinner, because a field that looked dead for even
-                  half a second would have somebody pressing Enter again. */}
+              {/* The composer. One card, the question on its top row and the
+                  ask button under it. Enter asks; a picture can be pasted into
+                  the box, and a document dropped anywhere on the page.
+                  THE PILL THAT STOOD HERE chose the kind of answer, back when
+                  the answer was a template a model picked. The templates are
+                  gone, so there is one kind of question again and nothing to
+                  choose — see app/api/agent/route.js. The one thing it carried
+                  besides the mode stays: the moment the field is busy on its
+                  own account, checking the message for patient details before
+                  it goes anywhere (lib/safety/patient-data.mjs), said in the
+                  placeholder, because a field that looked dead for even half a
+                  second would have somebody pressing Enter again. */}
               <div className={'riva-composer' + (v.isGenerating ? ' riva-dock-live' : '')}>
-                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" />
-                <div className="riva-composer-bar">
-                  <ModeSwitch mode={v.mode} onPick={v.onPickMode} busy={v.isScreening} ready={v.modeReady} />
+                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : PLACEHOLDER} aria-label="Ask a question" />
+                <div className="riva-composer-bar" style={s('justify-content:flex-end;')}>
                   <Hover tag="button" type="submit" className="riva-dock-send" aria-label="Ask" base="flex:none;width:40px;height:40px;border-radius:50%;background:#005eb8;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" hover="background:#003087;">
                     <Svg w={19} stroke="#fff" sw={2.4}>{Icons.arrow}</Svg>
                   </Hover>

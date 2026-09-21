@@ -7,9 +7,6 @@ import {
 import {
   nelFormNotFound, nelReferralFormAnswer, referralAnswer,
 } from '../lib/templates/referrals.mjs';
-import { formCommandAnswer } from '../lib/templates/lookup-command.mjs';
-import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
-import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
 
 // The NEL Referral Tree is 533 form names lifted out of a PDF, and the whole
 // value of them is that they are the strings staff type into EMIS. So these
@@ -250,23 +247,8 @@ test('nothing on the tree is null, so the caller can fall through', () => {
 // Typing the command names the list to search, so a miss is that list saying it
 // has nothing — never a model writing plausibly about a form that is not on it.
 // That is the entire reason to type /form instead of asking in words.
-test('/form is a command, and it claims its own template', () => {
-  const parsed = parseCommand('/form suspected skin cancer');
-  assert.equal(parsed.command.template, 'referralForm');
-  assert.equal(parsed.command.fill, 'lookup');
-  assert.equal(parsed.rest, 'suspected skin cancer');
-  // The server honours a template only when a command claims it.
-  assert.equal(forcedTemplate('referralForm'), 'referralForm');
-});
-
 // The router must not be able to choose it: an ordinary question keeps going
 // through `referral`, which checks the practice's own material first.
-test('the model cannot pick the command-only template', () => {
-  const templates = SELECTION_SCHEMA.shape.template._def.values;
-  assert.ok(!templates.includes('referralForm'));
-  assert.ok(templates.includes('referral'));
-});
-
 test('a miss on /form is answered by the tree, not by prose', () => {
   const card = nelFormNotFound('fit note');
   assert.match(card.title, /fit note/);
@@ -430,25 +412,3 @@ test('every found form says the practice may email it instead', () => {
 // emails RP ACN 2022. That argument still holds for a referral question asked in
 // ordinary words, and referralAnswer still acts on it; a command that names a
 // document must answer from that document.
-test('the command reads the tree and not the practice pages', () => {
-  const pages = [{
-    docTitle: 'Referrals sent by email',
-    text: ['These go by email rather than e-RS:', '- District nurse', '- Wheelchair service'].join('\n'),
-  }];
-  const card = formCommandAnswer({ query: 'district nurse', pages });
-  assert.match(JSON.stringify(card.source), /Referral Tree introduction/);
-  assert.doesNotMatch(String(card.subtitle || ''), /email/i);
-});
-
-test('the tree answers when it has the form', () => {
-  const card = formCommandAnswer({ query: 'tongue tie' });
-  assert.equal(card.title, 'Tongue Tie Referral Form 2021 CH');
-});
-
-test('/form never returns null, so the turn can never reach prose', () => {
-  for (const q of ['printer toner', '', '   ']) {
-    const card = formCommandAnswer({ query: q });
-    assert.ok(card && card.title, `"${q}" produced no card`);
-    assert.match(JSON.stringify(card.source), /Referral Tree/);
-  }
-});
