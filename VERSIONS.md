@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.11.2` | 2026-09-21 | fix | `f05251d` | fix: show the model every page, whole |
+| `6.11.1` | 2026-09-20 | docs | `7f48def` | docs: record 6.11.0 in the versions table |
 | `6.11.0` | 2026-09-20 | feat | `81b273c` | feat: say where a written answer actually came from |
 | `6.10.2` | 2026-09-20 | docs | `ecd82e4` | docs: record 6.10.1 in the versions table |
 | `6.10.1` | 2026-09-20 | fix | `67b5d35` | fix: show the page shape that can answer backwards |
