@@ -34,8 +34,8 @@ It provides:
 | Practice Q&A | `/` (also `/helpbot`) | Answers "how do we do X here?" from the practice's own documents and Notebook, with a verbatim quote behind every claim. The front door of the app. |
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
-| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/accurx` command, which puts that line, and the booking notes reception needs, on the same card as where the patient goes. |
-| Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. Also available in the assistant as the **Coding** mode (the `/coding` command), which is the one mode the patient-data screen does not run on. |
+| Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. It was also an `/accurx` command in the assistant; the slash commands are gone, so this page is the only way in. |
+| Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. It was also a Coding mode in the assistant — the one mode exempt from the patient-data screen; the modes are gone, so this page is the only way in and the assistant screens every message. |
 | Questions | `/questions` | The questions nobody has an answer for yet: the ones staff ask because the practice has not written the answer down, and — filed on their own, off the question log — the ones the assistant was asked and could not answer. |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |
@@ -263,7 +263,7 @@ versioning. Tables, grouped by the feature that owns them:
 
 | Table | Columns | Personal data |
 | --- | --- | --- |
-| `notes` | `id, parent_id, title, body, position, is_section, created_at, updated_at` | **Free text written by staff.** Intended for procedures; nothing in the code prevents patient or staff details being typed in. This is risk #2 in the DPIA. |
+| `notes` | `id, parent_id, title, body, position, is_section, kind, fields, status, created_at, updated_at` | **Free text written by staff.** Intended for procedures; nothing in the code prevents patient or staff details being typed in. This is risk #2 in the DPIA. `kind` is what the note is — free writing, or one of the recorded cards (`lib/notebook/kinds.mjs`); `fields` holds that kind's values; `status` is `live` or `draft`, decided from the values on every save, and a draft is never served to a reader. |
 | `note_attachments` | `id, note_id, url, pathname, filename, content_type, size, created_at` | Whatever is in the uploaded file. `url` is a public Blob URL. |
 | `notebook_snapshots` | `id, label, kind, note_count, attachment_count, payload, created_at` | **A copy of every note's free text** at the moment the save was taken — the same exposure as `notes`, held for as long as the save is. |
 | `note_revisions` | `id, note_id, title, body, reason, proposal_id, turn_id, created_at` | **A copy of a page's free text as it stood before a rewrite.** Written before every apply and every revert on the defragmentation path, so a change can be undone. Same exposure as `notes`. Cascades when the note is deleted. |
@@ -409,27 +409,15 @@ sequenceDiagram
   participant A as /api/agent
   participant PG as Postgres
   participant OR as OpenRouter
-  B->>A: question, history, images, attachments, template (a slash command)
+  B->>A: question, history, images, attachments
   A->>A: identifier redaction, then the safety scan of the whole message — no model
-  A->>A: practice directory match — no model
-  alt the directory answers it
-    A-->>B: contacts card
-  else
-    A->>PG: load EVERY non-empty Notebook page in full
-    A->>PG: ROUTE — the trigger index: exact, lexical, vector, fused (lib/routing; off by default)
-    Note over A,PG: a confident, clear match renders that page with no model call;<br/>a close call asks back; anything else falls through to SELECT unchanged
-    A->>OR: SELECT — fast role, one generateObject call:<br/>a template (or a Notebook page title) and its variables
-    opt the page's folder is tagged with an output shape
-      A->>OR: FORMAT — one focused read of that page
-    end
-    A->>A: RENDER the template in code (lib/templates)
-    alt no template fits
-      A->>OR: PROSE — fast role, the whole Notebook as system prompt
-      A->>A: redact any number the Notebook, question or attachment does not contain
-    end
-    A-->>B: answer payload — or a question back with options
-  end
-  A->>PG: question_log row, ai_usage rows (after the answer has gone out)
+  A->>PG: load every SERVABLE Notebook page in full (drafts excluded)
+  Note over A,PG: a typed note leads with its recorded values,<br/>written out in code by lib/notebook/kinds.mjs
+  A->>OR: ANSWER — fast role (images role with a picture), the whole Notebook as system prompt
+  A->>A: redact any number the Notebook, question or attachment does not contain
+  A->>A: measure which pages the answer is made of (lib/questions/grounding.mjs)
+  A-->>B: answer payload, with the bands above it
+  A->>PG: question_log row, ai_usage row (after the answer has gone out)
 ```
 
 **Phase detail**
@@ -438,78 +426,54 @@ sequenceDiagram
    path: names and addresses are stripped out of the question
    (`lib/safety/identifiers.mjs`). The browser did this already as the message
    was sent, so in the ordinary case nothing changes here; the endpoint repeats
-   it so a request made any other way is held to the same rule. The one
-   exception is document coding, whose input *is* a letter about a patient
-   (`checksPatientData`, `lib/commands.mjs`).
+   it so a request made any other way is held to the same rule. It now runs on
+   every message: the one exemption was document coding, which was a slash
+   command, and the page at `/coding` is a separate endpoint.
 1. **Safety scan** — deterministic and message-wide, before any model runs
    (`lib/safety/scan.mjs`): red flags, NICE NG12 suspected-cancer features,
    safeguarding, and the acuity band the message belongs to. The findings become
-   the bands above whatever card is rendered, on every path below including a
-   failed turn.
-2. **The directory is asked before the model is** — a message asking for a
-   contact detail that the practice directory holds is answered from it
-   verbatim (`lib/templates/directory.mjs`): no model, no tokens.
-3. **A slash command skips the choosing** — `/accurx`, `/coding`, `/practice`,
-   `/form`, `/template` name the template outright (`lib/commands.mjs`), so the
-   model is asked for that one template's values and nothing else. `/practice`
-   is the only path that retrieves: a hybrid lexical + vector search over the
-   practice documents (`searchKnowledge`, `lib/knowledge.js`), answered in prose
-   with each part quote-checked against the passage it cites
-   (`lib/agent/practice-answer.mjs`); a part whose quote is not found is dropped.
-4. **Notebook load** — `fullNotebookContext()` reads *every* non-empty Notebook
+   the bands above the answer and the panel beside it, on every turn including
+   a failed one. Never model output.
+2. **Notebook load** — `fullNotebookContext()` reads every *servable* Notebook
    page from the live tables, in full. Nothing is chunked, truncated or selected
-   by similarity; the block goes first in the prompt so a provider that caches
-   prefixes pays for it once. A Notebook that has outgrown
-   `NOTEBOOK_FULL_MAX_CHARS` falls back to a title catalogue.
-5. **Routing** — in front of the picker, and **off by default**
-   (`lib/routing/`, switch and thresholds at `/settings`). Each Notebook page
-   carries trigger phrases — how reception staff would ask for it, generated
-   once by the fast role (`npm run routing:seed`) and learned from clarify
-   taps. The question is normalised and matched exactly, then by tsvector and
-   by embedding over those phrases, fused by reciprocal rank (the same `1/(60 +
-   rank)` as `searchKnowledge`). The decision reads two numbers the picker
-   never had: the cosine similarity of the best phrase (confidence) and how far
-   ahead of the runner-up page it is, in the same cosine units (margin). The
-   fusion orders the candidates — that is what lets a rare token like 2WW
-   outrank a paraphrase — but it never sets the margin: a gap between fused
-   scores is about 0.016 for any runner-up one rank behind, whatever the two
-   pages say. Confident and clear → the page is rendered
-   with **no model call**; confident but close → a question back with the
-   pages as options, and a tap teaches the router (`POST /api/routing/learn`);
-   anything else → the picker, with its inputs untouched. A wrong page
-   rendered confidently is the failure to watch: it is the headline metric of
-   `evals/routing/bench-pages.mjs`, and the reason the hit threshold starts
-   conservative.
-6. **Selection** — one `generateObject` call on the **fast role** (the images
-   role when a picture is attached), `temperature: 0`, output capped at
-   `READ_MAX_TOKENS`, against `SELECTION_SCHEMA` (`lib/templates/route.mjs`).
-   The model returns which template fits — a closed enum, or a Notebook page
-   title — and that template's variables. It does not write the answer. A
-   message that looks multi-intent is also asked where each separate ask starts
-   and ends, and code decides everything after that (acuity is a table, not the
-   model's opinion). A provider that refuses structured output is asked again as
-   plain text and the first JSON object in the reply is parsed and re-validated.
-7. **Render** — the template is filled in code (`lib/templates/`). A Notebook
-   page is rendered from the database exactly as the practice wrote it. Where the
-   page's folder carries an output tag (Notebook sidebar → *Format answers as*),
-   one more focused read lifts that tag's values from the page and draws them
-   above it; the page is still shown underneath, so a thin read costs nothing.
-8. **Asking back** — when the message reads two ways and the two ways go
-   different places, the turn ends in a question with the readings as options;
-   tapping one asks the original question again with the ambiguity settled.
-9. **Prose fallback** — only when no template fits. The fast role writes an
-   answer with the whole Notebook as its system prompt; the card is marked as
-   the assistant's own work (`general: true`), and any digit run that does not
-   appear in the Notebook, the question or an attachment is redacted
+   by similarity; the block goes last in the system prompt, which is itself the
+   first thing in the request and byte-identical between questions, so a
+   provider that caches prefixes pays for it once. A **draft** — a typed note
+   that does not carry what its kind requires — is not included at all, and a
+   typed note is written out with its recorded values first, in one fixed shape
+   built in code (`fieldsMarkdown`, `lib/notebook/kinds.mjs`).
+3. **Answer** — one `generateText` call on the **fast role** (the images role
+   when a picture is attached), `temperature: 0.2`, output capped at
+   `ANSWER_MAX_TOKENS`. The system prompt is the rules plus the Notebook
+   (`lib/agent/notebook-answer.mjs`); the history and any attached document go
+   in as user messages before the question.
+4. **Number redaction** — any digit run that does not appear in the practice
+   directory, the Notebook, the question, the history or an attachment is
+   stripped before the answer reaches a receptionist
    (`redactUnverifiedNumbers`).
-10. **Log** — after the answer has been sent: one `question_log` row (the
-   question, the answer as text, the template that built it, the model that
-   ran) and one `ai_usage` row per model call.
+5. **Grounding** — the answer is compared against the pages it was written
+   from, run of words by run of words (`lib/questions/grounding.mjs`). Where it
+   is demonstrably made of a page, the page is named under it; where it is not,
+   the card says the answer is the assistant's own work (`general: true`).
+6. **Log** — after the answer has been sent: one `question_log` row (the
+   question, the answer as text, the model that ran) and one `ai_usage` row.
 
-**What is not here.** There is no research tool loop, no evidence registry, no
-compose/validate/repair cycle and no answer cache. Those were the previous
-generation of this endpoint; `ANSWER-PIPELINE-REDESIGN.md` records how it worked
-and why it was replaced.
+**Where the consistency comes from.** It used to come from rendering a template
+in code: the model chose one of about twenty templates and filled in its
+variables, a tagged page cost a second call to lift its values out of its prose,
+and a referral cost a third to read its pairing. It now comes from the note. A
+typed note (`lib/notebook/kinds.mjs`) carries its speciality, its clinic type,
+its address in named fields, validated before it may be served at all, and
+written into the prompt in one fixed shape — so the model lays those values out
+rather than working them out, and there is nothing left for it to read
+differently on a second pass.
+
+**What is not here.** There is no template router, no retrieval router in the
+request path, no research tool loop, no evidence registry, no
+compose/validate/repair cycle and no answer cache. `lib/routing/` is still in
+the repository — it is the substrate the search redesign builds on — but
+nothing on this path calls it. `ANSWER-PIPELINE-REDESIGN.md` records the two
+generations before this one.
 
 ### Contacts
 
@@ -544,10 +508,10 @@ unless the answer routes the reader somewhere else (email, Accurx).
 
 | Flow | Endpoint | What leaves the practice | Stored |
 | --- | --- | --- | --- |
-| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. **Not on the Coding mode** (`checked: false` in `lib/commands.mjs`): a discharge summary identifies a patient by definition, so screening it would refuse the one thing that mode is for — the same reason an attached document is not screened either. **The name-and-address redaction does not run on it either**, in the browser or at `/api/agent`: one flag answers for both guards, so a letter pasted into that mode reaches the model as it was pasted. Like the standalone reception helpers, that paste carries the duty to remove identifiers first. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
+| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. It runs on **every** message now: the one exemption was the Coding mode, whose input is a letter about a patient by definition, and the modes are gone. An attached document is still not screened, for that same reason. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
 | Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the practice's destinations (`lib/triage/destinations.mjs`), to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
-| Document coding | `POST /api/docfile` (and the `/coding` command on `/api/agent`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
+| Document coding | `POST /api/docfile` | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
 | Medication check | `POST /api/medication` | Medicine name + optional question, to OpenRouter with the `openrouter:web_search` server tool (Exa). | The result is cached in `medications`; the question text is stored in the `queries` jsonb. |
 | Medicine extraction | `POST /api/medication/extract` | A pasted list or prescription snippet. | Nothing. Audit records the size only. |
 | Notebook format / organise | `POST /api/notebook/format`, `/organize` | The note's text, to OpenRouter. Returned as a diff/plan the user must confirm — nothing is saved unseen. | The confirmed result is saved as note text. Audit records the action only. |
@@ -583,7 +547,7 @@ never its text.
 
 | Endpoint | Methods | Postgres | OpenRouter | Blob | Open web | Audit content |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/api/agent` | POST | yes — `notes`, `knowledge_*`, `routing_*`, `question_log`, `open_questions` (only a turn it could not answer), `ai_usage` | yes — selection, format, prose, `/accurx` reading, and embeddings when the router is on | no | no | recorded (≤400 chars) |
+| `/api/agent` | POST | yes — `notes`, `question_log`, `open_questions` (only a turn it could not answer), `ai_usage` | yes — one call, which writes the answer | no | no | recorded (≤400 chars) |
 | `/api/screen` | POST | yes — `ai_usage` | yes — superSpeed role | no | no | not described |
 | `/api/attach` | POST | no | **no** | no | no | not described |
 | `/api/signpost` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
@@ -660,18 +624,20 @@ changed at `/settings`, so it can be changed without a redeploy.
 | Role | Setting key | Job | Fallback chain |
 | --- | --- | --- | --- |
 | **reasoning** | `ai_model` | Researches the question **and writes every answer**. | `DEFAULT_AI_MODEL = google/gemini-3.5-flash-lite` |
-| **fast** | `ai_model_fast` | Short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
+| **fast** | `ai_model_fast` | **The assistant's answer**, and the short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
-| **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes, writes the reason line and booking notes, and says whether the message reports somebody having already dealt with it. | `OPENROUTER_ACCURX_MODEL` → **fast** |
 | **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
-| **images** | `ai_model_images` | Any message with a picture attached — a screenshot of the repeat-medication screen to format for AccurX, a photo of a letter — whichever path it takes: a command, the template picker, or prose. | `OPENROUTER_IMAGES_MODEL` → **its own default**, `DEFAULT_IMAGES_MODEL = mistralai/ministral-14b-2512` |
+| **images** | `ai_model_images` | Any message with a picture attached — a screenshot of a screen, a photo of a letter. The whole turn runs on it. | `OPENROUTER_IMAGES_MODEL` → **its own default**, `DEFAULT_IMAGES_MODEL = mistralai/ministral-14b-2512` |
 
-**The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
-the only two that do, and for opposite reasons. `accurx` falls back to fast so
-that adding it changed nothing about what `/accurx` costs; the row exists so a
-practice *can* put a better model on the one decision in the app that is a
-judgement about a patient rather than reading or extraction. `superSpeed` does
-it because the reasoning model is the **wrong** default for it: that role holds
+**There was an `accurx` role here too**, for the one decision in the app that
+was a judgement about a patient rather than reading or extraction. It read a
+pasted `/accurx` request and said where the patient went. The slash commands
+are gone and nothing calls it, so the row is gone rather than left on
+`/settings` as a setting that changes nothing.
+
+**The superSpeed role inherits from *fast*, not from reasoning** — the only one
+that does, and it does it because the reasoning model is the **wrong** default
+for it: that role holds
 the send while a message is screened, so an install that has chosen a large,
 careful model above would otherwise have put that model in front of every
 message anybody types. It is the only role a reader waits on with nothing on the
@@ -912,10 +878,16 @@ action" risk.
   another complaint is dropped rather than written — the failure mode that had a
   knee card claiming self-care had failed on the strength of a sentence about
   the patient's voice.
-- **The one second model pass** (`/accurx` only) may raise acuity
-  above what the scanners found and may never lower it; if it fails or times out
-  the deterministic answer stands unchanged.
-- **`/accurx` is decided by reading the message, against the routing guide and
+> **The AccurX card is not reachable from the assistant any more.** It was the
+> `/accurx` slash command, and the slash commands went with the template router
+> (§8). Everything below still describes code that exists — the templates render
+> at `/templates`, and the routing guide behind them is the same data
+> `/signpost` is built from — but nothing in `/api/agent` calls it. The second
+> model pass that could raise acuity on that path (`lib/safety/triage-pass.mjs`)
+> was deleted with it; the deterministic scanners it sat on top of still run on
+> every message.
+
+- **`/accurx` was decided by reading the message, against the routing guide and
   nothing else** (`lib/templates/accurx-route.mjs`). **One call**, on its own
   model role, returning where it goes, why, the wording, and every separate thing
   the message asked for. It used to be a fan-out of one closed question per

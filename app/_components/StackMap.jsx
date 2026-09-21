@@ -244,7 +244,6 @@ const ROLES = [
   { k: 'medication', u: 'Medication Check + web tool', m: 'openai/gpt-4.1-nano', f: 'env default', c: P.orange },
   { k: 'embeddings', u: 'knowledge + router vectors', m: 'openai/text-embedding-3-small', f: 'Azure only · no retention', c: P.green },
   { k: 'web', u: 'one open-internet search', m: 'inherits', f: 'medication → fast', c: P.light },
-  { k: 'accurx', u: 'where a pasted request goes', m: 'inherits', f: 'fast', c: P.purple },
   { k: 'superSpeed', u: 'the pre-send screen', m: 'inherits', f: 'fast', c: P.red },
 ];
 

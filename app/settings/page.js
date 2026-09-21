@@ -26,7 +26,7 @@ const LIST_LIMIT = 40;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed', 'images'];
+const ROLE_KEYS = ['fast', 'web', 'superSpeed', 'images'];
 
 // A model's advertised rate. Shown per row because it is the number people
 // compare models on — but it is not what a question costs, which is why the
@@ -236,7 +236,6 @@ export default function SettingsPage() {
     reasoning: model,
     fast: fastModel,
     web: roleValue('web') || model,
-    accurx: roleValue('accurx') || fastModel,
     superSpeed: roleValue('superSpeed') || fastModel,
     // Images falls back to its own default rather than to any row above: the
     // model above may not see pictures at all. The default comes from the
@@ -316,17 +315,6 @@ export default function SettingsPage() {
             <ModelField
               label="Web search model" value={roleValue('web')} models={models} index={index}
               placeholder={model || 'inherit'} onChange={(v) => setRole('web', v)}
-            />
-          </Row>
-          {/* The one role that makes a judgement about a patient rather than
-              reading or extracting. It inherits from Fast rather than from the
-              model above, so leaving it blank changes nothing — the row is here
-              so that a practice CAN pay for a better reader on the one decision
-              where it shows. */}
-          <Row name="AccurX routing" job="Reads a pasted /accurx and says where it goes" rate={rateLine(priceOf(resolved.accurx))} used={usedLine('accurx')}>
-            <ModelField
-              label="AccurX routing model" value={roleValue('accurx')} models={models} index={index}
-              placeholder={fastModel || 'inherit'} onChange={(v) => setRole('accurx', v)}
             />
           </Row>
           {/* The only row where the answer is waited for with nothing on the

@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `7.0.0` | 2026-09-21 | refactor | `b630002` | refactor!: answer in one model call, and drop the modes with it |
+| `6.14.0` | 2026-09-21 | feat | `c2f6f0f` | feat: create and fill in typed notes from the notebook |
+| `6.13.0` | 2026-09-21 | feat | `5e06cc3` | feat: give a note a kind, its own fields and a live/draft status |
+| `6.12.1` | 2026-09-21 | docs | `a9cb670` | docs: record 6.12.0 in the versions table |
 | `6.12.0` | 2026-09-21 | feat | `557f2da` | feat: let the model read the referral pairing off the page |
 | `6.11.3` | 2026-09-21 | docs | `f8f7a78` | docs: record 6.11.2 in the versions table |
 | `6.11.2` | 2026-09-21 | fix | `f05251d` | fix: show the model every page, whole |

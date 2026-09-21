@@ -8,60 +8,50 @@ clickable sources they can open in-browser.
 ## How it works
 
 - Questions go to `POST /api/agent`, routed through **OpenRouter**. It is **one
-  model call, not a research loop**: the model reads the message, chooses the
-  template that fits it and fills that template's variables — and the answer is
-  then the template, rendered in code from the values it returned. Understanding
-  a message is what a model is good at, so it does that; the shape of what comes
-  out is what a model is unreliable at, so code does that. The API key and
+  model call**: the whole Notebook goes in as the system prompt, the message
+  goes in, and the model writes the answer out of the Notebook. The API key and
   server-side knowledge never reach the browser.
-- **The Notebook is a template too.** It arrives as a list of page titles and the
-  model returns a title; the page is then rendered from the database exactly as
-  the practice wrote it. So even open-ended questions come back as a variable
-  filled in rather than prose the model composed — the same answer every time,
-  about ten output tokens, and no way for a procedure to be paraphrased on its
-  way to somebody following it.
-- **The tool-calling loop this replaced is gone**, along with its tools, its
-  evidence registry, its compose/validate/repair cycle and the single-shot
-  `/api/ask` endpoint before it. `ANSWER-PIPELINE-REDESIGN.md` records how they
-  used to work and why they were replaced; `ARCHITECTURE.md` §8 describes the
-  turn that runs now.
+- **The consistency lives in the Notebook, not in the pipeline.** A note
+  declares what it is (`lib/notebook/kinds.mjs`): free writing, or one of the
+  recorded cards — an e-RS referral, an email referral, a blood test set. A
+  card holds its speciality, its clinic type, its address in named fields,
+  which are validated before the note may be served at all and written into
+  the prompt in one fixed shape built in code. So the model lays those values
+  out rather than working them out, and the same referral comes back the same
+  way every time.
+- **An unfinished card is not served.** A typed note that does not carry what
+  its kind requires is a **draft**: the notebook says exactly what is missing,
+  in the box it belongs to, and the assistant does not see the page at all. An
+  answer built on half a referral card is worse than no answer, because a
+  missing speciality stops looking missing once it has been written into a
+  sentence.
+- **The template router this replaced is gone**, along with the output tags
+  that let a folder decide how its pages were formatted, the retrieval router
+  in the request path, the slash commands and the mode picker. Before that
+  there was a tool-calling loop with an evidence registry and a
+  compose/validate/repair cycle. `ANSWER-PIPELINE-REDESIGN.md` records the
+  older generations; `ARCHITECTURE.md` §8 describes the turn that runs now.
+  `lib/routing/` is still in the repository — it is what the search redesign
+  builds on — but nothing on the answer path calls it.
 - **A contact question is answered with a contact.** The practice directory and
   the CQC register are matched in code (`lib/contacts.fuzzy.mjs`,
-  `lib/lookup/`), and what they hold is shown in the contacts card as structured
-  data — never retyped through the model's prose, where an unverified number is
-  stripped out.
+  `lib/lookup/`) and shown as structured data — never retyped through the
+  model's prose, where an unverified number is stripped out. The directory is
+  one press away from the bar on every page.
 - **The turn is streamed to the browser as it happens** (newline-delimited JSON),
   so the field says which step is running instead of showing a silent spinner.
-- **Every turn is written down.** The question, the answer as text, the
-  template that built it and the model that ran are recorded in `question_log`
-  (`lib/questions/log.js`) and read back at `/stats`. There is no answer cache:
-  with the answer assembled in code from a page and a template, there was
-  nothing left worth caching, and its question normaliser now lives in
-  `lib/routing/` as the first rung of the router.
+- **Every turn is written down.** The question, the answer as text and the
+  model that ran are recorded in `question_log` (`lib/questions/log.js`) and
+  read back at `/stats`. There is no answer cache.
 - **A question it cannot answer becomes a question somebody can.** Every turn
-  that comes back without an answer — a card flagged as a pathway the practice
-  has not recorded, a prose answer standing on general knowledge with no
-  Notebook page behind it, or a turn that fell over — is filed on the open
-  questions list at `/questions` as it is logged (`lib/questions/gaps.mjs`).
+  that comes back without an answer — an answer standing on general knowledge
+  with no Notebook page behind it, or a turn that fell over — is filed on the
+  open questions list at `/questions` as it is logged (`lib/questions/gaps.mjs`).
   Staff can add a question there themselves, which is what the list was asked
   for; the assistant's own arrive without anybody having to notice them. Same
   wording twice is one row with a count, so the gap being hit five times a week
   is visible as the thing to write down next. The switch that turns the question
   log off at a desk turns this off with it.
-- **A router sits in front of the picker, off by default** (`lib/routing/`).
-  The picker returns one of an enum with no score, so a near-miss on wording
-  and a total miss look the same to it and the failure is a cliff. The router
-  matches the question against short *trigger phrases* per Notebook page — how
-  staff would ask for it, generated once (`npm run routing:seed`) and learned
-  from taps on a "which did you mean?" card — by exact form, tsvector and
-  embedding, fused by reciprocal rank, and decides on two numbers: how alike
-  the best phrasing is (cosine), and how far ahead of the runner-up page it is
-  (the same cosine units — a gap between fused ranking scores says nothing
-  about content). A confident, clear match renders the page with no model call; a
-  close call asks back; anything else falls through to the picker unchanged.
-  Switch and thresholds live at `/settings`; `npm run routing:stats` shows
-  coverage and the fall-through rate; `evals/routing/bench-pages.mjs` measures
-  it against a golden set the judging agent writes (`evals/routing/pages.md`).
 - **A message that asks for five things gets five things acknowledged.** The
   selection call returns exactly one template, which is why an eConsult listing
   a knee, a hoarse voice, a repeat prescription, a fit note and a question about
@@ -120,27 +110,19 @@ clickable sources they can open in-browser.
     unreadable answer, and the message goes as it always did. A guard that fails
     closed is a guard that shuts the desk down when OpenRouter has a bad
     minute, with a patient standing at it.
-  - **Nothing checks the Coding mode, and that is the whole of the exception**
-    (`checked: false` in `lib/commands.mjs`). Both guards above are off there —
-    the redaction and the screen — in the browser and at the endpoint, so a
-    letter pasted into that mode reaches the model exactly as it was pasted.
-    Coding is handed a document about a patient; that is its input, not an
-    accident of one. A discharge summary carries a name, a date of birth and a
-    hospital number because that is what a discharge summary is, so the screen
-    refused the exact thing being asked for and the redactor ate the words the
-    answer is built from — the site and the department are proper nouns, and a
-    letter filed under `[name removed]` is filed nowhere. The same reasoning
-    already exempted an *attached* document from both; a letter pasted into the
-    box is the same letter, and was treated differently only because of how it
-    arrived. **One flag answers for both guards** so that neither can be
-    switched off alone: half a guard edits the reader's letter without being any
-    use against what the letter was always going to carry. What still holds is
-    the answer itself — the filing title never carries a name, an NHS number or
-    a date of birth, because `DOC_CODING_RULES` says so and the prompt is built
-    from that list. Like the standalone helpers at `/coding`, `/signpost` and
-    `/reason`, which have never redacted what is pasted into them, **it is the
-    paste that carries the duty to take identifiers out first** — recorded as
-    exactly that in the DPIA, under "Identifiers left in text pasted into the
+  - **There was one exemption, and it has gone with the mode it belonged to.**
+    Coding was a slash command, and neither guard ran on it: what is pasted
+    into it is a letter about a patient by definition, so the screen refused
+    the exact thing being asked for and the redactor ate the words the answer
+    was built from — the site and the department are proper nouns, and a
+    letter filed under `[name removed]` is filed nowhere. The slash commands
+    are gone, so **every message typed into the assistant is now redacted and
+    screened**, and the page at `/coding` — which has never redacted what is
+    pasted into it — is where a letter goes. An *attached* document is still
+    exempt from both, for the same reason it always was. Like the standalone
+    helpers at `/coding`, `/signpost` and `/reason`, **it is the paste that
+    carries the duty to take identifiers out first** — recorded as exactly
+    that in the DPIA, under "Identifiers left in text pasted into the
     reception helpers".
   - **Assertions are span-local and fail toward silence.** A card may only claim
     something about the complaint it is about, and only from words inside that
@@ -246,69 +228,22 @@ clickable sources they can open in-browser.
   hospital, one already sent and being chased, a waiting time or a policy that
   merely uses the word gets no e-RS card and no referral steps
   (`lib/referrals/scope.mjs`).
-- **Slash commands say which card you want** rather than leaving it to be worked
-  out (`lib/commands.mjs`): `/accurx` (where the patient goes and the reason
-  line, from one paste), `/coding` (a filing title), `/practice` (search the
-  documents, no model at all), `/form` (a NEL referral form) and `/template`
-  (the EMIS template that records a NEL contract). There used to be two more — `/triage`, which said
-  where a patient went, and `/appt`, which wrote the reason line and the booking
-  notes — and `/accurx` is both of them on one card, so they were removed rather
-  than kept as half-answers beside it. A described symptom typed without any
-  command still reaches the same triage card: that path never went through
-  `/triage`.
-- **The kind of answer is chosen from the search icon, not typed.** The
-  magnifying glass at the left of the field carries a disc behind it and is a
-  button (`app/_components/ModeSwitch.jsx`): pressing it opens the list of modes
-  over the box — Q&A, AccurX, Coding, Referral form, Contract template, Practice
-  documents — each named with the line saying
-  what it does, and the armed one ticked. **Nothing was added to the page to make
-  room for it**: the glass had always sat there costing 48px of the field and
-  doing nothing when it was pressed, and the disc is what says a thing can be
-  pressed. It is the same size as the ask button opposite, so the field is a box
-  with a control at each end. The disc **fills blue with a white glass whenever
-  anything other than Q&A is armed**, so a field about to answer out of the
-  referral list cannot look like a field about to answer a question, and the
-  spinner shown while a message is screened for patient details takes the glass's
-  place inside it. Arrow keys walk the list, Enter takes a mode, Escape closes it.
-  Two earlier controls are gone: a row of pills under the field, which was four
-  buttons hanging off the dock for a choice left alone almost every time and had
-  to appear and disappear with the cursor to stay out of the way, and before that
-  a segmented track with a sliding thumb.
-  **`/accurx` is offered here**, first after Q&A: it is the one the practice
-  reaches for most — a pasted AccurX request answered with the route, the urgency
-  and the reason line on one card — and hiding the command somebody new to the
-  desk would most benefit from finding was the wrong trade for a shorter list.
-  **Coding is offered too, and was `/document`.** It was hidden on the argument
-  that the people who file letters do it by habit and a habit needs no
-  advertising, which quietly meant an everyday answer was reachable only by
-  somebody who had already been told it existed. It is a mode now, named for the
-  helper that does the same job at `/coding`, and the old spelling still
-  resolves: typing `/document` reaches it, is offered under the Coding row while
-  it is being typed, and is rewritten to `/coding ` in the field, so the habit
-  teaches the new name instead of being broken by it. It is also **the one mode nothing
-  checks for patient data** — neither the redaction nor the screen — because
-  what is pasted into it is a letter about a patient by definition. See the
-  guards above. The strip above
-  the field carries only the send bar and the "Copied" line, and nothing was
-  added to the header or the footer. Typing "/" still works and still wins over
-  the disc, being the more specific thing the reader just did. **The disc wears
-  the armed mode's own icon** — a sheet of lines for Form, two sheets for
-  Template, a speech bubble for AccurX, a folder for Coding, a book for Practice,
-  the magnifying glass for Q&A — and the same glyph is drawn beside each name in the list, so which
-  mode is armed is legible at a glance rather than inferred from the disc turning
-  blue. **The choice lasts until it is changed**, across a reload as well as
-  across a message (`riva-mode-v1`). It used to last exactly one message; three
-  referral forms are three questions, and re-arming the picker between each one
-  was the friction the picker existed to remove. The failure modes are not
-  symmetric — a wrong `/form` says honestly that no list has such an entry, while
-  a wrong `/accurx` renders a confident triage card with a destination and an
-  urgency for a question that was never about a patient — so what pays for a mode
-  that stays put is that it cannot be missed and takes one key to drop: the icon
-  on the disc, that mode's own placeholder wording, and **Escape in the field**.
-  A question asked with a mode carries **"Asked as Form"** in the transcript,
-  because `/form knee` typed into the box stays in the reader's own words for ever
-  and choosing the mode with a button would otherwise leave nothing on screen
-  explaining which list the answer came from.
+- **The slash commands and the mode picker are gone.** There were seven of
+  them — `/accurx`, `/coding`, `/practice`, `/form`, `/template`, `/contact`
+  and the Q&A resting state — offered by typing "/" and by a disc in the
+  field, and each one named the template the server was to render. They
+  existed because the answer was a template a model picked, and the two cases
+  where being wrong cost most were the two where the reader already knew.
+  There are no templates to name any more, so the field is one kind of
+  question again. What each of them did still exists elsewhere: the filing
+  title at `/coding`, the reason line at `/reason` and `/signpost`, the
+  practice documents at `/knowledge`, the directory from the bar on every
+  page. **The modes come back when there is something for them to select.**
+> **The two PCIT lookups below have no way in from the assistant.** They were
+> the `/form` and `/template` slash commands, and the commands went with the
+> template router. The datasets, the ranking and the cards are all still here
+> and still tested; what is gone is the mode that reached them. They come back
+> with the modes.
 - **`/form` and `/template` answer from a list, with no model anywhere in the
   path.** The reader has already said which of the two Primary Care IT lists they
   want, and the rest of the line is the query, so the turn is a ranked string
@@ -521,14 +456,21 @@ clickable sources they can open in-browser.
 
 - **`app/page.js`** — the chat UI (React). Persists chat + custom guides to
   `localStorage`.
-- **`app/api/agent/route.js`** — the assistant's only answer path: the safety
-  scan, the directory check, the one selection call, the template render, the
-  prose fallback and the NDJSON event stream the chat reads.
-- **`lib/templates/`** — the templates: the selection schema and prompt
-  (`route.mjs`), each card's renderer, the output tags a Notebook folder can
-  carry.
-- **`lib/routing/`** — the confidence-scored router in front of the picker:
-  the question normaliser (exact-match rung) and the trigger-phrase index.
+- **`app/api/agent/route.js`** — the assistant's only answer path: the
+  identifier redaction, the safety scan, the one model call with the whole
+  Notebook in front of it, the number redaction and the NDJSON event stream
+  the chat reads.
+- **`lib/notebook/kinds.mjs`** — what a note IS: the closed registry of kinds,
+  the fields each one holds, what makes it complete, how it is drawn and what
+  the prompt is shown. The one place the format of a recorded card is decided.
+- **`lib/agent/notebook-answer.mjs`** — the system prompt: the rules, then the
+  Notebook in full.
+- **`lib/templates/`** — the card renderers. Nothing on the answer path calls
+  them any more; they are what `/templates` draws, and the blocks
+  (`blocks.mjs`) a recorded card renders through.
+- **`lib/routing/`** — the confidence-scored retrieval router: the question
+  normaliser and the trigger-phrase index. Not in the request path; it is what
+  the search redesign builds on.
 - **`lib/agent/`** — `practice-answer.mjs` (the `/practice` answer, quote-checked
   against the passages it cites), `contract-intent.mjs`, `web-search.mjs`
   (OpenRouter's web-search server tool, used by Instant Lookup).
@@ -606,8 +548,7 @@ clickable sources they can open in-browser.
   decomposed spans), `spans.mjs` (locality — message-wide checks against
   span-local assertions), `ng12.mjs`, `redflags.mjs`, `confidentiality.mjs`,
   `acuity.mjs` (the rank table), `scan.mjs` (which request the card is about,
-  and what has to be said above it), `triage-pass.mjs` (the `/accurx` second
-  pass and the veto that keeps it honest). No model is consulted anywhere in
+  and what has to be said above it). No model is consulted anywhere in
   the folder; `lib/templates/safety.mjs` renders what it finds.
 - **`lib/answer-cache/`** — answers already given, so the same question is not
   researched twice. `match.mjs` holds the free half (the canonical form of a
@@ -669,8 +610,8 @@ clickable sources they can open in-browser.
 The assistant keeps each source type predictable:
 
 - **Documents:** found by PostgreSQL full-text (`GIN`) search rather than by a
-  vector, and served by `/practice`, which shows the passages themselves with no
-  model in the path (`lib/templates/practice.mjs`). **Unedited is not the same as
+  vector. They were served by the `/practice` command, which is gone with the
+  rest of them; `/knowledge` is where the documents are read now. **Unedited is not the same as
   unformatted**: the words are exactly the document's, but they are laid out the
   way every other piece of text in the app is — a heading naming the document,
   then its own paragraphs and lists. They used to arrive as blockquotes with the
