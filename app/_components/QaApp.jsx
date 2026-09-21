@@ -81,21 +81,6 @@ function phoneDigits(entry) {
   return phoneParts(entry).map((p) => String(p.tel || p.display)).join(' ').replace(/\D/g, '');
 }
 
-// How long ago a cached answer was written, in the words someone would use.
-// The reader is deciding whether to trust it or press Reload, and "3 hours ago"
-// answers that in a way a timestamp does not.
-function timeAgo(iso) {
-  const then = Date.parse(iso || '');
-  if (!Number.isFinite(then)) return 'earlier';
-  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
-  if (mins < 2) return 'just now';
-  if (mins < 60) return mins + ' minutes ago';
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return hours === 1 ? 'an hour ago' : hours + ' hours ago';
-  const days = Math.round(hours / 24);
-  return days === 1 ? 'yesterday' : days + ' days ago';
-}
-
 // How long one lookup took, for the timeline. Tenths up to a minute — the
 // interesting difference is between a lookup that was instant and one the
 // reader actually waited on, and neither needs milliseconds.
@@ -914,7 +899,7 @@ class RiversidePracticeQA extends React.Component {
     // search it runs appears in the card while it is still working.
     // `commandTemplate` rides along so a retry asks the same way: retrying a
     // /accurx as an ordinary question would answer a different thing.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], cache: null, clarify: null, alerts: [], panel: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], clarify: null, alerts: [], panel: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
@@ -1021,9 +1006,7 @@ class RiversidePracticeQA extends React.Component {
     });
   }
 
-  // `refresh` is set by Reload on a cached answer: research the question again
-  // rather than serving what the server already has stored for it.
-  async fetchAI(question, idx, { refresh = false } = {}) {
+  async fetchAI(question, idx) {
     if (isTestQuery(question)) { this.mockAI(idx, isGeneralTestQuery(question)); return; }
     // History is the conversation BEFORE this question (idx-1 = the user message
     // we're answering). On the first question this is empty, so the server skips
@@ -1041,7 +1024,7 @@ class RiversidePracticeQA extends React.Component {
     if (ctrl) this.aiAborts.add(ctrl);
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images, attachments, refresh, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
+        { question, history, customGuides: this.state.customGuides, images, attachments, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
         (ev) => { if (this.runId === run) this.onAgentEvent(idx, ev); },
       );
       if (this.runId !== run) return;
@@ -1100,7 +1083,7 @@ class RiversidePracticeQA extends React.Component {
       }
       // turnId identifies this answer to the server, so a verdict pressed under
       // it is stored against the answer it was actually about.
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', cache: data.cache || null, general: data.general === true, sources: data.sources || [], template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', general: data.general === true, sources: data.sources || [], template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
     } catch (e) {
       // An abort is this conversation being left, not a failed answer: there is
       // no card left to mark as broken.
@@ -1193,18 +1176,8 @@ class RiversidePracticeQA extends React.Component {
   retryAi(idx) {
     const m = this.state.messages[idx];
     if (!m || m.kind !== 'ai') return;
-    this.updateAi(idx, { status: 'loading', steps: [], statusText: '', cache: null });
+    this.updateAi(idx, { status: 'loading', steps: [], statusText: '' });
     this.fetchAI(m.question, idx);
-  }
-
-  // Reload on a cached answer: ask the question again for real, and replace the
-  // stored answer with what comes back. The card returns to its working state
-  // meanwhile, so nobody reads the old answer thinking it is the new one.
-  reloadAi(idx) {
-    const m = this.state.messages[idx];
-    if (!m || m.kind !== 'ai') return;
-    this.updateAi(idx, { status: 'loading', steps: [], statusText: '', cache: null });
-    this.fetchAI(m.question, idx, { refresh: true });
   }
 
   // Format the exact contacts for copying. Each line carries where its number
@@ -1652,11 +1625,6 @@ class RiversidePracticeQA extends React.Component {
         // the practice's own words.
         const usedJudgement = sections.some((sec) => sec.isJudgement);
         const usedReasoning = sections.some((sec) => sec.isReasoned);
-        // This answer was not researched just now — it was given earlier, to
-        // this question or to one worded differently, and served from the
-        // practice's own cache. Said on the card rather than left to be
-        // guessed, with Reload next to it for anyone who wants it done again.
-        const cache = m.cache && m.cache.hit ? m.cache : null;
         return {
           isAi: true,
           // A request the assistant carried out itself — formatting, rewriting,
@@ -1675,13 +1643,6 @@ class RiversidePracticeQA extends React.Component {
           // the blocks it produced instead of markdown sections.
           template: m.template || null,
           hasTemplate: !!m.template,
-          isCached: !!cache,
-          cachedLabel: cache ? 'Answered from cache — saved ' + timeAgo(cache.cachedAt) : '',
-          // Only worth saying when the wording differed: the reader is entitled
-          // to see the question this answer was actually written for.
-          cachedQuestion: cache && cache.match === 'similar' ? cache.question : '',
-          hasCachedQuestion: !!(cache && cache.match === 'similar' && cache.question),
-          onReload: () => self.reloadAi(idx),
           aiLoading: m.status === 'loading',
           aiError: m.status === 'error',
           aiDeclined: m.status === 'declined',

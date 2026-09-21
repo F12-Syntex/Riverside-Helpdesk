@@ -44,31 +44,6 @@ function SourceImages({ images }) {
   );
 }
 
-// This answer was not worked out just now: it was given earlier and kept, and
-// is being shown again instead of costing another twenty seconds. Said at the
-// top of the card, before the answer is read rather than after — with the
-// question it was originally written for whenever the wording differed, and
-// Reload for anyone who would rather have it researched again.
-function CacheBar({ v }) {
-  return (
-    <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:9px 0;background:#f0f4f5;border-bottom:1px solid #e3e9ec;')}>
-      <span style={s('display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#4c6272;')}>
-        <Svg w={14} sw={2.2} style={s('flex:none;')}>{Icons.refresh}</Svg>{v.cachedLabel}
-      </span>
-      {v.hasCachedQuestion && (
-        <span style={s('flex:1 1 240px;min-width:0;font-size:13px;color:#768692;overflow-wrap:anywhere;')}>
-          Asked before as &ldquo;{v.cachedQuestion}&rdquo;
-        </span>
-      )}
-      <Hover tag="button" type="button" onClick={v.onReload} title="Ask this again and replace the saved answer"
-        base="margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #aeb7bb;border-radius:999px;padding:5px 13px;font:inherit;font-size:13px;font-weight:600;color:#005eb8;cursor:pointer;"
-        hover="border-color:#005eb8;background:#f7fbff;">
-        <Svg w={13} sw={2.4}>{Icons.refresh}</Svg>Reload
-      </Hover>
-    </div>
-  );
-}
-
 // A request the assistant carried out itself — format this email, shorten this
 // message, tidy these notes. Nothing in it comes from the practice's documents,
 // and that is said once, before the work is read, rather than as an amber block
@@ -288,8 +263,6 @@ export default function AiAnswer({ v }) {
 
         {v.aiDone && (
           <>
-            {v.isCached && <CacheBar v={v} />}
-
             {/* The question is already the heading of the page (ChatView renders
                 it as the h1 with the rule under it), so printing it again here
                 gave every answer two titles. Only the intro belongs in this
