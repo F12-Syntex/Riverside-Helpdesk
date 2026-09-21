@@ -83,7 +83,7 @@ const CASES = [
   },
 ];
 
-const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } });
+const sql = neon((process.env.DEV_DATABASE_URL || process.env.DATABASE_URL), { fetchOptions: { cache: 'no-store' } });
 const notes = await sql`
   SELECT id, parent_id AS "parentId", title, body, is_section AS "isSection", position
   FROM notes ORDER BY position ASC, id ASC

@@ -39,7 +39,7 @@ for (const line of fs.readFileSync(path.join(root, '.env.local'), 'utf8').split(
   const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
   if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
-const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } });
+const sql = neon((process.env.DEV_DATABASE_URL || process.env.DATABASE_URL), { fetchOptions: { cache: 'no-store' } });
 
 const TITLE = 'FCP and musculoskeletal triage';
 const BODY = `The **First Contact Physiotherapist (FCP)** is where adult muscle, joint, tendon and back problems go. The FCP assesses, diagnoses and starts treatment without the patient seeing a GP first, and refers on where imaging, orthopaedics or pain management is needed.

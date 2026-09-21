@@ -14,7 +14,7 @@ for (const line of env.split(/\r?\n/)) {
   if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
 
-const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } });
+const sql = neon((process.env.DEV_DATABASE_URL || process.env.DATABASE_URL), { fetchOptions: { cache: 'no-store' } });
 
 const notes = await sql`
   SELECT id, parent_id AS "parentId", title, body, position,

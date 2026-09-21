@@ -168,7 +168,7 @@ async function readSnomedTerms(file) {
 }
 
 function connect() {
-  let url = process.env.DATABASE_URL;
+  let url = (process.env.DEV_DATABASE_URL || process.env.DATABASE_URL);
   if (!url) {
     // Convenience for a local run: the app keeps this in .env.local.
     const envFile = path.join(ROOT, '.env.local');
