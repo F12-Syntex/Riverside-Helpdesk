@@ -31,7 +31,7 @@ await ensureRoutingSchema();
 const sql = getSql();
 const notes = await sql`
   SELECT id, parent_id AS "parentId", title, body, position,
-         is_section AS "isSection", output_tag AS "outputTag", updated_at AS "updatedAt"
+         is_section AS "isSection", kind, fields, status, updated_at AS "updatedAt"
   FROM notes ORDER BY position ASC, id ASC
 `;
 const pages = buildFullNotebookSources(notes, []);
