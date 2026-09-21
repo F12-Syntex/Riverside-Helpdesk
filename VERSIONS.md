@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `7.0.1` | 2026-09-21 | docs | `e6ddb93` | docs: describe the turn that runs now, and drop the dead accurx role |
 | `7.0.0` | 2026-09-21 | refactor | `b630002` | refactor!: answer in one model call, and drop the modes with it |
 | `6.14.0` | 2026-09-21 | feat | `c2f6f0f` | feat: create and fill in typed notes from the notebook |
 | `6.13.0` | 2026-09-21 | feat | `5e06cc3` | feat: give a note a kind, its own fields and a live/draft status |
