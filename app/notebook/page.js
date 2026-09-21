@@ -22,12 +22,14 @@ import { Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
 import {
-  NotebookStyles, T, NBIcons, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
+  NotebookStyles, T, NBIcons, Banner, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
   EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
   MenuOption, Spinner,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
-import { OUTPUT_TAGS, outputTag } from '@/lib/templates/output-tags.mjs';
+import {
+  CREATABLE_KINDS, emptyFields, isTypedKind, noteIssues, noteKind, normaliseFields, suggestKind,
+} from '@/lib/notebook/kinds.mjs';
 import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -101,6 +103,26 @@ const PAGE_CSS = `
 .nbk-dropzone{position:absolute;inset:12px;z-index:5;display:flex;align-items:center;justify-content:center;
   gap:10px;border:2px dashed var(--nbk-blue);border-radius:var(--nbk-r-lg);background:rgba(233,242,250,.88);
   font-size:16px;font-weight:700;color:var(--nbk-navy);pointer-events:none;}
+
+/* The typed card, editable. Its own colour runs down the left edge so the kind
+   is visible without reading the chip, and the boxes sit two to a row at any
+   sensible width - a referral is a dozen short values, and one per row turned
+   it into a page of scrolling. */
+.nbk-card{margin:18px 20px 6px;border:1px solid var(--nbk-kind-edge);border-left:3px solid var(--nbk-kind);
+  border-radius:var(--nbk-r-md);background:var(--nbk-kind-tint);box-shadow:var(--nbk-sh-1);overflow:hidden;}
+.nbk-card__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 14px 0;}
+.nbk-card__note{font-size:12.5px;color:var(--nbk-mut);}
+.nbk-card__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2px 14px;padding:10px 14px 14px;}
+.nbk-fbox{display:flex;flex-direction:column;gap:3px;padding:6px 0;min-width:0;}
+.nbk-fbox__label{font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--nbk-mut);}
+.nbk-fbox__input{width:100%;box-sizing:border-box;border:1px solid var(--nbk-line);border-radius:var(--nbk-r-sm);
+  background:#fff;padding:7px 9px;font:inherit;font-size:14px;color:var(--nbk-ink);resize:vertical;}
+.nbk-fbox__input:focus{outline:none;border-color:var(--nbk-kind);box-shadow:0 0 0 3px var(--nbk-kind-tint);}
+.nbk-fbox__input--bad{border-color:#d5281b;}
+.nbk-fbox__hint{font-size:11.5px;line-height:1.45;color:var(--nbk-dim);min-height:1px;}
+.nbk-fbox__bad{color:#d5281b;font-weight:600;}
+.nbk-card__prose{margin:0 20px;padding:12px 0 0;border-top:1px solid var(--nbk-line-soft);
+  font-size:12.5px;font-weight:700;color:var(--nbk-mut);}
 
 .nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
 .nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 24px;}
@@ -231,18 +253,97 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
 }
 
 /**
- * The tag a row sets, as a chip.
+ * What a note is, as a chip.
  *
- * A swatch and the short name, in the tag's own colour. `full` spells the
- * whole name out - used in the menu, where there is room and where the
- * reader is choosing between them; the tree uses the short one so a chip
- * never pushes a page title out of view.
+ * A swatch and the short name, in the kind's own colour. `full` spells the
+ * whole name out - used where there is room; the tree uses the short one so a
+ * chip never pushes a page title out of view. A plain note wears nothing:
+ * almost every page is one, and a chip on all of them is a chip on none.
+ *
+ * A DRAFT SAYS SO. An incomplete card is not served, and the tree is where
+ * somebody notices that without opening it.
  */
-function TagChip({ tag, full = false }) {
+function KindChip({ kind, draft = false, full = false }) {
+  const def = noteKind(kind);
+  if (!isTypedKind(def.id)) return null;
   return (
-    <Chip colour={tag.colour} dot={full} title={'Answers from here are drawn as the ' + tag.label + '.'}>
-      {full ? tag.label : tag.short}
+    <Chip colour={draft ? { ink: '#8a5a00', tint: '#fff5e0', edge: '#d9a441' } : def.colour} dot={full}
+      title={draft
+        ? def.label + ' - not finished, so the assistant does not answer from it yet.'
+        : def.label + ' - the assistant answers from its recorded values.'}>
+      {(full ? def.label : def.short) + (draft ? ' - draft' : '')}
     </Chip>
+  );
+}
+
+/**
+ * One box on a typed note, drawn from its field descriptor.
+ *
+ * THE FORM IS THE SCREEN, not a description of it. The boxes are in the order
+ * they are typed into e-RS, AccurX or EMIS, they are labelled with those
+ * screens' own words, and what is missing is said IN the box it belongs to
+ * rather than in a list at the top.
+ *
+ * A list field is one value per line. That is how the practice already writes
+ * them down, it survives a paste out of a screen, and it does not need a
+ * control nobody at a front desk has used before.
+ */
+function FieldBox({ field, value, issue, onChange }) {
+  const id = 'nbf-' + field.key;
+  const shown = field.type === 'list' ? (value || []).join('\n') : (value || '');
+  const common = {
+    id,
+    value: shown,
+    onChange: (e) => onChange(field.type === 'list' ? e.target.value.split('\n') : e.target.value),
+    placeholder: field.placeholder || '',
+    'aria-describedby': id + '-hint',
+    'aria-invalid': issue ? true : undefined,
+    className: 'nbk-fbox__input' + (issue ? ' nbk-fbox__input--bad' : ''),
+  };
+  return (
+    <div className="nbk-fbox">
+      <label className="nbk-fbox__label" htmlFor={id}>{field.label}</label>
+      {field.type === 'enum' ? (
+        <select {...common}>
+          {field.options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      ) : field.type === 'text' ? (
+        <input {...common} type="text" />
+      ) : (
+        <textarea {...common} rows={field.type === 'list' ? Math.max(2, (value || []).length + 1) : 4} />
+      )}
+      <div className="nbk-fbox__hint" id={id + '-hint'}>
+        {issue ? <span className="nbk-fbox__bad">{issue.message}</span> : field.hint}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The whole card, editable.
+ *
+ * Above the page's own writing, because the values are what the reader came
+ * for and the prose is what is different about this one. Nothing here is
+ * chosen by a model, at any point: the boxes come from the kind, the values
+ * come from the practice, and what the assistant is shown is these values in
+ * this order.
+ */
+function FieldsForm({ kind, fields, issues, onChange }) {
+  const def = noteKind(kind);
+  const byField = new Map((issues || []).map((i) => [i.field, i]));
+  return (
+    <div className="nbk-card" style={{ '--nbk-kind': def.colour.ink, '--nbk-kind-tint': def.colour.tint, '--nbk-kind-edge': def.colour.edge }}>
+      <div className="nbk-card__head">
+        <Chip colour={def.colour} dot>{def.label}</Chip>
+        <span className="nbk-card__note">{def.summary}</span>
+      </div>
+      <div className="nbk-card__grid">
+        {def.fields.map((field) => (
+          <FieldBox key={field.key} field={field} value={fields[field.key]} issue={byField.get(field.key)}
+            onChange={(next) => onChange({ ...fields, [field.key]: next })} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -259,7 +360,7 @@ function SideRow({ n, depth, ctx }) {
   const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
   const open = !!expanded[n.id] || (!!q && kids.length > 0);
   const fileCount = attachments.filter((a) => a.noteId === n.id).length;
-  const tag = outputTag(n.outputTag);
+  const draft = String(n.status || 'live') === 'draft';
   // Drag a note (anything below the root) onto a section row to move it there.
   const draggable = !!n.parentId;
   const dropOk = dragId != null && canDropOn(dragId, n.id);
@@ -301,15 +402,16 @@ function SideRow({ n, depth, ctx }) {
         ) : (<span style={{ flex: 'none', width: '28px' }} />)}
         <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)}>
           <Svg w={16} sw={2} style={{ flex: 'none', color: isSel ? T.blue : T.dim }}>
-            {depth === 0 || n.isSection ? Icons.book : Icons.fileLines}
+            {depth === 0 || n.isSection ? Icons.book
+              : isTypedKind(n.kind) ? (Icons[noteKind(n.kind).icon] || Icons.fileLines)
+                : Icons.fileLines}
           </Svg>
           <span className="nbk-row__name">{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={{ flex: 'none', color: T.dim }}>{Icons.paperclip}</Svg>}
-          {/* The shape answers from here come back in. The CHIP is only on the
-              row that sets it - the same chip twenty times down a folder would
-              be noise - and what everything below inherits is shown instead by
-              the coloured line running down their indent. */}
-          {tag && <TagChip tag={tag} />}
+          {/* What this note is, where it is not the ordinary page. A draft says
+              so here, because a card nobody finished is one the assistant is
+              not answering from and the tree is where that gets noticed. */}
+          <KindChip kind={n.kind} draft={draft} />
         </button>
         <span className="nbk-row__actions">
           {depth < MAX_DEPTH - 1 && (
@@ -319,11 +421,12 @@ function SideRow({ n, depth, ctx }) {
         </span>
       </div>
       {open && kids.length > 0 && (
-        // The guide line down a folder's contents takes the tag's colour where
-        // the folder sets one. That is what makes a tag visible at a glance
-        // without a chip on every page: the whole subtree is drawn in it, and a
-        // sub-folder that overrides the tag changes colour from there down.
-        <div className="nbk-kids" style={tag ? { '--nbk-edge': tag.colour.edge, '--nbk-edge-w': '2px' } : undefined}>
+        // A PLAIN GUIDE LINE. It used to take the colour of the folder's tag,
+        // because a tag was a property of the folder and everything beneath it
+        // inherited one. A kind is a property of the note, so the folder has no
+        // colour to lend and a coloured line here would say something untrue
+        // about the pages under it.
+        <div className="nbk-kids">
           {kids.map((k) => <SideRow key={k.id} n={k} depth={depth + 1} ctx={ctx} />)}
         </div>
       )}
@@ -387,7 +490,7 @@ export default function NotebookPage() {
         if (!res.ok) throw new Error('bad status');
         const data = await res.json();
         const list = Array.isArray(data.notes) ? data.notes : [];
-        for (const n of list) saved.current.set(n.id, { title: n.title || '', body: n.body || '' });
+        for (const n of list) saved.current.set(n.id, { title: n.title || '', body: n.body || '', fields: JSON.stringify(n.fields || {}) });
         setNotes(list);
         setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
         setStatus('ready');
@@ -404,27 +507,28 @@ export default function NotebookPage() {
   }, []);
 
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
-  // WHICH ROW a tag is coming from - the row itself, or the nearest folder
-  // above it that sets one. Null when nothing on the path does. The same walk
-  // the assistant does server-side (noteOutputTag in lib/knowledge-context.mjs),
-  // so the chip in the tree and the shape of the answer cannot disagree.
-  const tagSource = React.useCallback((note) => {
-    const seen = new Set();
-    let cur = note;
-    while (cur && !seen.has(cur.id)) {
-      seen.add(cur.id);
-      if (String(cur.outputTag || '').trim()) return cur;
-      cur = cur.parentId == null ? null : byId.get(cur.parentId);
-    }
-    return null;
-  }, [byId]);
-  const inheritedTag = React.useCallback((note) => {
-    const found = tagSource(note);
-    return found ? String(found.outputTag).trim() : '';
-  }, [tagSource]);
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
   const isSection = !!selected && (!selected.parentId || !!selected.isSection);
+  // The open page's typed values, always complete for its kind: an editor
+  // handed an undefined value renders an uncontrolled box that React then
+  // complains about the first time somebody types in it.
+  const selectedFields = React.useMemo(
+    () => (selected && isTypedKind(selected.kind) ? { ...emptyFields(selected.kind), ...normaliseFields(selected.kind, selected.fields) } : {}),
+    [selected],
+  );
+  // WHAT IS MISSING, WORKED OUT HERE AS WELL AS ON THE SERVER. The server
+  // decides whether the note is servable; this is the same rules run against
+  // what is on screen, so a box turns red as it is emptied rather than 1.8
+  // seconds later when the autosave comes back.
+  const selectedIssues = React.useMemo(
+    () => (selected && isTypedKind(selected.kind) ? noteIssues(selected.kind, selectedFields) : []),
+    [selected, selectedFields],
+  );
+  const suggested = React.useMemo(
+    () => (selected && !isSection && !isTypedKind(selected.kind) ? suggestKind(selected.body) : ''),
+    [selected, isSection],
+  );
   // Files docked below the page. Images embedded inline in the text are shown
   // there, not repeated here - a chip reappears if its image is deleted from
   // the text, so the file can still be removed (or re-embedded) from the strip.
@@ -472,19 +576,33 @@ export default function NotebookPage() {
       const n = notesRef.current.find((x) => x.id === id);
       if (!n) { dirty.current.delete(id); continue; } // deleted while dirty
       const prev = saved.current.get(id) || {};
+      // The typed values are compared as their JSON, which is what makes an
+      // autosave of a card the same cheap check as an autosave of prose: one
+      // string against one string, with no walk of a shape that differs per
+      // kind.
+      const fieldsNow = JSON.stringify(n.fields || {});
       const patch = {};
       if ((n.title || '') !== (prev.title || '')) patch.title = n.title || '';
       if ((n.body || '') !== (prev.body || '')) patch.body = n.body || '';
+      if (fieldsNow !== (prev.fields || '{}')) patch.fields = n.fields || {};
       if (!Object.keys(patch).length) { dirty.current.delete(id); continue; }
-      const sent = { title: n.title || '', body: n.body || '' };
+      const sent = { title: n.title || '', body: n.body || '', fields: fieldsNow };
       try {
         saving.current.add(id);
         setSaveState('saving');
         const res = await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...patch, id }) });
         if (!res.ok) throw new Error('bad status');
+        const { note: back } = await res.json();
         saved.current.set(id, sent);
+        // WHETHER IT IS SERVABLE IS THE SERVER'S ANSWER, not this page's. The
+        // rules that decide live or draft live with the kind, and a browser
+        // that worked it out for itself would be a second copy of them.
+        if (back && back.status) {
+          setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, status: back.status } : x)));
+        }
         const latest = notesRef.current.find((x) => x.id === id);
-        if (latest && (latest.title || '') === sent.title && (latest.body || '') === sent.body) {
+        if (latest && (latest.title || '') === sent.title && (latest.body || '') === sent.body
+          && JSON.stringify(latest.fields || {}) === sent.fields) {
           dirty.current.delete(id);
           dirtyAt.current.delete(id);
         }
@@ -620,31 +738,38 @@ export default function NotebookPage() {
     });
   }
 
-  async function createNoteApi(title, parentId) {
+  async function createNoteApi(title, parentId, kind = 'note') {
     const res = await fetch('/api/notebook', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, parentId: parentId || null }),
+      body: JSON.stringify({ title, parentId: parentId || null, kind }),
     });
     if (!res.ok) throw new Error('bad status');
     const { note } = await res.json();
-    saved.current.set(note.id, { title: note.title || '', body: note.body || '' });
+    saved.current.set(note.id, { title: note.title || '', body: note.body || '', fields: JSON.stringify(note.fields || {}) });
     return note;
   }
 
   // New page under a parent - or, with no parent, a new section. A section is
   // a name-only container, so it is always created together with its first
   // page, and the page (the writing surface) is what opens.
-  async function newNote(parentId) {
+  //
+  // THE KIND IS CHOSEN HERE, at the moment the page is made, which is the
+  // whole point: a referral card is a referral card because somebody said so,
+  // not because of the folder it landed in. It is named for what it is, so the
+  // tree reads sensibly before anybody has typed a word into it.
+  async function newNote(parentId, kind = 'note') {
     await flush();
+    const def = noteKind(kind);
+    const name = isTypedKind(def.id) ? 'New ' + def.label.toLowerCase() : 'New page';
     try {
       if (parentId) {
-        const note = await createNoteApi('New page', parentId);
+        const note = await createNoteApi(name, parentId, def.id);
         setNotes((ns) => ns.concat([note]));
         setExpanded((e) => ({ ...e, [parentId]: true }));
         setSelectedId(note.id);
       } else {
         const section = await createNoteApi('New section', null);
-        const page = await createNoteApi('New page', section.id);
+        const page = await createNoteApi(name, section.id, def.id);
         setNotes((ns) => ns.concat([section, page]));
         setExpanded((e) => ({ ...e, [section.id]: true }));
         setSelectedId(page.id);
@@ -803,24 +928,29 @@ export default function NotebookPage() {
   }
 
   /**
-   * Tag a folder (or one page) with the shape its answers come back in.
+   * Change what a page IS.
    *
-   * The tag is inherited by everything beneath it, so this is normally done
-   * once on a section - "Referrals is the e-RS screen" - rather than page by
-   * page. '' clears it, which means "whatever the folder above says", not
-   * "plain": see setNoteOutputTag in lib/notebook.js.
+   * A deliberate act, never an autosave and never something a folder does to
+   * the pages inside it. The page's own writing is untouched: converting prose
+   * into a card keeps the prose underneath, which is where the differences
+   * from the standard process live.
+   *
+   * What the two kinds share is kept and the rest is dropped, by the server -
+   * see setNoteKind in lib/notebook.js.
    */
-  async function setOutputTag(id, tag) {
+  async function setNoteKindApi(id, kind) {
+    await flush();
     try {
       const res = await fetch('/api/notebook', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, outputTag: tag }),
+        body: JSON.stringify({ id, kind }),
       });
       if (!res.ok) throw new Error('bad status');
       const { note } = await res.json();
-      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, outputTag: note.outputTag || '' } : n)));
+      saved.current.set(note.id, { title: note.title || '', body: note.body || '', fields: JSON.stringify(note.fields || {}) });
+      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, kind: note.kind, fields: note.fields || {}, status: note.status } : n)));
     } catch (e) {
-      setUploadErr('Could not change the answer format.');
+      setUploadErr('Could not change what this page is.');
     }
   }
 
@@ -1131,11 +1261,17 @@ export default function NotebookPage() {
                   </p>
                   {sectionPages.map((p) => (
                     <button key={p.id} type="button" className="nbk-page-card" onClick={() => selectNote(p.id)}>
-                      <Svg w={17} sw={2} style={{ flex: 'none', color: T.blue }}>{Icons.fileLines}</Svg>
+                      <Svg w={17} sw={2} style={{ flex: 'none', color: T.blue }}>
+                        {isTypedKind(p.kind) ? (Icons[noteKind(p.kind).icon] || Icons.fileLines) : Icons.fileLines}
+                      </Svg>
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.title || 'Untitled'}
                       </span>
-                      {(p.body || '').trim() ? null : <span style={{ flex: 'none', fontSize: '12px', fontWeight: 600, color: T.dim }}>Empty</span>}
+                      <KindChip kind={p.kind} draft={String(p.status || 'live') === 'draft'} />
+                      {/* "Empty" is about a page with nothing written on it. A
+                          card's writing is optional - its values are the page -
+                          so it is never said of one. */}
+                      {isTypedKind(p.kind) || (p.body || '').trim() ? null : <span style={{ flex: 'none', fontSize: '12px', fontWeight: 600, color: T.dim }}>Empty</span>}
                       <Svg w={15} sw={2.2} style={{ flex: 'none', color: '#b6c2c9' }}>{Icons.chevronRight}</Svg>
                     </button>
                   ))}
@@ -1166,13 +1302,60 @@ export default function NotebookPage() {
                     ))}
                 </div>
 
-                <PageEditor
-                  key={selected.id}
-                  initialBody={selected.body || ''}
-                  onChange={(md) => editSelected({ body: md })}
-                  onReady={setEditor}
-                  uploadImage={uploadInlineImage}
-                />
+                {/* THE CARD, ABOVE THE WRITING. The recorded values are what
+                    the reader came for and what the assistant answers from;
+                    the prose underneath is what is different about this one.
+                    Both are saved the same way, by the same autosave. */}
+                {isTypedKind(selected.kind) && (
+                  <div className="nbk-editor nbk-scroll" style={{ display: 'block' }}>
+                    {selectedIssues.length > 0 && (
+                      <div style={{ margin: '18px 20px 0' }}>
+                        <Banner tone="warn" icon={Icons.alertCircle}>
+                          <strong>Not finished, so the assistant is not answering from this yet.</strong>{' '}
+                          {selectedIssues.map((i) => i.message).join(' ')}
+                        </Banner>
+                      </div>
+                    )}
+                    <FieldsForm kind={selected.kind} fields={selectedFields} issues={selectedIssues}
+                      onChange={(next) => editSelected({ fields: normaliseFields(selected.kind, next) })} />
+                    <div className="nbk-card__prose">Differences from the standard process, and anything else worth saying</div>
+                    <PageEditor
+                      key={selected.id}
+                      initialBody={selected.body || ''}
+                      onChange={(md) => editSelected({ body: md })}
+                      onReady={setEditor}
+                      uploadImage={uploadInlineImage}
+                    />
+                  </div>
+                )}
+
+                {/* A PAGE THAT LOOKS LIKE A CARD. A deterministic check on the
+                    words the practice already writes - no model, no tokens -
+                    offering the conversion. It never converts anything: a
+                    suggestion that acted on its own would be the folder
+                    inheritance this replaced, wearing a different hat. */}
+                {!isTypedKind(selected.kind) && suggested && (
+                  <div style={{ padding: '14px 20px 0' }}>
+                    <Banner tone="info" icon={Icons.sparkle}
+                      actions={<Button variant="primary" size="sm" onClick={() => setNoteKindApi(selected.id, suggested)}>
+                        Convert
+                      </Button>}>
+                      This page reads like {noteKind(suggested).label === 'e-RS referral' ? 'an' : 'a'}{' '}
+                      <strong>{noteKind(suggested).label}</strong>. Converting it puts the values in their own
+                      boxes and keeps everything written here underneath.
+                    </Banner>
+                  </div>
+                )}
+
+                {!isTypedKind(selected.kind) && (
+                  <PageEditor
+                    key={selected.id}
+                    initialBody={selected.body || ''}
+                    onChange={(md) => editSelected({ body: md })}
+                    onReady={setEditor}
+                    uploadImage={uploadInlineImage}
+                  />
+                )}
 
                 {(selectedFiles.length > 0 || uploadErr || uploading) && (
                   <div className="nbk-dock">
@@ -1209,7 +1392,21 @@ export default function NotebookPage() {
       {menu && menuNote && (
         <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={232}>
           <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
-          <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
+
+          {/* NEW, BY WHAT IT IS. The kind is chosen here, at the moment the
+              page is made, and it is the whole of what decides how the page is
+              filled in, checked and answered from. There is no second step and
+              no folder to put it in the right place - that is what the tag it
+              replaced got wrong. */}
+          <MenuSeparator />
+          <MenuLabel>New inside</MenuLabel>
+          {CREATABLE_KINDS.map((k) => (
+            <MenuOption key={k.id} label={k.id === 'note' ? 'Note' : k.label} help={k.summary}
+              colour={k.colour} hollow={k.id === 'note'} swatch={k.colour.ink}
+              onClick={() => { setMenu(null); newNote(menu.id, k.id); }} />
+          ))}
+
+          <MenuSeparator />
           {canOrganize(menuNote) && (
             <MenuItem icon={Icons.sparkle} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
           )}
@@ -1220,50 +1417,23 @@ export default function NotebookPage() {
             </MenuItem>
           ) : null}
 
-          {/* What shape the answers from here come back in.
-              Set on a folder and everything beneath it inherits it, so this
-              reads as a property of the folder: the tag in force is named at
-              the top, the one this row sets is ticked, and where those differ
-              the difference is the whole point of the panel. */}
-          <MenuSeparator />
-          <MenuLabel>Format answers as</MenuLabel>
-          {(() => {
-            const own = String(menuNote.outputTag || '');
-            const inherited = inheritedTag(menuNote);
-            const from = !own && inherited ? tagSource(menuNote) : null;
-            return (
-              <>
-                {/* WHAT IS IN FORCE, and where it comes from. Without this the
-                    panel is a list of choices with no statement of the current
-                    one - and on a page that inherits, the ticked row would be
-                    the only thing on screen, reading as "nothing" about pages
-                    that are in fact drawn as something. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 10px 6px', fontSize: '12px', color: T.mut }}>
-                  {inherited
-                    ? <TagChip tag={outputTag(inherited)} />
-                    : <span style={{ fontWeight: 600, color: T.ink }}>The page itself</span>}
-                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {own ? 'set here' : from ? 'from ' + from.title : 'nothing set'}
-                  </span>
-                </div>
-                {[{
-                  id: '',
-                  // Clearing a page's own tag does NOT mean "plain" - it means
-                  // "whatever the folder says", and where a folder says
-                  // something, saying "the page itself" here would be a lie
-                  // with a tick next to it.
-                  label: from ? 'Use the folder\u2019s format' : 'The page itself',
-                  help: from
-                    ? 'Answers follow ' + from.title + ' - the ' + outputTag(inherited).label + '.'
-                    : 'Answers are the page exactly as it is written.',
-                }, ...OUTPUT_TAGS].map((t) => (
-                  <MenuOption key={t.id || 'plain'} label={t.label} help={t.help} colour={t.colour}
-                    hollow={!t.id} swatch={t.colour && t.colour.ink} selected={own === t.id}
-                    onClick={() => { setMenu(null); setOutputTag(menu.id, t.id); }} />
-                ))}
-              </>
-            );
-          })()}
+          {/* WHAT THIS PAGE IS. Only on a page: a section is a name-only
+              container with nothing to fill in, and offering to make one a
+              referral would be offering something the server refuses.
+              Converting keeps the page's writing and re-coerces its values to
+              the new kind, so what the two share survives and the rest goes. */}
+          {menuNote.parentId && !menuNote.isSection ? (
+            <>
+              <MenuSeparator />
+              <MenuLabel>This page is</MenuLabel>
+              {CREATABLE_KINDS.map((k) => (
+                <MenuOption key={k.id} label={k.id === 'note' ? 'A note' : k.label} help={k.summary}
+                  colour={k.colour} hollow={k.id === 'note'} swatch={k.colour.ink}
+                  selected={String(menuNote.kind || 'note') === k.id}
+                  onClick={() => { setMenu(null); setNoteKindApi(menu.id, k.id); }} />
+              ))}
+            </>
+          ) : null}
 
           <MenuSeparator />
           <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
