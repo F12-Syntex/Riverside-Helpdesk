@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.12.0` | 2026-09-21 | feat | `557f2da` | feat: let the model read the referral pairing off the page |
+| `6.11.3` | 2026-09-21 | docs | `f8f7a78` | docs: record 6.11.2 in the versions table |
 | `6.11.2` | 2026-09-21 | fix | `f05251d` | fix: show the model every page, whole |
 | `6.11.1` | 2026-09-20 | docs | `7f48def` | docs: record 6.11.0 in the versions table |
 | `6.11.0` | 2026-09-20 | feat | `81b273c` | feat: say where a written answer actually came from |
