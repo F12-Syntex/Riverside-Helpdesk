@@ -20,9 +20,10 @@ export const THEMES = [
 ];
 
 export const THEME_KEY = 'riva-theme';
-export const DEFAULT_THEME = 'sky';
+export const DEFAULT_THEME = 'mist';
 
-export const themeById = (id) => THEMES.find((t) => t.id === id) || THEMES[0];
+export const themeById = (id) => THEMES.find((t) => t.id === id)
+  || THEMES.find((t) => t.id === DEFAULT_THEME);
 
 export function readTheme() {
   if (typeof document === 'undefined') return DEFAULT_THEME;

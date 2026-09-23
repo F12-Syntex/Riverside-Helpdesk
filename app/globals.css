@@ -779,11 +779,11 @@ body { overflow-x: hidden; }
 /* The theme's three colours, for everything CSS draws in them. Kept in
    step with THEMES in app/_components/theme.js, which hands the same
    colours to the shader. */
-:root, [data-theme="sky"] { --rv-sky-a: #41b6e6; --rv-sky-b: #005eb8; --rv-sky-c: #8fd3f4; }
+[data-theme="sky"] { --rv-sky-a: #41b6e6; --rv-sky-b: #005eb8; --rv-sky-c: #8fd3f4; }
 [data-theme="aurora"] { --rv-sky-a: #41b6e6; --rv-sky-b: #00a499; --rv-sky-c: #8f78f5; }
 [data-theme="dusk"] { --rv-sky-a: #8f78f5; --rv-sky-b: #f59ac2; --rv-sky-c: #41b6e6; }
 [data-theme="meadow"] { --rv-sky-a: #00a499; --rv-sky-b: #78be20; --rv-sky-c: #41b6e6; }
-[data-theme="mist"] { --rv-sky-a: #8fa6b8; --rv-sky-b: #c3d1dc; --rv-sky-c: #7fa7c9; }
+:root:not([data-theme]), [data-theme="mist"] { --rv-sky-a: #8fa6b8; --rv-sky-b: #c3d1dc; --rv-sky-c: #7fa7c9; }
 
 /* The still light — shown before the shader's first frame, and for good
    where there is no WebGL or less motion is wanted. */
