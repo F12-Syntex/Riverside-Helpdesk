@@ -23,7 +23,7 @@ import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
 import {
   NotebookStyles, T, NBIcons, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
-  EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
+  EmptyState, EmptyMarquee, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
   MenuOption, Spinner, Tile,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
@@ -66,7 +66,7 @@ const PAGE_CSS = `
 .nbk-brand__name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--nbk-ink);line-height:1.15;}
 .nbk-brand__meta{font-size:12px;font-weight:600;color:var(--nbk-dim);font-variant-numeric:tabular-nums;}
 .nbk-brand__tile{position:relative;flex:none;width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;
-  color:#fff;background:var(--nbk-blue);box-shadow:0 6px 14px -6px rgba(0,94,184,.6);}
+  color:#fff;background:var(--nbk-blue);box-shadow:var(--nbk-bevel),0 0 0 1px #004f9c;}
 .nbk-sidebar__row{display:flex;align-items:center;gap:8px;}
 .nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:4px 8px 16px;display:flex;flex-direction:column;gap:1px;}
 .nbk-tree__label{padding:8px 8px 5px;}
@@ -77,7 +77,7 @@ const PAGE_CSS = `
 .nbk-foot-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px 8px;border:1px solid transparent;border-radius:12px;
   background:rgba(255,255,255,.55);font:inherit;font-size:12px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
   transition:background-color .15s ease,color .15s ease,box-shadow .15s ease,transform .1s ease;}
-.nbk-foot-btn:hover{background:#fff;color:var(--nbk-blue);box-shadow:0 1px 2px rgba(33,43,50,.08),0 6px 14px -8px rgba(0,48,135,.3);}
+.nbk-foot-btn:hover{background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
 .nbk-foot-btn:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-foot-btn:active{transform:translateY(1px);}
 .nbk-foot-btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
@@ -117,8 +117,6 @@ const PAGE_CSS = `
 .nbk-doc-title:hover{background:rgba(33,43,50,.035);}
 .nbk-doc-title:focus{background:transparent !important;box-shadow:inset 0 -2px 0 var(--nbk-blue) !important;border:none !important;}
 .nbk-doc-rule{height:1px;margin:18px 0 0;background:linear-gradient(90deg,var(--nbk-line-soft),transparent);}
-.nbk-doc-rule--glow{height:2px;border-radius:2px;opacity:.55;
-  background:linear-gradient(90deg,var(--rv-sky-b,#005eb8),var(--rv-sky-a,#41b6e6) 30%,var(--rv-sky-c,#8fd3f4) 60%,transparent);}
 
 .nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;
   border-top:1px solid var(--nbk-line-soft);background:rgba(248,250,251,.9);}
@@ -143,8 +141,7 @@ const PAGE_CSS = `
   box-shadow:0 1px 2px rgba(33,43,50,.05);font:inherit;color:var(--nbk-ink);cursor:pointer;
   animation:nbk-in .4s var(--nbk-ease) both;
   transition:border-color .15s ease,box-shadow .2s ease,transform .2s var(--nbk-ease);}
-.nbk-page-card:hover{border-color:#cfe0ef;transform:translateY(-2px);
-  box-shadow:0 1px 2px rgba(33,43,50,.05),0 14px 30px -14px rgba(0,48,135,.32);}
+.nbk-page-card:hover{border-color:#aac7e0;transform:translateY(-1px);box-shadow:0 1px 2px rgba(33,43,50,.06),0 3px 6px -2px rgba(33,43,50,.08);}
 .nbk-page-card:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-page-card:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
 .nbk-page-card__title{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.35;
@@ -1160,7 +1157,7 @@ export default function NotebookPage() {
           the notebook. Write the content in a page below.
         </p>
       )}
-      <div className="nbk-doc-rule nbk-doc-rule--glow" />
+      <div className="nbk-doc-rule" />
     </div>
   ) : null;
 
@@ -1302,8 +1299,13 @@ export default function NotebookPage() {
 
           {view !== 'map' && (<>
             {!selected && (
-              <EmptyState icon={Icons.book} title={status === 'loading' ? 'Opening the notebook' : 'Nothing open'}
-                body="Pick a page from the tree, or create a section to start writing. Everything written here is what the assistant answers from."
+              <EmptyMarquee
+                items={notes.filter((n) => n.parentId && !n.isSection).map((n) => ({ id: n.id, title: n.title, meta: (byId.get(n.parentId) || {}).title || '' }))}
+                onPick={selectNote}
+                title={status === 'loading' ? 'Opening the notebook' : pageCount ? 'Nothing open' : 'Nothing written yet'}
+                body={status === 'loading' ? null : pageCount
+                  ? 'Pick a page as it passes, or one from the tree. Everything written here is what the assistant answers from.'
+                  : 'Create a section to start writing. Everything written here is what the assistant answers from.'}
                 action={status === 'loading' ? null : <Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}>New section</Button>} />
             )}
 

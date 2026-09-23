@@ -19,7 +19,7 @@
  * It speaks the shell's language (globals.css, "THE SHELL"): glass for
  * what floats on the light, white paper for what is read, icons on
  * tiles, menus in the mode menu's surface. The theme's colours are used
- * only where the shell uses them - a hairline, a glow, a progress bar -
+ * only where the shell uses them - a hairline, a progress bar -
  * and every control stays NHS blue whichever theme is picked.
  * ------------------------------------------------------------------ */
 
@@ -59,10 +59,15 @@ export const KIT_CSS = `
   --nbk-green:#007f3b;--nbk-red:#d5281b;--nbk-amber:#a4610a;
   --nbk-tile:#eef2f4;
   --nbk-r-xs:8px;--nbk-r-sm:11px;--nbk-r-md:14px;--nbk-r-lg:20px;--nbk-r-xl:22px;
-  --nbk-sh-1:0 1px 2px rgba(33,43,50,.06);
-  --nbk-sh-2:0 1px 2px rgba(33,43,50,.05),0 8px 18px -6px rgba(33,43,50,.12),0 28px 56px -12px rgba(0,48,135,.22);
-  --nbk-sh-3:0 2px 4px rgba(33,43,50,.05),0 24px 60px -12px rgba(33,43,50,.28),0 40px 90px -30px rgba(0,48,135,.35);
-  --nbk-sh-paper:0 1px 2px rgba(33,43,50,.05),0 10px 24px -12px rgba(33,43,50,.14),0 30px 70px -30px rgba(0,48,135,.26);
+  /* Edges, not glows: a hairline ring for where a surface ends, and a
+     shadow only as deep as the thing is lifted. No coloured haze. */
+  --nbk-ring:0 0 0 1px rgba(33,43,50,.08);
+  --nbk-sh-1:0 0 0 1px rgba(33,43,50,.06),0 1px 2px rgba(33,43,50,.06);
+  --nbk-sh-2:0 0 0 1px rgba(33,43,50,.07),0 4px 8px -2px rgba(33,43,50,.08),0 14px 28px -8px rgba(33,43,50,.14);
+  --nbk-sh-3:0 0 0 1px rgba(33,43,50,.07),0 8px 16px -4px rgba(33,43,50,.1),0 28px 56px -12px rgba(33,43,50,.22);
+  --nbk-sh-paper:0 0 0 1px rgba(33,43,50,.06),0 1px 2px rgba(33,43,50,.04),0 4px 12px -4px rgba(33,43,50,.07);
+  /* A pressed-in top edge, for a solid button: it reads as a surface. */
+  --nbk-bevel:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.12);
   --nbk-glass:rgba(255,255,255,.62);--nbk-glass-line:rgba(255,255,255,.9);
   --nbk-blur:saturate(160%) blur(14px);
   --nbk-ease:cubic-bezier(.2,.8,.3,1);
@@ -81,8 +86,8 @@ export const KIT_CSS = `
    (the tree, the bar's cousins); paper for what is read and written. */
 .nbk-glass{background:var(--nbk-glass);border:1px solid var(--nbk-glass-line);
   -webkit-backdrop-filter:var(--nbk-blur);backdrop-filter:var(--nbk-blur);
-  box-shadow:0 1px 2px rgba(33,43,50,.05),0 8px 18px -8px rgba(33,43,50,.12),0 20px 44px -18px rgba(0,48,135,.2);}
-.nbk-paper{background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.95);box-shadow:var(--nbk-sh-paper);}
+  box-shadow:var(--nbk-sh-paper);}
+.nbk-paper{background:#fff;box-shadow:var(--nbk-sh-paper);}
 
 /* An icon on a tile: the mode menu's shape, used for every glyph that
    names a thing rather than does something. */
@@ -103,17 +108,17 @@ export const KIT_CSS = `
 .nbk-btn--sm{height:30px;padding:0 11px;font-size:12.5px;gap:6px;border-radius:9px;}
 .nbk-btn--lg{height:42px;padding:0 18px;font-size:15px;border-radius:13px;}
 .nbk-btn--block{width:100%;}
-.nbk-btn--primary{background:var(--nbk-blue);color:#fff;box-shadow:0 6px 16px -4px rgba(0,94,184,.45);}
-.nbk-btn--primary:hover:not([disabled]){background:var(--nbk-navy);box-shadow:0 8px 20px -4px rgba(0,48,135,.5);}
+.nbk-btn--primary{background:var(--nbk-blue);border-color:#004f9c;color:#fff;box-shadow:var(--nbk-bevel),0 1px 2px rgba(0,48,135,.25);}
+.nbk-btn--primary:hover:not([disabled]){background:#0052a3;}
 .nbk-btn--secondary{background:rgba(255,255,255,.88);border-color:var(--nbk-line);color:var(--nbk-ink);box-shadow:var(--nbk-sh-1);}
 .nbk-btn--secondary:hover:not([disabled]){border-color:#aac7e0;background:#fff;color:var(--nbk-blue);}
 .nbk-btn--ghost{color:var(--nbk-mut);}
 .nbk-btn--ghost:hover:not([disabled]){background:rgba(33,43,50,.06);color:var(--nbk-ink);}
 .nbk-btn--soft{background:var(--nbk-tint);color:var(--nbk-blue);}
 .nbk-btn--soft:hover:not([disabled]){background:#dcebf8;color:var(--nbk-navy);}
-.nbk-btn--success{background:var(--nbk-green);color:#fff;box-shadow:0 6px 16px -4px rgba(0,127,59,.4);}
+.nbk-btn--success{background:var(--nbk-green);border-color:#006631;color:#fff;box-shadow:var(--nbk-bevel),0 1px 2px rgba(0,80,40,.25);}
 .nbk-btn--success:hover:not([disabled]){background:#00612f;}
-.nbk-btn--danger{background:var(--nbk-red);color:#fff;box-shadow:0 6px 16px -4px rgba(213,40,27,.4);}
+.nbk-btn--danger{background:var(--nbk-red);border-color:#b52216;color:#fff;box-shadow:var(--nbk-bevel),0 1px 2px rgba(120,20,10,.25);}
 .nbk-btn--danger:hover:not([disabled]){background:#a81d13;}
 .nbk-btn--quiet-danger{background:#fff;border-color:#f0cfcb;color:#a81d13;}
 .nbk-btn--quiet-danger:hover:not([disabled]){background:#fdf4f3;border-color:#dfa49c;}
@@ -187,16 +192,49 @@ export const KIT_CSS = `
 .nbk-banner--danger{background:#fdecea;border-color:#f0c6c1;color:#a81d13;}
 .nbk-banner--success{background:#e8f5ed;border-color:#b9ddc8;color:#00612f;}
 
-/* The empty state carries the light: a glow in the theme's colours behind
-   its tile, the one decorative thing on an otherwise blank sheet. */
-.nbk-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+/* The empty state: its icon on a tile with two more fanned out behind
+   it, which spread when the pointer comes near (the 21st.dev "Empty
+   State"), on a dashed plate rather than a glow. */
+.nbk-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
   padding:48px 24px;text-align:center;color:var(--nbk-mut);animation:nbk-in .45s var(--nbk-ease) both;}
-.nbk-empty__icon{position:relative;width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;
-  margin-bottom:6px;background:#fff;color:var(--nbk-blue);box-shadow:0 1px 2px rgba(33,43,50,.06),0 12px 28px -10px rgba(0,48,135,.3);}
-.nbk-empty__icon::before{content:"";position:absolute;inset:-26px;z-index:-1;border-radius:50%;filter:blur(18px);opacity:.55;
-  background:radial-gradient(closest-side,var(--rv-sky-a,#41b6e6),var(--rv-sky-c,#8fd3f4) 55%,transparent);}
-.nbk-empty__title{font-size:19px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
-.nbk-empty__body{max-width:400px;font-size:14px;line-height:1.6;margin-bottom:6px;}
+.nbk-empty__icon{position:relative;z-index:0;width:52px;height:52px;margin:6px 0 14px;display:flex;align-items:center;justify-content:center;
+  border-radius:14px;background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
+.nbk-empty__icon::before,.nbk-empty__icon::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;
+  background:#fff;box-shadow:var(--nbk-sh-1);transition:transform .45s var(--nbk-ease);}
+.nbk-empty__icon::before{transform:translate(-14px,5px) rotate(-10deg) scale(.9);}
+.nbk-empty__icon::after{transform:translate(14px,5px) rotate(10deg) scale(.9);}
+.nbk-empty:hover .nbk-empty__icon::before{transform:translate(-26px,2px) rotate(-16deg) scale(.92);}
+.nbk-empty:hover .nbk-empty__icon::after{transform:translate(26px,2px) rotate(16deg) scale(.92);}
+.nbk-empty__icon>svg{transition:transform .45s var(--nbk-ease);}
+.nbk-empty:hover .nbk-empty__icon>svg{transform:translateY(-2px) scale(1.06);}
+.nbk-empty__title{font-size:17px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
+.nbk-empty__body{max-width:380px;font-size:14px;line-height:1.6;margin-bottom:8px;}
+
+/* Nothing open: the notebook's own pages, drifting up through a window
+   that fades at both ends (the 21st.dev "Empty State with Marquee").
+   Hover holds it still; any row opens its page. Before anything has
+   loaded, and in an empty notebook, the rows are skeletons. */
+.nbk-void{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px 24px;
+  text-align:center;color:var(--nbk-mut);animation:nbk-in .45s var(--nbk-ease) both;}
+.nbk-marquee{position:relative;width:min(400px,100%);height:236px;margin-bottom:18px;overflow:hidden;border-radius:16px;
+  background:#f8fafb;box-shadow:inset 0 0 0 1px rgba(33,43,50,.06);
+  -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);}
+.nbk-marquee__track{display:flex;flex-direction:column;gap:8px;padding:4px 10px;animation:nbk-marquee var(--nbk-marquee-s,20s) linear infinite;}
+.nbk-marquee:hover .nbk-marquee__track,.nbk-marquee:focus-within .nbk-marquee__track{animation-play-state:paused;}
+.nbk-mrow{flex:none;display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 12px 0 9px;border:none;border-radius:11px;
+  background:#fff;box-shadow:var(--nbk-sh-1);font:inherit;text-align:left;cursor:pointer;
+  transition:box-shadow .15s ease,transform .15s ease;}
+.nbk-mrow:hover{box-shadow:0 0 0 1px #aac7e0,0 1px 2px rgba(33,43,50,.06);}
+.nbk-mrow:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
+.nbk-mrow:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
+.nbk-mrow__title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:650;color:var(--nbk-ink);}
+.nbk-mrow__meta{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--nbk-dim);}
+.nbk-mrow--skel{cursor:default;}
+.nbk-skel{display:block;height:9px;border-radius:999px;background:linear-gradient(90deg,#eef2f4 0%,#f6f8f9 40%,#eef2f4 80%);
+  background-size:200% 100%;animation:nbk-skel 1.6s linear infinite;}
+.nbk-skel--tile{flex:none;width:26px;height:26px;border-radius:8px;}
+@keyframes nbk-marquee{from{transform:translateY(0);}to{transform:translateY(-50%);}}
+@keyframes nbk-skel{from{background-position:100% 0;}to{background-position:-100% 0;}}
 
 /* ------------------------------- modals ----------------------------- */
 .nbk-overlay{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
@@ -204,19 +242,16 @@ export const KIT_CSS = `
   overflow:auto;animation:nbk-fade .18s ease;}
 .nbk-modal{position:relative;width:100%;max-height:calc(100vh - 48px);display:flex;flex-direction:column;background:#fff;
   border:1px solid #e1e8ec;border-radius:var(--nbk-r-xl);box-shadow:var(--nbk-sh-3);overflow:hidden;animation:nbk-pop .26s var(--nbk-ease);}
-/* A hairline in the theme's colours along the top, as the bar has along its foot. */
-.nbk-modal::before{content:"";position:absolute;left:24px;right:24px;top:0;height:2px;border-radius:0 0 2px 2px;opacity:.7;pointer-events:none;
-  background:linear-gradient(90deg,transparent,var(--rv-sky-a,#41b6e6),var(--rv-sky-b,#005eb8),var(--rv-sky-c,#8fd3f4),transparent);}
 .nbk-modal--sm{max-width:440px;}
 .nbk-modal--md{max-width:620px;}
 .nbk-modal--lg{max-width:940px;}
 .nbk-modal--xl{max-width:1280px;}
 .nbk-modal__head{flex:none;display:flex;align-items:flex-start;gap:14px;padding:22px 22px 14px;}
 .nbk-modal__icon{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
-  justify-content:center;background:var(--nbk-blue);color:#fff;box-shadow:0 6px 16px -6px rgba(0,94,184,.55);}
-.nbk-modal__icon--danger{background:var(--nbk-red);box-shadow:0 6px 16px -6px rgba(213,40,27,.5);}
-.nbk-modal__icon--warn{background:#fdf5e8;color:var(--nbk-amber);box-shadow:none;}
-.nbk-modal__icon--success{background:var(--nbk-green);box-shadow:0 6px 16px -6px rgba(0,127,59,.5);}
+  justify-content:center;background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
+.nbk-modal__icon--danger{background:#fef3f2;color:var(--nbk-red);box-shadow:0 0 0 1px #f6d3cf;}
+.nbk-modal__icon--warn{background:#fdf8ef;color:var(--nbk-amber);box-shadow:0 0 0 1px #efdcb7;}
+.nbk-modal__icon--success{background:#eef8f2;color:var(--nbk-green);box-shadow:0 0 0 1px #c6e4d1;}
 .nbk-modal__title{margin:0;padding-top:1px;font-size:18.5px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
 .nbk-modal__sub{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--nbk-mut);}
 .nbk-modal__body{flex:1;min-height:0;overflow:auto;padding:4px 22px 8px;font-size:14px;line-height:1.6;color:var(--nbk-mut);}
@@ -273,7 +308,7 @@ export const KIT_CSS = `
   transition:background-color .14s ease,box-shadow .14s ease;}
 .nbk-row:hover{background:rgba(255,255,255,.66);}
 .nbk-row--path .nbk-row__name{color:var(--nbk-ink);font-weight:650;}
-.nbk-row--on,.nbk-row--on:hover{background:#fff;box-shadow:0 1px 2px rgba(33,43,50,.07),0 6px 14px -8px rgba(0,48,135,.28);}
+.nbk-row--on,.nbk-row--on:hover{background:#fff;box-shadow:var(--nbk-sh-1);}
 .nbk-row__btn{flex:1;min-width:0;display:flex;align-items:center;gap:9px;border:none;background:none;font:inherit;
   font-size:14px;color:var(--nbk-ink);text-align:left;padding:5px 2px;cursor:pointer;border-radius:9px;}
 .nbk-row__btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
@@ -303,13 +338,13 @@ export const KIT_CSS = `
 .nbk-toolbar{flex:none;display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:1px;
   margin:0 auto;padding:4px;max-width:calc(100% - 24px);
   background:rgba(242,246,249,.92);border:1px solid #e6edf2;border-radius:14px;
-  box-shadow:0 1px 2px rgba(33,43,50,.04),0 8px 20px -12px rgba(0,48,135,.25);}
+  box-shadow:0 1px 2px rgba(33,43,50,.04);}
 .nbk-tbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;min-width:32px;
   padding:0 7px;border:none;border-radius:10px;background:none;color:var(--nbk-mut);font:inherit;font-size:12.5px;
   font-weight:700;cursor:pointer;transition:background-color .14s ease,color .14s ease,box-shadow .14s ease;}
 .nbk-tbtn:hover{background:#fff;color:var(--nbk-ink);box-shadow:0 1px 2px rgba(33,43,50,.08);}
 .nbk-tbtn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
-.nbk-tbtn--on,.nbk-tbtn--on:hover{background:var(--nbk-blue);color:#fff;box-shadow:0 4px 10px -4px rgba(0,94,184,.55);}
+.nbk-tbtn--on,.nbk-tbtn--on:hover{background:var(--nbk-blue);color:#fff;box-shadow:var(--nbk-bevel);}
 .nbk-tbtn--accent{color:var(--nbk-blue);background:#fff;padding:0 11px 0 9px;box-shadow:0 1px 2px rgba(33,43,50,.08);}
 .nbk-tbtn--accent:hover{background:var(--nbk-blue);color:#fff;}
 .nbk-tsep{flex:none;width:1px;height:18px;background:#d9e2e8;margin:0 5px;}
@@ -391,7 +426,10 @@ export const KIT_CSS = `
 @keyframes nbk-sheen{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
 @keyframes nbk-slide{0%{margin-left:-38%;}100%{margin-left:100%;}}
 @media (prefers-reduced-motion:reduce){
-  .nbk-overlay,.nbk-modal,.nbk-menu,.nbk-toast,.nbk-empty,.nbk-kids,.nbk-status{animation:none;}
+  .nbk-overlay,.nbk-modal,.nbk-menu,.nbk-toast,.nbk-empty,.nbk-void,.nbk-kids,.nbk-status,.nbk-skel{animation:none;}
+  .nbk-marquee__track{animation:none;}
+  .nbk-marquee{overflow-y:auto;}
+  .nbk-empty__icon::before,.nbk-empty__icon::after,.nbk-empty__icon>svg{transition:none;}
   .nbk-tabs__pill,.nbk-row__twist svg{transition:none;}
   .nbk-bar__fill::after,.nbk-status--saving .nbk-status__dot::after{animation:none;}
   .nbk-bar__fill--idle{animation:none;margin-left:0;width:100%;opacity:.45;}
@@ -506,6 +544,47 @@ export function EmptyState({ icon, title, body, action }) {
   return (
     <div className="nbk-empty">
       {icon && <div className="nbk-empty__icon"><Svg w={26} sw={1.8}>{icon}</Svg></div>}
+      {title && <div className="nbk-empty__title">{title}</div>}
+      {body && <div className="nbk-empty__body">{body}</div>}
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Nothing open, said with the notebook itself: its pages scrolling slowly
+ * past, any of them a click away. `items` is [{ id, title, meta }]; with
+ * none (still loading, or an empty notebook) the rows are skeletons.
+ */
+export function EmptyMarquee({ items = [], onPick, title, body, action }) {
+  const rows = items.length ? items.slice(0, 14) : Array.from({ length: 6 }, (_, i) => ({ id: 'skel' + i, skel: true }));
+  // Twice over, so the track can run to half way and start again unseen.
+  const loop = rows.concat(rows);
+  return (
+    <div className="nbk-void">
+      <div className="nbk-marquee" aria-hidden={items.length ? undefined : true}>
+        <div className="nbk-marquee__track" style={{ '--nbk-marquee-s': Math.max(14, rows.length * 3.2) + 's' }}>
+          {loop.map((r, i) => {
+            const copy = i >= rows.length;
+            if (r.skel) {
+              return (
+                <div key={i} className="nbk-mrow nbk-mrow--skel">
+                  <span className="nbk-skel nbk-skel--tile" />
+                  <span className="nbk-skel" style={{ width: 34 + ((i * 29) % 40) + '%' }} />
+                </div>
+              );
+            }
+            return (
+              <button key={i} type="button" className="nbk-mrow" tabIndex={copy ? -1 : undefined} aria-hidden={copy || undefined}
+                onClick={() => onPick && onPick(r.id)}>
+                <Tile icon={Icons.fileLines} />
+                <span className="nbk-mrow__title">{r.title || 'Untitled'}</span>
+                {r.meta && <span className="nbk-mrow__meta">{r.meta}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       {title && <div className="nbk-empty__title">{title}</div>}
       {body && <div className="nbk-empty__body">{body}</div>}
       {action}
