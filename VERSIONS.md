@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `8.1.0` | 2026-09-21 | feat | `c50f944` | feat: let a branch point at a second database |
 | `8.0.2` | 2026-09-21 | chore | `ea6859a` | chore: correct the version after the breaking-change bump |
 | `8.0.1` | 2026-09-21 | fix | `db41b75` | fix: strip the UTF-8 BOM that broke the Vercel build |
 | `8.0.0` | 2026-09-21 | fix | `9bdaca1` | fix!: never drop a column from ensureNotebookSchema |

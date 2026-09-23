@@ -24,8 +24,8 @@ import MapView from '../_components/notebook/MapView';
 import CardEditor from '../_components/notebook/CardEditor';
 import {
   NotebookStyles, T, NBIcons, Banner, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
-  EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
-  MenuOption, Spinner,
+  EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuSeparator,
+  MenuSub, MenuChoice, Spinner,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
 import {
@@ -1318,55 +1318,46 @@ export default function NotebookPage() {
       </div>
       {/* ---------------------------- The note menu --------------------------- */}
       {menu && menuNote && (
-        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={232}>
+        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={200}>
+          {/* One line per action; the two lists of kinds sit behind a
+              submenu each, so they are never on screen twice. The kind is
+              still chosen at the moment a page is made - "Add page" asks
+              which - and a page's kind can be changed under "Type", which
+              keeps its writing and re-coerces its values. A section has no
+              kind: it is a name-only container, so it gets no "Type". */}
+          <MenuSub icon={Icons.plus} label="Add page">
+            {CREATABLE_KINDS.map((k) => (
+              <MenuChoice key={k.id} colour={k.colour} hollow={k.id === 'note'}
+                onClick={() => { setMenu(null); newNote(menu.id, k.id); }}>
+                {k.label}
+              </MenuChoice>
+            ))}
+          </MenuSub>
           <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
-
-          {/* NEW, BY WHAT IT IS. The kind is chosen here, at the moment the
-              page is made, and it is the whole of what decides how the page is
-              filled in, checked and answered from. There is no second step and
-              no folder to put it in the right place - that is what the tag it
-              replaced got wrong. */}
-          <MenuSeparator />
-          <MenuLabel>New inside</MenuLabel>
-          {CREATABLE_KINDS.map((k) => (
-            <MenuOption key={k.id} label={k.id === 'note' ? 'Note' : k.label} help={k.summary}
-              colour={k.colour} hollow={k.id === 'note'} swatch={k.colour.ink}
-              onClick={() => { setMenu(null); newNote(menu.id, k.id); }} />
-          ))}
-
-          <MenuSeparator />
-          {canOrganize(menuNote) && (
-            <MenuItem icon={Icons.sparkle} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
-          )}
+          {menuNote.parentId && !menuNote.isSection ? (
+            <MenuSub icon={Icons.fileLines} label="Type"
+              hint={(CREATABLE_KINDS.find((k) => k.id === String(menuNote.kind || 'note')) || {}).label}>
+              {CREATABLE_KINDS.map((k) => (
+                <MenuChoice key={k.id} colour={k.colour} hollow={k.id === 'note'}
+                  selected={String(menuNote.kind || 'note') === k.id}
+                  onClick={() => { setMenu(null); setNoteKindApi(menu.id, k.id); }}>
+                  {k.label}
+                </MenuChoice>
+              ))}
+            </MenuSub>
+          ) : null}
           {menuNote.parentId ? (
             <MenuItem icon={menuNote.isSection ? Icons.fileLines : Icons.book}
               onClick={() => { setMenu(null); toggleSection(menu.id, !menuNote.isSection); }}>
-              {menuNote.isSection ? 'Convert to page' : 'Convert to section'}
+              {menuNote.isSection ? 'Make a page' : 'Make a section'}
             </MenuItem>
           ) : null}
-
-          {/* WHAT THIS PAGE IS. Only on a page: a section is a name-only
-              container with nothing to fill in, and offering to make one a
-              referral would be offering something the server refuses.
-              Converting keeps the page's writing and re-coerces its values to
-              the new kind, so what the two share survives and the rest goes. */}
-          {menuNote.parentId && !menuNote.isSection ? (
-            <>
-              <MenuSeparator />
-              <MenuLabel>This page is</MenuLabel>
-              {CREATABLE_KINDS.map((k) => (
-                <MenuOption key={k.id} label={k.id === 'note' ? 'A note' : k.label} help={k.summary}
-                  colour={k.colour} hollow={k.id === 'note'} swatch={k.colour.ink}
-                  selected={String(menuNote.kind || 'note') === k.id}
-                  onClick={() => { setMenu(null); setNoteKindApi(menu.id, k.id); }} />
-              ))}
-            </>
-          ) : null}
+          {canOrganize(menuNote) && (
+            <MenuItem icon={Icons.sparkle} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
+          )}
 
           <MenuSeparator />
-          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
-            {menuNote.parentId && !menuNote.isSection ? 'Delete page' : 'Delete section'}
-          </MenuItem>
+          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>Delete</MenuItem>
         </Menu>
       )}
 
