@@ -26,7 +26,7 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 import { ACCURX_READ_SCHEMA, accurxReadPrompt, readingVerdict } from '../../lib/templates/accurx-route.mjs';
-import { renderCommand } from '../../lib/templates/route.mjs';
+import { accurxAnswer } from '../../lib/templates/accurx.mjs';
 import { triagePatientAnswer } from '../../lib/templates/triage.mjs';
 import { answerToText } from '../../lib/questions/flatten.mjs';
 import { BOOKING_RULES, CONTINUITY_RULES, REASON_RULES } from '../../lib/templates/writing.mjs';
@@ -122,7 +122,21 @@ const scan = safetyScan({ message });
 // decomposed: false }` — because the reading is the only judgement now. A
 // harness that passed a complaint in would narrow the card to one request where
 // production never narrows it, and would be marking a pipeline nobody runs.
-const card = renderCommand('accurxTriage', values, message, { complaint: '', gist: '' }) || patterns;
+//
+// This called renderCommand('accurxTriage', …) in lib/templates/route.mjs until
+// b630002 removed that file. With no complaint and no gist, all it did was the
+// call below, so the call is made here directly, with the same arguments.
+const said = String(values.condition || '').trim();
+const card = accurxAnswer({
+  condition: said || message,
+  text: message,
+  complaint: '',
+  reason: String(values.reason || '').trim(),
+  details: Array.isArray(values.details) ? values.details.filter(Boolean).slice(0, 5) : [],
+  booking: Array.isArray(values.booking) ? values.booking.filter(Boolean).slice(0, 5) : [],
+  route: readingVerdict(values),
+  message,
+}) || patterns;
 
 console.log(JSON.stringify({
   patternsDestination: patterns.destination || '',
