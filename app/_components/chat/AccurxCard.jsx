@@ -28,27 +28,20 @@ const AX_CSS = `
 .ax--today{--ax-tone:#b36200;--ax-tint:#fdf6ea;--ax-ink:#7a4300;}
 .ax--routine{--ax-tone:#007f3b;--ax-tint:#ecf7f0;--ax-ink:#00532a;}
 
-.ax-head{position:relative;display:flex;align-items:center;gap:14px;padding:18px 20px 16px;
-  background:linear-gradient(180deg,var(--ax-tint),#fff);}
-.ax-head::after{content:"";position:absolute;left:20px;right:20px;bottom:0;height:1px;background:rgba(33,43,50,.07);}
-.ax-tile{flex:none;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;
-  background:var(--ax-tone);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12),0 4px 10px -4px var(--ax-tone);}
+.ax-head{position:relative;display:flex;align-items:center;gap:14px;padding:16px 20px 14px;border-left:4px solid var(--ax-tone);
+  border-bottom:1px solid #eef1f2;}
 .ax-head__text{flex:1;min-width:0;}
 .ax-head__side{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
 .ax-kicker{display:block;font-size:12.5px;font-weight:650;color:#5b7183;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ax-dest{display:block;margin-top:1px;font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:#212b32;}
-.ax-tier{flex:none;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:999px;
-  font-size:12px;font-weight:750;letter-spacing:.02em;color:var(--ax-ink);background:#fff;box-shadow:0 0 0 1px color-mix(in srgb,var(--ax-tone) 30%,transparent);}
-.ax-tier__dot{width:7px;height:7px;border-radius:50%;background:var(--ax-tone);}
-.ax--now .ax-tier__dot{animation:axPulse 1.4s ease-in-out infinite;}
-@keyframes axPulse{0%,100%{box-shadow:0 0 0 0 rgba(213,40,27,.5);}50%{box-shadow:0 0 0 5px rgba(213,40,27,0);}}
+.ax-tier{flex:none;display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:6px;
+  font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--ax-ink);background:var(--ax-tint);}
 
 .ax-body{display:flex;flex-direction:column;gap:14px;padding:16px 20px 18px;}
 
 /* The one-line strips: an act-now instruction, and anything that means
    the card should not simply be believed. */
 .ax-strip{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.5;}
-.ax-strip svg{flex:none;margin-top:2px;}
 .ax-strip--now{background:#d5281b;color:#fff;font-weight:650;}
 .ax-strip--warn{background:#fdf8ef;color:#6b4a00;box-shadow:inset 0 0 0 1px #efdcb7;}
 
@@ -81,14 +74,10 @@ const AX_CSS = `
 .ax-chips{display:flex;flex-wrap:wrap;gap:6px;}
 .ax-chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:3px 10px;border-radius:9px;
   font-size:13px;font-weight:600;line-height:1.35;color:#324554;background:#f2f6f9;box-shadow:inset 0 0 0 1px #e3e9ed;}
-.ax-chip svg{flex:none;color:#768692;}
 .ax-chip b{font-weight:750;color:#212b32;}
 .ax-chip--blue{background:#eaf2fb;box-shadow:inset 0 0 0 1px #c9dcef;color:#003087;}
-.ax-chip--blue svg{color:#005eb8;}
 .ax-chip--amber{background:#fdf8ef;box-shadow:inset 0 0 0 1px #efdcb7;color:#6b4a00;}
-.ax-chip--amber svg{color:#a4610a;}
 .ax-chip--green{background:#ecf7f0;box-shadow:inset 0 0 0 1px #c6e4d1;color:#00532a;}
-.ax-chip--green svg{color:#007f3b;}
 .ax-chip--note{background:#fff;}
 
 /* Everything else the message asked for. */
@@ -102,9 +91,12 @@ const AX_CSS = `
 .ax-req__goes--open{color:#6b4a00;background:#fdf8ef;}
 .ax-req__note{flex-basis:100%;font-size:12.5px;color:#5b7183;}
 
-/* Why, in one line. */
-.ax-why{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.55;color:#4c6272;}
-.ax-why svg{flex:none;margin-top:2px;color:#768692;}
+/* Why here: fixed labels (lib/triage/criteria.mjs), the message's detail beside each. */
+.ax-crit{margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:5px 16px;font-size:14px;line-height:1.45;}
+.ax-crit dt{font-weight:700;color:#212b32;}
+.ax-crit dd{margin:0;color:#324554;overflow-wrap:anywhere;}
+.ax-crit dd:empty::before{content:"—";color:#aeb7bd;}
+.ax-why{font-size:13.5px;line-height:1.55;color:#4c6272;}
 .ax-quote{color:#212b32;font-weight:600;}
 
 /* The folds. */
@@ -134,7 +126,6 @@ const AX_CSS = `
 
 @media (max-width:600px){
   .ax-head{padding:16px 16px 14px;gap:12px;}
-  .ax-tile{width:38px;height:38px;border-radius:12px;}
   .ax-dest{font-size:18px;}
   .ax-body{padding:14px 16px 16px;}
   .ax-fold__btn{padding:12px 16px;}
@@ -144,7 +135,7 @@ const AX_CSS = `
   .ax-foot__src{margin-left:0;}
 }
 @media (prefers-reduced-motion:reduce){
-  .ax--now .ax-tier__dot,.ax-fold__body{animation:none;}
+  .ax-fold__body{animation:none;}
 }
 `;
 
@@ -155,27 +146,6 @@ const TIERS = {
   routine: { label: 'Routine', cls: 'ax--routine' },
 };
 const tierOf = (rank) => (rank >= 5 ? 'now' : rank === 4 ? 'today' : rank === 3 ? 'doctor' : 'routine');
-
-const DEST_ICONS = {
-  emergency: Icons.alertCircle,
-  dutyInterrupt: Icons.alertCircle,
-  ae: Icons.alertCircle,
-  eyeEmergency: Icons.alertCircle,
-  dutyDoctor: Icons.stethoscope,
-  gp: Icons.stethoscope,
-  doctorTask: Icons.fileLines,
-  pharmacy: Icons.pill,
-  pharmacyTeam: Icons.pill,
-  nurse: Icons.stethoscope,
-  diabeticNurse: Icons.stethoscope,
-  districtNurse: Icons.home,
-  midwife: Icons.home,
-  socialPrescriber: Icons.chat,
-  minorEyeService: Icons.search,
-  fcp: Icons.arrow,
-};
-
-const USER = (<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>);
 
 function Copy({ value, label = 'Copy', quiet = false }) {
   const [state, setState] = React.useState('');
@@ -214,6 +184,7 @@ export default function AccurxCard({ answer }) {
   const bookable = !a.urgent;
   const notes = [...a.booking, ...(bookable ? [] : a.details)];
   const seen = a.seen;
+  const crit = a.criteria || [];
   const same = String(a.sendTo || '').trim() === String(a.label || '').trim();
   const seenText = seen ? [seen.who || 'Not said who', seen.when].filter(Boolean).join(' · ') : '';
 
@@ -222,13 +193,12 @@ export default function AccurxCard({ answer }) {
       <style data-ax="1" dangerouslySetInnerHTML={{ __html: AX_CSS }} />
 
       <div className="ax-head">
-        <span className="ax-tile" aria-hidden="true"><Svg w={21} sw={2.1}>{DEST_ICONS[a.destination] || Icons.arrow}</Svg></span>
         <span className="ax-head__text">
           <span className="ax-kicker">{answer.title}</span>
           <span className="ax-dest">{a.label}</span>
         </span>
         <span className="ax-head__side">
-          <span className="ax-tier"><span className="ax-tier__dot" />{t.label}</span>
+          <span className="ax-tier">{t.label}</span>
           {a.copySendTo && same ? <Copy value={a.sendTo} quiet /> : null}
         </span>
       </div>
@@ -236,27 +206,42 @@ export default function AccurxCard({ answer }) {
       <div className="ax-body">
         {answer.warn ? (
           <div className="ax-strip ax-strip--now" role="alert">
-            <Svg w={16} sw={2.4}>{Icons.alertCircle}</Svg><span>{answer.warn}</span>
+            <span>{answer.warn}</span>
           </div>
         ) : null}
         {a.urgent ? (
           <div className="ax-strip ax-strip--now" role="alert">
-            <Svg w={16} sw={2.4}>{Icons.alertCircle}</Svg>
             <span>Not an appointment. Nobody books from this card: act on the steps below now.</span>
           </div>
         ) : null}
 
         {a.unread ? (
           <div className="ax-strip ax-strip--warn">
-            <Svg w={16} sw={2.2}>{Icons.alertCircle}</Svg>
             <span>The message couldn’t be read this time. It’s with the <b>duty doctor</b> because that’s where anything unplaced goes, not because it was assessed.</span>
           </div>
         ) : null}
 
         {a.conflicts.length ? (
           <div className="ax-strip ax-strip--warn">
-            <Svg w={16} sw={2.2}>{Icons.alertCircle}</Svg>
             <span><b>Won’t book the usual way.</b> {a.conflicts.map((c) => String(c).replace(/[.;,\s]+$/, '')).join(' · ')}.</span>
+          </div>
+        ) : null}
+
+        {/* Why here: the fixed criteria when the reading gave them, its own
+            sentence when it did not. The sentence is folded away otherwise. */}
+        {crit.length ? (
+          <div>
+            <span className="ax-label">Why here</span>
+            <dl className="ax-crit">
+              {crit.map((c) => <React.Fragment key={c.id}><dt>{c.label}</dt><dd>{c.value}</dd></React.Fragment>)}
+              {a.because ? <><dt>Patient wrote</dt><dd className="ax-quote">“{a.because}”</dd></> : null}
+            </dl>
+          </div>
+        ) : (a.reasoning || a.because) ? (
+          <div className="ax-why">
+            <span className="ax-label ax-group__title">Why here</span>
+            {a.reasoning ? <Rich text={a.reasoning} /> : null}
+            {a.because ? <> {a.reasoning ? '' : 'Decided by '}<span className="ax-quote">“{a.because}”</span></> : null}
           </div>
         ) : null}
 
@@ -284,14 +269,12 @@ export default function AccurxCard({ answer }) {
             {a.appointment ? (
               <span className={'ax-chip ' + (a.appointment.hedged ? 'ax-chip--amber' : 'ax-chip--blue')}
                 title={[a.appointment.why, a.appointment.rule].filter(Boolean).join(' ')}>
-                <Svg w={14} sw={2.2}>{Icons.calendar}</Svg>
                 <span><b>{a.appointment.label}</b>{a.appointment.hedged ? ' · nothing decided it' : ''}</span>
               </span>
             ) : null}
             {seen ? (
               <span className={'ax-chip ' + (seen.here && bookable ? 'ax-chip--blue' : '')}
                 title={seen.quote ? 'The patient’s words: “' + seen.quote + '”. From the message, not the record.' : 'From the message, not the record.'}>
-                <Svg w={14} sw={2.2}>{USER}</Svg>
                 <span>
                   {seen.here && bookable ? <>Book with <b>{seen.who || 'whoever saw it'}</b></> : <>Seen before: <b>{seenText}</b></>}
                   {!seen.here ? ' · elsewhere' : ''}
@@ -300,13 +283,12 @@ export default function AccurxCard({ answer }) {
             ) : null}
             {a.clinics.map((c) => (
               <span key={c.label} className="ax-chip ax-chip--green" title={c.because ? 'The patient’s words: “' + c.because + '”' : ''}>
-                <Svg w={14} sw={2.2}>{Icons.check}</Svg>
                 <span><b>{c.label}</b> could do this</span>
               </span>
             ))}
             {notes.map((n, i) => (
               <span key={'n' + i} className="ax-chip ax-chip--note">
-                <Svg w={13} sw={2.2}>{Icons.infoCircle}</Svg><span><Rich text={n} /></span>
+                <Rich text={n} />
               </span>
             ))}
           </div>
@@ -327,15 +309,6 @@ export default function AccurxCard({ answer }) {
           </div>
         ) : null}
 
-        {(a.reasoning || a.because) ? (
-          <div className="ax-why">
-            <Svg w={14} sw={2.2}>{Icons.question}</Svg>
-            <span>
-              {a.reasoning ? <Rich text={a.reasoning} /> : null}
-              {a.because ? <> {a.reasoning ? '' : 'Decided by '}<span className="ax-quote">“{a.because}”</span></> : null}
-            </span>
-          </div>
-        ) : null}
       </div>
 
       <div className="ax-folds">
@@ -355,16 +328,23 @@ export default function AccurxCard({ answer }) {
             ) : null}
           </Fold>
         ) : null}
-        <Fold label="What this service takes" meta={a.ruledOut.length ? a.ruledOut.length + ' considered' : ''}>
-          {a.covers ? <><div className="ax-sub">Takes</div><div>{a.covers}</div></> : null}
-          {a.refuses ? <><div className="ax-sub">Doesn’t take</div><div>{a.refuses}</div></> : null}
-          {a.ruledOut.length ? (
-            <>
-              <div className="ax-sub">Considered and not chosen</div>
-              <ul className="ax-list">{a.ruledOut.map((r, i) => <li key={i}><b>{r.label}</b> — {r.why}</li>)}</ul>
-            </>
-          ) : null}
-        </Fold>
+        {(crit.length && a.reasoning) || a.ruledOut.length ? (
+          <Fold label="Full reasoning" meta={a.ruledOut.length ? a.ruledOut.length + ' not chosen' : ''}>
+            {crit.length && a.reasoning ? <div><Rich text={a.reasoning} /></div> : null}
+            {a.ruledOut.length ? (
+              <>
+                <div className="ax-sub">Considered and not chosen</div>
+                <ul className="ax-list">{a.ruledOut.map((r, i) => <li key={i}><b>{r.label}</b> — {r.why}</li>)}</ul>
+              </>
+            ) : null}
+          </Fold>
+        ) : null}
+        {a.covers || a.refuses ? (
+          <Fold label="What this service takes">
+            {a.covers ? <><div className="ax-sub">Takes</div><div>{a.covers}</div></> : null}
+            {a.refuses ? <><div className="ax-sub">Doesn’t take</div><div>{a.refuses}</div></> : null}
+          </Fold>
+        ) : null}
       </div>
 
       <div className="ax-foot">
