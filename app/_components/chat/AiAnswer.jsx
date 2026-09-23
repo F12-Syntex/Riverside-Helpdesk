@@ -8,6 +8,7 @@ import WorkingState from './WorkingState';
 import Rich from './Rich';
 import Md from './Md';
 import TemplateView from '../templates/TemplateView';
+import AccurxCard from './AccurxCard';
 import UnresolvedPanel from './UnresolvedPanel';
 import ErsForm from '../templates/ErsForm';
 
@@ -288,7 +289,11 @@ export default function AiAnswer({ v }) {
                 shape, so it renders on its own — the markdown sections, key
                 points and citations below are all empty for these. */}
             {v.hasTemplate && (
-              <div style={s('margin:16px 0 0;')}><TemplateView answer={v.template} /></div>
+              <div style={s('margin:16px 0 0;')}>
+                {/* An AccurX request has its own card: the same answer, drawn
+                    around the three things reception came for. */}
+                {v.template.accurx ? <AccurxCard answer={v.template} /> : <TemplateView answer={v.template} />}
+              </div>
             )}
 
             {/* And beside it, everything the message asked for. The card can

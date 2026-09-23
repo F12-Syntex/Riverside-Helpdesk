@@ -1386,18 +1386,3 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   .riva-rotate, .riva-rotate-ch, .riva-dock-center .riva-composer::before { animation: none; transition: none; }
   .riva-dock-center .riva-composer::before { display: none; }
 }
-
-/* ---- the Q&A's particles (DotField.jsx) --------------------------- */
-
-/* A canvas of floating dashes behind the conversation, in the manner of
-   Google Antigravity: they gather in a ring round the pointer and are
-   drawn in DotField.jsx. The canvas only has to fill the page and stay
-   out of the way. */
-.riva-dots {
-  position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%;
-  display: block; pointer-events: none;
-  animation: rivaDotsIn 1.4s ease both;
-}
-@keyframes rivaDotsIn { from { opacity: 0; } }
-/* The shell's own edge dither would double up with these. */
-.riva-shell:has(.riva-dots) .riva-sky-dots { opacity: 0; animation: none; }
