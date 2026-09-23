@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.23.2` | 2026-09-23 | fix | `7ec023d` | fix: bring plain line icons back to the Notebook |
+| `6.23.1` | 2026-09-23 | fix | `6acb425` | fix: bring standard icons back to answer notes and callouts |
+| `6.23.0` | 2026-09-23 | feat | `a3dab66` | feat: show how many contacts a search is going through while it loads |
+| `6.22.6` | 2026-09-23 | docs | `17f1adb` | docs: record 6.22.4 and 6.22.5 in the versions table |
 | `6.22.5` | 2026-09-23 | fix | `44e4671` | fix: restore the original AccurX card and drop the routing criteria |
 | `6.22.4` | 2026-09-23 | docs | `12e011f` | docs: record 6.22.2 and 6.22.3 in the versions table |
 | `6.22.3` | 2026-09-23 | fix | `4b1a6af` | fix: cut the AccurX card down to where, why, reason and booking |
