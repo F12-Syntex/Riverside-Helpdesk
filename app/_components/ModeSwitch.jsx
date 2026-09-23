@@ -148,11 +148,15 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     </span>
   );
 
-  const renderRow = (row) => {
+  // The pointer moves the same highlight the arrow keys do, so there is
+  // only ever one lit row: the one Enter would take.
+  const point = (i) => () => { if (i !== at) setAt(i); };
+
+  const renderRow = (row, i) => {
     if (row.kind === 'back') {
       return (
         <button key="back" type="button" role="menuitem" title={row.summary}
-          onClick={leaveFolder} className="riva-mode riva-mode-back">
+          onClick={leaveFolder} onMouseMove={point(i)} className="riva-mode riva-mode-back">
           <span className="riva-mode-backicon" aria-hidden="true">
             <Svg w={15} sw={2.4}>{Icons.arrowLeft}</Svg>
           </span>
@@ -166,7 +170,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
         <React.Fragment key="folder">
           <span className="riva-modes-sep" role="separator" />
           <button type="button" role="menuitem" title={row.summary}
-            onClick={enterFolder} className={'riva-mode riva-mode-folder' + (holds ? ' is-on' : '')}>
+            onClick={enterFolder} onMouseMove={point(i)} className={'riva-mode riva-mode-folder' + (holds ? ' is-on' : '')}>
             {tile(row.icon, false)}
             {text(row.label, holds ? 'Now: ' + current.label : row.summary)}
             <span className="riva-mode-trail" aria-hidden="true">
@@ -179,7 +183,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     const on = row.name === mode;
     return (
       <button key={row.name || 'qa'} type="button" role="menuitemradio" aria-checked={on}
-        title={row.summary} onClick={() => choose(row.name)}
+        title={row.summary} onClick={() => choose(row.name)} onMouseMove={point(i)}
         className={'riva-mode' + (on ? ' is-on' : '')}>
         {tile(row.icon, on)}
         {text(row.label, row.summary)}
@@ -206,7 +210,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           + 'transition:color .16s ease,opacity .25s ease;'
           + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eef2f4;color:#4c6272;')
           + (ready ? '' : 'opacity:0;')}
-        hover={armed ? 'background:#003087;' : 'background:#e1e8ec;color:#005eb8;'}>
+        hover={armed ? 'background:#0068c9;' : 'background:#e1e8ec;color:#005eb8;'}>
         {busy
           ? <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
           : <Svg w={16} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
@@ -219,7 +223,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           {!inFolder && <div className="riva-modes-title">Answer mode</div>}
           {/* Keyed on the page so switching slides the new list in. */}
           <div key={inFolder ? 'folder' : 'top'} className={'riva-modes-page' + (inFolder ? ' is-folder' : '')}>
-            {rows.map(renderRow)}
+            {rows.map((row, i) => renderRow(row, i))}
           </div>
           <div className="riva-modes-foot" aria-hidden="true">
             <span><kbd>↑</kbd><kbd>↓</kbd> move</span>

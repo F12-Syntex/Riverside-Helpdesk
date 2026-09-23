@@ -209,11 +209,14 @@ body {
   }
 }
 
+/* Keyboard focus: an NHS-blue ring round the control, and nothing else.
+   It used to repaint the control itself yellow with a black underline,
+   over the top of every component's own look (the !important saw to
+   that), which is how a highlighted row in the mode menu came out as a
+   yellow slab. A ring says "here" without changing what the thing is. */
 button:focus-visible, [tabindex]:focus-visible {
-  outline: none;
-  background: #ffeb3b !important;
-  color: #212b32 !important;
-  box-shadow: 0 -2px #ffeb3b, 0 4px #212b32 !important;
+  outline: 2px solid #005eb8;
+  outline-offset: 2px;
 }
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 3px solid #ffeb3b;
@@ -601,6 +604,9 @@ body { overflow-x: hidden; }
    the same lift — so the two read as one piece. */
 .riva-modes { position: relative; flex: none; z-index: 3; }
 .riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
+/* While its menu is open the pill reads as pressed: a soft ring, not a
+   darker fill that sinks the label. */
+.riva-modes-open .riva-modes-btn { box-shadow: 0 0 0 3px rgba(0,94,184,.16); }
 .riva-modes-list {
   position: absolute; left: -4px; bottom: calc(100% + 16px); z-index: 8;
   width: 340px; max-width: calc(100vw - 32px);
@@ -631,18 +637,22 @@ body { overflow-x: hidden; }
   background: transparent; font: inherit; text-align: left; cursor: pointer;
   color: #212b32; transition: background .14s ease;
 }
-.riva-mode:hover, .riva-mode:focus-visible { background: #f2f6f9; outline: none; }
-.riva-mode:focus-visible { box-shadow: inset 0 0 0 2px #005eb8; }
+/* The lit row is the focused row, and the pointer moves the focus (see
+   ModeSwitch), so :hover is not styled at all: styling both lit two rows
+   at once whenever the mouse rested on one and the arrow keys moved to
+   another. The lit row lifts on a soft tint with a hairline, and its
+   tile turns blue; no ring, since the tint is already the "here". */
+.riva-mode:focus, .riva-mode:focus-visible { outline: none; background: #f2f6f9; box-shadow: inset 0 0 0 1px #e1e8ec; }
 .riva-mode.is-on { background: #eaf2fb; }
-.riva-mode.is-on:hover { background: #e1ecf8; }
+.riva-mode.is-on:focus, .riva-mode.is-on:focus-visible { background: #e1ecf8; box-shadow: inset 0 0 0 1px #c9dcef; }
 .riva-mode-tile {
   flex: none; display: flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 10px;
   background: #eef2f4; color: #4c6272;
   transition: background .14s ease, color .14s ease;
 }
-.riva-mode:hover .riva-mode-tile { background: #e3ebf0; color: #005eb8; }
-.riva-mode-tile.is-on, .riva-mode:hover .riva-mode-tile.is-on { background: #005eb8; color: #fff; }
+.riva-mode:focus .riva-mode-tile { background: #e1ecf8; color: #005eb8; }
+.riva-mode-tile.is-on, .riva-mode:focus .riva-mode-tile.is-on { background: #005eb8; color: #fff; }
 .riva-mode-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .riva-mode-label { font-size: 14.5px; font-weight: 650; color: #212b32; }
 .riva-mode.is-on .riva-mode-label { color: #005eb8; }
@@ -657,7 +667,7 @@ body { overflow-x: hidden; }
   flex: none; display: flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; border-radius: 999px; background: #eef2f4; color: #4c6272;
 }
-.riva-mode-back:hover .riva-mode-backicon { background: #005eb8; color: #fff; }
+.riva-mode-back:focus .riva-mode-backicon { background: #005eb8; color: #fff; }
 .riva-mode-heading { font-size: 13.5px; font-weight: 700; color: #212b32; }
 
 /* Keys, for the keyboard user; gone where there is no keyboard. */
