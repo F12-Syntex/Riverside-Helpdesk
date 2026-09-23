@@ -629,7 +629,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
   const worst = Object.values(report.pages).sort((a, b) => a.health.score - b.health.score || b.chars - a.chars).slice(0, 8);
 
   return (
-    <div style={s('flex:1;min-height:0;overflow:auto;padding:18px 22px 40px;background:#f0f4f5;position:relative;')}>
+    <div style={s('flex:1;min-height:0;overflow:auto;padding:4px 18px 40px;background:transparent;position:relative;')}>
       <div style={s('display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;')}>
         <Tile value={number(t.pages)} caption="pages" hint={number(t.sections) + ' sections'} />
         <Tile value={number(t.red)} caption="cannot be read" tone={t.red ? 'bad' : 'good'} />
