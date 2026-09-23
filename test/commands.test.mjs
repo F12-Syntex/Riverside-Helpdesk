@@ -1,86 +1,40 @@
-// Slash commands. The point of typing one is that the answer stops being a
-// guess, so what matters here is that the command is recognised, that the
-// message survives it intact, and that neither command can render something
-// else — including when the model returns nothing usable.
+// The modes. The point of choosing one is that the answer stops being a
+// guess, so what matters here is that the mode is recognised and that no mode
+// can render something else — including when the model returns nothing usable.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import * as commands from '../lib/commands.mjs';
 import {
-  COMMANDS, COMMAND_TEMPLATES, MODES, QA_MODE, TOP_MODES, FOLDER_MODES, awaitingArguments, commandByName, commandByTemplate,
-  forcedTemplate, isLocalCommand, matchCommands, modePlaceholder, parseCommand, checksPatientData,
+  COMMANDS, COMMAND_TEMPLATES, MODES, QA_MODE, TOP_MODES, FOLDER_MODES, commandByName, commandByTemplate,
+  forcedTemplate, modePlaceholder, checksPatientData,
 } from '../lib/commands.mjs';
 import { commandPrompt, renderCommand } from '../lib/templates/route.mjs';
 import { consultationEntry, plainEnglish } from '../lib/templates/writing.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { choosePassages, practiceSearchAnswer } from '../lib/templates/practice.mjs';
 
-test('the list is offered while the name is being typed, and not after', () => {
-  // Nothing is hidden now: every command is offered by both surfaces, /coding
-  // included — filing a letter is an everyday answer that was reachable only by
-  // somebody already told it existed.
-  assert.deepEqual(matchCommands('/').map((c) => c.name), ['contact', 'accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
-  assert.deepEqual(matchCommands('/p').map((c) => c.name), ['practice']);
-  assert.deepEqual(matchCommands('/f').map((c) => c.name), ['form']);
-  assert.deepEqual(matchCommands('/t').map((c) => c.name), ['template']);
-  assert.deepEqual(matchCommands('/a').map((c) => c.name), ['accurx']);
-  assert.deepEqual(matchCommands('/c').map((c) => c.name), ['contact', 'consultation', 'coding']);
-  assert.deepEqual(matchCommands('/cont').map((c) => c.name), ['contact']);
-  // "/number" is how the question is asked at the desk; it reaches the same row.
-  assert.deepEqual(matchCommands('/num').map((c) => c.name), ['contact']);
-  assert.deepEqual(matchCommands('/cons').map((c) => c.name), ['consultation']);
-  assert.deepEqual(matchCommands('/m').map((c) => c.name), ['medication']);
-  // "/meds" is what the desk says; it reaches the same row.
-  assert.deepEqual(matchCommands('/meds').map((c) => c.name), ['medication']);
-  assert.deepEqual(matchCommands('/cod').map((c) => c.name), ['coding']);
-  assert.deepEqual(matchCommands('/accurx').map((c) => c.name), ['accurx']);
-  // The old spelling is matched and shown under the new name, so somebody
-  // halfway through the command they have always typed is not left looking at
-  // an empty list under a command that does still work.
-  assert.deepEqual(matchCommands('/d').map((c) => c.name), ['coding']);
-  assert.deepEqual(matchCommands('/document').map((c) => c.name), ['coding']);
-  assert.deepEqual(matchCommands('/ap'), []);
-  // A space means the message has started; a list over it would be in the way.
-  assert.deepEqual(matchCommands('/accurx '), []);
-  assert.deepEqual(matchCommands('/accurx sore throat'), []);
-  assert.deepEqual(matchCommands('how do I refer for an ECG'), []);
-  assert.deepEqual(matchCommands('/zzz'), []);
-});
-
-test('the message survives the command intact', () => {
-  const parsed = parseCommand('/accurx pt has a sore throat since Friday, no fever');
-  assert.equal(parsed.command.template, 'accurxTriage');
-  assert.equal(parsed.rest, 'pt has a sore throat since Friday, no fever');
-
-  // Several lines of a pasted letter, kept whole.
-  const pasted = parseCommand('/coding Discharge summary\nHomerton, Ophthalmology\n07-Aug-2026');
-  assert.equal(pasted.command.template, 'documentCoding');
-  assert.match(pasted.rest, /^Discharge summary\nHomerton/);
-});
-
-test('an unknown command is asked as written rather than swallowed', () => {
-  assert.equal(parseCommand('/refer for an ECG'), null);
-  assert.equal(parseCommand('how do I refer for an ECG'), null);
-  // Including the two that used to exist. Somebody with the old habit gets their
-  // message answered the ordinary way rather than swallowed.
-  assert.equal(parseCommand('/triage pt has a sore throat'), null);
-  assert.equal(parseCommand('/appt heartburn 3 weeks'), null);
-});
-
-test('a command with nothing after it is a command still being written', () => {
-  assert.equal(awaitingArguments('/accurx').name, 'accurx');
-  assert.equal(awaitingArguments('/accurx   ').name, 'accurx');
-  assert.equal(awaitingArguments('/accurx a patient'), null);
+// The picker is the one way in. The typed "/" commands, and the Contact and
+// Coding modes, were withdrawn.
+test('there are no slash commands, and no Contact or Coding mode', () => {
+  for (const gone of ['matchCommands', 'parseCommand', 'awaitingArguments', 'isLocalCommand']) {
+    assert.equal(commands[gone], undefined, gone + ' is still exported');
+  }
+  for (const name of ['contact', 'contacts', 'number', 'coding', 'document', 'meds']) {
+    assert.equal(commandByName(name), null, name + ' still resolves');
+  }
+  assert.equal(commandByName('medication').template, 'repeatMedication');
 });
 
 test('the server honours only a template a command claims', () => {
   assert.equal(forcedTemplate('accurxTriage'), 'accurxTriage');
-  assert.equal(forcedTemplate('documentCoding'), 'documentCoding');
   assert.equal(forcedTemplate('consultationNote'), 'consultationNote');
   assert.equal(forcedTemplate('practiceSearch'), 'practiceSearch');
   assert.equal(forcedTemplate('repeatMedication'), 'repeatMedication');
-  // Contact is answered in the browser and has no card on the server, so its
-  // template is not honoured: sent up anyway, the message is answered plainly.
+  // The withdrawn modes are not honoured: sent up anyway, the message is
+  // answered the ordinary way. The router can still choose documentCoding.
   assert.equal(forcedTemplate('contactSearch'), '');
+  assert.equal(forcedTemplate('documentCoding'), '');
   // Anything else — including a real template no command offers — is ignored,
   // so the field cannot be used to force an arbitrary card. "triage" is one of
   // those now: the router still chooses it, but no command claims it.
@@ -93,7 +47,7 @@ test('the server honours only a template a command claims', () => {
   assert.equal(commandByTemplate('triage'), null);
 });
 
-test('/coding falls back to the coding rules, never to prose', () => {
+test('the coding card falls back to the coding rules, never to prose', () => {
   const filed = renderCommand('documentCoding', {
     document: { date: '07-Aug-2026', site: 'HUH', department: 'Ophthalmology', actions: [] },
   });
@@ -526,7 +480,7 @@ const copied = (card) => card.blocks
   .flatMap((b) => b.items)
   .filter((item) => item.copy);
 
-test('/coding offers the filing title', () => {
+test('the coding card offers the filing title', () => {
   const card = renderCommand('documentCoding', {
     document: { date: '07-Aug-2026', site: 'HUH', department: 'Ophthalmology', actions: ['d/c'] },
   });
@@ -575,39 +529,38 @@ test('an emergency card offers nothing to copy', () => {
   assert.equal(copied(spinal).length, 0);
 });
 
-/* ------------------------------------------------- choosing without typing */
+/* ------------------------------------------------------------ the picker */
 
-// The commands were only ever reachable by typing "/", which meant only people
-// who had been told they existed ever used them. The picker in the field offers
-// all of them; these guard the words it uses, which live beside the commands so
-// the button and the typed command cannot drift apart.
+// These guard the words the picker uses, which live beside the modes so the
+// button and the server cannot drift apart.
 
-test('every command carries the words the picker needs', () => {
+test('every mode carries the words the picker needs', () => {
   for (const c of COMMANDS) {
     assert.ok(c.label, `${c.name} has no label`);
     assert.ok(c.placeholder, `${c.name} has no placeholder`);
     assert.ok(c.summary, `${c.name} has no summary`);
-    // The placeholder says what to TYPE. Naming the command again would waste
-    // the one line of instruction there is room for — the chip beside it has
-    // already said which mode this is.
-    assert.ok(!c.placeholder.startsWith('/'), `${c.name}'s placeholder repeats the command`);
+    assert.ok(!c.placeholder.startsWith('/'), `${c.name}'s placeholder names a command`);
   }
 });
 
 test('the modes are Q&A first, then every command, and nothing else', () => {
-  assert.deepEqual(MODES.map((m) => m.name), ['', 'contact', 'accurx', 'consultation', 'medication', 'coding', 'form', 'template', 'practice']);
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication', 'form', 'template', 'practice']);
   assert.equal(MODES[0].label, 'Q&A');
   assert.equal(MODES[0].name, '', 'the resting mode is not a command');
   // Every mode but the first must be a real command, or the picker offers
   // something the server will not honour.
-  for (const m of MODES.slice(1)) assert.ok(commandByName(m.name), `${m.name} is not a command`);
+  for (const m of MODES.slice(1)) {
+    assert.ok(commandByName(m.name), `${m.name} is not a command`);
+    assert.equal(forcedTemplate(commandByName(m.name).template), commandByName(m.name).template);
+  }
+  assert.deepEqual(COMMAND_TEMPLATES, COMMANDS.map((c) => c.template));
 });
 
-// The picker draws the writing modes at the top and the four lookups behind a
+// The picker draws the writing modes at the top and the lookups behind a
 // folder. Splitting the list must lose nothing: the two halves are the whole.
 test('the folder holds the lookups, and the two halves are every mode', () => {
-  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'contact', 'accurx', 'consultation', 'medication']);
-  assert.deepEqual(FOLDER_MODES.map((m) => m.name), ['coding', 'form', 'template', 'practice']);
+  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication']);
+  assert.deepEqual(FOLDER_MODES.map((m) => m.name), ['form', 'template', 'practice']);
   assert.deepEqual(TOP_MODES.concat(FOLDER_MODES).map((m) => m.name).sort(), MODES.map((m) => m.name).sort());
   assert.equal(QA_MODE.folder, undefined, 'the resting mode is never behind the folder');
 });
@@ -618,115 +571,30 @@ test('the field asks for the right thing in each mode', () => {
   assert.match(modePlaceholder('template'), /contract|template/i);
   assert.match(modePlaceholder('practice'), /practice documents/i);
   assert.match(modePlaceholder('accurx'), /AccurX/);
-  assert.match(modePlaceholder('coding'), /letter|discharge summary/i);
   assert.match(modePlaceholder('consultation'), /said and done/i);
   assert.match(modePlaceholder('medication'), /screenshot/i);
-  assert.match(modePlaceholder('contact'), /name|number/i);
-  // An alias is resolved, never a mode of its own: the picker has one row per
-  // command and the field is captioned by the name that row carries.
-  assert.equal(modePlaceholder('document'), QA_MODE.placeholder);
-  // An unknown mode is Q&A, so a stale value in a browser cannot leave the
-  // field captioned with something that no longer exists.
+  // A withdrawn or unknown mode is Q&A, so a stale value kept in a browser
+  // cannot leave the field captioned with something that no longer exists.
+  assert.equal(modePlaceholder('contact'), QA_MODE.placeholder);
+  assert.equal(modePlaceholder('coding'), QA_MODE.placeholder);
   assert.equal(modePlaceholder('nonsense'), QA_MODE.placeholder);
   assert.equal(modePlaceholder(undefined), QA_MODE.placeholder);
 });
 
-// A mode is only useful if it reaches the same place the typed command does.
-test('picking a mode and typing its command mean the same thing', () => {
-  for (const m of MODES.slice(1)) {
-    const typed = parseCommand(`/${m.name} something`);
-    assert.equal(typed.command.template, commandByName(m.name).template);
-    // A local command never reaches the server, so there is no template for
-    // it to honour; every other mode's template is the one the server renders.
-    if (isLocalCommand(typed.command)) assert.equal(forcedTemplate(typed.command.template), '');
-    else assert.equal(forcedTemplate(typed.command.template), typed.command.template);
-  }
-});
-
-/* ------------------------------------------------ the one local command */
-
-// Contact is a search, not a question: it is matched in the browser and
-// nothing is sent. What this protects is that it is offered like any other
-// mode, and that the server can never be asked to render it.
-test('/contact is a mode that stays in the browser', () => {
-  const contact = commandByName('contact');
-  assert.equal(contact.local, true);
-  assert.equal(isLocalCommand(contact), true);
-  assert.equal(contact.icon, 'phone');
-  assert.equal(commandByName('contacts').name, 'contact');
-  assert.equal(commandByName('number').name, 'contact');
-  assert.equal(parseCommand('/contact homerton').rest, 'homerton');
-  // Every other command is not local, and the server honours every one of
-  // their templates.
-  for (const c of COMMANDS.filter((x) => x.name !== 'contact')) {
-    assert.equal(isLocalCommand(c), false, c.name);
-    assert.equal(forcedTemplate(c.template), c.template, c.name);
-  }
-  assert.ok(!COMMAND_TEMPLATES.includes('contactSearch'));
-});
-
-
-/* ------------------------------------------ renamed, and nothing hidden */
-
-// Coding answered to /document for as long as it was hidden. Renaming it must
-// not break the habit of the people who used it: the old spelling still parses,
-// still forces the same template, and still carries its message.
-test('the old spelling still reaches the command that was renamed', () => {
-  for (const [typed, template] of [
-    ['/accurx pt has a sore throat since Friday', 'accurxTriage'],
-    ['/coding Discharge summary, Homerton, 07-Aug-2026', 'documentCoding'],
-    ['/document Discharge summary, Homerton, 07-Aug-2026', 'documentCoding'],
-  ]) {
-    const parsed = parseCommand(typed);
-    assert.ok(parsed, `${typed} no longer parses`);
-    assert.equal(parsed.command.template, template);
-    assert.ok(parsed.rest, 'the message was lost');
-    // The server honours a template only when a command claims it.
-    assert.equal(forcedTemplate(template), template);
-    assert.equal(commandByName(parsed.command.name).template, template);
-  }
-  // An alias resolves to the command, and the command keeps one name: the field
-  // rewrites "/document" to "/coding ", so the habit teaches the new spelling.
-  assert.equal(commandByName('document').name, 'coding');
-  assert.equal(awaitingArguments('/document').name, 'coding');
-});
-
-test('every command is offered, by both surfaces at once', () => {
+test('every command is offered', () => {
   assert.deepEqual(COMMANDS.filter((c) => c.hidden).map((c) => c.name), []);
-  // A mode nobody can reach from the "/" list, or the other way round, is two
-  // lists to keep.
-  for (const c of COMMANDS) {
-    assert.ok(MODES.some((m) => m.name === c.name), `${c.name} is not a mode`);
-    assert.ok(matchCommands('/').some((row) => row.name === c.name), `${c.name} is not in the "/" list`);
-  }
-  // "/accurx" alone is a command being written rather than a question.
-  assert.equal(awaitingArguments('/accurx').name, 'accurx');
+  for (const c of COMMANDS) assert.ok(MODES.some((m) => m.name === c.name), `${c.name} is not a mode`);
 });
 
-/* ------------------------------------ the guards, and their one exception */
+/* ---------------------------------------------------------------- the guards */
 
 // Two guards read a message for patient data: the name-and-address redaction
-// (lib/safety/identifiers.mjs), which edits it, and the screen
-// (lib/safety/patient-data.mjs), which refuses to send it. Coding is handed a
-// letter about a patient — that is its input — so BOTH are off there and
-// neither is off anywhere else. One flag answers for both, on purpose: half a
-// guard would edit the reader's letter without being any use against what the
-// letter was always going to carry.
-test('only Coding is exempt, and it is exempt from both guards', () => {
-  for (const c of COMMANDS) {
-    assert.equal(checksPatientData(c), c.name !== 'coding', `${c.name} is guarded wrongly`);
-  }
-  assert.deepEqual(COMMANDS.filter((c) => c.checked === false).map((c) => c.name), ['coding']);
-  // An ordinary question — no command at all — is checked, and so is anything
-  // that arrives claiming a template no command owns.
+// and the screen. One flag answers for both, and no mode switches it off now
+// that Coding is withdrawn.
+test('every mode is checked for patient data', () => {
+  for (const c of COMMANDS) assert.equal(checksPatientData(c), true, `${c.name} is unguarded`);
   assert.equal(checksPatientData(null), true);
   assert.equal(checksPatientData(undefined), true);
-  assert.equal(checksPatientData(commandByTemplate('documentCoding')), false);
-  assert.equal(checksPatientData(commandByTemplate('practiceSearch')), true);
-  assert.equal(checksPatientData(commandByTemplate('notebook')), true);
-  // Typed, armed or resolved from the template at the endpoint, it is the same
-  // command and therefore the same answer — a guard that ran on one side of the
-  // wire only would edit the letter without protecting anything.
-  assert.equal(checksPatientData(parseCommand('/coding Discharge summary').command), false);
-  assert.equal(checksPatientData(commandByName('document')), false);
+  assert.equal(checksPatientData(commandByTemplate('documentCoding')), true);
+  assert.equal(checksPatientData({ checked: false }), false, 'the flag still works');
 });

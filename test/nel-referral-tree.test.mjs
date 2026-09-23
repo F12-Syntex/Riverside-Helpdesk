@@ -8,7 +8,7 @@ import {
   nelFormNotFound, nelReferralFormAnswer, referralAnswer,
 } from '../lib/templates/referrals.mjs';
 import { formCommandAnswer } from '../lib/templates/lookup-command.mjs';
-import { forcedTemplate, parseCommand } from '../lib/commands.mjs';
+import { commandByName, forcedTemplate } from '../lib/commands.mjs';
 import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
 
 // The NEL Referral Tree is 533 form names lifted out of a PDF, and the whole
@@ -247,14 +247,12 @@ test('nothing on the tree is null, so the caller can fall through', () => {
 
 /* ------------------------------------------------------------ /form */
 
-// Typing the command names the list to search, so a miss is that list saying it
+// Choosing the mode names the list to search, so a miss is that list saying it
 // has nothing — never a model writing plausibly about a form that is not on it.
-// That is the entire reason to type /form instead of asking in words.
-test('/form is a command, and it claims its own template', () => {
-  const parsed = parseCommand('/form suspected skin cancer');
-  assert.equal(parsed.command.template, 'referralForm');
-  assert.equal(parsed.command.fill, 'lookup');
-  assert.equal(parsed.rest, 'suspected skin cancer');
+test('Referral form is a mode, and it claims its own template', () => {
+  const command = commandByName('form');
+  assert.equal(command.template, 'referralForm');
+  assert.equal(command.fill, 'lookup');
   // The server honours a template only when a command claims it.
   assert.equal(forcedTemplate('referralForm'), 'referralForm');
 });

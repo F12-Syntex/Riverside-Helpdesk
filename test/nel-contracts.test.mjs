@@ -4,7 +4,7 @@ import {
   PRACTICE_AREAS, buildContractIndex, findContracts, nelContracts, rankContracts,
 } from '../lib/referrals/nel-contracts.mjs';
 import { contractNotFound, contractTemplateAnswer } from '../lib/templates/contracts.mjs';
-import { commandByName, forcedTemplate, parseCommand } from '../lib/commands.mjs';
+import { commandByName, forcedTemplate } from '../lib/commands.mjs';
 import { SELECTION_SCHEMA, selectionPrompt } from '../lib/templates/route.mjs';
 import { referralAnswer } from '../lib/templates/referrals.mjs';
 
@@ -227,11 +227,10 @@ test('nothing found is null, so the caller can answer another way', () => {
 
 /* -------------------------------------------------------- /template */
 
-test('/template is a command, and it claims the contract template', () => {
-  const parsed = parseCommand('/template ADHD shared pathway');
-  assert.equal(parsed.command.template, 'contractTemplate');
-  assert.equal(parsed.command.fill, 'lookup');
-  assert.equal(parsed.rest, 'ADHD shared pathway');
+test('Contract template is a mode, and it claims the contract template', () => {
+  const command = commandByName('template');
+  assert.equal(command.template, 'contractTemplate');
+  assert.equal(command.fill, 'lookup');
   assert.equal(forcedTemplate('contractTemplate'), 'contractTemplate');
 });
 

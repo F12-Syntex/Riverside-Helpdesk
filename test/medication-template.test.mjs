@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import { COMMAND_SCHEMAS, commandPrompt, renderCommand } from '../lib/templates/route.mjs';
 import { repeatMedicationAnswer, MEDICATION_READ_RULES } from '../lib/templates/medication.mjs';
-import { commandByName, parseCommand } from '../lib/commands.mjs';
+import { commandByName } from '../lib/commands.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
 import { field } from '../lib/templates/blocks.mjs';
 
@@ -117,11 +117,9 @@ test('the prompt says a screenshot is attached, and hands over the reading rules
   assert.equal(parsed.groups[1].medications[1].name, 'Co-codamol 30mg/500mg tablets');
 });
 
-test('/medication is a command, a mode, and answers to /meds', () => {
+test('Repeat medication is a mode', () => {
   assert.equal(commandByName('medication').template, 'repeatMedication');
-  assert.equal(commandByName('meds').name, 'medication');
   assert.equal(commandByName('medication').icon, 'pill');
-  assert.equal(parseCommand('/meds Citalopram 20mg tablets').command.name, 'medication');
 });
 
 /* -------------------------------------- a screenshot pasted into plain Q&A */

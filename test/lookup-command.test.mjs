@@ -171,9 +171,8 @@ test('only a real mode name survives coming back out of storage', () => {
   // template to force: a name no command claims must be dropped.
   assert.equal(isMode(''), true);
   assert.equal(isMode('form'), true);
-  assert.equal(isMode('coding'), true);
-  // An alias resolves to a command; it is not a mode the picker offers, so it
-  // must not survive coming back out of storage as one.
-  assert.equal(isMode('document'), false);
+  // A withdrawn mode kept by an older page must not survive either.
+  assert.equal(isMode('coding'), false);
+  assert.equal(isMode('contact'), false);
   assert.equal(isMode('rm -rf'), false);
 });
