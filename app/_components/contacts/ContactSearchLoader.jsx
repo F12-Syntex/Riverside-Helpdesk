@@ -2,27 +2,22 @@
 
 // What the contacts search shows while it looks: how many contacts it is
 // looking through, counted up with rolling digits, over a thin sweeping bar.
-// The number is the register's real size from /api/cqc, never a round
-// figure typed in here.
+// Shown on the first load only — see `warm` below.
 import React from 'react';
 import RollingDigits from './RollingDigits';
+import meta from '../../../lib/lookup/cqc.meta.json';
 
-let cachedSize = 0;
-let pending = null;
+// How many rows the register holds, written beside it by
+// scripts/build-cqc-directory.mjs, so the count is on screen at once rather
+// than after the server has loaded 57k rows to report it.
+export const REGISTER_SIZE = meta.rows || 0;
 
-/** The register's size, fetched once per page load and shared. */
-export function useRegisterSize(known = 0) {
-  const [size, setSize] = React.useState(known || cachedSize);
-  React.useEffect(() => {
-    if (known) { cachedSize = known; setSize(known); return; }
-    if (cachedSize) { setSize(cachedSize); return; }
-    pending = pending || fetch('/api/cqc', { cache: 'no-store' }).then((r) => r.json()).then((d) => (cachedSize = d.total || 0)).catch(() => 0);
-    let live = true;
-    pending.then((n) => { if (live) setSize(n); });
-    return () => { live = false; };
-  }, [known]);
-  return size;
-}
+// The first register request in a server process is the slow one: it
+// decompresses and indexes every row. After that a search is a few ms, too
+// quick for a loader to be anything but a flicker, so it is only shown once.
+let warm = false;
+export const registerIsWarm = () => warm;
+export const markRegisterWarm = () => { warm = true; };
 
 const CSS = `
 .csl{display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:16px;background:#fff;
@@ -41,13 +36,17 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){.csl{animation:none;}.csl-bar::after{animation-duration:3s;}}
 `;
 
-export default function ContactSearchLoader({ total = 0, query = '', compact = false, sub = 'Every CQC-registered service in England' }) {
-  const size = useRegisterSize(total);
+export default function ContactSearchLoader({ total = 0, query = '', compact = false, verb = 'Searching', sub = 'Every CQC-registered service in England' }) {
+  const size = total || REGISTER_SIZE;
+  // A warm server answers in a few ms; don't flash a loader for that.
+  const [shown, setShown] = React.useState(false);
+  React.useEffect(() => { const t = setTimeout(() => setShown(true), 150); return () => clearTimeout(t); }, []);
+  if (!shown) return null;
   return (
     <div className={'csl' + (compact ? ' csl--compact' : '')} role="status" aria-live="polite">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="csl-line">
-        <span>Searching</span>
+        <span>{verb}</span>
         {size ? <RollingDigits value={size} className="csl-num" /> : <span className="csl-num">…</span>}
         <span>contacts{query ? <> for <b style={{ color: '#212b32' }}>“{query}”</b></> : null}</span>
       </div>

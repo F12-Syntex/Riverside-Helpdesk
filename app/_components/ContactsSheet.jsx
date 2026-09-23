@@ -4,7 +4,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { s, Hover, Svg, Icons } from './ui';
 import { searchContacts } from '@/lib/contacts';
-import ContactSearchLoader from './contacts/ContactSearchLoader';
+import ContactSearchLoader, { markRegisterWarm, registerIsWarm } from './contacts/ContactSearchLoader';
 
 /* ------------------------------------------------------------------ *
  * The practice directory, over the page rather than instead of it.
@@ -79,6 +79,19 @@ export default function ContactsSheet({ onClose }) {
 
   React.useEffect(() => setMounted(true), []);
 
+  // The register loads on the server the first time it is asked, which is
+  // the one slow moment. Start that as the sheet opens, so it is done by the
+  // time the second letter is typed, and say what is loading meanwhile.
+  const [warm, setWarm] = React.useState(registerIsWarm);
+  React.useEffect(() => {
+    if (registerIsWarm()) return undefined;
+    let live = true;
+    fetch('/api/cqc', { cache: 'no-store' })
+      .then(() => { markRegisterWarm(); if (live) setWarm(true); })
+      .catch(() => { if (live) setWarm(true); });
+    return () => { live = false; };
+  }, []);
+
   const [cqc, setCqc] = React.useState({ for: '', entries: [], loading: false });
   const results = React.useMemo(() => searchContacts(query), [query]);
   const trimmed = query.trim();
@@ -94,7 +107,7 @@ export default function ContactsSheet({ onClose }) {
     const timer = setTimeout(() => {
       fetch('/api/cqc?q=' + encodeURIComponent(trimmed), { cache: 'no-store', signal: controller.signal })
         .then((r) => (r.ok ? r.json() : { entries: [] }))
-        .then((d) => setCqc({ for: trimmed, entries: d.entries || [], loading: false }))
+        .then((d) => { markRegisterWarm(); setCqc({ for: trimmed, entries: d.entries || [], loading: false }); })
         .catch(() => { if (!controller.signal.aborted) setCqc({ for: trimmed, entries: [], loading: false }); });
     }, CQC_DEBOUNCE_MS);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -197,6 +210,8 @@ export default function ContactsSheet({ onClose }) {
           </div>
         </div>
 
+        {warm ? null : <div style={s('padding:0 20px;')}><ContactSearchLoader compact verb="Loading" /></div>}
+
         {/* The list scrolls inside the sheet, which is a fixed size: it is the
             same shape with one match as with a hundred, so nothing under the
             cursor moves as the letters go in. */}
@@ -231,7 +246,7 @@ export default function ContactsSheet({ onClose }) {
                   ))}
                 </ul>
               ) : (
-                <ContactSearchLoader compact />
+                <p style={s('margin:6px 4px;font-size:14px;color:#8a99a3;')}>Searching…</p>
               )}
             </>
           )}

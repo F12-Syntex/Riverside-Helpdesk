@@ -3,7 +3,7 @@
 import React from 'react';
 import { s, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
-import ContactSearchLoader from '../_components/contacts/ContactSearchLoader';
+import ContactSearchLoader, { markRegisterWarm, registerIsWarm } from '../_components/contacts/ContactSearchLoader';
 import { highlightRanges } from '../../lib/lookup/fuzzy';
 
 /* ------------------------------------------------------------------ *
@@ -338,6 +338,9 @@ export default function Page() {
   // apart from the search results so a search never overwrites it and it
   // is there again the moment the box is cleared.
   const [suggested, setSuggested] = React.useState([]);
+  // Whether the register has answered once. Until it has, the server is
+  // loading every row, and that is the only wait worth showing a loader for.
+  const [warm, setWarm] = React.useState(registerIsWarm);
   // The web fallback is never automatic — it costs a model call, so it runs
   // only when the reader presses Enter, and only for the query they pressed it
   // on. `for` guards against the results of an old query lingering under a new
@@ -375,7 +378,7 @@ export default function Page() {
     const timer = setTimeout(() => {
       fetch('/api/cqc?q=' + encodeURIComponent(trimmed), { cache: 'no-store' })
         .then((r) => r.json())
-        .then((d) => { if (live) setCqc({ entries: Array.isArray(d.entries) ? d.entries : [], total: d.total || 0, loading: false }); })
+        .then((d) => { markRegisterWarm(); setWarm(true); if (live) setCqc({ entries: Array.isArray(d.entries) ? d.entries : [], total: d.total || 0, loading: false }); })
         .catch(() => { if (live) setCqc((c) => ({ entries: [], total: c.total, loading: false })); });
     }, 200);
     return () => { live = false; clearTimeout(timer); };
@@ -388,10 +391,12 @@ export default function Page() {
     fetch('/api/cqc', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
+        markRegisterWarm();
+        setWarm(true);
         if (Array.isArray(d.entries)) setSuggested(d.entries);
         setCqc((c) => (c.total ? c : { ...c, total: d.total || 0 }));
       })
-      .catch(() => {});
+      .catch(() => setWarm(true));
   }, []);
 
   const flashCopied = (label) => {
@@ -494,10 +499,13 @@ export default function Page() {
           </EmptyState>
         ) : null}
 
+        {/* The first load, while the server reads the whole register in. */}
+        {idle && !warm ? <ContactSearchLoader verb="Loading" total={cqc.total} /> : null}
+
         {searching ? (
           <>
-            <ContactSearchLoader total={cqc.total} query={trimmed} />
-            <div style={s('margin-top:12px;')}><Skeleton /></div>
+            {warm ? null : <div style={s('margin-bottom:12px;')}><ContactSearchLoader total={cqc.total} query={trimmed} /></div>}
+            <Skeleton />
           </>
         ) : null}
 
