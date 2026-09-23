@@ -262,7 +262,7 @@ export default function AiAnswer({ v }) {
         )}
 
         {v.aiDone && (
-          <>
+          <div className="riva-answer-flow">
             {/* The question is already the heading of the page (ChatView renders
                 it as the h1 with the rule under it), so printing it again here
                 gave every answer two titles. Only the intro belongs in this
@@ -424,7 +424,7 @@ export default function AiAnswer({ v }) {
                 {v.hasDropped && <span style={s('font-size:12.5px;color:#768692;')}>{v.droppedNote}</span>}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

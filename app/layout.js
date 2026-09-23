@@ -4,6 +4,7 @@ import Notifications from './_components/Notifications';
 import AuditTracker from './_components/AuditTracker';
 import AppShell from './_components/AppShell';
 import ShaderBackground from './_components/ShaderBackground';
+import { THEME_BOOT } from './_components/theme';
 
 export const metadata = {
   title: 'The Riverside Practice Q&A bot',
@@ -18,8 +19,11 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en-GB">
+    // THEME_BOOT sets data-theme on <html> before React hydrates; React
+    // does not render that attribute, so the difference is expected.
+    <html lang="en-GB" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap"

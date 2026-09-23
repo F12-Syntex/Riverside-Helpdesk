@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Svg, Icons } from './ui';
 import { VERSION_LABEL, BUILD_LABEL } from '@/lib/version.mjs';
+import ThemePicker from './ThemePicker';
 
 /* The right-hand end of the top bar, offered to whatever page is inside
    the shell. AppHeader renders its controls into it, so a tool's actions
@@ -158,6 +159,47 @@ function matchHref(rawPath) {
   return { href: '/' + seg, group: 'Riverside', label: seg.charAt(0).toUpperCase() + seg.slice(1) };
 }
 
+/* The row of tools, with the active one marked by a pill that SLIDES to
+   it rather than jumping: going from one tool to another is shown as a
+   move, the same way the mode menu slides between its pages. The pill is
+   measured off the active link, so it fits whatever the label is. */
+function TopNav({ current }) {
+  const navRef = React.useRef(null);
+  const [pill, setPill] = React.useState(null);
+  const activeHref = current?.href;
+
+  React.useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return undefined;
+    const place = () => {
+      const el = nav.querySelector('.riva-topnav-item.is-active');
+      setPill(el ? { left: el.offsetLeft, width: el.offsetWidth } : null);
+    };
+    place();
+    window.addEventListener('resize', place);
+    // The web font can land after the first measure and widen the labels.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(place).catch(() => {});
+    return () => window.removeEventListener('resize', place);
+  }, [activeHref]);
+
+  return (
+    <nav ref={navRef} className="riva-topnav" aria-label="Tools">
+      {pill && <span className="riva-topnav-pill" style={{ transform: 'translateX(' + pill.left + 'px)', width: pill.width }} aria-hidden="true" />}
+      {ROW.map((item) => {
+        const active = activeHref === item.href;
+        return (
+          <Link key={item.href} href={item.href}
+            className={'riva-topnav-item' + (active ? ' is-active' : '')}
+            aria-current={active ? 'page' : undefined}>
+            <span className="riva-topnav-ico"><Svg w={15} sw={2}>{item.icon}</Svg></span>
+            <span className="riva-topnav-label">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 function NavRow({ item, active, onNavigate }) {
   return (
     <Link
@@ -302,59 +344,50 @@ export default function AppShell({ children }) {
 
   return (
     <div className="riva-shell">
-      {/* Three glass islands floating on the light, not a bar: who this is
-          (with the way back beside it), the tools, and what can be done
-          here. Nothing joins them, so the page runs edge to edge behind. */}
+      {/* One glass bar floating on the light: who this is on the left, the
+          tools in the middle, and what can be done here on the right. It is
+          the same surface as the composer and the menus it opens, so the
+          chrome and the page read as one set of things. */}
       <header className="riva-top">
-        <div className="riva-top-left riva-island">
-          {/* Whose service this is, and the way back to the front door. The
-              logo is here and nowhere else. */}
-          <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
-            <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
-            <span className="riva-brand-name">Riverside</span>
-          </Link>
-          {/* Which build this is, in plain sight on every page. Somebody told
-              a change is live should be able to see the number without
-              opening a menu; the commit still rides in the tooltip. */}
-          <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
+        <div className="riva-bar">
+          <div className="riva-top-left">
+            {/* Whose service this is, and the way back to the front door. */}
+            <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
+              <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
+              <span className="riva-brand-name">Riverside</span>
+            </Link>
+            {/* Which build this is, in plain sight on every page; the commit
+                rides in the tooltip. */}
+            <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
+            {/* Where the reader is, when the row is folded away. */}
+            <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
+          </div>
 
-          {/* Where the reader is, when the row is folded away. */}
-          <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
+          <TopNav current={current} />
+
+          <div className="riva-top-right">
+            {/* Where a tool's own controls land (see AppHeader). */}
+            <div className="riva-crumb-actions" ref={setSlot} />
+            <button type="button" className="riva-top-search" onClick={() => setPaletteOpen(true)}
+              aria-label="Go to a tool (⌘K)" title="Go to a tool — ⌘K">
+              <Svg w={15} sw={2.2}>{Icons.search}</Svg>
+              <span className="riva-top-search-label">Go to</span>
+              <kbd className="riva-kbd">⌘K</kbd>
+            </button>
+            <ThemePicker />
+            <div className="riva-top-menuwrap">
+              <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
+                aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
+                <Svg w={18} sw={2}>{Icons.menu}</Svg>
+              </button>
+              {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} />}
+            </div>
+          </div>
         </div>
 
         {/* A page's way back: a pill hanging under the brand, on its own,
             where a hand goes for "back" and where nothing else is. */}
         <div className="riva-crumb-lead" ref={setLead} />
-
-        <nav className="riva-topnav" aria-label="Tools">
-          {ROW.map((item) => {
-            const active = current?.href === item.href;
-            return (
-              <Link key={item.href} href={item.href}
-                className={'riva-topnav-item' + (active ? ' is-active' : '')}
-                aria-current={active ? 'page' : undefined}>
-                <span className="riva-topnav-ico"><Svg w={15} sw={2}>{item.icon}</Svg></span>
-                <span className="riva-topnav-label">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="riva-top-right riva-island">
-          {/* Where a tool's own controls land (see AppHeader). */}
-          <div className="riva-crumb-actions" ref={setSlot} />
-          <button type="button" className="riva-top-btn riva-top-search" onClick={() => setPaletteOpen(true)}
-            aria-label="Go to a tool (⌘K)" title="Go to a tool — ⌘K">
-            <Svg w={17} sw={2}>{Icons.search}</Svg>
-          </button>
-          <div className="riva-top-menuwrap">
-            <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
-              aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
-              <Svg w={19} sw={2}>{Icons.menu}</Svg>
-            </button>
-            {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} />}
-          </div>
-        </div>
       </header>
 
       {/* The page scrolls inside the shell rather than the window, so a

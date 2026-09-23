@@ -83,9 +83,54 @@ function TurnQuestion({ question }) {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * The glass shapes on the opening screen.
+ *
+ * Spheres, a ring and a capsule floating either side of the heading, in
+ * the theme's colours — the depth of the 21st.dev "spatial product
+ * showcase", kept well clear of the words. Each drifts on its own, and
+ * all of them lean a little towards the pointer, the nearer ones more,
+ * which is what makes them read as standing at different depths.
+ * Decoration only: hidden from screen readers, never in the way of a
+ * click, gone on a narrow screen and still for reduced motion.
+ * ------------------------------------------------------------------ */
+function HeroOrbs() {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return undefined;
+    let raf = 0;
+    let x = 0;
+    let y = 0;
+    const move = (e) => {
+      x = (e.clientX / window.innerWidth) * 2 - 1;
+      y = (e.clientY / window.innerHeight) * 2 - 1;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        el.style.setProperty('--mx', x.toFixed(3));
+        el.style.setProperty('--my', y.toFixed(3));
+      });
+    };
+    window.addEventListener('pointermove', move);
+    return () => { window.removeEventListener('pointermove', move); cancelAnimationFrame(raf); };
+  }, []);
+  return (
+    <div ref={ref} className="riva-orbs" aria-hidden="true">
+      <span className="riva-orb-slot riva-d3" style={{ left: 'calc(50% - 520px)', top: '26%' }}><span className="riva-orb riva-orb-lg" /></span>
+      <span className="riva-orb-slot riva-d1" style={{ left: 'calc(50% - 360px)', top: '52%' }}><span className="riva-ring" /></span>
+      <span className="riva-orb-slot riva-d2" style={{ left: 'calc(50% + 380px)', top: '20%' }}><span className="riva-orb riva-orb-md" /></span>
+      <span className="riva-orb-slot riva-d1" style={{ left: 'calc(50% + 300px)', top: '48%' }}><span className="riva-capsule" /></span>
+      <span className="riva-orb-slot riva-d2" style={{ left: 'calc(50% + 470px)', top: '60%' }}><span className="riva-orb riva-orb-sm" /></span>
+    </div>
+  );
+}
+
 export default function ChatView({ v }) {
   return (
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
+
+      {v.isEmpty && <HeroOrbs />}
 
       {v.isEmpty && (
         // Sits a fixed margin above the dock, which is centred while nothing
