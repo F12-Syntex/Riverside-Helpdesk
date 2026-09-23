@@ -274,13 +274,36 @@ export default function AiAnswer({ v }) {
 
         {v.aiDeclined && (
           <>
+            {/* The bands go out on a decline too. A red flag in a question the
+                notebook does not cover is still a red flag, and it is the
+                one thing on this card that must not wait. */}
+            {v.hasAlerts && v.alerts.map((alert) => (
+              <div key={alert.key} style={s('margin:16px 0 0;')}><TemplateView answer={alert.answer} /></div>
+            ))}
             <div style={s('padding:18px 0;display:flex;gap:13px;align-items:flex-start;')}>
               <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
               <div style={s('flex:1;min-width:0;')}>
                 <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
                 <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
+                {v.hasNearest && (
+                  <div style={s('margin-top:14px;')}>
+                    <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:7px;')}>Closest pages in the notebook</div>
+                    <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
+                      {v.nearest.map((p) => (
+                        <Hover key={p.key} tag="button" type="button" onClick={p.onOpen}
+                          base="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:6px 13px;font:inherit;font-size:14px;font-weight:600;color:#005eb8;cursor:pointer;text-align:left;"
+                          hover="border-color:#005eb8;background:#f7fbff;">
+                          <Svg w={13} sw={2.2} style={s('flex:none;')}>{Icons.arrow}</Svg>{p.label}
+                        </Hover>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+            {v.hasPanel && (
+              <UnresolvedPanel panel={v.panel} onAsk={v.onAskItem} onDismiss={v.onDismissItem} />
+            )}
             <ContactsCard v={v} />
             {v.hasContacts && <div style={s('height:12px;')} />}
           </>

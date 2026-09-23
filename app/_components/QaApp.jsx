@@ -845,7 +845,7 @@ class RiversidePracticeQA extends React.Component {
       // or a message, so it must not be read as an empty one. Without this a
       // perfectly good ECG referral card was declined as needing a clinician.
       if (!data.answerable || (!data.template && !data.sections.length && !data.message)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [], nearest: data.nearest || [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
         return;
       }
       // turnId identifies this answer to the server, so a verdict pressed under
@@ -1436,6 +1436,14 @@ class RiversidePracticeQA extends React.Component {
           aiError: m.status === 'error',
           aiDeclined: m.status === 'declined',
           aiDone: m.status === 'done',
+          // The notebook did not cover it: the pages closest to the question,
+          // each opening as saved, so the reader can check rather than trust.
+          nearest: (m.nearest || []).map((c, i) => ({
+            key: i,
+            label: String(c.docTitle || '').replace(/^Notebook:\s*/, ''),
+            onOpen: () => self.openViewer(c),
+          })),
+          hasNearest: !!(m.nearest && m.nearest.length),
           question: m.question,
           intro: m.intro || '',
           hasIntro: !!(m.intro && m.intro.length),

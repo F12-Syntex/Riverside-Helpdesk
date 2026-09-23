@@ -1,54 +1,48 @@
-﻿// The agent endpoint: one model call, answering out of the Notebook.
+// The agent endpoint: the model chooses out of the Notebook, code shows it.
 //
-// WHAT WAS HERE BEFORE. A template router. The model read the message, chose
-// one of about twenty templates and filled in its variables; the answer was
-// that template rendered in code. On top of that sat a confidence-scored
-// retrieval router, a second call to lift the values out of a tagged page, a
-// third to read a referral's pairing, and seven slash commands that each named
-// a template outright. Three model calls on a referral turn, a catalogue the
-// model had to be taught, and — because a page's format was inherited from the
-// folder it sat in and re-read by a model every time — no guarantee that the
-// same page came back the same way twice.
+// WHAT WAS HERE BEFORE. First a template router — about twenty templates, three
+// model calls on a referral turn. Then one call in which the Notebook went in
+// whole and the model wrote the answer as prose, measured afterwards for how
+// much of it was the practice's own wording. Measured, not enforced: a
+// sentence it made up was shown just the same, under a banner.
 //
-// WHAT IS HERE NOW. The Notebook goes in whole, the message goes in, and the
-// model writes the answer. That is the entire pipeline.
-//
-// THE CONSISTENCY MOVED INTO THE NOTEBOOK. It used to come from rendering a
-// template in code, which is why all of the above existed. It now comes from
-// the note: a typed note carries its speciality, its clinic type, its address
-// in named fields, validated before the note may be served at all, and written
-// into the prompt in one fixed shape by lib/notebook/kinds.mjs. The model is
-// asked to lay those values out, not to find them — so there is nothing left
-// for it to read differently on a second pass. See lib/notebook/kinds.mjs.
+// WHAT IS HERE NOW. The Notebook still goes in whole, and there is still one
+// call, but the model no longer writes the answer. It returns a CHOICE — page
+// ids, and for each either "this page's card" or a passage quoted from it —
+// and lib/agent/verify-answer.mjs checks every part of that choice against the
+// pages it was shown:
+//   - an id that was not in front of it is dropped;
+//   - a card is drawn from the note's stored, validated fields in code;
+//   - a quote must be on the page word for word, and what is shown is the
+//     page's own sentences around it, not the model's copy;
+//   - its one written line, the lead, may carry no number, no address and no
+//     word that is in neither the question nor the pages it picked.
+// If nothing survives, the answer is that the Notebook does not cover it, with
+// the closest pages to open. There is no general-knowledge answer on this path.
 //
 // WHAT DID NOT GO. The deterministic floor. Every message is still scanned by
 // lib/safety before and independently of the model: the emergency band, the
 // confidentiality band and the panel of everything the message asked for are
-// not model output and never were, and a pipeline change is not a reason for
-// a red flag to stop being a red flag. Names and addresses are still redacted
-// at this endpoint as well as in the browser, and a number the answer cannot
-// vouch for is still stripped before a receptionist can dial it.
+// not model output and never were. Names and addresses are still redacted at
+// this endpoint as well as in the browser.
 //
-// EVERY TURN IS STILL WRITTEN DOWN. As the answer goes out, the question, the
-// answer as text and the model that ran are recorded in question_log
-// (lib/questions/log.js) and read back at /stats.
+// EVERY TURN IS STILL WRITTEN DOWN, in question_log (lib/questions/log.js) and
+// read back at /stats — now with what the checks threw away, which is the
+// running count of how often the model pointed at something that was not there.
 import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { answerSystemPrompt, notebookFullText } from '@/lib/agent/notebook-answer.mjs';
+import { selectFromNotebook } from '@/lib/agent/notebook-answer.mjs';
+import { presentVerified, verifySelection } from '@/lib/agent/verify-answer.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { bandFindings, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
-import { groundedIn } from '@/lib/questions/grounding.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
-import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { getDirectory } from '@/lib/lookup/directory';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
-import { recordUsage } from '@/lib/ai/usage';
 import { recordQuestion } from '@/lib/questions/log';
 import { loggingOffIn } from '@/lib/questions/opt-out.mjs';
 import { answerToText } from '@/lib/questions/flatten.mjs';
@@ -58,34 +52,11 @@ export const dynamic = 'force-dynamic';
 // One model call. The five minutes the research loop needed are not needed here.
 export const maxDuration = 120;
 
-// The answer's output cap. Left unset, OpenRouter reserves the model's whole
-// output window — 65,536 tokens on some — before the call is made, and refuses
-// the request outright when the account cannot cover that reservation. An
-// answer a receptionist reads at the desk is far shorter than this.
-const ANSWER_MAX_TOKENS = 1500;
-
 const NDJSON_HEADERS = {
   'Content-Type': 'application/x-ndjson; charset=utf-8',
   'Cache-Control': 'no-cache, no-transform',
   Connection: 'keep-alive',
 };
-
-// Numbers the answer is allowed to keep: the practice directory, the Notebook,
-// plus anything already present in the reader's own message, history or
-// attached document (an email being reformatted carries the numbers it arrived
-// with). Every other number is the model's invention and is stripped before a
-// receptionist can dial it.
-const NUMBER_RUN = /\d[-\d.()/ \t ]{7,}\d/g;
-function verifiedNumbers(texts = []) {
-  const verified = new Set(contactTelSet());
-  for (const text of texts) {
-    for (const run of String(text || '').match(NUMBER_RUN) || []) {
-      const d = digitsOf(run);
-      if (d.length >= 9) verified.add(d);
-    }
-  }
-  return verified;
-}
 
 // The machine the question was typed at, for the question log. The tracker
 // mirrors its id into a year-long cookie (lib/audit/client.js), and that cookie
@@ -124,14 +95,18 @@ function safetyOutput(scan) {
   };
 }
 
+// For the question log's template column: which of the three things this turn
+// was, with ":not-recorded" on a decline so /stats counts it as a gap.
+const LOG_TEMPLATE = { answer: 'notebook', ambiguous: 'notebook:ambiguous', not_covered: 'notebook:not-recorded' };
+
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
   }
 
-  // The FAST model writes the answer. An unset fast role resolves to the
-  // reasoning model, so an install that has only ever chosen one model works.
+  // The FAST model chooses. An unset fast role resolves to the reasoning
+  // model, so an install that has only ever chosen one model works.
   const roles = await getModelRoles();
   const model = roles.fast.model;
 
@@ -159,7 +134,7 @@ export async function POST(request) {
   const seeing = images.length > 0;
   const answerModel = seeing ? roles.images.model : model;
   // A document dropped onto the question and already read into text by
-  // /api/attach. The reader's own material: context for the model, never stored.
+  // /api/attach. The reader's own material: context for the choice, never stored.
   const attachments = sanitiseAttachments(body?.attachments);
   const attached = attachmentsBlock(attachments);
 
@@ -204,7 +179,7 @@ export async function POST(request) {
       // What the reader saw, as text, for the log: the bands above the answer
       // and the answer itself. A band is part of the answer, not decoration
       // around it, and a log that omitted it would not show what was on screen.
-      const shownText = (alerts, prose) => [...(alerts || []).map((part) => answerToText(part)), prose]
+      const shownText = (alerts, parts) => [...(alerts || []).map((part) => answerToText(part)), ...parts]
         .filter(Boolean)
         .join('\n\n---\n\n');
 
@@ -226,16 +201,13 @@ export async function POST(request) {
 
         // THE NOTEBOOK, READ LIVE. Not the mirrored search index: an autosave
         // is visible on the next question, and no page is left out by
-        // retrieval. A Notebook that cannot be read leaves the turn answering
-        // under the no-access rules rather than failing — and the answer says
-        // so, rather than quietly sounding like every other one.
+        // retrieval.
         let pages = [];
         try {
           pages = await fullNotebookContext();
         } catch (e) {
           console.warn('[agent] notebook unavailable:', String(e).slice(0, 160));
         }
-        const notebookText = pages.length ? notebookFullText(pages) : '';
 
         send({
           type: 'tool-result',
@@ -244,100 +216,104 @@ export async function POST(request) {
           summary: pages.length ? pages.length + ' pages' : 'The notebook could not be read',
           items: [],
         });
-        send({ type: 'status', text: 'Writing the answer' });
 
-        const userContent = images.length
-          ? [{ type: 'text', text: question }].concat(images.map((url) => ({ type: 'image', image: url })))
-          : question;
-
-        const generated = await generateText({
-          model: openrouter(answerModel),
-          system: answerSystemPrompt(notebookText),
-          maxOutputTokens: ANSWER_MAX_TOKENS,
-          messages: [
-            ...(history ? [{ role: 'user', content: `Conversation so far:\n${history}` }] : []),
-            // The dropped document goes in before the question, as the context
-            // the question is asked against.
-            ...(attached ? [{ role: 'user', content: attached }] : []),
-            { role: 'user', content: userContent },
-          ],
-          temperature: 0.2,
-        });
-        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: answerModel, usage: generated.usage });
-
-        const markdown = String(generated.text || '').trim();
-        if (!markdown) {
-          send({ type: 'error', error: 'The assistant did not return an answer.' });
-          const written = logTurn({ outcome: 'failed', error: 'The model returned an empty answer.' });
+        // NO NOTEBOOK, NOTHING TO CHOOSE FROM. Said as it is, with the bands
+        // still above it, and no model asked to fill the gap.
+        if (!pages.length) {
+          send({
+            type: 'answer',
+            payload: {
+              kind: 'answer', answerable: false, turnId,
+              intro: 'The notebook could not be read just now, so there is nothing to answer from. Please try again in a moment.',
+              alerts: safety.alerts, panel: safety.panel,
+              sections: [], template: null, nearest: [], contacts: [], citations: [],
+            },
+          });
+          const written = logTurn({ outcome: 'failed', error: 'The notebook could not be read.', answer: shownText(safety.alerts, []) });
           controller.close();
           await written;
           return;
         }
 
-        // THE NOTEBOOK COUNTS AS VERIFIED. The model is shown it and told to
-        // use its exact wording, so the numbers it writes are largely the
-        // practice's own — and the redactor, which strips any number it cannot
-        // vouch for, would have cut every one of them out of the answer it just
-        // asked for. A number written in the Notebook is a number the practice
-        // wrote down; nothing else on this path is.
-        const verified = verifiedNumbers([question, history, attached, notebookText]);
-        const prose = redactUnverifiedNumbers(markdown, verified);
+        send({ type: 'status', text: 'Finding the page that answers it' });
 
-        // AND WHETHER IT IS THE PRACTICE'S OWN WORDS, MEASURED. The answer is
-        // compared against the pages it was written from, run of words by run
-        // of words: where it is demonstrably made of a page, the page is named
-        // and the "this is the assistant's own work" banner goes. Where it is
-        // not, the banner is exactly what it always was. See
-        // lib/questions/grounding.mjs.
-        const madeOf = groundedIn(prose, pages);
+        const selection = await selectFromNotebook({
+          openrouter,
+          model: answerModel,
+          pages,
+          question,
+          history,
+          attached,
+          images,
+          role: seeing ? 'images' : 'fast',
+          turnId,
+        });
+
+        // THE CHECKS. Everything below this line is the page's own text, a
+        // card drawn from its stored fields, a page title or fixed wording.
+        const verified = verifySelection(selection, pages, question);
+        const shown = presentVerified(verified);
+        const answered = verified.verdict === 'answer';
 
         send({
           type: 'answer',
           payload: {
             kind: 'answer',
-            answerable: true,
+            answerable: answered || verified.verdict === 'ambiguous',
             // The turn this answer is, so a verdict left on it — or an item
             // closed on its panel — joins back to the answer it was actually
             // about rather than to the next turn worded the same way.
             turnId,
-            // WHAT THIS ANSWER IS MADE OF, rather than which branch produced
-            // it. Where the words are demonstrably the Notebook's, the pages
-            // are named and the reader is not told to go and check the
-            // practice's own writing.
-            general: !madeOf.length,
-            sources: madeOf.map((m) => m.docTitle),
-            template: null,
+            // Never general: nothing on this path is the model's own knowledge.
+            general: false,
+            // The pages are named on each quote's citation and on the card, so
+            // the footer list is left empty rather than said twice.
+            sources: [],
+            template: shown.template,
             // The deterministic floor. Never model output, which is why it
             // applies to every turn identically.
             alerts: safety.alerts,
             panel: safety.panel,
-            intro: '',
+            intro: shown.intro,
             keyPoints: [],
-            sections: [{
-              heading: '',
-              markdown: prose,
-              basis: 'general',
-              critical: false,
-              cite: null,
-              web: null,
-            }],
+            sections: shown.sections,
+            nearest: shown.nearest,
             message: '',
             messageCite: null,
             messageWeb: null,
             tip: '',
             gaps: '',
             followUps: [],
-            clarify: null,
+            clarify: shown.clarify,
             referralRoute: null,
             citations: [],
             contacts: [],
-            validation: { attempts: 1, checked: 1, verified: 1, dropped: 0, problems: [] },
+            // Real counts: what the model chose, and what the checks threw away.
+            validation: {
+              attempts: 1,
+              checked: verified.checked,
+              verified: verified.cards.length + verified.quotes.length,
+              dropped: answered ? verified.dropped.length : 0,
+              problems: verified.dropped.map((d) => d.reason),
+            },
           },
         });
+
+        const usedPages = pages.filter((page) => shown.sources.includes(page.docTitle));
         const written = logTurn({
-          outcome: 'prose',
-          answer: shownText(safety.alerts, prose),
-          provenance: buildProvenance({ scan, pages: pages.filter((page) => madeOf.some((m) => m.docTitle === page.docTitle)) }),
+          outcome: 'template',
+          template: LOG_TEMPLATE[verified.verdict] || 'notebook',
+          source: shown.sources.join(' · '),
+          answer: shownText(safety.alerts, [
+            shown.intro,
+            shown.template ? answerToText(shown.template) : '',
+            ...shown.sections.map((sec) => sec.markdown + (sec.cite ? `\n— ${sec.cite.docTitle}` : '')),
+            shown.clarify ? shown.clarify.question + ' ' + shown.clarify.options.join(' / ') : '',
+            shown.nearest.length ? 'Closest pages: ' + shown.nearest.map((c) => c.docTitle).join(' · ') : '',
+            verified.dropped.length ? `[${verified.dropped.length} pick(s) failed the checks: ${verified.dropped.map((d) => d.reason).join(', ')}]` : '',
+            verified.leadReason ? `[lead replaced: ${verified.leadReason}]` : '',
+          ]),
+          provenance: buildProvenance({ scan, pages: usedPages }),
         });
         controller.close();
         await written;
