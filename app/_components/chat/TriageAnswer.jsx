@@ -8,12 +8,14 @@ import Rich from './Rich';
 
 // How each urgency band is shown. Colours follow the NHS palette already used
 // across the app (emergency red, urgent amber, routine/self-care blues/greens).
+// Only the two bands that call for action now carry a warning icon; the rest
+// are told apart by their label and colour.
 const BANDS = {
   emergency: { label: 'Emergency', bg: '#fdf2f2', border: '#d5281b', fg: '#a5130b', icon: Icons.triangle },
   urgent: { label: 'Urgent: duty doctor', bg: '#fff8e6', border: '#d9a300', fg: '#8a6100', icon: Icons.alertCircle },
-  routine: { label: 'Routine', bg: '#e8f1f8', border: '#005eb8', fg: '#003087', icon: Icons.calendar },
-  'self-care': { label: 'Self-care / signpost', bg: '#eaf5ee', border: '#007f3b', fg: '#00602c', icon: Icons.pill },
-  unclear: { label: 'Unclear: escalate', bg: '#f0f4f5', border: '#768692', fg: '#4c6272', icon: Icons.infoCircle },
+  routine: { label: 'Routine', bg: '#e8f1f8', border: '#005eb8', fg: '#003087', icon: null },
+  'self-care': { label: 'Self-care / signpost', bg: '#eaf5ee', border: '#007f3b', fg: '#00602c', icon: null },
+  unclear: { label: 'Unclear: escalate', bg: '#f0f4f5', border: '#768692', fg: '#4c6272', icon: null },
 };
 
 export default function TriageAnswer({ v }) {
@@ -21,8 +23,8 @@ export default function TriageAnswer({ v }) {
   return (
     <div>
       <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
-        <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
-          <span style={s('flex:none;')}><Svg w={16}>{Icons.fileLines}</Svg></span>Triage notes: routing only, with AI judgement marked. Not clinical advice.
+        <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
+          Triage notes: routing only, with AI judgement marked. Not clinical advice.
         </div>
 
         {v.aiLoading && (
@@ -47,7 +49,7 @@ export default function TriageAnswer({ v }) {
           <>
             {/* Urgency band */}
             <div style={s('margin:18px 22px 0;display:flex;gap:12px;align-items:flex-start;border:1px solid ' + band.border + ';background:' + band.bg + ';border-left:5px solid ' + band.border + ';border-radius:0 8px 8px 0;padding:12px 16px;')}>
-              <span style={s('flex:none;color:' + band.fg + ';margin-top:1px;')}><Svg w={20} sw={2.2}>{band.icon}</Svg></span>
+              {band.icon && <span style={s('flex:none;color:' + band.fg + ';margin-top:1px;')}><Svg w={20} sw={2.2}>{band.icon}</Svg></span>}
               <div style={s('flex:1;min-width:0;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + band.fg + ';')}>{band.label}</div>
                 {v.hasUrgencyReason && <div style={s('margin-top:3px;font-size:16px;line-height:1.45;color:#212b32;')}><Rich text={v.urgencyReason} /></div>}
@@ -80,8 +82,7 @@ export default function TriageAnswer({ v }) {
             )}
 
             {v.hasRoute && (
-              <div style={s('margin:14px 22px 0;display:flex;gap:10px;align-items:center;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;padding:11px 14px;')}>
-                <span style={s('flex:none;color:#005eb8;')}><Svg w={18} sw={2.2}>{Icons.arrow}</Svg></span>
+              <div style={s('margin:14px 22px 0;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;padding:11px 14px;')}>
                 <div style={s('font-size:16px;line-height:1.4;')}><strong>Route to:</strong> {v.route}</div>
               </div>
             )}
@@ -113,7 +114,7 @@ export default function TriageAnswer({ v }) {
 
             <ContactsCard v={v} />
             <div style={s('border-top:1px solid #d8dde0;margin-top:16px;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Routing only. A clinician makes the clinical decision</span>
+              <span style={s('font-size:14px;color:#4c6272;')}>Routing only. A clinician makes the clinical decision</span>
               <div style={s('margin-left:auto;display:flex;gap:10px;')}>
                 <Hover onClick={v.onCopy} base="background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:6px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;"><Svg w={15}>{Icons.copy}</Svg>{v.copyLabel}</Hover>
               </div>

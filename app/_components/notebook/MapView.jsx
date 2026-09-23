@@ -287,9 +287,9 @@ function PagePanel({ page, onOpenPage, onPropose, proposing, onChanged, refreshK
         ))}
       </div>
       <div style={s('margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;')}>
-        <Hover tag="button" onClick={() => onOpenPage(page.id)} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;"><Svg w={14} sw={2.4}>{Icons.edit}</Svg>Open page</Hover>
+        <Hover tag="button" onClick={() => onOpenPage(page.id)} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;">Open page</Hover>
         <Hover tag="button" onClick={() => onPropose(page.id)} disabled={proposing || page.chars === 0} base={btn('#005eb8', '#fff') + (proposing || page.chars === 0 ? 'opacity:.6;cursor:default;' : '')} hover="background:#003d78;">
-          <Svg w={14} sw={2.4}>{Icons.sparkle}</Svg>{proposing ? 'Proposing…' : 'Propose rewrite'}
+          {proposing ? 'Proposing…' : 'Propose rewrite'}
         </Hover>
       </div>
       <History noteId={page.id} onChanged={onChanged} refreshKey={refreshKey} />
@@ -315,7 +315,7 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
   const changed = (meaning.changed || []).length;
   const canApply = validation.ok && meaning.ok && (!unsure || ack) && !editing && !busy;
   return (
-    <Modal size="xl" icon={Icons.sparkle} title="Proposed rewrite" subtitle={before.path}
+    <Modal size="xl" title="Proposed rewrite" subtitle={before.path}
       onClose={busy ? undefined : onClose} dismissable={!busy}
       footer={<>
         <Button variant="quiet-danger" onClick={onReject} disabled={busy}>Reject</Button>

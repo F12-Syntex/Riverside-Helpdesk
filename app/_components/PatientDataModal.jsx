@@ -72,7 +72,6 @@ export default function PatientDataModal({ v }) {
             base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:11px 20px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #003d78;display:inline-flex;align-items:center;gap:8px;"
             active="transform:translateY(4px);box-shadow:none;"
           >
-            <span style={s('display:flex;')}><Svg w={18}>{Icons.edit}</Svg></span>
             Edit the message
           </Hover>
         </div>

@@ -24,7 +24,7 @@ import MapView from '../_components/notebook/MapView';
 import {
   NotebookStyles, T, NBIcons, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
   EmptyState, EmptyMarquee, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
-  MenuOption, Spinner, Tile,
+  MenuOption, Spinner,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
 import { OUTPUT_TAGS, outputTag } from '@/lib/templates/output-tags.mjs';
@@ -65,8 +65,6 @@ const PAGE_CSS = `
 .nbk-brand{display:flex;align-items:center;gap:10px;padding:0 2px 2px;}
 .nbk-brand__name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--nbk-ink);line-height:1.15;}
 .nbk-brand__meta{font-size:12px;font-weight:600;color:var(--nbk-dim);font-variant-numeric:tabular-nums;}
-.nbk-brand__tile{position:relative;flex:none;width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;
-  color:#fff;background:var(--nbk-blue);box-shadow:var(--nbk-bevel),0 0 0 1px #004f9c;}
 .nbk-sidebar__row{display:flex;align-items:center;gap:8px;}
 .nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:4px 8px 16px;display:flex;flex-direction:column;gap:1px;}
 .nbk-tree__label{padding:8px 8px 5px;}
@@ -78,7 +76,6 @@ const PAGE_CSS = `
   background:rgba(255,255,255,.55);font:inherit;font-size:12px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
   transition:background-color .15s ease,color .15s ease,box-shadow .15s ease,transform .1s ease;}
 .nbk-foot-btn:hover{background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
-.nbk-foot-btn:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-foot-btn:active{transform:translateY(1px);}
 .nbk-foot-btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
 
@@ -121,7 +118,7 @@ const PAGE_CSS = `
 .nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;
   border-top:1px solid var(--nbk-line-soft);background:rgba(248,250,251,.9);}
 .nbk-dock__label{margin-right:4px;}
-.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 4px 4px 5px;
+.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 4px 4px 11px;
   background:#fff;border:1px solid var(--nbk-line);border-radius:12px;box-shadow:var(--nbk-sh-1);animation:nbk-in .3s var(--nbk-ease) both;}
 .nbk-attach a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;
   font-weight:600;color:var(--nbk-ink);text-decoration:none;}
@@ -142,7 +139,6 @@ const PAGE_CSS = `
   animation:nbk-in .4s var(--nbk-ease) both;
   transition:border-color .15s ease,box-shadow .2s ease,transform .2s var(--nbk-ease);}
 .nbk-page-card:hover{border-color:#aac7e0;transform:translateY(-1px);box-shadow:0 1px 2px rgba(33,43,50,.06),0 3px 6px -2px rgba(33,43,50,.08);}
-.nbk-page-card:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-page-card:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
 .nbk-page-card__title{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.35;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -154,13 +150,12 @@ const PAGE_CSS = `
   font:inherit;font-size:14px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
   transition:border-color .15s ease,color .15s ease,background-color .15s ease;}
 .nbk-add-card:hover{border-color:var(--nbk-blue);color:var(--nbk-blue);background:var(--nbk-tint);}
-.nbk-add-card:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 
 /* ---- the map, in the same sheet ---- */
 .nbk-map-lede{font-size:13px;color:var(--nbk-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
-.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 24px;}
+.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 12px;}
 
 .nbk-scrim{display:none;}
 
@@ -187,7 +182,7 @@ const PAGE_CSS = `
   .nbk-doc-title{font-size:27px;}
   .nbk-cards{padding:8px 20px 0;grid-template-columns:1fr;}
   .nbk-page-card,.nbk-add-card{min-height:0;}
-  .nbk-map-lede,.nbk-hide-sm{display:none;}
+  .nbk-map-lede{display:none;}
 }
 @media (prefers-reduced-motion:reduce){
   .nbk-sidebar,.nbk-main,.nbk-doc-head,.nbk-page-card,.nbk-attach{animation:none;}
@@ -400,7 +395,6 @@ function SideRow({ n, depth, ctx }) {
           </button>
         ) : (<span style={{ flex: 'none', width: '22px' }} />)}
         <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)} aria-current={isSel ? 'page' : undefined}>
-          <Tile icon={depth === 0 || n.isSection ? Icons.book : Icons.fileLines} on={isSel} />
           <span className="nbk-row__name">{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={{ flex: 'none', color: T.dim }}>{Icons.paperclip}</Svg>}
           {/* The shape answers from here come back in. The CHIP is only on the
@@ -1113,7 +1107,7 @@ export default function NotebookPage() {
       { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
     ] : []),
     null,
-    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true, label: 'AI format' },
+    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, accent: true, label: 'AI format' },
   ];
 
   /* ------------------------------ Render ------------------------------- */
@@ -1176,7 +1170,6 @@ export default function NotebookPage() {
         <aside className="nbk-sidebar nbk-glass" aria-label="Sections and pages">
           <div className="nbk-sidebar__top">
             <div className="nbk-brand">
-              <span className="nbk-brand__tile"><Svg w={18} sw={2.1}>{Icons.book}</Svg></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="nbk-brand__name">Notebook</div>
                 <div className="nbk-brand__meta">
@@ -1189,7 +1182,7 @@ export default function NotebookPage() {
             {/* Pages is the editor; Map is the treemap of every page and what
                 the assistant makes of it. Same notes, two readings of them. */}
             <Tabs block ariaLabel="Notebook view" value={view} onChange={(v2) => { setView(v2); setDrawer(false); }}
-              items={[{ id: 'pages', label: 'Pages', icon: Icons.fileLines }, { id: 'map', label: 'Map', icon: NBIcons.layers }]} />
+              items={[{ id: 'pages', label: 'Pages' }, { id: 'map', label: 'Map' }]} />
             <div className="nbk-sidebar__row">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <SearchField value={search} onChange={setSearch} placeholder="Search notes" />
@@ -1215,7 +1208,6 @@ export default function NotebookPage() {
 
           <div className="nbk-sidebar__foot">
             <span className="nbk-sidebar__note">
-              <Svg w={13} sw={2.2} stroke={T.green} style={{ flex: 'none' }}>{Icons.shield}</Svg>
               Notes are used by the assistant automatically.
             </span>
             {/* Backup: export downloads every note as JSON; import restores it
@@ -1224,15 +1216,15 @@ export default function NotebookPage() {
             <div className="nbk-foot-grid">
               <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/api/notebook/export'; }}
                 title="Download all notes as a JSON backup">
-                <Tile icon={NBIcons.download} />Export
+                Export
               </button>
               <button type="button" className="nbk-foot-btn" onClick={() => importInput.current && importInput.current.click()}
                 title="Restore notes from a JSON backup (added alongside existing notes)">
-                <Tile icon={NBIcons.upload} />Import
+                Import
               </button>
               <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/notebook/saves'; }}
                 title="Saves of the whole notebook - take one, or roll back to one">
-                <Tile icon={Icons.undo} />Saves
+                Saves
               </button>
             </div>
           </div>
@@ -1273,10 +1265,10 @@ export default function NotebookPage() {
               <div className="nbk-head__actions">
                 <StatusPill state={saveState} />
                 {selected && canOrganize(selected) && (
-                  <Button variant="soft" icon={Icons.sparkle} onClick={() => runAiOrganize()}
+                  <Button variant="soft" onClick={() => runAiOrganize()}
                     disabled={!!aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')}
                     title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)">
-                    <span className="nbk-hide-sm">AI organise</span>
+                    AI organise
                   </Button>
                 )}
                 {selected && !isSection && (
@@ -1319,7 +1311,6 @@ export default function NotebookPage() {
                     return (
                       <button key={p.id} type="button" className="nbk-page-card" onClick={() => selectNote(p.id)}
                         style={{ animationDelay: Math.min(i, 12) * 30 + 'ms' }}>
-                        <Tile icon={p.isSection ? Icons.book : Icons.fileLines} />
                         <span className="nbk-page-card__title">{p.title || 'Untitled'}</span>
                         {text
                           ? <span className="nbk-page-card__excerpt">{text}</span>
@@ -1328,7 +1319,7 @@ export default function NotebookPage() {
                     );
                   })}
                   <button type="button" className="nbk-add-card" onClick={() => newNote(selected.id)}>
-                    <Tile icon={Icons.plus} />New page
+                    New page
                   </button>
                 </div>
               </div>
@@ -1371,7 +1362,6 @@ export default function NotebookPage() {
                     {selectedFiles.length > 0 && <span className="nbk-label nbk-dock__label">Files</span>}
                     {selectedFiles.map((a) => (
                       <span key={a.id} className="nbk-attach">
-                        <Tile icon={(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file} />
                         <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' - ' + fmtSize(a.size) : '')}>
                           {a.filename}
                         </a>
@@ -1389,7 +1379,6 @@ export default function NotebookPage() {
             {/* Drop overlay */}
             {dragging && selected && !isSection && (
               <div className="nbk-dropzone">
-                <Tile icon={Icons.paperclip} size="lg" on />
                 Drop files to attach to &ldquo;{selected.title || 'Untitled'}&rdquo;
               </div>
             )}
@@ -1399,13 +1388,13 @@ export default function NotebookPage() {
       {/* ---------------------------- The note menu --------------------------- */}
       {menu && menuNote && (
         <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={232}>
-          <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
-          <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
+          <MenuItem onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
+          <MenuItem onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
           {canOrganize(menuNote) && (
-            <MenuItem icon={Icons.sparkle} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
+            <MenuItem tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
           )}
           {menuNote.parentId ? (
-            <MenuItem icon={menuNote.isSection ? Icons.fileLines : Icons.book}
+            <MenuItem
               onClick={() => { setMenu(null); toggleSection(menu.id, !menuNote.isSection); }}>
               {menuNote.isSection ? 'Convert to page' : 'Convert to section'}
             </MenuItem>
@@ -1457,7 +1446,7 @@ export default function NotebookPage() {
           })()}
 
           <MenuSeparator />
-          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
+          <MenuItem tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
             {menuNote.parentId && !menuNote.isSection ? 'Delete page' : 'Delete section'}
           </MenuItem>
         </Menu>
@@ -1465,7 +1454,7 @@ export default function NotebookPage() {
 
       {/* --------------------------- AI format review -------------------------- */}
       {aiFmt && aiFmt.status === 'loading' && (
-        <Modal size="sm" icon={Icons.sparkle} title="Reformatting the page" dismissable={false}
+        <Modal size="sm" title="Reformatting the page" dismissable={false}
           subtitle="Restructuring it into headings, lists, tables and highlights. Nothing is saved until you have read it.">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
             <Spinner />Working...
@@ -1473,13 +1462,13 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiFmt && aiFmt.status === 'error' && (
-        <Modal size="sm" tone="warn" icon={Icons.alertCircle} title="Could not reformat" onClose={() => setAiFmt(null)}
+        <Modal size="sm" title="Could not reformat" onClose={() => setAiFmt(null)}
           footer={<Button variant="primary" onClick={() => setAiFmt(null)}>Close</Button>}>
           <p style={{ margin: 0 }}>{aiFmt.message}</p>
         </Modal>
       )}
       {aiFmt && aiFmt.status === 'ready' && (
-        <Modal size="lg" icon={Icons.sparkle} title="Proposed reformat"
+        <Modal size="lg" title="Proposed reformat"
           subtitle="Headings, lists, tables and highlights. Every fact is kept, and nothing is saved until you apply."
           onClose={() => setAiFmt(null)} flush
           footer={<>
@@ -1499,7 +1488,7 @@ export default function NotebookPage() {
 
       {/* --------------------------- AI organise plan -------------------------- */}
       {aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') && (
-        <Modal size="sm" icon={Icons.sparkle} dismissable={false}
+        <Modal size="sm" dismissable={false}
           title={aiOrg.status === 'loading' ? 'Reading this section' : 'Moving the content'}
           subtitle={aiOrg.status === 'loading'
             ? 'Every page in it is read and each part is matched to the section it belongs in.'
@@ -1510,13 +1499,13 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'error' && (
-        <Modal size="sm" tone="warn" icon={Icons.alertCircle} title="Could not organise" onClose={() => setAiOrg(null)}
+        <Modal size="sm" title="Could not organise" onClose={() => setAiOrg(null)}
           footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Close</Button>}>
           <p style={{ margin: 0 }}>{aiOrg.message}</p>
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'done' && (
-        <Modal size="sm" tone="success" icon={Icons.check} title="Organised" onClose={() => setAiOrg(null)}
+        <Modal size="sm" title="Organised" onClose={() => setAiOrg(null)}
           footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Done</Button>}>
           <p style={{ margin: 0 }}>
             {'Moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
@@ -1527,7 +1516,7 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'ready' && (
-        <Modal size="lg" icon={Icons.sparkle} title="Where each page's content will go"
+        <Modal size="lg" title="Where each page's content will go"
           subtitle="Every fact is kept; emptied pages are removed and their files move with the content. Nothing changes until you apply."
           onClose={() => setAiOrg(null)}
           footer={<>
@@ -1537,8 +1526,7 @@ export default function NotebookPage() {
           <div>
             {aiOrg.plan.allocations.map((a) => (
               <div key={a.noteId} className="nbk-plan__note">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', fontWeight: 700, color: T.ink }}>
-                  <Svg w={15} sw={2} style={{ flex: 'none', color: T.dim }}>{Icons.fileLines}</Svg>
+                <div style={{ fontSize: '14.5px', fontWeight: 700, color: T.ink }}>
                   {a.noteTitle || 'Untitled'}
                 </div>
                 {a.parts.map((p, i) => (

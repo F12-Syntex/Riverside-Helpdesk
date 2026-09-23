@@ -1837,9 +1837,11 @@ class RiversidePracticeQA extends React.Component {
               <div style={s('display:flex;flex-direction:column;gap:8px;margin-bottom:10px;')}>
                 {v.pendingDocs.map((d) => (
                   <div key={d.key} style={s('display:flex;align-items:center;gap:11px;background:#fff;border:1px solid ' + (d.isError ? '#f0c2bd' : '#d8dde0') + ';border-radius:12px;padding:10px 12px;box-shadow:0 2px 8px rgba(33,43,50,.08);animation:rivaUp .18s ease;')}>
-                    <span style={s('flex:none;display:flex;color:' + (d.isError ? '#d5281b' : '#005eb8') + ';')}>
-                      <Svg w={18} sw={2}>{d.isError ? Icons.alertCircle : Icons.file}</Svg>
-                    </span>
+                    {d.isError && (
+                      <span style={s('flex:none;display:flex;color:#d5281b;')}>
+                        <Svg w={18} sw={2}>{Icons.alertCircle}</Svg>
+                      </span>
+                    )}
                     <span style={s('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;')}>
                       <span style={s('font-size:14.5px;font-weight:600;color:#212b32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{d.name}</span>
                       {/* One line, always: the row's height is reserved above
@@ -1892,7 +1894,6 @@ class RiversidePracticeQA extends React.Component {
         {v.isDragging && (
           <div style={s('position:fixed;inset:0;z-index:70;pointer-events:none;background:rgba(240,244,245,.82);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;animation:rivaHeaderIn .12s ease both;')}>
             <div style={s('display:flex;flex-direction:column;align-items:center;gap:14px;border:2px dashed #005eb8;border-radius:20px;background:#fff;padding:34px 46px;box-shadow:0 18px 50px rgba(33,43,50,.18);text-align:center;')}>
-              <span style={s('display:flex;color:#005eb8;')}><Svg w={34} sw={1.8}>{Icons.paperclip}</Svg></span>
               <span style={s('font-size:21px;font-weight:700;letter-spacing:-0.01em;')}>Drop to attach</span>
               <span style={s('font-size:14.5px;color:#4c6272;max-width:34ch;')}>
                 PDF, Word, text or a picture. It is read for this question only and is not saved anywhere.

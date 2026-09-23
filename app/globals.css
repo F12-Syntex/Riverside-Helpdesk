@@ -290,9 +290,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   body, #riva-scroll { scrollbar-width: none; -ms-overflow-style: none; }
   body::-webkit-scrollbar, #riva-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
-  /* Drop the bot avatar on phones so answers use the full width. */
-  .riva-bot-avatar { display: none !important; }
-
   /* Don't hand a whole document to a phone — hide the embedded preview; the
    * passage text and the Open / Download buttons in the citation panel remain. */
   .riva-doc-embed { display: none !important; }
@@ -630,7 +627,7 @@ body { overflow-x: hidden; }
 @keyframes rivaModesFolder { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 .riva-modes-sep { display: block; height: 1px; margin: 4px 10px; background: #edf1f3; }
 
-/* One row: an icon tile, the name over what it reads, and a trailing mark. */
+/* One row: the name over what it reads, and a trailing mark. */
 .riva-mode {
   display: flex; align-items: center; gap: 12px; width: 100%;
   padding: 8px 10px; border: none; border-radius: 12px;
@@ -640,19 +637,11 @@ body { overflow-x: hidden; }
 /* The lit row is the focused row, and the pointer moves the focus (see
    ModeSwitch), so :hover is not styled at all: styling both lit two rows
    at once whenever the mouse rested on one and the arrow keys moved to
-   another. The lit row lifts on a soft tint with a hairline, and its
-   tile turns blue; no ring, since the tint is already the "here". */
+   another. The lit row lifts on a soft tint with a hairline; no ring,
+   since the tint is already the "here". */
 .riva-mode:focus, .riva-mode:focus-visible { outline: none; background: #f2f6f9; box-shadow: inset 0 0 0 1px #e1e8ec; }
 .riva-mode.is-on { background: #eaf2fb; }
 .riva-mode.is-on:focus, .riva-mode.is-on:focus-visible { background: #e1ecf8; box-shadow: inset 0 0 0 1px #c9dcef; }
-.riva-mode-tile {
-  flex: none; display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 10px;
-  background: #eef2f4; color: #4c6272;
-  transition: background .14s ease, color .14s ease;
-}
-.riva-mode:focus .riva-mode-tile { background: #e1ecf8; color: #005eb8; }
-.riva-mode-tile.is-on, .riva-mode:focus .riva-mode-tile.is-on { background: #005eb8; color: #fff; }
 .riva-mode-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .riva-mode-label { font-size: 14.5px; font-weight: 650; color: #212b32; }
 .riva-mode.is-on .riva-mode-label { color: #005eb8; }
@@ -663,11 +652,8 @@ body { overflow-x: hidden; }
 
 /* The folder page's header: the way back, and where you are. */
 .riva-mode-back { padding: 7px 8px; margin-bottom: 2px; }
-.riva-mode-backicon {
-  flex: none; display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 999px; background: #eef2f4; color: #4c6272;
-}
-.riva-mode-back:focus .riva-mode-backicon { background: #005eb8; color: #fff; }
+.riva-mode-backicon { flex: none; display: flex; color: #4c6272; }
+.riva-mode-back:focus .riva-mode-backicon { color: #005eb8; }
 .riva-mode-heading { font-size: 13.5px; font-weight: 700; color: #212b32; }
 
 /* Keys, for the keyboard user; gone where there is no keyboard. */
@@ -959,21 +945,13 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 }
 .riva-menu-row {
   display: flex; align-items: center; gap: 11px;
-  height: 40px; padding: 0 8px; border-radius: 12px;
+  height: 40px; padding: 0 10px; border-radius: 12px;
   font-size: 14px; font-weight: 600; color: var(--rv-ink);
   text-decoration: none; cursor: pointer;
   transition: background-color .14s ease, color .14s ease;
 }
 .riva-menu-row:hover, .riva-menu-row:focus-visible { background: #f2f6f9; outline: none; }
 .riva-menu-row.is-active { background: #eaf2fb; color: var(--rv-accent); }
-.riva-menu-ico {
-  flex: none; display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 9px;
-  background: #eef2f4; color: var(--rv-ink-2);
-  transition: background-color .14s ease, color .14s ease;
-}
-.riva-menu-row:hover .riva-menu-ico { background: #e3ebf0; color: var(--rv-accent); }
-.riva-menu-row.is-active .riva-menu-ico { background: var(--rv-accent); color: #fff; }
 .riva-menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-menu-foot {
   display: flex; align-items: baseline; gap: 8px;
@@ -1160,7 +1138,6 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   text-align: left; cursor: pointer;
 }
 .riva-palette-row.is-sel { background: var(--rv-accent-dim); color: var(--rv-accent); }
-.riva-palette-row.is-sel .riva-menu-ico { color: var(--rv-accent); }
 .riva-palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-palette-group { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--rv-ink-3); }
 .riva-palette-empty { padding: 18px 12px; font-size: 13.5px; color: var(--rv-ink-3); text-align: center; }

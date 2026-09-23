@@ -152,7 +152,6 @@ export default function ContactsSheet({ onClose }) {
     <div className="riva-modal-overlay" role="dialog" aria-modal="true" aria-label="Contacts" onMouseDown={onClose}>
       <div className="riva-sheet riva-contacts-sheet" style={{ maxWidth: '620px' }} onMouseDown={(e) => e.stopPropagation()}>
         <div style={s('display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #e4eaec;')}>
-          <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={19} sw={2.2}>{Icons.phone}</Svg></span>
           <h2 style={s('flex:1;min-width:0;font-size:19px;margin:0;letter-spacing:-0.01em;')}>Contacts</h2>
           <Hover tag="button" type="button" onClick={onClose} aria-label="Close contacts"
             base="flex:none;width:34px;height:34px;border-radius:50%;background:#f0f4f5;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4c6272;padding:0;"

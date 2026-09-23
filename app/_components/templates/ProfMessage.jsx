@@ -49,7 +49,6 @@ export default function ProfMessage({ block }) {
           there is one obvious button on the block and it is never scrolled
           past. */}
       <div style={s('display:flex;align-items:center;gap:10px;padding:7px 10px 7px 16px;background:#005eb8;color:#fff;')}>
-        <Svg w={14} stroke="#fff" sw={2.4} style={s('flex:none;')}>{Icons.chat}</Svg>
         <span style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>Send from Accurx</span>
         <CopyButton value={body} label="Copy the wording" small />
       </div>

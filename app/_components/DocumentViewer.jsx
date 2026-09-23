@@ -168,7 +168,6 @@ export default function DocumentViewer({ v }) {
       <div onClick={(e) => e.stopPropagation()} style={s('width:100%;max-width:680px;background:#fff;height:100%;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(33,43,50,.2);')}>
 
         <div style={s('flex:none;display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid #d8dde0;')}>
-          <span style={s('flex:none;width:34px;height:34px;border-radius:8px;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={18}>{Icons.file}</Svg></span>
           <div style={s('flex:1;min-width:0;')}>
             <div style={s('font-size:17px;font-weight:700;line-height:1.25;text-wrap:pretty;')}>{vm.docTitle}</div>
             <div style={s('font-size:13px;color:#768692;')}>{locParts.join(' · ')}</div>
@@ -183,8 +182,7 @@ export default function DocumentViewer({ v }) {
           {/* The full document, formatted, with the passage highlighted (desktop). */}
           {vm.hasFile && (
             <div className="riva-doc-embed" style={s('flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 20px 0;')}>
-              <div style={s('flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
-                <Svg w={14} stroke="#946200" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
+              <div style={s('flex:none;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
                 {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below.' : 'Showing the full document. The exact passage is shown below.')
                   : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (vm.page ? ' (page ' + vm.page + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
                   : 'The full document is shown below.'}
@@ -214,10 +212,10 @@ export default function DocumentViewer({ v }) {
         {vm.hasFile && (
           <div style={s('flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid #d8dde0;background:#fff;')}>
             <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#005eb8;color:#fff;border:none;'} hover="background:#003087;">
-              <Svg w={16} stroke="#fff" sw={2.2}>{Icons.file}</Svg>Open full document
+              Open full document
             </Hover>
             <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#fff;color:#005eb8;border:2px solid #d8dde0;'} hover="border-color:#005eb8;">
-              <Svg w={16} sw={2.2}>{Icons.arrow}</Svg>Download
+              Download
             </Hover>
           </div>
         )}

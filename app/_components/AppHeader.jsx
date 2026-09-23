@@ -107,7 +107,7 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
                 base={'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:7px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background-color .15s ease,color .15s ease;'
                   + (active ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.14);' : 'background:none;color:#4c6272;')}
                 hover={active ? '' : 'color:#212b32;'}>
-                <Svg w={15} sw={2}>{t.icon}</Svg><span className="riva-tab-label">{t.label}</span>
+                {t.icon && <Svg w={15} sw={2}>{t.icon}</Svg>}<span className="riva-tab-label">{t.label}</span>
               </Hover>
             );
           })}

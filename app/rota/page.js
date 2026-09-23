@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { s, Icons } from '../_components/ui';
+import { s } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import RotaSystem from '../_components/rota/RotaSystem';
 
@@ -11,8 +11,8 @@ export default function RotaPage() {
     active: page,
     onSelect: setPage,
     items: [
-      { key: 'rota', label: 'Rota', icon: Icons.calendar },
-      { key: 'staff', label: 'Staff', icon: Icons.book },
+      { key: 'rota', label: 'Rota' },
+      { key: 'staff', label: 'Staff' },
     ],
   };
   return (

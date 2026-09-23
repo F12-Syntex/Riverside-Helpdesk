@@ -190,8 +190,7 @@ export default function ChatView({ v }) {
             {v.turn.hasDocs && (
               <div style={s('display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;')}>
                 {v.turn.docNames.map((name, j) => (
-                  <span key={j} style={s('display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#fff;border:1px solid #dde4e7;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#4c6272;')}>
-                    <Svg w={14} sw={2} style={s('flex:none;color:#005eb8;')}>{Icons.file}</Svg>
+                  <span key={j} style={s('display:inline-flex;align-items:center;max-width:100%;background:#fff;border:1px solid #dde4e7;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#4c6272;')}>
                     <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{name}</span>
                   </span>
                 ))}
@@ -218,9 +217,9 @@ export default function ChatView({ v }) {
 
           {v.isViewingHistory && (
             <Hover tag="button" onClick={v.onLatest}
-              base="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:2px 0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;cursor:pointer;"
+              base="align-self:flex-start;display:inline-flex;align-items:center;background:none;border:none;padding:2px 0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;cursor:pointer;"
               hover="color:#003087;">
-              <Svg w={16} sw={2.4}>{Icons.arrow}</Svg>Back to the latest question
+              Back to the latest question
             </Hover>
           )}
         </div>

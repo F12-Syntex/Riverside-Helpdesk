@@ -351,7 +351,7 @@ export default function RunPanel({ state, driving, error, busy, errors = {}, fre
         {error && <div style={s('margin-top:8px;font-size:13px;color:' + BAND_INK.red + ';')}>{error}</div>}
         <div style={s('margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;')}>
           <Hover tag="button" onClick={() => onStart('all')} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;">
-            <Svg w={14} sw={2.4}>{Icons.sparkle}</Svg>Defragment everything
+            Defragment everything
           </Hover>
           <Hover tag="button" onClick={() => onStart('needs-attention')} disabled={busy} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;">
             Only the pages that need it
@@ -396,7 +396,7 @@ export default function RunPanel({ state, driving, error, busy, errors = {}, fre
             {driving && <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:' + MUTED + ';')}><Svg w={14} sw={2.4} style={s('animation:rivaSpin 1s linear infinite;')}>{Icons.spinner}</Svg>working</span>}
             {!driving && !state.done && !state.waiting && <Hover tag="button" onClick={onContinue} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;">Continue</Hover>}
             {run.status === 'done'
-              ? <Hover tag="button" onClick={() => onStart('all')} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;"><Svg w={14} sw={2.4}>{Icons.sparkle}</Svg>Defragment again</Hover>
+              ? <Hover tag="button" onClick={() => onStart('all')} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;">Defragment again</Hover>
               : <Hover tag="button" onClick={onCancel} disabled={busy} base={btn('#fff', MUTED)} hover="background:#f4f7f8;">Stop</Hover>}
           </div>
         </div>

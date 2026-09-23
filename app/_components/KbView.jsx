@@ -7,7 +7,6 @@ function KbCard({ d }) {
   return (
     <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:14px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
       <div style={s('display:flex;align-items:center;gap:14px;padding:16px 20px;')}>
-        <span style={s('flex:none;width:38px;height:38px;border-radius:9px;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={20}>{Icons.file}</Svg></span>
         <div style={s('flex:1;min-width:0;')}>
           <div style={s('font-size:17px;font-weight:700;line-height:1.25;text-wrap:pretty;')}>{d.title}</div>
           <div style={s('font-size:13.5px;color:#768692;margin-top:2px;')}>{d.subtitle}</div>

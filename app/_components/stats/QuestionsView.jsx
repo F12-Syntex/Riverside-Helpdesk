@@ -84,7 +84,7 @@ function VerdictChip({ verdict }) {
       ink={good ? '#00612f' : '#8a1509'}
       tint={good ? '#e6f4ec' : '#fde8e9'}
       edge={good ? '#a7d8b6' : '#f0b8b3'}
-      icon={good ? Icons.check : Icons.alertCircle}>
+      icon={good ? null : Icons.alertCircle}>
       {verdictLabel(verdict)}
     </Chip>
   );

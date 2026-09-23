@@ -36,7 +36,7 @@ export default function AddGuideModal({ v }) {
                 </div>
               ))}
             </div>
-            <button onClick={v.onAddStep} style={s('margin-top:10px;background:none;border:none;color:#005eb8;font:inherit;font-size:15px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:6px;')}><span><Svg w={17}>{Icons.plus}</Svg></span>Add step</button>
+            <button onClick={v.onAddStep} style={s('margin-top:10px;background:none;border:none;color:#005eb8;font:inherit;font-size:15px;font-weight:600;cursor:pointer;padding:0;')}>Add step</button>
           </div>
           <div>
             <label style={s('display:block;font-weight:600;font-size:16px;margin-bottom:6px;')}>Tip <span style={s('font-weight:400;color:#768692;')}>(optional)</span></label>

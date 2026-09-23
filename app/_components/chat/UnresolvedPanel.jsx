@@ -23,7 +23,7 @@
 // panel is worse than no panel at all — so pressing Done writes a row and
 // changes nothing else.
 import React, { useState } from 'react';
-import { s, Hover, Svg, Icons } from '../ui';
+import { s, Hover } from '../ui';
 
 // Three states, and they have to be told apart at a glance from three feet away
 // with a patient at the desk.
@@ -77,7 +77,6 @@ export default function UnresolvedPanel({ panel, onAsk, onDismiss }) {
     <div style={s('margin:16px 0 0;background:#fff;border:1px solid #d8e1e5;border-radius:14px;overflow:hidden;')}>
       <div style={s('padding:13px 18px 12px;border-bottom:1px solid #eef1f2;')}>
         <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:9px;')}>
-          <Svg w={16} stroke="#4c6272" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
           <span style={s('flex:1;min-width:0;font-size:17px;font-weight:700;color:#212b32;')}>{panel.title}</span>
           {panel.open > 0 && (
             <span style={s('flex:none;border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;background:#fffdf5;color:#8a6100;border:1px solid #ecd39a;')}>

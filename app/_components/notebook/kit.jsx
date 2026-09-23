@@ -42,22 +42,12 @@ export const NBIcons = {
   sidebar: (<><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></>),
 };
 
-/** A glyph on a tile - the mode menu's shape for naming a thing. */
-export function Tile({ icon, on = false, size = 'md', w }) {
-  return (
-    <span className={cx('nbk-tile', size === 'lg' && 'nbk-tile--lg', on && 'nbk-tile--on')} aria-hidden="true">
-      <Svg w={w || (size === 'lg' ? 18 : 14)} sw={2.1}>{icon}</Svg>
-    </span>
-  );
-}
-
 export const KIT_CSS = `
 :root{
   --nbk-ink:#212b32;--nbk-mut:#4c6272;--nbk-dim:#768692;
   --nbk-line:#dde4e7;--nbk-line-soft:#edf1f3;--nbk-soft:#f2f6f9;--nbk-canvas:transparent;
   --nbk-blue:#005eb8;--nbk-navy:#003087;--nbk-tint:#eaf2fb;
   --nbk-green:#007f3b;--nbk-red:#d5281b;--nbk-amber:#a4610a;
-  --nbk-tile:#eef2f4;
   --nbk-r-xs:8px;--nbk-r-sm:11px;--nbk-r-md:14px;--nbk-r-lg:20px;--nbk-r-xl:22px;
   /* Edges, not glows: a hairline ring for where a surface ends, and a
      shadow only as deep as the thing is lifted. No coloured haze. */
@@ -89,13 +79,6 @@ export const KIT_CSS = `
   box-shadow:var(--nbk-sh-paper);}
 .nbk-paper{background:#fff;box-shadow:var(--nbk-sh-paper);}
 
-/* An icon on a tile: the mode menu's shape, used for every glyph that
-   names a thing rather than does something. */
-.nbk-tile{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
-  border-radius:8px;background:var(--nbk-tile);color:var(--nbk-mut);
-  transition:background-color .14s ease,color .14s ease;}
-.nbk-tile--lg{width:36px;height:36px;border-radius:11px;}
-.nbk-tile--on{background:var(--nbk-blue);color:#fff;}
 
 /* ------------------------------ buttons ----------------------------- */
 .nbk-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;
@@ -192,21 +175,9 @@ export const KIT_CSS = `
 .nbk-banner--danger{background:#fdecea;border-color:#f0c6c1;color:#a81d13;}
 .nbk-banner--success{background:#e8f5ed;border-color:#b9ddc8;color:#00612f;}
 
-/* The empty state: its icon on a tile with two more fanned out behind
-   it, which spread when the pointer comes near (the 21st.dev "Empty
-   State"), on a dashed plate rather than a glow. */
+/* The empty state: a title, a line of explanation and an action. */
 .nbk-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
   padding:48px 24px;text-align:center;color:var(--nbk-mut);animation:nbk-in .45s var(--nbk-ease) both;}
-.nbk-empty__icon{position:relative;z-index:0;width:52px;height:52px;margin:6px 0 14px;display:flex;align-items:center;justify-content:center;
-  border-radius:14px;background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
-.nbk-empty__icon::before,.nbk-empty__icon::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;
-  background:#fff;box-shadow:var(--nbk-sh-1);transition:transform .45s var(--nbk-ease);}
-.nbk-empty__icon::before{transform:translate(-14px,5px) rotate(-10deg) scale(.9);}
-.nbk-empty__icon::after{transform:translate(14px,5px) rotate(10deg) scale(.9);}
-.nbk-empty:hover .nbk-empty__icon::before{transform:translate(-26px,2px) rotate(-16deg) scale(.92);}
-.nbk-empty:hover .nbk-empty__icon::after{transform:translate(26px,2px) rotate(16deg) scale(.92);}
-.nbk-empty__icon>svg{transition:transform .45s var(--nbk-ease);}
-.nbk-empty:hover .nbk-empty__icon>svg{transform:translateY(-2px) scale(1.06);}
 .nbk-empty__title{font-size:17px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
 .nbk-empty__body{max-width:380px;font-size:14px;line-height:1.6;margin-bottom:8px;}
 
@@ -221,18 +192,16 @@ export const KIT_CSS = `
   -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);}
 .nbk-marquee__track{display:flex;flex-direction:column;gap:8px;padding:4px 10px;animation:nbk-marquee var(--nbk-marquee-s,20s) linear infinite;}
 .nbk-marquee:hover .nbk-marquee__track,.nbk-marquee:focus-within .nbk-marquee__track{animation-play-state:paused;}
-.nbk-mrow{flex:none;display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 12px 0 9px;border:none;border-radius:11px;
+.nbk-mrow{flex:none;display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 12px;border:none;border-radius:11px;
   background:#fff;box-shadow:var(--nbk-sh-1);font:inherit;text-align:left;cursor:pointer;
   transition:box-shadow .15s ease,transform .15s ease;}
 .nbk-mrow:hover{box-shadow:0 0 0 1px #aac7e0,0 1px 2px rgba(33,43,50,.06);}
-.nbk-mrow:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-mrow:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
 .nbk-mrow__title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:650;color:var(--nbk-ink);}
 .nbk-mrow__meta{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--nbk-dim);}
 .nbk-mrow--skel{cursor:default;}
 .nbk-skel{display:block;height:9px;border-radius:999px;background:linear-gradient(90deg,#eef2f4 0%,#f6f8f9 40%,#eef2f4 80%);
   background-size:200% 100%;animation:nbk-skel 1.6s linear infinite;}
-.nbk-skel--tile{flex:none;width:26px;height:26px;border-radius:8px;}
 @keyframes nbk-marquee{from{transform:translateY(0);}to{transform:translateY(-50%);}}
 @keyframes nbk-skel{from{background-position:100% 0;}to{background-position:-100% 0;}}
 
@@ -247,11 +216,6 @@ export const KIT_CSS = `
 .nbk-modal--lg{max-width:940px;}
 .nbk-modal--xl{max-width:1280px;}
 .nbk-modal__head{flex:none;display:flex;align-items:flex-start;gap:14px;padding:22px 22px 14px;}
-.nbk-modal__icon{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
-  justify-content:center;background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
-.nbk-modal__icon--danger{background:#fef3f2;color:var(--nbk-red);box-shadow:0 0 0 1px #f6d3cf;}
-.nbk-modal__icon--warn{background:#fdf8ef;color:var(--nbk-amber);box-shadow:0 0 0 1px #efdcb7;}
-.nbk-modal__icon--success{background:#eef8f2;color:var(--nbk-green);box-shadow:0 0 0 1px #c6e4d1;}
 .nbk-modal__title{margin:0;padding-top:1px;font-size:18.5px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
 .nbk-modal__sub{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--nbk-mut);}
 .nbk-modal__body{flex:1;min-height:0;overflow:auto;padding:4px 22px 8px;font-size:14px;line-height:1.6;color:var(--nbk-mut);}
@@ -269,19 +233,13 @@ export const KIT_CSS = `
   display:flex;flex-direction:column;padding:6px;background:#fff;border:1px solid #e1e8ec;
   border-radius:18px;box-shadow:var(--nbk-sh-2);animation:nbk-pop .2s var(--nbk-ease);}
 .nbk-menu__item{display:flex;align-items:center;gap:11px;width:100%;border:none;background:none;border-radius:12px;
-  min-height:38px;padding:5px 8px;font:inherit;font-size:14px;font-weight:600;color:var(--nbk-ink);text-align:left;cursor:pointer;
+  min-height:38px;padding:5px 10px;font:inherit;font-size:14px;font-weight:600;color:var(--nbk-ink);text-align:left;cursor:pointer;
   transition:background-color .14s ease,color .14s ease;}
-.nbk-menu__item .nbk-tile{width:26px;height:26px;}
 .nbk-menu__item:hover,.nbk-menu__item:focus-visible{background:var(--nbk-soft);outline:none;}
-.nbk-menu__item:hover .nbk-tile{background:#e3ebf0;color:var(--nbk-blue);}
 .nbk-menu__item--accent{color:var(--nbk-blue);}
-.nbk-menu__item--accent .nbk-tile{background:var(--nbk-tint);color:var(--nbk-blue);}
 .nbk-menu__item--accent:hover{background:var(--nbk-tint);}
-.nbk-menu__item--accent:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-menu__item--danger{color:#a81d13;}
-.nbk-menu__item--danger .nbk-tile{background:#fdecea;color:var(--nbk-red);}
 .nbk-menu__item--danger:hover{background:#fdf4f3;}
-.nbk-menu__item--danger:hover .nbk-tile{background:var(--nbk-red);color:#fff;}
 .nbk-menu__label{padding:9px 10px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--nbk-dim);}
 .nbk-menu__sep{height:1px;background:var(--nbk-line-soft);margin:5px 6px;}
 .nbk-menu__opt{display:flex;align-items:flex-start;gap:10px;width:100%;border:none;background:none;border-radius:12px;
@@ -312,9 +270,6 @@ export const KIT_CSS = `
 .nbk-row__btn{flex:1;min-width:0;display:flex;align-items:center;gap:9px;border:none;background:none;font:inherit;
   font-size:14px;color:var(--nbk-ink);text-align:left;padding:5px 2px;cursor:pointer;border-radius:9px;}
 .nbk-row__btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
-.nbk-row__btn .nbk-tile{width:24px;height:24px;border-radius:7px;}
-.nbk-row:hover .nbk-tile{background:#e3ebf0;color:var(--nbk-blue);}
-.nbk-row--on .nbk-tile,.nbk-row--on:hover .nbk-tile{background:var(--nbk-blue);color:#fff;}
 .nbk-row--on .nbk-row__btn{color:var(--nbk-blue);font-weight:650;}
 .nbk-row--top>.nbk-row__btn{font-weight:650;}
 .nbk-row__name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -429,7 +384,6 @@ export const KIT_CSS = `
   .nbk-overlay,.nbk-modal,.nbk-menu,.nbk-toast,.nbk-empty,.nbk-void,.nbk-kids,.nbk-status,.nbk-skel{animation:none;}
   .nbk-marquee__track{animation:none;}
   .nbk-marquee{overflow-y:auto;}
-  .nbk-empty__icon::before,.nbk-empty__icon::after,.nbk-empty__icon>svg{transition:none;}
   .nbk-tabs__pill,.nbk-row__twist svg{transition:none;}
   .nbk-bar__fill::after,.nbk-status--saving .nbk-status__dot::after{animation:none;}
   .nbk-bar__fill--idle{animation:none;margin-left:0;width:100%;opacity:.45;}
@@ -540,10 +494,9 @@ export function Banner({ tone = 'info', icon, children, actions }) {
   );
 }
 
-export function EmptyState({ icon, title, body, action }) {
+export function EmptyState({ title, body, action }) {
   return (
     <div className="nbk-empty">
-      {icon && <div className="nbk-empty__icon"><Svg w={26} sw={1.8}>{icon}</Svg></div>}
       {title && <div className="nbk-empty__title">{title}</div>}
       {body && <div className="nbk-empty__body">{body}</div>}
       {action}
@@ -569,7 +522,6 @@ export function EmptyMarquee({ items = [], onPick, title, body, action }) {
             if (r.skel) {
               return (
                 <div key={i} className="nbk-mrow nbk-mrow--skel">
-                  <span className="nbk-skel nbk-skel--tile" />
                   <span className="nbk-skel" style={{ width: 34 + ((i * 29) % 40) + '%' }} />
                 </div>
               );
@@ -577,7 +529,6 @@ export function EmptyMarquee({ items = [], onPick, title, body, action }) {
             return (
               <button key={i} type="button" className="nbk-mrow" tabIndex={copy ? -1 : undefined} aria-hidden={copy || undefined}
                 onClick={() => onPick && onPick(r.id)}>
-                <Tile icon={Icons.fileLines} />
                 <span className="nbk-mrow__title">{r.title || 'Untitled'}</span>
                 {r.meta && <span className="nbk-mrow__meta">{r.meta}</span>}
               </button>
@@ -611,7 +562,7 @@ export function ProgressBar({ done = 0, total = 0 }) {
  * is the only thing that changes between a delete confirmation and a
  * full side-by-side diff.
  */
-export function Modal({ title, subtitle, icon, tone = '', size = 'md', onClose, footer, footerSplit = false, children, flush = false, dismissable = true, labelledBy }) {
+export function Modal({ title, subtitle, size = 'md', onClose, footer, footerSplit = false, children, flush = false, dismissable = true, labelledBy }) {
   React.useEffect(() => {
     if (!dismissable || !onClose) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } };
@@ -623,9 +574,8 @@ export function Modal({ title, subtitle, icon, tone = '', size = 'md', onClose, 
     <div className="nbk-overlay" onMouseDown={(e) => { if (dismissable && onClose && e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={labelledBy ? undefined : title}
         className={cx('nbk-modal', 'nbk-modal--' + size)} onMouseDown={(e) => e.stopPropagation()}>
-        {(title || icon) && (
+        {title && (
           <div className="nbk-modal__head">
-            {icon && <div className={cx('nbk-modal__icon', tone && 'nbk-modal__icon--' + tone)}><Svg w={19} sw={2}>{icon}</Svg></div>}
             <div style={{ flex: 1, minWidth: 0 }}>
               {title && <h2 className="nbk-modal__title">{title}</h2>}
               {subtitle && <p className="nbk-modal__sub">{subtitle}</p>}
@@ -641,9 +591,9 @@ export function Modal({ title, subtitle, icon, tone = '', size = 'md', onClose, 
 }
 
 /** A destructive (or one-button) confirmation, in the shape of the Modal. */
-export function ConfirmModal({ title, message, confirmLabel = 'Delete', tone = 'danger', icon, soleButton = false, onConfirm, onClose, busy = false }) {
+export function ConfirmModal({ title, message, confirmLabel = 'Delete', tone = 'danger', soleButton = false, onConfirm, onClose, busy = false }) {
   return (
-    <Modal size="sm" tone={tone} icon={icon || (tone === 'danger' ? Icons.triangle : Icons.infoCircle)} title={title} onClose={onClose}
+    <Modal size="sm" title={title} onClose={onClose}
       footer={<>
         {!soleButton && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
         <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} loading={busy} disabled={busy}>{confirmLabel}</Button>
@@ -657,7 +607,7 @@ export function ConfirmModal({ title, message, confirmLabel = 'Delete', tone = '
 export function ProgressModal({ title, message, done, total, unit = '', footnote }) {
   const known = total > 0;
   return (
-    <Modal size="sm" icon={Icons.refresh} title={title} subtitle={message} dismissable={false}>
+    <Modal size="sm" title={title} subtitle={message} dismissable={false}>
       <div role="status" aria-live="polite" style={{ paddingBottom: '6px' }}>
         <ProgressBar done={done} total={total} />
         <div style={{ marginTop: '10px', fontSize: '13px', color: T.dim }}>
@@ -732,10 +682,9 @@ export function Menu({ x, y, flipY, width = 216, children, onMouseDown }) {
   );
 }
 
-export function MenuItem({ icon, tone = '', children, ...rest }) {
+export function MenuItem({ tone = '', children, ...rest }) {
   return (
     <button type="button" {...rest} className={cx('nbk-menu__item', tone && 'nbk-menu__item--' + tone)}>
-      {icon && <Tile icon={icon} />}
       <span style={{ flex: 1, minWidth: 0 }}>{children}</span>
     </button>
   );

@@ -212,7 +212,6 @@ function NavRow({ item, active, onNavigate }) {
       className={'riva-menu-row' + (active ? ' is-active' : '')}
       aria-current={active ? 'page' : undefined}
     >
-      <span className="riva-menu-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
       <span className="riva-menu-label">{item.label}</span>
     </Link>
   );
@@ -263,7 +262,6 @@ function Palette({ onClose }) {
           {rows.map((item, i) => (
             <button key={item.href} type="button" onClick={() => go(item)} onMouseMove={() => setSel(i)}
               className={'riva-palette-row' + (i === sel ? ' is-sel' : '')}>
-              <span className="riva-menu-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
               <span className="riva-palette-label">{item.label}</span>
               <span className="riva-palette-group">{item.group}</span>
             </button>

@@ -33,11 +33,6 @@ const LK_CSS = `
 .lk-main{flex:1;width:100%;max-width:860px;margin:0 auto;padding:22px 24px 140px;}
 @keyframes lk-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
-.lk-tile{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;
-  background:#eef2f4;color:var(--rv-ink-2);transition:background-color .15s ease,color .15s ease;}
-.lk-tile--on{background:var(--rv-accent);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.12);}
-.lk-tile--warn{background:#fdf8ef;color:#a4610a;box-shadow:0 0 0 1px #efdcb7;}
-
 /* ---- the heading over the list ---- */
 .lk-head{display:flex;align-items:center;gap:12px;margin:0 2px 12px;animation:lk-in .45s cubic-bezier(.2,.8,.3,1) both;}
 .lk-head__text{flex:1;min-width:0;}
@@ -56,8 +51,7 @@ const LK_CSS = `
 .lk-row:hover{background:#f8fafc;}
 .lk-row.is-sel{background:#f2f7fc;}
 .lk-row.is-sel::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--rv-accent);}
-.lk-row.is-sel .lk-tile{background:var(--rv-accent);color:#fff;}
-.lk-row__main{flex:1 1 260px;min-width:0;display:flex;align-items:flex-start;gap:12px;}
+.lk-row__main{flex:1 1 260px;min-width:0;display:flex;align-items:flex-start;}
 .lk-row__text{flex:1;min-width:0;}
 .lk-row__label{display:block;font-size:15.5px;font-weight:650;color:var(--rv-ink);line-height:1.35;overflow-wrap:anywhere;}
 .lk-row__note{display:block;margin-top:2px;font-size:13px;line-height:1.45;color:var(--rv-ink-2);}
@@ -85,22 +79,10 @@ const LK_CSS = `
   font-size:13px;font-weight:650;text-decoration:none;word-break:break-all;}
 .lk-mail:hover{background:#e8f1f8;}
 
-/* ---- empty states: the icon on a tile, two more fanned behind it ---- */
+/* ---- empty states: a title and what to do next, on glass ---- */
 .lk-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:34px 26px 30px;border-radius:22px;
   background:var(--rv-glass);border:1px solid var(--rv-glass-line);-webkit-backdrop-filter:var(--rv-glass-blur);backdrop-filter:var(--rv-glass-blur);
   box-shadow:0 0 0 1px rgba(33,43,50,.04),0 4px 12px -4px rgba(33,43,50,.07);animation:lk-in .45s cubic-bezier(.2,.8,.3,1) both;}
-.lk-empty__icon{position:relative;z-index:0;width:52px;height:52px;margin:4px 0 16px;display:flex;align-items:center;justify-content:center;
-  border-radius:14px;background:#fff;color:var(--rv-accent);box-shadow:0 0 0 1px rgba(33,43,50,.06),0 1px 2px rgba(33,43,50,.06);}
-.lk-empty__icon::before,.lk-empty__icon::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:#fff;
-  box-shadow:0 0 0 1px rgba(33,43,50,.06),0 1px 2px rgba(33,43,50,.06);transition:transform .45s cubic-bezier(.2,.8,.3,1);}
-.lk-empty__icon::before{transform:translate(-14px,5px) rotate(-10deg) scale(.9);}
-.lk-empty__icon::after{transform:translate(14px,5px) rotate(10deg) scale(.9);}
-.lk-empty:hover .lk-empty__icon::before{transform:translate(-26px,2px) rotate(-16deg) scale(.92);}
-.lk-empty:hover .lk-empty__icon::after{transform:translate(26px,2px) rotate(16deg) scale(.92);}
-.lk-empty__icon>svg{transition:transform .45s cubic-bezier(.2,.8,.3,1);}
-.lk-empty:hover .lk-empty__icon>svg{transform:translateY(-2px) scale(1.06);}
-.lk-empty--warn .lk-empty__icon{color:#a4610a;}
-.lk-empty--error .lk-empty__icon{color:#d5281b;}
 .lk-empty__title{margin:0;font-size:18px;font-weight:750;letter-spacing:-.015em;color:var(--rv-ink);line-height:1.3;}
 .lk-empty__body{margin:8px auto 0;max-width:52ch;font-size:14.5px;line-height:1.6;color:var(--rv-ink-2);}
 .lk-empty__fine{margin:14px auto 0;max-width:52ch;font-size:12.5px;line-height:1.5;color:var(--rv-ink-3);}
@@ -160,17 +142,18 @@ const LK_CSS = `
 .lk-page{display:flex;align-items:center;gap:12px;padding:11px 16px;text-decoration:none;color:inherit;transition:background-color .15s ease;}
 .lk-page + .lk-page{border-top:1px solid #edf1f3;}
 .lk-page:hover{background:#f8fafc;}
-.lk-page:hover .lk-tile{background:var(--rv-accent);color:#fff;}
 .lk-page__title{display:block;font-size:14.5px;font-weight:650;color:var(--rv-accent);line-height:1.35;overflow-wrap:anywhere;}
+.lk-page__ext{flex:none;margin-left:auto;display:flex;color:var(--rv-ink-3);}
+.lk-page:hover .lk-page__ext{color:var(--rv-accent);}
 .lk-page__url{display:block;margin-top:2px;font-size:12px;color:var(--rv-ink-3);overflow-wrap:anywhere;}
 
 /* ---- the copied toast ---- */
 .lk-toast{position:fixed;left:50%;bottom:calc(var(--riva-dock-field-h) + var(--riva-dock-pad-b) + 22px);transform:translateX(-50%);z-index:60;
-  max-width:calc(100vw - 32px);display:flex;align-items:center;gap:10px;padding:6px 16px 6px 6px;border-radius:999px;background:#fff;
+  max-width:calc(100vw - 32px);display:flex;align-items:center;gap:10px;padding:8px 16px 8px 14px;border-radius:999px;background:#fff;
   font-size:14px;font-weight:650;color:var(--rv-ink);
   box-shadow:0 0 0 1px rgba(33,43,50,.07),0 8px 16px -4px rgba(33,43,50,.1),0 28px 56px -12px rgba(33,43,50,.22);
   animation:lk-toast .28s cubic-bezier(.2,.8,.3,1) both;}
-.lk-toast .lk-tile{width:28px;height:28px;border-radius:999px;background:var(--rv-green);color:#fff;}
+.lk-toast__ico{flex:none;display:flex;color:var(--rv-green);}
 @keyframes lk-toast{from{opacity:0;transform:translate(-50%,8px) scale(.97);}to{opacity:1;transform:translateX(-50%);}}
 
 /* ---- the search card ---- */
@@ -204,7 +187,6 @@ const LK_CSS = `
 @media (max-width:600px){
   .lk-main{padding:16px 16px 130px;}
   .lk-row{padding:12px 14px;}
-  .lk-row__main .lk-tile{display:none;}
   .lk-head__note{display:none;}
   .lk-input{font-size:17px;}
   .lk-search__keys{display:none;}
@@ -216,40 +198,17 @@ const LK_CSS = `
 }
 `;
 
-// Service kinds the register uses most, drawn so a row says what it is at a
-// glance: a dentist from a care home from a hospital.
-const KIND_ICONS = {
-  hospital: (<><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M12 7v6M9 10h6" /><path d="M10 21v-4h4v4" /></>),
-  tooth: (<path d="M7 3c-2.2 0-3.5 1.9-3.5 4.3 0 2.6 1.3 4 1.8 6.4.5 2.4.7 7.3 2.7 7.3 1.7 0 1.6-5.6 4-5.6s2.3 5.6 4 5.6c2 0 2.2-4.9 2.7-7.3.5-2.4 1.8-3.8 1.8-6.4C20.5 4.9 19.2 3 17 3c-1.9 0-2.9 1.2-5 1.2S8.9 3 7 3z" />),
-  care: Icons.home,
-  gp: Icons.stethoscope,
-  ambulance: (<><path d="M3 17V8a1 1 0 0 1 1-1h10v10" /><path d="M14 10h4l3 4v3h-7" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /><path d="M8.5 10v4M6.5 12h4" /></>),
-};
-
-function kindIcon(entry) {
-  if (entry.source !== 'cqc') return KIND_ICONS.hospital;
-  const t = (entry.types || '').toLowerCase();
-  if (t.includes('dentist')) return KIND_ICONS.tooth;
-  if (t.includes('hospital') || t.includes('hospice') || t.includes('urgent care')) return KIND_ICONS.hospital;
-  if (t.includes('doctors') || t.includes('clinic') || t.includes('diagnosis')) return KIND_ICONS.gp;
-  if (t.includes('ambulance')) return KIND_ICONS.ambulance;
-  if (t.includes('home') || t.includes('supported') || t.includes('shared lives')) return KIND_ICONS.care;
-  return Icons.stethoscope;
-}
-
 // A key, drawn as one.
 function Kbd({ children }) {
   return <kbd className="riva-kbd">{children}</kbd>;
 }
 
 // The states that are not a list of results: nothing typed, nothing found,
-// nothing on the web. The icon sits on a tile with two fanned behind it, on
-// a pane of glass, so the page reads as having an answer rather than as
-// having broken.
-function EmptyState({ icon, tone = 'quiet', title, children }) {
+// nothing on the web. On a pane of glass, so the page reads as having an
+// answer rather than as having broken.
+function EmptyState({ title, children }) {
   return (
-    <div className={'lk-empty' + (tone !== 'quiet' ? ' lk-empty--' + tone : '')}>
-      <span className="lk-empty__icon"><Svg w={24} sw={1.9}>{icon}</Svg></span>
+    <div className="lk-empty">
       <h2 className="lk-empty__title">{title}</h2>
       {children}
     </div>
@@ -264,7 +223,6 @@ function Skeleton() {
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="lk-row">
           <span className="lk-row__main">
-            <span className="lk-skel" style={s('flex:none;width:34px;height:34px;border-radius:11px;')} />
             <span style={s('flex:1;min-width:0;padding-top:3px;')}>
               <span className="lk-skel" style={s('height:13px;width:' + ['58%', '44%', '66%', '50%'][i] + ';')} />
               <span className="lk-skel" style={s('margin-top:9px;width:' + ['76%', '62%', '70%', '58%'][i] + ';')} />
@@ -339,7 +297,6 @@ function EntryRow({ entry, query, selected, flash }) {
   return (
     <div id={'lk-' + entry.id} className={'lk-row' + (selected ? ' is-sel' : '')}>
       <span className="lk-row__main">
-        <span className="lk-tile" aria-hidden="true"><Svg w={17} sw={1.9}>{kindIcon(entry)}</Svg></span>
         <span className="lk-row__text">
           <span className="lk-row__label">
             <Highlighted label={entry.label} query={query} />
@@ -495,9 +452,6 @@ export default function Page() {
         {results.length ? (
           <>
             <div className="lk-head">
-              <span className="lk-tile lk-tile--on" aria-hidden="true">
-                <Svg w={17} sw={2}>{trimmed ? Icons.search : Icons.phone}</Svg>
-              </span>
               <span className="lk-head__text">
                 <span className="lk-head__title">
                   {trimmed
@@ -532,7 +486,7 @@ export default function Page() {
         {/* One character is not a search — the register is not even asked. Say
             that, rather than showing a "Searching…" that never finishes. */}
         {tooShort ? (
-          <EmptyState icon={Icons.search} title="Keep typing">
+          <EmptyState title="Keep typing">
             <p className="lk-empty__body">
               Two letters or more, and the register is searched as you type.
             </p>
@@ -547,7 +501,7 @@ export default function Page() {
             search, and offer the web rather than a dead end. The web is not
             automatic: it costs a model call, so the reader asks for it. */}
         {nothingFound && !webShown ? (
-          <EmptyState icon={Icons.search} tone="warn" title={'No match for “' + trimmed + '”'}>
+          <EmptyState title={'No match for “' + trimmed + '”'}>
             <p className="lk-empty__body">
               This searches the CQC register — GP practices, dentists, hospitals, clinics,
               care and nursing homes. Pharmacies, interpreting lines, individual hospital
@@ -555,7 +509,6 @@ export default function Page() {
             </p>
 
             <button type="button" className="lk-btn lk-btn--primary" onClick={() => searchWeb(trimmed)}>
-              <Svg w={17} sw={2.2}>{Icons.globe}</Svg>
               Search the web for a number
             </button>
             <div className="lk-hint">or press <Kbd>Enter</Kbd></div>
@@ -579,7 +532,6 @@ export default function Page() {
         {webShown ? (
           <section className="lk-web" aria-label="From the web">
             <div className="lk-web__head">
-              <span className="lk-tile lk-tile--warn" aria-hidden="true"><Svg w={17} sw={2}>{Icons.globe}</Svg></span>
               <span style={s('min-width:0;')}>
                 <span className="lk-web__title">From the web</span>
                 <span className="lk-web__sub">Not the CQC register — check before using</span>
@@ -629,7 +581,7 @@ export default function Page() {
                     all, so the commonest failure — pages found, none of them
                     publishing a number — ended on a list of dead links. */}
                 {!web.contacts.length ? (
-                  <EmptyState icon={Icons.alertCircle} tone="error" title="No number found for this one">
+                  <EmptyState title="No number found for this one">
                     <p className="lk-empty__body">
                       {web.reason
                         || (web.results.length
@@ -657,13 +609,11 @@ export default function Page() {
                     </div>
                     {web.results.map((r) => (
                       <a key={r.url} href={r.url} target="_blank" rel="noreferrer" className="lk-page">
-                        <span className="lk-tile" aria-hidden="true" style={s('width:28px;height:28px;border-radius:9px;')}>
-                          <Svg w={14} sw={2}>{Icons.external}</Svg>
-                        </span>
                         <span style={s('min-width:0;')}>
                           <span className="lk-page__title">{r.title}</span>
                           <span className="lk-page__url">{r.url}</span>
                         </span>
+                        <span className="lk-page__ext" aria-hidden="true"><Svg w={14} sw={2}>{Icons.external}</Svg></span>
                       </a>
                     ))}
                   </div>
@@ -697,7 +647,7 @@ export default function Page() {
           own height the moment anyone copied a number. */}
       {flash ? (
         <div role="status" className="lk-toast">
-          <span className="lk-tile" aria-hidden="true"><Svg w={15} sw={2.6}>{Icons.check}</Svg></span>
+          <span className="lk-toast__ico" aria-hidden="true"><Svg w={15} sw={2.6}>{Icons.check}</Svg></span>
           <span style={s('min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>Copied {flash}</span>
         </div>
       ) : null}

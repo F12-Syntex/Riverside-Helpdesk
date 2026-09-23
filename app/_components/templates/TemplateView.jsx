@@ -20,7 +20,7 @@ import ProfMessage from './ProfMessage';
 import PathologyForm from './PathologyForm';
 
 const TONE = {
-  info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: Icons.infoCircle },
+  info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: null },
   warn: { bar: '#ecd39a', bg: '#fffdf5', ink: '#8a6100', icon: Icons.alertCircle },
   critical: { bar: '#d5281b', bg: '#fdf4f3', ink: '#a51b0f', icon: Icons.alertCircle },
 };
@@ -78,7 +78,7 @@ function Note({ tone, text }) {
   const t = TONE[tone] || TONE.info;
   return (
     <div style={s('display:flex;gap:9px;align-items:flex-start;border-left:4px solid ' + t.bar + ';background:' + t.bg + ';border-radius:0 10px 10px 0;padding:10px 14px;')}>
-      <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke={t.bar} sw={2.2}>{t.icon}</Svg></span>
+      {t.icon && <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke={t.bar} sw={2.2}>{t.icon}</Svg></span>}
       <span style={s('font-size:14.5px;line-height:1.5;color:' + t.ink + ';')}><Rich text={text} /></span>
     </div>
   );
@@ -94,7 +94,7 @@ function Expand({ label, hint, blocks }) {
       <Hover tag="button" type="button" onClick={() => setOpen(!open)}
         base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:12px 16px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;"
         hover="background:#f7fbff;">
-        <Svg w={16} sw={2.4} style={s('flex:none;transition:transform .15s ease;' + (open ? 'transform:rotate(90deg);' : ''))}>{Icons.arrow}</Svg>
+        <Svg w={16} sw={2.4} style={s('flex:none;transition:transform .15s ease;' + (open ? 'transform:rotate(90deg);' : ''))}>{Icons.chevronRight}</Svg>
         <span style={s('flex:1;min-width:0;')}>{label}</span>
       </Hover>
       {open && (

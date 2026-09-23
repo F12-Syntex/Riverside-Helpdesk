@@ -13,7 +13,7 @@ import { s, Hover, Svg, Icons } from './ui';
  * notebook, a guide as a question asked here.
  * ------------------------------------------------------------------ */
 
-function Row({ depth = 0, open, hasChildren, icon, label, meta, onClick, tag = 'button', href }) {
+function Row({ depth = 0, open, hasChildren, label, meta, onClick, tag = 'button', href }) {
   const pad = 12 + depth * 20;
   const extra = tag === Link ? { href } : {};
   return (
@@ -26,7 +26,6 @@ function Row({ depth = 0, open, hasChildren, icon, label, meta, onClick, tag = '
       <span style={s('flex:none;width:16px;display:flex;color:#8a99a3;transform:rotate(' + (hasChildren && open ? 90 : 0) + 'deg);transition:transform .15s ease;')}>
         {hasChildren ? <Svg w={14} sw={2.6}>{Icons.chevronRight}</Svg> : null}
       </span>
-      {icon && <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={15} sw={2}>{icon}</Svg></span>}
       <span style={s('flex:1;min-width:0;font-size:15px;font-weight:' + (depth === 0 ? 700 : 400) + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{label}</span>
       {meta ? <span style={s('flex:none;font-size:12.5px;color:#8a99a3;')}>{meta}</span> : null}
     </Hover>
@@ -44,7 +43,6 @@ function NoteBranch({ note, childrenOf, depth, openKeys, toggle }) {
         depth={depth}
         open={open}
         hasChildren={kids.length > 0}
-        icon={kids.length ? Icons.folder : Icons.fileLines}
         label={note.title || 'Untitled note'}
         tag={kids.length ? 'button' : Link}
         href={kids.length ? undefined : '/notebook'}
@@ -102,9 +100,9 @@ export default function SourcesView({ v }) {
           const open = openKeys.has(key);
           return (
             <div key={g.key}>
-              <Row depth={1} open={open} hasChildren icon={Icons.folder} label={g.label} meta={g.docs.length} onClick={() => toggle(key)} />
+              <Row depth={1} open={open} hasChildren label={g.label} meta={g.docs.length} onClick={() => toggle(key)} />
               {open && g.docs.map((d) => (
-                <Row key={d.docId} depth={2} icon={Icons.file} label={d.title} meta={d.subtitle}
+                <Row key={d.docId} depth={2} label={d.title} meta={d.subtitle}
                   onClick={d.canOpen ? d.onOpen : undefined} />
               ))}
             </div>
@@ -122,13 +120,13 @@ export default function SourcesView({ v }) {
 
       {section('contacts', 'Telephone directory', (v.sourceContacts || []).length || '', (
         (v.sourceContacts || []).map((c) => (
-          <Row key={c.key} depth={1} icon={Icons.phone} label={c.label} meta={c.number} onClick={c.onPick} />
+          <Row key={c.key} depth={1} label={c.label} meta={c.number} onClick={c.onPick} />
         ))
       ))}
 
       {section('guides', 'Written guides', (v.sourceGuides || []).length || '', (
         (v.sourceGuides || []).map((g) => (
-          <Row key={g.key} depth={1} icon={Icons.book} label={g.question} onClick={g.onAsk} />
+          <Row key={g.key} depth={1} label={g.question} onClick={g.onAsk} />
         ))
       ))}
     </div>

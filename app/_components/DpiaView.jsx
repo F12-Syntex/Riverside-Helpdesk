@@ -45,11 +45,8 @@ export default function DpiaView() {
       <div className="riva-dpia-sheet" style={s(sheet)}>
 
         {/* Masthead */}
-        <div style={s('display:flex;gap:16px;align-items:flex-start;border-bottom:3px solid #005eb8;padding-bottom:22px;')}>
-          <span style={s('flex:none;width:52px;height:52px;border-radius:10px;background:#e8f1f8;display:inline-flex;align-items:center;justify-content:center;color:#005eb8;')}>
-            <Svg w={28} sw={1.8}>{Icons.shield}</Svg>
-          </span>
-          <div style={s('flex:1;min-width:0;')}>
+        <div style={s('border-bottom:3px solid #005eb8;padding-bottom:22px;')}>
+          <div>
             <div style={s('font-size:13px;font-weight:700;color:#768692;text-transform:uppercase;letter-spacing:.06em;')}>{d.program} · Sample DPIA template</div>
             <h1 className="riva-hero-h1" style={s('font-size:30px;font-weight:800;margin:4px 0 8px;letter-spacing:-0.02em;')}>{d.title}</h1>
             <p style={s('font-size:16px;color:#4c6272;line-height:1.5;margin:0;text-wrap:pretty;')}>{d.subtitle}</p>
