@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.22.3` | 2026-09-23 | fix | `4b1a6af` | fix: cut the AccurX card down to where, why, reason and booking |
+| `6.22.2` | 2026-09-23 | docs | `a0d76e9` | docs: record 6.22.0 and 6.22.1 in the versions table |
 | `6.22.1` | 2026-09-23 | fix | `9fb5574` | fix: strip decorative filler icons from the interface |
 | `6.22.0` | 2026-09-23 | feat | `51f2971` | feat: explain AccurX routes with a fixed set of criteria |
 | `6.21.1` | 2026-09-23 | docs | `a8ecb0b` | docs: record 6.20.3 and 6.21.0 in the versions table |
