@@ -1376,3 +1376,55 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   .riva-rotate, .riva-rotate-ch, .riva-dock-center .riva-composer::before { animation: none; transition: none; }
   .riva-dock-center .riva-composer::before { display: none; }
 }
+
+/* ---- the Q&A's dots (DotField.jsx) -------------------------------- */
+
+/* Three dot grids at three depths behind the conversation, each faded
+   by its own mask and each fainter than the last is large. Together
+   they are texture, not pattern: the answers should look as if they
+   float a little above the page, and no more. */
+.riva-dots { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.riva-dots-layer { position: absolute; inset: 0; overflow: hidden; transition: opacity 1.2s ease; }
+.riva-dots-svg {
+  position: absolute; left: 0; right: 0; top: calc(-1 * var(--riva-dots-gap)); height: calc(100% + var(--riva-dots-gap));
+}
+/* Far: fine and faint, pooled behind the column the answers are in. */
+.riva-dots-far {
+  color: color-mix(in srgb, var(--rv-sky-b) 45%, #4c6272);
+  opacity: .42;
+  -webkit-mask-image: radial-gradient(ellipse 46% 60% at 50% 42%, #000 0%, rgba(0,0,0,.55) 45%, transparent 80%);
+  mask-image: radial-gradient(ellipse 46% 60% at 50% 42%, #000 0%, rgba(0,0,0,.55) 45%, transparent 80%);
+}
+/* Mid: a ring round the column, clear in the middle where the text is. */
+.riva-dots-mid {
+  color: color-mix(in srgb, var(--rv-sky-a) 70%, #005eb8);
+  opacity: .32;
+  -webkit-mask-image: radial-gradient(ellipse 80% 78% at 50% 45%, transparent 28%, #000 58%, rgba(0,0,0,.4) 80%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 78% at 50% 45%, transparent 28%, #000 58%, rgba(0,0,0,.4) 80%, transparent 100%);
+}
+/* Near: the largest and sparsest, a little out of focus, only out at
+   the edges. */
+.riva-dots-near {
+  color: color-mix(in srgb, var(--rv-sky-b) 60%, #003087);
+  opacity: .30; filter: blur(.7px);
+  -webkit-mask-image: radial-gradient(ellipse 95% 90% at 50% 50%, transparent 52%, #000 100%);
+  mask-image: radial-gradient(ellipse 95% 90% at 50% 50%, transparent 52%, #000 100%);
+}
+/* The shell's own edge dither would double up with these; the Q&A has
+   its own now. */
+.riva-shell:has(.riva-dots) .riva-sky-dots { opacity: 0; animation: none; }
+/* Working: the layers drift down, each at its own pace, and firm up a
+   little, the same cue as the light behind them. */
+html[data-busy] .riva-dots-svg { animation: rivaDotsFall 4s linear infinite; }
+html[data-busy] .riva-dots-mid .riva-dots-svg { animation-duration: 2.6s; }
+html[data-busy] .riva-dots-near .riva-dots-svg { animation-duration: 1.8s; }
+html[data-busy] .riva-dots-mid { opacity: .44; }
+html[data-busy] .riva-dots-near { opacity: .4; }
+@keyframes rivaDotsFall { to { transform: translateY(var(--riva-dots-gap)); } }
+@media (max-width: 600px) {
+  .riva-dots-far { opacity: .3; }
+  .riva-dots-near { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-busy] .riva-dots-svg { animation: none; }
+}

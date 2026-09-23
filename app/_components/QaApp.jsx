@@ -17,6 +17,7 @@ import {
 import { s, Hover, Svg, Icons, assetSrc } from './ui';
 import AppHeader from './AppHeader';
 import ChatView from './ChatView';
+import DotField from './DotField';
 import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
 import DocumentViewer from './DocumentViewer';
@@ -1770,6 +1771,10 @@ class RiversidePracticeQA extends React.Component {
         // Set through the style object rather than s(), which would camel-case
         // the custom property out of existence.
         style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;'), '--riva-dock-attached': v.dockAttached }}>
+
+        {/* Dots at three depths behind the conversation (not under Sources,
+            which is a list to read rather than answers to lift). */}
+        {!v.isKb && <DotField />}
 
 
 
