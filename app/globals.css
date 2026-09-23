@@ -1323,3 +1323,32 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 }
 .riva-palette-field { border-bottom: 1px solid #edf1f3 !important; padding: 14px 16px !important; }
 .riva-palette-row { border-radius: 12px !important; min-height: 42px; }
+
+/* ---- the opening screen's light ---------------------------------- */
+
+/* One word of the heading in the theme's colours, drifting slowly. */
+.riva-hero-accent {
+  background-image: linear-gradient(100deg, var(--rv-sky-b), var(--rv-sky-a), var(--rv-sky-c), var(--rv-sky-b));
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: rivaAccentDrift 9s ease-in-out infinite alternate;
+}
+@keyframes rivaAccentDrift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+/* A glow in the theme's colours behind the field while nothing has been
+   asked, turning slowly round it: the one thing on the opening screen
+   that says where to start. Gone once there is an answer to read. */
+@property --riva-glow-turn { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.riva-dock-center .riva-composer::before {
+  content: ''; position: absolute; inset: -6px; z-index: -1; border-radius: 28px; pointer-events: none;
+  background: conic-gradient(from var(--riva-glow-turn), var(--rv-sky-a), var(--rv-sky-c), var(--rv-sky-b), var(--rv-sky-a));
+  filter: blur(22px); opacity: .5;
+  animation: rivaGlowTurn 10s linear infinite, rivaGlowIn 1.2s ease both;
+  transition: opacity .3s ease;
+}
+.riva-dock-center .riva-dock-form:focus-within .riva-composer::before { opacity: .7; }
+@keyframes rivaGlowTurn { to { --riva-glow-turn: 360deg; } }
+@keyframes rivaGlowIn { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .riva-hero-accent, .riva-dock-center .riva-composer::before { animation: none; }
+}
