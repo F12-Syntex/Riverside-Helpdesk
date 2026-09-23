@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.22.5` | 2026-09-23 | fix | `44e4671` | fix: restore the original AccurX card and drop the routing criteria |
+| `6.22.4` | 2026-09-23 | docs | `12e011f` | docs: record 6.22.2 and 6.22.3 in the versions table |
 | `6.22.3` | 2026-09-23 | fix | `4b1a6af` | fix: cut the AccurX card down to where, why, reason and booking |
 | `6.22.2` | 2026-09-23 | docs | `a0d76e9` | docs: record 6.22.0 and 6.22.1 in the versions table |
 | `6.22.1` | 2026-09-23 | fix | `9fb5574` | fix: strip decorative filler icons from the interface |
