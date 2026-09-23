@@ -1772,7 +1772,7 @@ class RiversidePracticeQA extends React.Component {
         // the custom property out of existence.
         style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;'), '--riva-dock-attached': v.dockAttached }}>
 
-        {/* Dots at three depths behind the conversation (not under Sources,
+        {/* Floating particles behind the conversation (not under Sources,
             which is a list to read rather than answers to lift). */}
         {!v.isKb && <DotField />}
 
