@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.22.1` | 2026-09-23 | fix | `9fb5574` | fix: strip decorative filler icons from the interface |
+| `6.22.0` | 2026-09-23 | feat | `51f2971` | feat: explain AccurX routes with a fixed set of criteria |
+| `6.21.1` | 2026-09-23 | docs | `a8ecb0b` | docs: record 6.20.3 and 6.21.0 in the versions table |
 | `6.21.0` | 2026-09-23 | feat | `40dcfe7` | feat: give AccurX answers a card of their own, led by what gets used |
 | `6.20.2` | 2026-09-23 | docs | `e92cc5e` | docs: record 6.20.0 and 6.20.1 in the versions table |
 | `6.20.1` | 2026-09-23 | fix | `0f1c1a8` | fix: light one row at a time in the mode menu, without the yellow |
