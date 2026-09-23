@@ -4,6 +4,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { s, Hover, Svg, Icons } from './ui';
 import { searchContacts } from '@/lib/contacts';
+import ContactSearchLoader from './contacts/ContactSearchLoader';
 
 /* ------------------------------------------------------------------ *
  * The practice directory, over the page rather than instead of it.
@@ -187,7 +188,6 @@ export default function ContactsSheet({ onClose }) {
             <span>
               {results.length} {results.length === 1 ? 'contact' : 'contacts'}{searching ? ' here' : ''}
               {cqcRows.length ? ' · ' + cqcRows.length + ' on the register' : ''}
-              {cqc.loading && searching ? ' · searching the register…' : ''}
             </span>
             {copied && (
               <span style={s('display:inline-flex;align-items:center;gap:6px;font-weight:600;color:#007f3b;')}>
@@ -231,7 +231,7 @@ export default function ContactsSheet({ onClose }) {
                   ))}
                 </ul>
               ) : (
-                <p style={s('margin:6px 4px;font-size:14px;color:#8a99a3;')}>Searching…</p>
+                <ContactSearchLoader compact />
               )}
             </>
           )}

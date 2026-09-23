@@ -3,6 +3,7 @@
 import React from 'react';
 import { s, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
+import ContactSearchLoader from '../_components/contacts/ContactSearchLoader';
 import { highlightRanges } from '../../lib/lookup/fuzzy';
 
 /* ------------------------------------------------------------------ *
@@ -493,7 +494,12 @@ export default function Page() {
           </EmptyState>
         ) : null}
 
-        {searching ? <Skeleton /> : null}
+        {searching ? (
+          <>
+            <ContactSearchLoader total={cqc.total} query={trimmed} />
+            <div style={s('margin-top:12px;')}><Skeleton /></div>
+          </>
+        ) : null}
 
         {/* Nothing in the register. The register only holds CQC-registered
             services, so a pharmacy, an interpreting line or a number off a
