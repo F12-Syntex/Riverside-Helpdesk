@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.14.4` | 2026-09-23 | style | `19d47ce` | style: light the opening screen with a glow round the field |
+| `6.14.3` | 2026-09-23 | docs | `6aad32a` | docs: record 6.14.1 in the versions table |
 | `6.14.2` | 2026-09-23 | style | `7db0f01` | style: drop the glass shapes from the opening screen |
 | `6.14.1` | 2026-09-23 | docs | `10c50ff` | docs: record 6.14.0 in the versions table |
 | `6.14.0` | 2026-09-23 | feat | `9c7c2f9` | feat: redesign the top bar, the light behind it and the working state |
