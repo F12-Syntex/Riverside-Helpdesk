@@ -58,32 +58,17 @@ Re-run after any change to the trigger index, the phrases, or the thresholds:
 ```
 node evals/routing/bench-pages.mjs report.json --repeats 5
 ```
-## The picker baseline — attempted, and blocked
+## The picker baseline — now evals/answer/bench-answer.mjs
 
-`evals/routing/bench-picker.mjs` runs the EXISTING selection call over the same
-cases, with the same schema, the same prompt and the same whole-Notebook block
-the endpoint uses, including the plain-text retry `readValues` falls back to.
-It exists because measuring the router alone measures very little: a turn
-handed back to the picker is no failure if the picker answers it, and a turn
-turned into a question IS a regression if the picker would have answered it
-correctly.
-
-**It has not produced a usable number.** The first run (3 repeats, 156 calls)
-errored on 30% of calls partway through and the second errored on all of them,
-both with `AI_APICallError: This request would exceed your available credits`.
-The practice's OpenRouter key is effectively spent — $118.89 of $120 used at
-the time of writing — so every model call, in this harness and in the live
-assistant, is refused. The partial numbers from the first run are not recorded
-here: half a run against a key that died mid-run is not a measurement.
-
-So the comparison is still open, and it is the one thing that would justify
-turning the router on:
+`bench-picker.mjs` measured a picker that no longer exists: commit b630002 moved
+the agent to one call, and the grounded-answer change after it made that call
+return a CHOICE of pages and quotes, checked in code, instead of prose. Its
+successor is `evals/answer/bench-answer.mjs`, which runs the endpoint's own
+selection call and checks over the same cases:
 
 ```
-node evals/routing/bench-picker.mjs picker.json --repeats 3
+node evals/answer/bench-answer.mjs report.json --repeats 5 --skip-unresolved
 ```
 
-Read `pageCorrectRate` and `pageWrongRate` against the 5.8% and 0% above, and
-`structuredRetryRate` — how often the provider refuses the schema and the
-endpoint pays for a second call — which is also the honest input cost of a turn
-the router would have answered for the price of one embedding.
+Its `wrong` and `answeredAnyway` rates are the numbers to hold the router
+against before turning it on. No full run is recorded yet.
