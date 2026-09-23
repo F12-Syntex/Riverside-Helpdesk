@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.23.5` | 2026-09-23 | fix | `7fe7d68` | fix: drop the coloured left-edge bars from cards and notes |
+| `6.23.4` | 2026-09-23 | fix | `3a2bea2` | fix: show the contacts loader on the first load, not on every search |
+| `6.23.3` | 2026-09-23 | docs | `68247ac` | docs: record 6.22.6 to 6.23.2 in the versions table |
 | `6.23.2` | 2026-09-23 | fix | `7ec023d` | fix: bring plain line icons back to the Notebook |
 | `6.23.1` | 2026-09-23 | fix | `6acb425` | fix: bring standard icons back to answer notes and callouts |
 | `6.23.0` | 2026-09-23 | feat | `a3dab66` | feat: show how many contacts a search is going through while it loads |
