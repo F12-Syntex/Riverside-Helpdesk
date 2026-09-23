@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.16.0` | 2026-09-23 | feat | `f082148` | feat: swap the glows for 21st.dev motion and hairline edges |
+| `6.15.1` | 2026-09-23 | docs | `9e13bb8` | docs: record 6.14.4 and 6.15.0 in the versions table |
 | `6.15.0` | 2026-09-23 | feat | `dca727f` | feat: redesign the Notebook in the shell's glass and paper |
 | `6.14.8` | 2026-09-23 | chore | `65a5df5` | chore: make Mist the default theme |
 | `6.14.7` | 2026-09-23 | docs | `17e4762` | docs: record 6.14.3 in the versions table |
