@@ -20,7 +20,7 @@ import ProfMessage from './ProfMessage';
 import PathologyForm from './PathologyForm';
 
 const TONE = {
-  info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: null },
+  info: { bar: '#005eb8', bg: '#f0f6fb', ink: '#1c3d5a', icon: Icons.infoCircle },
   warn: { bar: '#ecd39a', bg: '#fffdf5', ink: '#8a6100', icon: Icons.alertCircle },
   critical: { bar: '#d5281b', bg: '#fdf4f3', ink: '#a51b0f', icon: Icons.alertCircle },
 };

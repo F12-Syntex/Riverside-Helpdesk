@@ -182,7 +182,8 @@ export default function DocumentViewer({ v }) {
           {/* The full document, formatted, with the passage highlighted (desktop). */}
           {vm.hasFile && (
             <div className="riva-doc-embed" style={s('flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 20px 0;')}>
-              <div style={s('flex:none;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
+              <div style={s('flex:none;display:flex;align-items:center;gap:7px;font-size:13px;color:#4c6272;margin:0 0 8px;')}>
+                <Svg w={14} stroke="#946200" sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>
                 {vm.isHtml ? (located ? 'The passage this answer relies on is highlighted below.' : 'Showing the full document. The exact passage is shown below.')
                   : vm.isPdf ? (located ? 'The exact passage is highlighted in the original document below' + (vm.page ? ' (page ' + vm.page + ').' : '.') : 'Showing the original document. The exact passage is shown below.')
                   : 'The full document is shown below.'}
@@ -212,10 +213,10 @@ export default function DocumentViewer({ v }) {
         {vm.hasFile && (
           <div style={s('flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid #d8dde0;background:#fff;')}>
             <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#005eb8;color:#fff;border:none;'} hover="background:#003087;">
-              Open full document
+              <Svg w={16} stroke="#fff" sw={2.2}>{Icons.external}</Svg>Open full document
             </Hover>
             <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#fff;color:#005eb8;border:2px solid #d8dde0;'} hover="border-color:#005eb8;">
-              Download
+              <Svg w={16} sw={2.2} style={s('transform:rotate(180deg);')}>{Icons.up}</Svg>Download
             </Hover>
           </div>
         )}

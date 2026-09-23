@@ -52,7 +52,8 @@ function SourceImages({ images }) {
 // each part separately would only make it harder to read the part that matters.
 function GeneralBar() {
   return (
-    <div style={s('margin:14px 0 0;border:1px dashed #ecd39a;background:#fffdf5;border-radius:10px;padding:11px 14px;')}>
+    <div style={s('display:flex;gap:9px;align-items:flex-start;margin:14px 0 0;border:1px dashed #ecd39a;background:#fffdf5;border-radius:10px;padding:11px 14px;')}>
+      <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.infoCircle}</Svg></span>
       <span style={s('font-size:13.5px;line-height:1.5;color:#8a6100;')}>
         <strong>Done by the assistant.</strong> This is not from the practice&rsquo;s documents &mdash;
         check anything that has to match how the practice does things.
@@ -190,14 +191,15 @@ function Determined({ determination }) {
 
   return (
     <div style={s('padding:11px 16px 12px;border-top:1px solid #eef1f2;background:#fffdf5;font-size:13.5px;line-height:1.5;color:#8a6100;')}>
-      <div>
+      <div style={s('display:flex;gap:8px;align-items:flex-start;')}>
+        <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.alertCircle}</Svg></span>
         <span>
           <strong>Not recorded in the practice&rsquo;s notes.</strong> This pairing was determined from the practice&rsquo;s
           own referral data &mdash; check it against the doctor&rsquo;s task before sending.
         </span>
       </div>
       {d && (
-        <ul style={s('margin:9px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13px;')}>
+        <ul style={s('margin:9px 0 0 23px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13px;')}>
           {snomed && (
             <DeterminedFrom label="Condition">
               {snomed.term} &mdash; SNOMED CT {snomed.conceptId}
@@ -256,8 +258,9 @@ export default function AiAnswer({ v }) {
 
         {v.aiDeclined && (
           <>
-            <div style={s('padding:18px 0;')}>
-              <div>
+            <div style={s('padding:18px 0;display:flex;gap:11px;align-items:flex-start;')}>
+              <span style={s('flex:none;display:flex;margin-top:4px;color:#4c6272;')}><Svg w={18} sw={2}>{Icons.infoCircle}</Svg></span>
+              <div style={s('flex:1;min-width:0;')}>
                 <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
                 <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
               </div>
@@ -313,8 +316,8 @@ export default function AiAnswer({ v }) {
                 choosing one and hoping. Tapping an answer asks it properly. */}
             {v.hasClarify && (
               <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
-                <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;margin-bottom:9px;')}>
-                  Which did you mean?
+                <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;margin-bottom:9px;')}>
+                  <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.question}</Svg>Which did you mean?
                 </div>
                 <p style={s('margin:0 0 13px;font-size:17px;line-height:1.5;color:#212b32;')}>{v.clarifyQuestion}</p>
                 <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
@@ -337,7 +340,8 @@ export default function AiAnswer({ v }) {
               <div style={s('padding:16px 0 6px;display:flex;flex-direction:column;gap:16px;')}>
                 {v.sections.map((sec) => (sec.isJudgement || sec.isReasoned) ? (
                   <div key={sec.key} style={s('border:1px dashed #ecd39a;background:#fffdf5;border-radius:12px;padding:12px 16px 13px;')}>
-                    <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
+                    <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
+                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
                       {sec.isReasoned ? 'Worked out from the practice’s material' : 'AI judgement'}
                     </div>
                     <Md text={sec.markdown} />
@@ -366,7 +370,8 @@ export default function AiAnswer({ v }) {
             {v.hasGaps && (
               // What the practice's own material does not cover, said plainly
               // rather than filled in from the model's general knowledge.
-              <div style={s('margin:12px 0 4px;border:1px solid #dde4e7;background:#fff;border-radius:10px;padding:12px 14px;')}>
+              <div style={s('margin:12px 0 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #dde4e7;background:#fff;border-radius:10px;padding:12px 14px;')}>
+                <span style={s('flex:none;color:#4c6272;display:flex;margin-top:2px;')}><Svg w={16} sw={2.2}>{Icons.infoCircle}</Svg></span>
                 <div style={s('font-size:14.5px;line-height:1.5;color:#4c6272;')}>
                   <strong style={s('color:#212b32;')}>Not in the practice&rsquo;s own material:</strong> <Rich text={v.gaps} />
                 </div>
