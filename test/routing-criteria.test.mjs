@@ -10,6 +10,7 @@ test('criteria keep known ids once, in order, at most four, with fixed labels', 
     { id: 'made-up', value: 'x' },
     { id: 'age', value: 'again' },
     { id: 'duration', value: '3 months' },
+    { id: 'requested' },
     { id: 'worsening' },
     { id: 'redFlag', value: 'chest pain' },
     { id: 'onset', value: 'sudden' },
@@ -18,6 +19,8 @@ test('criteria keep known ids once, in order, at most four, with fixed labels', 
   assert.equal(out[0].label, 'Age');
   assert.equal(out[0].value, 'under 10');
   assert.equal(out[2].value, '');
+  // "Patient asked for" with no detail is dropped; "Getting worse" is not.
+  assert.ok(!out.some((c) => c.id === 'requested'));
   assert.equal(new Set(ROUTING_CRITERIA.map((c) => c.id)).size, ROUTING_CRITERIA.length);
 });
 
