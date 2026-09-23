@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.13.0` | 2026-09-23 | feat | `de9bbb1` | feat: trim the answer modes and redesign the mode menu |
+| `6.12.5` | 2026-09-21 | docs | `69f6c25` | docs: record 6.12.4 in the versions table |
 | `6.12.4` | 2026-09-21 | refactor | `405acbf` | refactor: drop the dead answer-cache path from the chat |
 | `6.12.3` | 2026-09-21 | docs | `1eb9c23` | docs: record 6.12.2 in the versions table |
 | `6.12.2` | 2026-09-21 | docs | `be1f64f` | docs: hand off the typed-notes answer-system redesign |
