@@ -287,9 +287,9 @@ function PagePanel({ page, onOpenPage, onPropose, proposing, onChanged, refreshK
         ))}
       </div>
       <div style={s('margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;')}>
-        <Hover tag="button" onClick={() => onOpenPage(page.id)} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;">Open page</Hover>
+        <Hover tag="button" onClick={() => onOpenPage(page.id)} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;"><Svg w={14} sw={2.2}>{Icons.fileLines}</Svg>Open page</Hover>
         <Hover tag="button" onClick={() => onPropose(page.id)} disabled={proposing || page.chars === 0} base={btn('#005eb8', '#fff') + (proposing || page.chars === 0 ? 'opacity:.6;cursor:default;' : '')} hover="background:#003d78;">
-          {proposing ? 'Proposing…' : 'Propose rewrite'}
+          <Svg w={14} sw={2.2}>{Icons.edit}</Svg>{proposing ? 'Proposing…' : 'Propose rewrite'}
         </Hover>
       </div>
       <History noteId={page.id} onChanged={onChanged} refreshKey={refreshKey} />

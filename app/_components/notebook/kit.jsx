@@ -178,6 +178,7 @@ export const KIT_CSS = `
 /* The empty state: a title, a line of explanation and an action. */
 .nbk-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
   padding:48px 24px;text-align:center;color:var(--nbk-mut);animation:nbk-in .45s var(--nbk-ease) both;}
+.nbk-empty__icon{display:flex;color:#aab7bf;margin-bottom:4px;}
 .nbk-empty__title{font-size:17px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
 .nbk-empty__body{max-width:380px;font-size:14px;line-height:1.6;margin-bottom:8px;}
 
@@ -200,6 +201,8 @@ export const KIT_CSS = `
 .nbk-mrow__title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:650;color:var(--nbk-ink);}
 .nbk-mrow__meta{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--nbk-dim);}
 .nbk-mrow--skel{cursor:default;}
+.nbk-mrow__icon{flex:none;display:flex;color:var(--nbk-dim);}
+.nbk-mrow:hover .nbk-mrow__icon{color:var(--nbk-blue);}
 .nbk-skel{display:block;height:9px;border-radius:999px;background:linear-gradient(90deg,#eef2f4 0%,#f6f8f9 40%,#eef2f4 80%);
   background-size:200% 100%;animation:nbk-skel 1.6s linear infinite;}
 @keyframes nbk-marquee{from{transform:translateY(0);}to{transform:translateY(-50%);}}
@@ -216,7 +219,10 @@ export const KIT_CSS = `
 .nbk-modal--lg{max-width:940px;}
 .nbk-modal--xl{max-width:1280px;}
 .nbk-modal__head{flex:none;display:flex;align-items:flex-start;gap:14px;padding:22px 22px 14px;}
-.nbk-modal__title{margin:0;padding-top:1px;font-size:18.5px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
+.nbk-modal__title{display:flex;align-items:center;gap:9px;margin:0;padding-top:1px;font-size:18.5px;font-weight:750;letter-spacing:-.015em;color:var(--nbk-ink);}
+/* A small inline glyph beside a destructive title - no plate behind it. */
+.nbk-modal__glyph{flex:none;display:flex;color:var(--nbk-mut);}
+.nbk-modal__glyph--danger{color:var(--nbk-red);}
 .nbk-modal__sub{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--nbk-mut);}
 .nbk-modal__body{flex:1;min-height:0;overflow:auto;padding:4px 22px 8px;font-size:14px;line-height:1.6;color:var(--nbk-mut);}
 .nbk-modal__body--flush{padding:0;}
@@ -240,6 +246,10 @@ export const KIT_CSS = `
 .nbk-menu__item--accent:hover{background:var(--nbk-tint);}
 .nbk-menu__item--danger{color:#a81d13;}
 .nbk-menu__item--danger:hover{background:#fdf4f3;}
+/* A menu item's glyph: a plain line icon in the muted ink, red for delete. */
+.nbk-menu__icon{flex:none;display:flex;color:var(--nbk-dim);}
+.nbk-menu__item--accent .nbk-menu__icon{color:var(--nbk-blue);}
+.nbk-menu__item--danger .nbk-menu__icon{color:var(--nbk-red);}
 .nbk-menu__label{padding:9px 10px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--nbk-dim);}
 .nbk-menu__sep{height:1px;background:var(--nbk-line-soft);margin:5px 6px;}
 .nbk-menu__opt{display:flex;align-items:flex-start;gap:10px;width:100%;border:none;background:none;border-radius:12px;
@@ -271,6 +281,9 @@ export const KIT_CSS = `
   font-size:14px;color:var(--nbk-ink);text-align:left;padding:5px 2px;cursor:pointer;border-radius:9px;}
 .nbk-row__btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
 .nbk-row--on .nbk-row__btn{color:var(--nbk-blue);font-weight:650;}
+/* Folder or page: a line glyph before the name, blue on the open row. */
+.nbk-row__icon{flex:none;display:flex;color:var(--nbk-dim);}
+.nbk-row--on .nbk-row__icon{color:var(--nbk-blue);}
 .nbk-row--top>.nbk-row__btn{font-weight:650;}
 .nbk-row__name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nbk-row__twist{flex:none;display:inline-flex;align-items:center;justify-content:center;width:22px;height:26px;
@@ -494,9 +507,10 @@ export function Banner({ tone = 'info', icon, children, actions }) {
   );
 }
 
-export function EmptyState({ title, body, action }) {
+export function EmptyState({ icon, title, body, action }) {
   return (
     <div className="nbk-empty">
+      {icon && <span className="nbk-empty__icon"><Svg w={28} sw={1.6}>{icon}</Svg></span>}
       {title && <div className="nbk-empty__title">{title}</div>}
       {body && <div className="nbk-empty__body">{body}</div>}
       {action}
@@ -529,6 +543,7 @@ export function EmptyMarquee({ items = [], onPick, title, body, action }) {
             return (
               <button key={i} type="button" className="nbk-mrow" tabIndex={copy ? -1 : undefined} aria-hidden={copy || undefined}
                 onClick={() => onPick && onPick(r.id)}>
+                <span className="nbk-mrow__icon"><Svg w={15} sw={2}>{Icons.fileLines}</Svg></span>
                 <span className="nbk-mrow__title">{r.title || 'Untitled'}</span>
                 {r.meta && <span className="nbk-mrow__meta">{r.meta}</span>}
               </button>
@@ -562,7 +577,7 @@ export function ProgressBar({ done = 0, total = 0 }) {
  * is the only thing that changes between a delete confirmation and a
  * full side-by-side diff.
  */
-export function Modal({ title, subtitle, size = 'md', onClose, footer, footerSplit = false, children, flush = false, dismissable = true, labelledBy }) {
+export function Modal({ title, subtitle, icon, tone = '', size = 'md', onClose, footer, footerSplit = false, children, flush = false, dismissable = true, labelledBy }) {
   React.useEffect(() => {
     if (!dismissable || !onClose) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } };
@@ -577,7 +592,12 @@ export function Modal({ title, subtitle, size = 'md', onClose, footer, footerSpl
         {title && (
           <div className="nbk-modal__head">
             <div style={{ flex: 1, minWidth: 0 }}>
-              {title && <h2 className="nbk-modal__title">{title}</h2>}
+              {title && (
+                <h2 className="nbk-modal__title">
+                  {icon && <span className={cx('nbk-modal__glyph', tone && 'nbk-modal__glyph--' + tone)}><Svg w={18} sw={2.1}>{icon}</Svg></span>}
+                  {title}
+                </h2>
+              )}
               {subtitle && <p className="nbk-modal__sub">{subtitle}</p>}
             </div>
             {dismissable && onClose && <IconButton plain icon={Icons.close} label="Close" onClick={onClose} />}
@@ -594,6 +614,7 @@ export function Modal({ title, subtitle, size = 'md', onClose, footer, footerSpl
 export function ConfirmModal({ title, message, confirmLabel = 'Delete', tone = 'danger', soleButton = false, onConfirm, onClose, busy = false }) {
   return (
     <Modal size="sm" title={title} onClose={onClose}
+      icon={tone === 'danger' ? Icons.triangle : undefined} tone={tone}
       footer={<>
         {!soleButton && <Button variant="ghost" onClick={onClose}>Cancel</Button>}
         <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} loading={busy} disabled={busy}>{confirmLabel}</Button>
@@ -682,9 +703,10 @@ export function Menu({ x, y, flipY, width = 216, children, onMouseDown }) {
   );
 }
 
-export function MenuItem({ tone = '', children, ...rest }) {
+export function MenuItem({ icon, tone = '', children, ...rest }) {
   return (
     <button type="button" {...rest} className={cx('nbk-menu__item', tone && 'nbk-menu__item--' + tone)}>
+      {icon && <span className="nbk-menu__icon"><Svg w={16} sw={2}>{icon}</Svg></span>}
       <span style={{ flex: 1, minWidth: 0 }}>{children}</span>
     </button>
   );

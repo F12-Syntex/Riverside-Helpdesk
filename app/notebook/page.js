@@ -118,7 +118,7 @@ const PAGE_CSS = `
 .nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;
   border-top:1px solid var(--nbk-line-soft);background:rgba(248,250,251,.9);}
 .nbk-dock__label{margin-right:4px;}
-.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 4px 4px 11px;
+.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 4px 4px 10px;
   background:#fff;border:1px solid var(--nbk-line);border-radius:12px;box-shadow:var(--nbk-sh-1);animation:nbk-in .3s var(--nbk-ease) both;}
 .nbk-attach a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;
   font-weight:600;color:var(--nbk-ink);text-decoration:none;}
@@ -155,7 +155,7 @@ const PAGE_CSS = `
 .nbk-map-lede{font-size:13px;color:var(--nbk-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
-.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 12px;}
+.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 23px;}
 
 .nbk-scrim{display:none;}
 
@@ -395,6 +395,7 @@ function SideRow({ n, depth, ctx }) {
           </button>
         ) : (<span style={{ flex: 'none', width: '22px' }} />)}
         <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)} aria-current={isSel ? 'page' : undefined}>
+          <span className="nbk-row__icon"><Svg w={15} sw={2}>{depth === 0 || n.isSection ? Icons.folder : Icons.fileLines}</Svg></span>
           <span className="nbk-row__name">{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={{ flex: 'none', color: T.dim }}>{Icons.paperclip}</Svg>}
           {/* The shape answers from here come back in. The CHIP is only on the
@@ -1107,7 +1108,7 @@ export default function NotebookPage() {
       { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
     ] : []),
     null,
-    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, accent: true, label: 'AI format' },
+    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.edit, accent: true, label: 'AI format' },
   ];
 
   /* ------------------------------ Render ------------------------------- */
@@ -1182,7 +1183,7 @@ export default function NotebookPage() {
             {/* Pages is the editor; Map is the treemap of every page and what
                 the assistant makes of it. Same notes, two readings of them. */}
             <Tabs block ariaLabel="Notebook view" value={view} onChange={(v2) => { setView(v2); setDrawer(false); }}
-              items={[{ id: 'pages', label: 'Pages' }, { id: 'map', label: 'Map' }]} />
+              items={[{ id: 'pages', label: 'Pages', icon: Icons.fileLines }, { id: 'map', label: 'Map', icon: NBIcons.layers }]} />
             <div className="nbk-sidebar__row">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <SearchField value={search} onChange={setSearch} placeholder="Search notes" />
@@ -1216,15 +1217,15 @@ export default function NotebookPage() {
             <div className="nbk-foot-grid">
               <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/api/notebook/export'; }}
                 title="Download all notes as a JSON backup">
-                Export
+                <Svg w={16} sw={2}>{NBIcons.download}</Svg>Export
               </button>
               <button type="button" className="nbk-foot-btn" onClick={() => importInput.current && importInput.current.click()}
                 title="Restore notes from a JSON backup (added alongside existing notes)">
-                Import
+                <Svg w={16} sw={2}>{NBIcons.upload}</Svg>Import
               </button>
               <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/notebook/saves'; }}
                 title="Saves of the whole notebook - take one, or roll back to one">
-                Saves
+                <Svg w={16} sw={2}>{Icons.undo}</Svg>Saves
               </button>
             </div>
           </div>
@@ -1265,7 +1266,7 @@ export default function NotebookPage() {
               <div className="nbk-head__actions">
                 <StatusPill state={saveState} />
                 {selected && canOrganize(selected) && (
-                  <Button variant="soft" onClick={() => runAiOrganize()}
+                  <Button variant="soft" icon={Icons.sitemap} onClick={() => runAiOrganize()}
                     disabled={!!aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')}
                     title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)">
                     AI organise
@@ -1319,7 +1320,7 @@ export default function NotebookPage() {
                     );
                   })}
                   <button type="button" className="nbk-add-card" onClick={() => newNote(selected.id)}>
-                    New page
+                    <Svg w={18} sw={2}>{Icons.plus}</Svg>New page
                   </button>
                 </div>
               </div>
@@ -1362,6 +1363,7 @@ export default function NotebookPage() {
                     {selectedFiles.length > 0 && <span className="nbk-label nbk-dock__label">Files</span>}
                     {selectedFiles.map((a) => (
                       <span key={a.id} className="nbk-attach">
+                        <Svg w={14} sw={2} style={{ flex: 'none', color: T.dim }}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
                         <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' - ' + fmtSize(a.size) : '')}>
                           {a.filename}
                         </a>
@@ -1379,6 +1381,7 @@ export default function NotebookPage() {
             {/* Drop overlay */}
             {dragging && selected && !isSection && (
               <div className="nbk-dropzone">
+                <Svg w={28} sw={1.8}>{Icons.paperclip}</Svg>
                 Drop files to attach to &ldquo;{selected.title || 'Untitled'}&rdquo;
               </div>
             )}
@@ -1388,13 +1391,13 @@ export default function NotebookPage() {
       {/* ---------------------------- The note menu --------------------------- */}
       {menu && menuNote && (
         <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={232}>
-          <MenuItem onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
-          <MenuItem onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
+          <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
+          <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
           {canOrganize(menuNote) && (
-            <MenuItem tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
+            <MenuItem icon={Icons.sitemap} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
           )}
           {menuNote.parentId ? (
-            <MenuItem
+            <MenuItem icon={menuNote.isSection ? Icons.fileLines : Icons.folder}
               onClick={() => { setMenu(null); toggleSection(menu.id, !menuNote.isSection); }}>
               {menuNote.isSection ? 'Convert to page' : 'Convert to section'}
             </MenuItem>
@@ -1446,7 +1449,7 @@ export default function NotebookPage() {
           })()}
 
           <MenuSeparator />
-          <MenuItem tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
+          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>
             {menuNote.parentId && !menuNote.isSection ? 'Delete page' : 'Delete section'}
           </MenuItem>
         </Menu>
@@ -1526,7 +1529,8 @@ export default function NotebookPage() {
           <div>
             {aiOrg.plan.allocations.map((a) => (
               <div key={a.noteId} className="nbk-plan__note">
-                <div style={{ fontSize: '14.5px', fontWeight: 700, color: T.ink }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', fontWeight: 700, color: T.ink }}>
+                  <Svg w={15} sw={2} style={{ flex: 'none', color: T.dim }}>{Icons.fileLines}</Svg>
                   {a.noteTitle || 'Untitled'}
                 </div>
                 {a.parts.map((p, i) => (
