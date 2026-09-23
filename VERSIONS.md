@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.18.0` | 2026-09-23 | feat | `441963e` | feat: slim the top bar and make the tools a segmented control |
+| `6.17.1` | 2026-09-23 | docs | `44e9384` | docs: record 6.17.0 in the versions table |
 | `6.17.0` | 2026-09-23 | feat | `c145694` | feat: redesign the contact lookup in the shell's glass and paper |
 | `6.16.1` | 2026-09-23 | docs | `f190445` | docs: record 6.16.0 in the versions table |
 | `6.16.0` | 2026-09-23 | feat | `f082148` | feat: swap the glows for 21st.dev motion and hairline edges |
