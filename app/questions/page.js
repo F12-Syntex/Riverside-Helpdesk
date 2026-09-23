@@ -97,7 +97,7 @@ function Row({ row, onAnswer, onRemove, busy }) {
   const stale = answered && row.answeredAt && new Date(row.lastAt) > new Date(row.answeredAt);
 
   return (
-    <div style={s(BOX + 'border-left:4px solid ' + (answered ? '#007f3b' : '#ed8b00') + ';border-radius:0 12px 12px 0;padding:14px 16px;')}>
+    <div style={s(BOX + 'border-radius:12px;padding:14px 16px;')}>
       <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;')}>
         <OriginBadge row={row} />
         {answered && (

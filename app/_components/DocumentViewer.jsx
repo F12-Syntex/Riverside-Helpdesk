@@ -202,7 +202,7 @@ export default function DocumentViewer({ v }) {
               missing — it's here whenever the highlight couldn't be placed. */}
           <div className={hidePassageOnDesktop ? 'riva-doc-passage' : ''} style={s('flex:0 1 auto;min-height:0;overflow-y:auto;padding:16px 20px;min-width:0;')}>
             <div style={s(label)}>What this is based on</div>
-            <div style={s('background:#fff;border:1px solid #d8dde0;border-left:4px solid #ffb81c;border-radius:0 8px 8px 0;padding:16px 18px;text-wrap:pretty;overflow-wrap:anywhere;')}>
+            <div style={s('background:#fff;border:1px solid #d8dde0;border-radius:8px;padding:16px 18px;text-wrap:pretty;overflow-wrap:anywhere;')}>
               <Md text={passageMd(vm.text)} />
             </div>
           </div>

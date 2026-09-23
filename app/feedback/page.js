@@ -68,7 +68,7 @@ export default function Page() {
 
         <div style={s('display:flex;flex-direction:column;gap:10px;')}>
           {rows.map((r) => (
-            <div key={r.id} style={s('background:#fff;border:1px solid #dde4e7;border-left:4px solid ' + (isGoodVerdict(r.verdict) ? '#007f3b' : '#d5281b') + ';border-radius:0 12px 12px 0;padding:12px 16px;')}>
+            <div key={r.id} style={s('background:#fff;border:1px solid #dde4e7;border-radius:12px;padding:12px 16px;')}>
               <div style={s('display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;')}>
                 <span style={s('font-size:13px;font-weight:700;color:' + (isGoodVerdict(r.verdict) ? '#007f3b' : '#a51b0f') + ';')}>
                   {verdictLabel(r.verdict)}

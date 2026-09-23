@@ -280,8 +280,9 @@ function PagePanel({ page, onOpenPage, onPropose, proposing, onChanged, refreshK
       <div style={s('margin-top:12px;display:flex;flex-direction:column;gap:8px;')}>
         {page.violations.length === 0 && <div style={s('font-size:13.5px;color:#00612f;font-weight:600;')}>Nothing to fix.</div>}
         {page.violations.map((v, i) => (
-          <div key={i} style={s('border-left:3px solid ' + (v.severity === 'error' ? BAND.red : v.severity === 'warn' ? BAND.amber : '#8f9ba3') + ';padding:4px 0 4px 10px;')}>
-            <div style={s('font-size:13px;font-weight:700;color:' + INK + ';')}>{RULE_TITLES[v.rule] || v.rule}{v.line ? <span style={s('font-weight:400;color:' + MUTED + ';')}> · line {v.line}</span> : null}</div>
+          <div key={i} style={s('padding:4px 0;')}>
+            <div style={s('font-size:13px;font-weight:700;color:' + INK + ';')}>
+              <span aria-hidden="true" style={s('display:inline-block;width:7px;height:7px;border-radius:50%;margin:0 7px 1px 0;background:' + (v.severity === 'error' ? BAND.red : v.severity === 'warn' ? BAND.amber : '#8f9ba3') + ';')} />{RULE_TITLES[v.rule] || v.rule}{v.line ? <span style={s('font-weight:400;color:' + MUTED + ';')}> · line {v.line}</span> : null}</div>
             <div style={s('font-size:13px;color:' + MUTED + ';line-height:1.45;margin-top:1px;')}>{v.message}</div>
           </div>
         ))}
@@ -338,7 +339,7 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
         </div>
 
         {(errors.length > 0 || changed > 0) && (
-          <div style={s('margin-top:12px;border-left:4px solid ' + BAND.red + ';background:' + BAND_TINT.red + ';border-radius:0 10px 10px 0;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.red + ';line-height:1.5;')}>
+          <div style={s('margin-top:12px;background:' + BAND_TINT.red + ';border-radius:10px;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.red + ';line-height:1.5;')}>
             <div style={s('font-weight:700;margin-bottom:4px;')}>This cannot be applied as it stands.</div>
             {errors.slice(0, 8).map((p, i) => <div key={i}>• {p.message}</div>)}
             {(meaning.changed || []).slice(0, 8).map((id) => { const p = validation.pairs.find((x) => x.id === id); return p ? <div key={id}>• Meaning changed: “{p.after.slice(0, 100)}” — {meaning.verdicts[id]?.reason}</div> : null; })}
@@ -346,7 +347,7 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
           </div>
         )}
         {unsure > 0 && changed === 0 && (
-          <label style={s('display:flex;align-items:flex-start;gap:8px;margin-top:12px;border-left:4px solid ' + BAND.amber + ';background:' + BAND_TINT.amber + ';border-radius:0 10px 10px 0;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.amber + ';line-height:1.5;cursor:pointer;')}>
+          <label style={s('display:flex;align-items:flex-start;gap:8px;margin-top:12px;background:' + BAND_TINT.amber + ';border-radius:10px;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.amber + ';line-height:1.5;cursor:pointer;')}>
             <input type="checkbox" checked={!!ack} onChange={(e) => onAck(e.target.checked)} style={s('margin-top:3px;')} />
             <span>The judge was unsure about {unsure} sentence{unsure === 1 ? '' : 's'} (amber on the right). I have read {unsure === 1 ? 'it' : 'them'} and the meaning is unchanged.</span>
           </label>

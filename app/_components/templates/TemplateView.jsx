@@ -77,7 +77,7 @@ function Fields({ title, items }) {
 function Note({ tone, text }) {
   const t = TONE[tone] || TONE.info;
   return (
-    <div style={s('display:flex;gap:9px;align-items:flex-start;border-left:4px solid ' + t.bar + ';background:' + t.bg + ';border-radius:0 10px 10px 0;padding:10px 14px;')}>
+    <div style={s('display:flex;gap:9px;align-items:flex-start;background:' + t.bg + ';border-radius:10px;padding:10px 14px;')}>
       {t.icon && <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke={t.bar} sw={2.2}>{t.icon}</Svg></span>}
       <span style={s('font-size:14.5px;line-height:1.5;color:' + t.ink + ';')}><Rich text={text} /></span>
     </div>
@@ -116,7 +116,7 @@ function Message({ label, text }) {
         <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4c6272;')}>{label}</div>
         <CopyButton value={text} />
       </div>
-      <div style={s('padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
+      <div style={s('padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-radius:8px;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
     </div>
   );
 }
@@ -129,7 +129,7 @@ function Contacts({ items }) {
   return (
     <div style={s('display:flex;flex-direction:column;gap:10px;')}>
       {items.map((c, i) => (
-        <div key={i} style={s('border:1px solid #d8e1e5;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;background:#fff;padding:12px 16px;')}>
+        <div key={i} style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;padding:12px 16px;')}>
           {c.label && <div style={s('font-size:15px;font-weight:700;color:#212b32;margin-bottom:5px;')}>{c.label}</div>}
           {c.tel && <div style={s('font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#005eb8;')}>{c.tel}</div>}
           {c.email && <div style={s('margin-top:3px;font-size:14.5px;font-weight:600;color:#212b32;overflow-wrap:anywhere;')}>{c.email}</div>}
@@ -223,7 +223,7 @@ export function Blocks({ blocks }) {
         }
         if (b.type === 'ask') {
           return (
-            <div key={i} style={s('border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;background:#fff;padding:14px 16px;')}>
+            <div key={i} style={s('border:1px solid #cfe1f0;border-radius:12px;background:#fff;padding:14px 16px;')}>
               <div style={s('font-size:16px;font-weight:600;color:#212b32;margin-bottom:10px;')}>{b.question}</div>
               <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
                 {b.options.map((o, n) => (

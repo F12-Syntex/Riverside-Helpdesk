@@ -131,7 +131,7 @@ export default function MedicationCard({ card }) {
 
             {/* Emergency: urgent-help guidance, shown prominently instead of an answer */}
             {emergency && (
-              <div style={s('margin:16px 22px 4px;display:flex;gap:13px;align-items:flex-start;background:#fdf2f0;border:1px solid #f0bcb4;border-left:4px solid #d5281b;border-radius:0 8px 8px 0;padding:14px 16px;')}>
+              <div style={s('margin:16px 22px 4px;display:flex;gap:13px;align-items:flex-start;background:#fdf2f0;border:1px solid #f0bcb4;border-radius:8px;padding:14px 16px;')}>
                 <span style={s('flex:none;color:#d5281b;margin-top:1px;')}><Svg w={22} sw={2.2}>{Icons.alertCircle}</Svg></span>
                 <div style={s('flex:1;min-width:0;')}>
                   <p style={s('margin:0 0 4px;font-size:18px;font-weight:700;color:#d5281b;')}>Call 999 now</p>
@@ -144,7 +144,7 @@ export default function MedicationCard({ card }) {
             {!emergency && r.queryAnswer && (
               <div style={s('margin:16px 22px 0;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Your question</div>
-                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;')}>
+                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;')}>
                   <p style={s('margin:0 0 12px;font-size:16px;font-weight:600;line-height:1.5;')}>{r.queryAnswer.question || query}</p>
                   {r.queryAnswer.points.length
                     ? <Points points={r.queryAnswer.points} />

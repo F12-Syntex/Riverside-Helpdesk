@@ -48,7 +48,7 @@ export default function TriageAnswer({ v }) {
         {v.aiDone && (
           <>
             {/* Urgency band */}
-            <div style={s('margin:18px 22px 0;display:flex;gap:12px;align-items:flex-start;border:1px solid ' + band.border + ';background:' + band.bg + ';border-left:5px solid ' + band.border + ';border-radius:0 8px 8px 0;padding:12px 16px;')}>
+            <div style={s('margin:18px 22px 0;display:flex;gap:12px;align-items:flex-start;border:1px solid ' + band.border + ';background:' + band.bg + ';border-radius:8px;padding:12px 16px;')}>
               {band.icon && <span style={s('flex:none;color:' + band.fg + ';margin-top:1px;')}><Svg w={20} sw={2.2}>{band.icon}</Svg></span>}
               <div style={s('flex:1;min-width:0;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + band.fg + ';')}>{band.label}</div>
@@ -107,7 +107,7 @@ export default function TriageAnswer({ v }) {
             {v.hasPatientMessage && (
               <div style={s('margin:16px 22px 4px;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Draft reply to patient</div>
-                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:16px;line-height:1.55;white-space:pre-wrap;')}>{v.patientMessage}</div>
+                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;font-size:16px;line-height:1.55;white-space:pre-wrap;')}>{v.patientMessage}</div>
                 {v.hasPatientMessageCite && <CiteChip label={v.patientMessageCiteLabel} onClick={v.onPatientMessageCite} />}
               </div>
             )}

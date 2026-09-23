@@ -49,8 +49,8 @@ export default function GuideCard({ v }) {
             </div>
           ))}
         </div>
-        {g.hasTip && <div style={s('margin:0 22px 16px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {g.tip}</div>}
-        {g.hasWarning && <div style={s('margin:0 22px 16px;border-left:4px solid #ffb81c;background:#fff6cc;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Important:</strong> {g.warning}</div>}
+        {g.hasTip && <div style={s('margin:0 22px 16px;background:#e8f1f8;padding:12px 16px;border-radius:8px;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {g.tip}</div>}
+        {g.hasWarning && <div style={s('margin:0 22px 16px;background:#fff6cc;padding:12px 16px;border-radius:8px;font-size:16px;line-height:1.5;')}><strong>Important:</strong> {g.warning}</div>}
         <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
           {v.showFeedbackButtons && (
             <>

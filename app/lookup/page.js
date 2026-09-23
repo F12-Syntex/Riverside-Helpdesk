@@ -51,7 +51,6 @@ const LK_CSS = `
 .lk-row + .lk-row{border-top:1px solid #edf1f3;}
 .lk-row:hover{background:#f8fafc;}
 .lk-row.is-sel{background:#f2f7fc;}
-.lk-row.is-sel::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--rv-accent);}
 .lk-row__main{flex:1 1 260px;min-width:0;display:flex;align-items:flex-start;}
 .lk-row__text{flex:1;min-width:0;}
 .lk-row__label{display:block;font-size:15.5px;font-weight:650;color:var(--rv-ink);line-height:1.35;overflow-wrap:anywhere;}

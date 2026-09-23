@@ -136,7 +136,7 @@ function Section({ sec }) {
 
   if (sec.isCritical) {
     return (
-      <div style={s('border:1px solid #f0c2bd;border-left:4px solid #d5281b;background:#fdf4f3;border-radius:0 12px 12px 0;padding:13px 16px 14px;')}>
+      <div style={s('border:1px solid #f0c2bd;background:#fdf4f3;border-radius:12px;padding:13px 16px 14px;')}>
         <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#a51b0f;margin-bottom:8px;')}>
           <Svg w={14} stroke="#d5281b" sw={2.4} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
           {sec.hasHeading ? sec.heading : 'Must not be missed'}
@@ -149,7 +149,7 @@ function Section({ sec }) {
   }
 
   return (
-    <div style={s(sec.isWeb ? 'border-left:3px solid #ecd39a;padding-left:13px;' : '')}>
+    <div>
       {heading}
       <Md text={sec.markdown} />
       {sec.hasImages && <SourceImages images={sec.images} />}
@@ -315,7 +315,7 @@ export default function AiAnswer({ v }) {
                 own material, so the assistant asks which was meant rather than
                 choosing one and hoping. Tapping an answer asks it properly. */}
             {v.hasClarify && (
-              <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
+              <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-radius:12px;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
                 <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;margin-bottom:9px;')}>
                   <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.question}</Svg>Which did you mean?
                 </div>
@@ -393,13 +393,13 @@ export default function AiAnswer({ v }) {
                     <Svg w={13} sw={2.2}>{Icons.copy}</Svg>{v.copyMessageLabel}
                   </Hover>
                 </div>
-                <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
+                <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-radius:8px;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
                 {v.hasMessageImages && <SourceImages images={v.messageImages} />}
                 {v.hasMessageCite ? <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} /> : <JudgementChip label="AI-drafted wording: check before sending" />}
               </div>
             )}
 
-            {v.hasTip && <div style={s('margin:14px 0 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
+            {v.hasTip && <div style={s('margin:14px 0 4px;background:#e8f1f8;padding:12px 16px;border-radius:8px;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
 
             {v.hasFollowUps && (
               // A step with its own procedure behind it is left out of the answer

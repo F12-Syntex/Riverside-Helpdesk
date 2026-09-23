@@ -37,7 +37,7 @@ export default function DocFileAnswer({ v }) {
             {/* The filing title — the thing the reader came for */}
             <div style={s('padding:18px 22px 0;')}>
               <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Filing title</div>
-              <div style={s('display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;padding:13px 16px;')}>
+              <div style={s('display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;padding:13px 16px;')}>
                 <span style={s('flex:1;min-width:200px;font-size:17.5px;font-weight:600;line-height:1.45;color:#212b32;word-break:break-word;')}>{v.title}</span>
                 <Hover onClick={v.onCopy} base="flex:none;background:#005eb8;color:#fff;border:none;border-radius:8px;padding:8px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="background:#003087;"><Svg w={15} stroke="#fff">{Icons.copy}</Svg>{v.copyLabel}</Hover>
               </div>

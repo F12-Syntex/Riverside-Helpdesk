@@ -24,7 +24,7 @@ export default function DpiaView() {
   const stepHead = 'font-size:19px;font-weight:800;padding:9px 16px;background:#005eb8;color:#fff;border-radius:3px;margin:0;';
   const guidance = 'font-size:14.5px;font-style:italic;color:#637381;line-height:1.5;margin:14px 0 10px;text-wrap:pretty;';
   const answer = 'font-size:15.5px;color:#212b32;line-height:1.6;margin:0;text-wrap:pretty;';
-  const answerBox = 'border:1px solid #d8dde0;border-left:3px solid #005eb8;border-radius:3px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;';
+  const answerBox = 'border:1px solid #d8dde0;border-radius:3px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;';
 
   const dot = (st) => {
     const c = STATUS[st] || STATUS.pending;
@@ -56,7 +56,7 @@ export default function DpiaView() {
         <p style={s('font-size:14.5px;color:#637381;line-height:1.55;margin:18px 0 0;text-wrap:pretty;')}>{d.preamble}</p>
 
         {/* Draft / status banner */}
-        <div style={s('margin-top:20px;background:#fff6cc;border:1px solid #ffd97a;border-left:6px solid #ffb81c;border-radius:4px;padding:14px 18px;display:flex;gap:13px;align-items:flex-start;')}>
+        <div style={s('margin-top:20px;background:#fff6cc;border:1px solid #ffd97a;border-radius:4px;padding:14px 18px;display:flex;gap:13px;align-items:flex-start;')}>
           <Svg w={24} stroke="#946200" sw={2} style={s('flex:none;margin-top:1px;')}>{Icons.triangle}</Svg>
           <div>
             <div style={s('font-size:16px;font-weight:800;color:#212b32;')}>{d.status}</div>

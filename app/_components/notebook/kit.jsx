@@ -348,7 +348,7 @@ export const KIT_CSS = `
 .nbk-prose ul[data-type="taskList"] li>label input{width:16px;height:16px;accent-color:var(--nbk-blue);cursor:pointer;margin:0;}
 .nbk-prose ul[data-type="taskList"] li>div{flex:1;min-width:0;}
 .nbk-prose li[data-checked="true"]>div{text-decoration:line-through;color:var(--nbk-dim);}
-.nbk-prose blockquote{margin:0 0 14px;border:none;background:var(--nbk-tint);box-shadow:inset 3px 0 0 var(--nbk-blue);
+.nbk-prose blockquote{margin:0 0 14px;border:none;background:var(--nbk-tint);
   padding:12px 16px 12px 18px;border-radius:12px;font-size:15.5px;color:#0b3a66;}
 .nbk-prose blockquote p{margin:0;}
 .nbk-prose blockquote p+p{margin-top:8px;}

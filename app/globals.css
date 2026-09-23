@@ -416,7 +416,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-md ol ol > li::before { content: none; }
 .riva-md ol ol > li::marker { color: #005eb8; font-weight: 600; font-variant-numeric: tabular-nums; }
 .riva-md ol ul { margin-top: 6px; }
-.riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #005eb8; background: #e8f1f8; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
+.riva-md blockquote { margin: 0 0 12px; background: #e8f1f8; padding: 10px 14px; border-radius:8px; font-size: 15.5px; }
 .riva-md blockquote p { margin: 0 0 4px; }
 .riva-md blockquote p:last-child { margin-bottom: 0; }
 /* A table is a surface of its own, like every other block in an answer:

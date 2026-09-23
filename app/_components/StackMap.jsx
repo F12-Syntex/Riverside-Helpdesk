@@ -100,7 +100,7 @@ function Stats() {
   return (
     <div style={s('display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin:0 0 26px;')}>
       {STATS.map((t) => (
-        <div key={t.k} style={s('background:#fff;border:1px solid ' + P.line + ';border-left:4px solid ' + t.c + ';border-radius:12px;padding:12px 13px;')}>
+        <div key={t.k} style={s('background:#fff;border:1px solid ' + P.line + ';border-radius:12px;padding:12px 13px;')}>
           <div style={s('font-size:24px;font-weight:800;letter-spacing:-0.5px;color:' + P.ink + ';font-variant-numeric:tabular-nums;')}>{t.v}</div>
           <div style={s('font-size:12px;font-weight:600;color:' + P.mid + ';margin-top:2px;')}>{t.k}</div>
         </div>
