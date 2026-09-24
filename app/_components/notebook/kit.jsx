@@ -313,9 +313,17 @@ export const KIT_CSS = `
 .nbk-tbtn:hover{background:#fff;color:var(--nbk-ink);box-shadow:0 1px 2px rgba(33,43,50,.08);}
 .nbk-tbtn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
 .nbk-tbtn--on,.nbk-tbtn--on:hover{background:var(--nbk-blue);color:#fff;box-shadow:var(--nbk-bevel);}
-.nbk-tbtn--accent{color:var(--nbk-blue);background:#fff;padding:0 11px 0 9px;box-shadow:0 1px 2px rgba(33,43,50,.08);}
-.nbk-tbtn--accent:hover{background:var(--nbk-blue);color:#fff;}
-.nbk-tsep{flex:none;width:1px;height:18px;background:#d9e2e8;margin:0 5px;}
+/* Format with AI: a solid blue pill standing apart from the grey strip, so
+   it reads as the page's main action rather than one more formatting icon. */
+.nbk-ai-btn{flex:none;display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 16px 0 13px;
+  border:none;border-radius:14px;background:linear-gradient(135deg,var(--nbk-blue),var(--nbk-navy));color:#fff;
+  font:inherit;font-size:14px;font-weight:750;letter-spacing:.005em;white-space:nowrap;cursor:pointer;
+  box-shadow:var(--nbk-bevel),0 2px 4px rgba(0,48,135,.18),0 8px 18px -8px rgba(0,94,184,.55);
+  transition:transform .14s ease,box-shadow .14s ease,filter .14s ease;}
+.nbk-ai-btn:hover{filter:brightness(1.08);transform:translateY(-1px);
+  box-shadow:var(--nbk-bevel),0 3px 6px rgba(0,48,135,.2),0 12px 22px -8px rgba(0,94,184,.6);}
+.nbk-ai-btn:active{transform:none;}
+.nbk-ai-btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}.nbk-tsep{flex:none;width:1px;height:18px;background:#d9e2e8;margin:0 5px;}
 .nbk-swatch{width:14px;height:14px;border-radius:999px;border:2px solid #fff;}
 
 /* -------------------------------- diff ------------------------------ */

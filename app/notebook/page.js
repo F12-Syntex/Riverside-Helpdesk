@@ -96,7 +96,11 @@ const PAGE_CSS = `
 .nbk-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
 .nbk-side-toggle{display:inline-flex;}
 
-.nbk-tools{flex:none;position:relative;z-index:2;padding:0 0 10px;}
+/* AI format leads the strip as its own button, outside the scrolling
+   toolbar, so it is the first thing seen and never scrolled out of view. */
+.nbk-tools{flex:none;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;
+  gap:8px;padding:0 12px 10px;}
+.nbk-tools .nbk-toolbar{margin:0;min-width:0;max-width:none;}
 
 .nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;}
 
@@ -1151,8 +1155,6 @@ export default function NotebookPage() {
       { title: 'Delete column', run: () => chain().deleteColumn().run(), label: 'Col off' },
       { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
     ] : []),
-    null,
-    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.edit, accent: true, label: 'AI format' },
   ];
 
   /* ------------------------------ Render ------------------------------- */
@@ -1378,6 +1380,12 @@ export default function NotebookPage() {
             {selected && !isSection && (
               <>
                 <div className="nbk-tools">
+                  <button type="button" className="nbk-ai-btn" onClick={runAiFormat}
+                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
+                    title="Restructure this page into headings, lists, tables and highlights. You review the changes before anything is applied.">
+                    <Svg w={17} sw={2}>{Icons.sparkle}</Svg>
+                    <span>Format with AI</span>
+                  </button>
                   <div className="nbk-toolbar nbk-hide-scroll" role="toolbar" aria-label="Formatting"
                     onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
                     {toolbar.map((btn, i) => btn === null
@@ -1385,8 +1393,8 @@ export default function NotebookPage() {
                       : (
                         <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
                           aria-pressed={btn.active ? true : undefined}
-                          onClick={() => { if (!editor && !btn.accent) return; btn.run(); }}
-                          className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '') + (btn.accent ? ' nbk-tbtn--accent' : '')}>
+                          onClick={() => { if (!editor) return; btn.run(); }}
+                          className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '')}>
                           {btn.swatch
                             ? <span className="nbk-swatch" style={{ background: btn.swatch, boxShadow: '0 0 0 1px ' + (btn.active ? T.blue : T.line) }} />
                             : btn.icon ? <Svg w={16} sw={2}>{btn.icon}</Svg> : null}
