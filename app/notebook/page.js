@@ -1408,7 +1408,8 @@ export default function NotebookPage() {
                     uploadImage={uploadInlineImage}
                     header={docHead}
                   />
-                  <button type="button" className="nbk-ai-fab" onClick={runAiFormat}
+                  <button type="button" className={'nbk-ai-fab' + (aiFmt && aiFmt.status === 'loading' ? ' nbk-ai-fab--busy' : '')}
+                    onClick={() => { if (!(aiFmt && aiFmt.status === 'loading')) runAiFormat(); }}
                     onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
                     aria-label="Format with AI"
                     title="Format with AI: restructure this page into headings, lists, tables and highlights (you review the changes first)">
@@ -1518,8 +1519,19 @@ export default function NotebookPage() {
       {aiFmt && aiFmt.status === 'loading' && (
         <Modal size="sm" title="Reformatting the page" dismissable={false}
           subtitle="Restructuring it into headings, lists, tables and highlights. Nothing is saved until you have read it.">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
-            <Spinner />Working...
+          <div className="nbk-fmt" aria-hidden="true">
+            <span className="nbk-fmt__h" />
+            {['92%', '74%', '84%'].map((w, i) => (
+              <div key={i} className="nbk-fmt__li" style={{ '--i': i }}>
+                <span className="nbk-fmt__dot" />
+                <span className="nbk-fmt__line" style={{ '--w': w }} />
+              </div>
+            ))}
+            <div className="nbk-fmt__tbl">{Array.from({ length: 6 }, (_, i) => <span key={i} className={i < 3 ? 'nbk-fmt__th' : 'nbk-fmt__td'} />)}</div>
+            <span className="nbk-fmt__scan" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 0 12px', fontSize: '13px', color: T.mut }}>
+            <Spinner w={13} />Formatting...
           </div>
         </Modal>
       )}

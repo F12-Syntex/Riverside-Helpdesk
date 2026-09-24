@@ -313,15 +313,48 @@ export const KIT_CSS = `
 .nbk-tbtn:hover{background:#fff;color:var(--nbk-ink);box-shadow:0 1px 2px rgba(33,43,50,.08);}
 .nbk-tbtn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
 .nbk-tbtn--on,.nbk-tbtn--on:hover{background:var(--nbk-blue);color:#fff;box-shadow:var(--nbk-bevel);}
-/* Format with AI: a quiet round button in the page's bottom-right corner,
-   white with a blue sparkles mark; it fills blue only on hover. */
+/* Format with AI: a round button in the page's bottom-right corner, blue
+   tinted with a blue ring so it is plainly coloured without shouting; it
+   fills solid blue on hover, and its sparkles twinkle while it works. */
 .nbk-ai-fab{position:absolute;right:20px;bottom:18px;z-index:3;display:inline-flex;align-items:center;justify-content:center;
-  width:44px;height:44px;padding:0;border:1px solid #d9e2e8;border-radius:999px;background:#fff;color:var(--nbk-blue);
-  cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.06),0 6px 16px -8px rgba(33,43,50,.3);
+  width:46px;height:46px;padding:0;border:1.5px solid rgba(0,94,184,.45);border-radius:999px;
+  background:linear-gradient(145deg,#f3f8fd,#dcebf9);color:var(--nbk-blue);cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,48,135,.1),0 8px 18px -8px rgba(0,94,184,.45);
   transition:background-color .14s ease,color .14s ease,border-color .14s ease,transform .14s ease;}
 .nbk-ai-fab:hover{background:var(--nbk-blue);border-color:var(--nbk-blue);color:#fff;transform:translateY(-1px);}
 .nbk-ai-fab:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
-@media (max-width:760px){.nbk-ai-fab{right:14px;bottom:14px;}}.nbk-tsep{flex:none;width:1px;height:18px;background:#d9e2e8;margin:0 5px;}
+.nbk-ai-fab--busy{background:var(--nbk-blue);border-color:var(--nbk-blue);color:#fff;cursor:progress;}
+.nbk-ai-fab--busy svg{animation:nbk-twinkle 1.1s ease-in-out infinite;}
+.nbk-ai-fab--busy::after{content:"";position:absolute;inset:-1.5px;border-radius:inherit;
+  border:2px solid var(--nbk-blue);animation:nbk-ping 1.4s ease-out infinite;pointer-events:none;}
+@media (max-width:760px){.nbk-ai-fab{right:14px;bottom:14px;}}
+
+/* ------------------------- formatting animation --------------------- */
+/* A miniature page that tidies itself on a loop while the AI works: plain
+   grey lines become a blue heading, a bulleted list and a table, as a scan
+   line passes over them, then fall back and go again. */
+.nbk-fmt{position:relative;overflow:hidden;width:220px;margin:6px auto 14px;padding:16px 18px 18px;
+  background:#fff;border:1px solid var(--nbk-line);border-radius:14px;box-shadow:var(--nbk-sh-1);}
+.nbk-fmt__scan{position:absolute;left:0;right:0;top:0;height:34px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,94,184,.13) 60%,rgba(0,94,184,.35) 96%,transparent);
+  animation:nbk-fmt-scan 3.2s ease-in-out infinite;}
+.nbk-fmt__h{display:block;height:7px;width:82%;border-radius:4px;background:#dde4e7;margin-bottom:12px;
+  animation:nbk-fmt-h 3.2s ease-in-out infinite;}
+.nbk-fmt__li{display:flex;align-items:center;margin-bottom:8px;}
+.nbk-fmt__dot{flex:none;width:0;height:6px;margin-right:0;border-radius:999px;background:var(--nbk-blue);transform:scale(0);
+  animation:nbk-fmt-dot 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * .12s);}
+.nbk-fmt__line{display:block;height:6px;width:var(--w);border-radius:4px;background:#dde4e7;}
+.nbk-fmt__tbl{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:12px;border-radius:6px;overflow:hidden;
+  animation:nbk-fmt-tbl 3.2s ease-in-out infinite;}
+.nbk-fmt__td{height:9px;background:#e8edf0;animation:nbk-fmt-cell 3.2s ease-in-out infinite;}
+.nbk-fmt__th{height:9px;background:#e8edf0;animation:nbk-fmt-head 3.2s ease-in-out infinite;}
+@keyframes nbk-fmt-scan{0%{transform:translateY(-40px);opacity:0;}8%{opacity:1;}45%{transform:translateY(150px);opacity:1;}52%,100%{transform:translateY(150px);opacity:0;}}
+@keyframes nbk-fmt-h{0%,12%{height:7px;width:82%;background:#dde4e7;}30%,82%{height:11px;width:56%;background:var(--nbk-blue);}96%,100%{height:7px;width:82%;background:#dde4e7;}}
+@keyframes nbk-fmt-dot{0%,18%{width:0;margin-right:0;transform:scale(0);}34%,82%{width:6px;margin-right:8px;transform:scale(1);}96%,100%{width:0;margin-right:0;transform:scale(0);}}
+@keyframes nbk-fmt-tbl{0%,28%{gap:0;}42%,82%{gap:2px;}96%,100%{gap:0;}}
+@keyframes nbk-fmt-cell{0%,28%{background:#e8edf0;}42%,82%{background:#eef3f7;}96%,100%{background:#e8edf0;}}
+@keyframes nbk-fmt-head{0%,28%{background:#e8edf0;}42%,82%{background:#b9d3ee;}96%,100%{background:#e8edf0;}}
+@keyframes nbk-twinkle{0%,100%{transform:scale(1) rotate(0);}50%{transform:scale(1.14) rotate(12deg);}}.nbk-tsep{flex:none;width:1px;height:18px;background:#d9e2e8;margin:0 5px;}
 .nbk-swatch{width:14px;height:14px;border-radius:999px;border:2px solid #fff;}
 
 /* -------------------------------- diff ------------------------------ */
@@ -402,6 +435,7 @@ export const KIT_CSS = `
 @media (prefers-reduced-motion:reduce){
   .nbk-overlay,.nbk-modal,.nbk-menu,.nbk-toast,.nbk-empty,.nbk-void,.nbk-kids,.nbk-status,.nbk-skel{animation:none;}
   .nbk-marquee__track{animation:none;}
+  .nbk-fmt *,.nbk-ai-fab--busy svg,.nbk-ai-fab--busy::after{animation:none !important;}
   .nbk-marquee{overflow-y:auto;}
   .nbk-tabs__pill,.nbk-row__twist svg{transition:none;}
   .nbk-bar__fill::after,.nbk-status--saving .nbk-status__dot::after{animation:none;}
