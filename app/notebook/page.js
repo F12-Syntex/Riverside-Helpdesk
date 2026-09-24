@@ -96,11 +96,8 @@ const PAGE_CSS = `
 .nbk-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
 .nbk-side-toggle{display:inline-flex;}
 
-/* AI format leads the strip as its own button, outside the scrolling
-   toolbar, so it is the first thing seen and never scrolled out of view. */
-.nbk-tools{flex:none;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;
-  gap:8px;padding:0 12px 10px;}
-.nbk-tools .nbk-toolbar{margin:0;min-width:0;max-width:none;}
+.nbk-tools{flex:none;position:relative;z-index:2;padding:0 0 10px;}
+.nbk-editor-wrap{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;}
 
 .nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;}
 
@@ -235,6 +232,8 @@ const TIcons = {
   underline: (<><path d="M6 4v6a6 6 0 0 0 12 0V4" /><line x1="4" x2="20" y1="20" y2="20" /></>),
   highlighter: (<><path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4a2 2 0 0 1 2.8 0l5.2 5.2a2 2 0 0 1 0 2.8Z" /></>),
   table: (<><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M12 3v18" /></>),
+  // Lucide "sparkles": the widely recognised mark for an AI action.
+  ai: (<><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>),
 };
 
 // Text-colour swatches for the toolbar (NHS palette).
@@ -1380,12 +1379,6 @@ export default function NotebookPage() {
             {selected && !isSection && (
               <>
                 <div className="nbk-tools">
-                  <button type="button" className="nbk-ai-btn" onClick={runAiFormat}
-                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
-                    title="Restructure this page into headings, lists, tables and highlights. You review the changes before anything is applied.">
-                    <Svg w={17} sw={2}>{Icons.sparkle}</Svg>
-                    <span>Format with AI</span>
-                  </button>
                   <div className="nbk-toolbar nbk-hide-scroll" role="toolbar" aria-label="Formatting"
                     onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
                     {toolbar.map((btn, i) => btn === null
@@ -1404,14 +1397,24 @@ export default function NotebookPage() {
                   </div>
                 </div>
 
-                <PageEditor
-                  key={selected.id}
-                  initialBody={selected.body || ''}
-                  onChange={(md) => editSelected({ body: md })}
-                  onReady={setEditor}
-                  uploadImage={uploadInlineImage}
-                  header={docHead}
-                />
+                {/* Format with AI floats in the page's bottom-right corner:
+                    always to hand, out of the way of the writing and the files. */}
+                <div className="nbk-editor-wrap">
+                  <PageEditor
+                    key={selected.id}
+                    initialBody={selected.body || ''}
+                    onChange={(md) => editSelected({ body: md })}
+                    onReady={setEditor}
+                    uploadImage={uploadInlineImage}
+                    header={docHead}
+                  />
+                  <button type="button" className="nbk-ai-fab" onClick={runAiFormat}
+                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
+                    aria-label="Format with AI"
+                    title="Format with AI: restructure this page into headings, lists, tables and highlights (you review the changes first)">
+                    <Svg w={20} sw={1.9}>{TIcons.ai}</Svg>
+                  </button>
+                </div>
 
                 {(selectedFiles.length > 0 || uploadErr || uploading) && (
                   <div className="nbk-dock">
