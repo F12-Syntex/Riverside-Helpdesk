@@ -794,3 +794,33 @@ test('the card says it has read the message and not the record', () => {
   assert.match(words(card), /nothing here has read the record/i);
   assert.match(words(card), /Find that consultation in the record before you book/i);
 });
+
+/* ------------------------------------------------------------------------ *
+ * THE PHARMACY WAS BEING SKIPPED. Hay fever, a cold or heartburn went to a GP
+ * because the patient asked for one. The reader now has to rule out the
+ * services below a doctor, in order, before it may name one — and the
+ * practice's self-care list is on the pharmacy entry it is ruling out.
+ * ------------------------------------------------------------------------ */
+
+test('the reader rules out the pharmacy and the self-care list before naming a doctor', async () => {
+  const { SELF_CARE_CONDITIONS } = await import('../lib/triage/destinations.mjs');
+  const prompt = accurxReadPrompt({ question: 'hay fever again, can I have a GP appt for tablets' });
+  assert.match(prompt, /RULE OUT THE SERVICES BELOW A DOCTOR FIRST/);
+  assert.match(prompt, /EVEN IF they asked for a GP appointment or a prescription/);
+  assert.match(prompt, /"The patient asked for a GP" does not close any of them/);
+  for (const c of SELF_CARE_CONDITIONS) {
+    assert.ok(prompt.includes(c.toLowerCase()), c + ' is on the self-care list the reader sees');
+  }
+  const pharmacy = DESTINATIONS.find((d) => d.id === 'pharmacy');
+  assert.match(pharmacy.refuses, /breastfeeding/, 'the UTI exclusions are the practice’s full list');
+  assert.match(pharmacy.refuses, /kidney infection/);
+});
+
+test('the reason line is asked for in the EMIS house style, with a worked example', async () => {
+  const { commandPrompt } = await import('../lib/templates/route.mjs');
+  const prompt = commandPrompt({ template: 'accurxTriage', question: 'pt has sore throat' });
+  assert.match(prompt, /under 25 words/);
+  assert.match(prompt, /Order: what pt wants; main sx\/problem/);
+  assert.match(prompt, /write "breastfeeding", not "bf"/);
+  assert.match(prompt, /Example output: pt req bloods bk’d sooner \?b12 def;/);
+});

@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.25.1` | 2026-09-24 | fix | `c37bdc0` | fix: draw the top bar's menus above the composer |
 | `6.25.0` | 2026-09-24 | feat | `73f0b2b` | feat: give the mode and tools menus icons, and style the scrollbars |
 | `6.24.4` | 2026-09-24 | chore | `19617fc` | chore: sync the lockfile version with package.json |
 | `6.24.3` | 2026-09-24 | docs | `a0277c5` | docs: record the merge in the versions table |
