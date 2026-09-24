@@ -387,6 +387,29 @@ export default function Page() {
     return state.rows.filter(active.match);
   }, [state.rows, filter]);
 
+  // Export: the questions under the current filter, as a plain numbered list
+  // ("1. …" one per line) ready to paste into an email or a meeting agenda.
+  const [copied, setCopied] = useState('');
+  async function copyList() {
+    const text = rows.map((r, i) => (i + 1) + '. ' + String(r.question || '').replace(/\s+/g, ' ').trim()).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      // No clipboard API (an http page, an older browser): the old way.
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(area);
+      if (!ok) { setCopied('Could not copy — your browser blocked it'); setTimeout(() => setCopied(''), 3500); return; }
+    }
+    setCopied('Copied ' + rows.length + (rows.length === 1 ? ' question' : ' questions'));
+    setTimeout(() => setCopied(''), 2500);
+  }
+
   async function ask(e) {
     e.preventDefault();
     const text = question.trim();
@@ -531,6 +554,15 @@ export default function Page() {
               <span style={s('margin-left:7px;opacity:.75;font-weight:500;')}>{counts[f.id] || 0}</span>
             </Hover>
           ))}
+          <span style={s('flex:1;')} />
+          <Hover tag="button" type="button" disabled={!rows.length} onClick={copyList}
+            title="Copy the questions shown as a numbered list: 1. question, 2. question…"
+            base={QUIET + 'padding:7px 14px;' + (rows.length ? '' : 'opacity:.5;cursor:default;')
+              + (copied.startsWith('Copied') ? 'border-color:#007f3b;color:#007f3b;' : '')}
+            hover={rows.length ? QUIET_HOVER : ''}>
+            <Svg w={14} sw={2}>{copied.startsWith('Copied') ? Icons.check : Icons.copy}</Svg>
+            {copied || 'Export ' + rows.length + (rows.length === 1 ? ' question' : ' questions')}
+          </Hover>
         </div>
 
         {state.loading && <p style={s('color:#4c6272;')}>Loading…</p>}

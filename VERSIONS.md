@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.30.0` | 2026-09-24 | feat | `7e6be5d` | feat: extract questions from pasted text with AI on /questions |
 | `6.29.0` | 2026-09-24 | feat | `6cbdf43` | feat: tint the Format with AI button blue and animate formatting |
 | `6.28.1` | 2026-09-24 | fix | `48fef84` | fix: tone down Format with AI into a bottom-right floating button |
 | `6.28.0` | 2026-09-24 | feat | `19cd373` | feat: lead the notebook toolbar with a prominent Format with AI button |
