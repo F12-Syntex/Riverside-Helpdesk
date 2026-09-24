@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.29.0` | 2026-09-24 | feat | `6cbdf43` | feat: tint the Format with AI button blue and animate formatting |
 | `6.28.1` | 2026-09-24 | fix | `48fef84` | fix: tone down Format with AI into a bottom-right floating button |
 | `6.28.0` | 2026-09-24 | feat | `19cd373` | feat: lead the notebook toolbar with a prominent Format with AI button |
 | `6.27.0` | 2026-09-24 | feat | `375484d` | feat: give every notebook page its own URL |
