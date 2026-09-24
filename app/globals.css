@@ -846,7 +846,9 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
    done here. */
 .riva-top {
   flex: none; height: var(--rv-top-h);
-  position: relative; z-index: 30;
+  /* Above the fixed composer dock (50), so the menus it opens are never
+     drawn behind the composer; below the scrims and modals (55+). */
+  position: relative; z-index: 52;
   padding: 5px 14px 0;
   animation: rivaBarIn .6s cubic-bezier(.2,.7,.3,1) both;
 }

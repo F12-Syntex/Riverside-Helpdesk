@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.25.0` | 2026-09-24 | feat | `73f0b2b` | feat: give the mode and tools menus icons, and style the scrollbars |
+| `6.24.4` | 2026-09-24 | chore | `19617fc` | chore: sync the lockfile version with package.json |
+| `6.24.3` | 2026-09-24 | docs | `a0277c5` | docs: record the merge in the versions table |
 | `6.24.2` | 2026-09-24 | chore | `b946e0a` | chore: merge origin/main into the templated answer card redesign |
 | `6.24.1` | 2026-09-24 | docs | `93ff78f` | docs: record 6.15.0 in the versions table |
 | `6.24.0` | 2026-09-24 | feat | `f4d521e` | feat: redesign the templated answer card |
