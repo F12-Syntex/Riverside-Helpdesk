@@ -231,8 +231,23 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-input:focus { border-color: #005eb8 !important; background: #fff !important; }
 .riva-form-field:focus { border-color: #005eb8 !important; }
 
-#riva-scroll::-webkit-scrollbar { width: 10px; }
-#riva-scroll::-webkit-scrollbar-thumb { background: #d8dde0; border-radius: 8px; border: 2px solid #f0f4f5; }
+/* Scrollbars: a slim rounded thumb on a clear track, in the ink of the
+   page, that warms to the accent under the pointer. WebKit/Blink take the
+   pseudo-elements; Firefox, which has none, takes the standard pair. The
+   phone rule further down still hides them for the native-app feel. */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--rv-ink-3) 34%, transparent);
+    border: 3px solid transparent; background-clip: padding-box; border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--rv-accent) 60%, transparent); }
+  ::-webkit-scrollbar-thumb:active { background-color: var(--rv-accent); }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--rv-ink-3) 40%, transparent) transparent; }
+}
 /* Selected text is picked out in NHS blue, the same blue the rest of the
    interface uses, rather than the browser's default. */
 ::selection { background: #005eb8; color: #fff; }
@@ -642,6 +657,14 @@ body { overflow-x: hidden; }
 .riva-mode:focus, .riva-mode:focus-visible { outline: none; background: #f2f6f9; box-shadow: inset 0 0 0 1px #e1e8ec; }
 .riva-mode.is-on { background: #eaf2fb; }
 .riva-mode.is-on:focus, .riva-mode.is-on:focus-visible { background: #e1ecf8; box-shadow: inset 0 0 0 1px #c9dcef; }
+.riva-mode-tile {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 10px;
+  background: #eef2f4; color: #4c6272;
+  transition: background .14s ease, color .14s ease;
+}
+.riva-mode:focus .riva-mode-tile { background: #e1ecf8; color: #005eb8; }
+.riva-mode-tile.is-on, .riva-mode:focus .riva-mode-tile.is-on { background: #005eb8; color: #fff; }
 .riva-mode-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .riva-mode-label { font-size: 14.5px; font-weight: 650; color: #212b32; }
 .riva-mode.is-on .riva-mode-label { color: #005eb8; }
@@ -952,6 +975,15 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 }
 .riva-menu-row:hover, .riva-menu-row:focus-visible { background: #f2f6f9; outline: none; }
 .riva-menu-row.is-active { background: #eaf2fb; color: var(--rv-accent); }
+.riva-menu-ico {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: #eef2f4; color: #4c6272;
+  transition: background .14s ease, color .14s ease;
+}
+.riva-menu-row:hover .riva-menu-ico, .riva-menu-row:focus-visible .riva-menu-ico,
+.riva-palette-row.is-sel .riva-menu-ico { background: #e1ecf8; color: var(--rv-accent); }
+.riva-menu-row.is-active .riva-menu-ico { background: var(--rv-accent); color: #fff; }
 .riva-menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-menu-foot {
   display: flex; align-items: baseline; gap: 8px;

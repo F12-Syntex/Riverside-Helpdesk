@@ -135,6 +135,14 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     if (open && e.key === 'Tab') setOpen(false);
   };
 
+  // Each mode's glyph on a small tile, so the list can be scanned by shape
+  // before it is read; the armed mode's tile turns blue.
+  const tile = (icon, on) => (
+    <span className={'riva-mode-tile' + (on ? ' is-on' : '')} aria-hidden="true">
+      <Svg w={16} sw={2.1}>{Icons[icon] || Icons.search}</Svg>
+    </span>
+  );
+
   const text = (label, summary) => (
     <span className="riva-mode-text">
       <span className="riva-mode-label">{label}</span>
@@ -165,6 +173,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           <span className="riva-modes-sep" role="separator" />
           <button type="button" role="menuitem" title={row.summary}
             onClick={enterFolder} onMouseMove={point(i)} className={'riva-mode riva-mode-folder' + (holds ? ' is-on' : '')}>
+            {tile(row.icon, false)}
             {text(row.label, holds ? 'Now: ' + current.label : row.summary)}
             <span className="riva-mode-trail" aria-hidden="true">
               <Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg>
@@ -178,6 +187,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
       <button key={row.name || 'qa'} type="button" role="menuitemradio" aria-checked={on}
         title={row.summary} onClick={() => choose(row.name)} onMouseMove={point(i)}
         className={'riva-mode' + (on ? ' is-on' : '')}>
+        {tile(row.icon, on)}
         {text(row.label, row.summary)}
         <span className="riva-mode-trail riva-mode-check" aria-hidden="true">
           {on ? <Svg w={15} sw={2.8}>{Icons.check}</Svg> : null}
@@ -203,9 +213,11 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eef2f4;color:#4c6272;')
           + (ready ? '' : 'opacity:0;')}
         hover={armed ? 'background:#0068c9;' : 'background:#e1e8ec;color:#005eb8;'}>
-        {/* The label names the mode; the only mark it needs is the spinner
+        {/* The mode's own glyph beside its name, swapped for the spinner
             while a message is being screened. */}
-        {busy && <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>}
+        {busy
+          ? <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
+          : <Svg w={15} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
         <span className="riva-modes-label">{current.label}</span>
         <Svg w={13} sw={2.4} style={s('opacity:.7;transition:transform .18s ease;' + (open ? 'transform:rotate(180deg);' : ''))}>{Icons.chevronDown}</Svg>
       </Hover>
