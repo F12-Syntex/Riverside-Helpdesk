@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.24.2` | 2026-09-24 | chore | `b946e0a` | chore: merge origin/main into the templated answer card redesign |
+| `6.24.1` | 2026-09-24 | docs | `93ff78f` | docs: record 6.15.0 in the versions table |
+| `6.24.0` | 2026-09-24 | feat | `f4d521e` | feat: redesign the templated answer card |
+| `6.23.6` | 2026-09-23 | docs | `0c7f24c` | docs: record 6.23.3 to 6.23.5 in the versions table |
 | `6.23.5` | 2026-09-23 | fix | `7fe7d68` | fix: drop the coloured left-edge bars from cards and notes |
 | `6.23.4` | 2026-09-23 | fix | `3a2bea2` | fix: show the contacts loader on the first load, not on every search |
 | `6.23.3` | 2026-09-23 | docs | `68247ac` | docs: record 6.22.6 to 6.23.2 in the versions table |
