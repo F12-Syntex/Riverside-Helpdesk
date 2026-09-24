@@ -822,5 +822,6 @@ test('the reason line is asked for in the EMIS house style, with a worked exampl
   assert.match(prompt, /under 25 words/);
   assert.match(prompt, /Order: what pt wants; main sx\/problem/);
   assert.match(prompt, /write "breastfeeding", not "bf"/);
+  assert.match(prompt, /Durations as \/7, \/52, \/12/, 'durations stay in the practice’s /52 form');
   assert.match(prompt, /Example output: pt req bloods bk’d sooner \?b12 def;/);
 });
