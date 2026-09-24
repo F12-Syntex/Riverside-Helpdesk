@@ -28,6 +28,7 @@ import {
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
 import { OUTPUT_TAGS, outputTag } from '@/lib/templates/output-tags.mjs';
+import { notebookHref, noteSegment, resolveNote } from '@/lib/notebook/links.mjs';
 import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -501,11 +502,16 @@ export default function NotebookPage() {
         setNotes(list);
         setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
         setStatus('ready');
-        // Open on the first page (sections are name-only), else the first section.
+        // Open the page the address names (/notebook/<title>-<id>), else the
+        // first page (sections are name-only), else the first section.
         if (list.length) {
-          const first = list.find((n) => n.parentId && !n.isSection) || list[0];
+          const named = resolveNote(list, noteSegment(window.location.pathname));
+          const first = named || list.find((n) => n.parentId && !n.isSection) || list[0];
           setSelectedId(first.id);
-          if (first.parentId) setExpanded((e) => ({ ...e, [first.parentId]: true }));
+          const open = {};
+          const ids = new Map(list.map((n) => [n.id, n]));
+          for (let cur = first; cur && cur.parentId; cur = ids.get(cur.parentId)) open[cur.parentId] = true;
+          setExpanded((e) => ({ ...e, ...open }));
         }
       } catch (e) {
         setStatus('error');
@@ -514,6 +520,44 @@ export default function NotebookPage() {
   }, []);
 
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
+
+  /* ------------------------------ Addresses --------------------------- *
+   * Every page has its own URL (lib/notebook/links.mjs). Opening a page
+   * pushes its address, so the back button walks the pages read; renaming
+   * one only rewrites the address in place, since it is the same page.   */
+  const selTitle = (byId.get(selectedId) || {}).title || '';
+  const lastUrlId = React.useRef(null);
+  React.useEffect(() => {
+    if (status !== 'ready' || selectedId == null) return;
+    const href = notebookHref({ id: selectedId, title: selTitle });
+    const here = window.location.pathname;
+    if (here !== href) {
+      const samePage = lastUrlId.current === selectedId || lastUrlId.current === null;
+      window.history[samePage ? 'replaceState' : 'pushState'](null, '', href + window.location.search);
+    }
+    lastUrlId.current = selectedId;
+    document.title = (selTitle || 'Untitled') + ' · Notebook';
+  }, [status, selectedId, selTitle]);
+  React.useEffect(() => {
+    const onPop = () => {
+      const hit = resolveNote(notesRef.current, noteSegment(window.location.pathname));
+      if (!hit) return;
+      lastUrlId.current = hit.id; // arriving here is not a new visit to push
+      selectNote(hit.id);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }); // re-bound each render so selectNote sees the current tree
+
+  const [copied, setCopied] = React.useState(false);
+  async function copyLink(id) {
+    const n = byId.get(id);
+    if (!n) return;
+    const url = window.location.origin + notebookHref(n);
+    try { await navigator.clipboard.writeText(url); } catch (e) { window.prompt('Copy this link', url); return; }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
   // WHICH ROW a tag is coming from - the row itself, or the nearest folder
   // above it that sets one. Null when nothing on the path does. The same walk
   // the assistant does server-side (noteOutputTag in lib/knowledge-context.mjs),
@@ -1280,6 +1324,9 @@ export default function NotebookPage() {
                   </>
                 )}
                 {selected && (
+                  <IconButton icon={copied ? Icons.check : Icons.copy} label={copied ? 'Link copied' : 'Copy link to this page'} onClick={() => copyLink(selected.id)} />
+                )}
+                {selected && (
                   <IconButton icon={NBIcons.dots} label="More actions" onClick={(e) => openMenu(e, selected.id, true)} />
                 )}
               </div>
@@ -1392,6 +1439,7 @@ export default function NotebookPage() {
       {menu && menuNote && (
         <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={232}>
           <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
+          <MenuItem icon={Icons.copy} onClick={() => { setMenu(null); copyLink(menu.id); }}>Copy link to page</MenuItem>
           <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
           {canOrganize(menuNote) && (
             <MenuItem icon={Icons.sitemap} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>

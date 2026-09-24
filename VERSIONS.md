@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.26.1` | 2026-09-24 | fix | `c616322` | fix: write reason-line durations as /7, /52, /12 again |
 | `6.26.0` | 2026-09-24 | feat | `690ce58` | feat: EMIS-style reason line and stricter pharmacy-first triage in /accurx |
 | `6.25.1` | 2026-09-24 | fix | `c37bdc0` | fix: draw the top bar's menus above the composer |
 | `6.25.0` | 2026-09-24 | feat | `73f0b2b` | feat: give the mode and tools menus icons, and style the scrollbars |

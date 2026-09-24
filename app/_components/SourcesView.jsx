@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { s, Hover, Svg, Icons } from './ui';
+import { notebookHref } from '@/lib/notebook/links.mjs';
 
 /* ------------------------------------------------------------------ *
  * Sources — everything the assistant reads from, in one tree.
@@ -45,7 +46,7 @@ function NoteBranch({ note, childrenOf, depth, openKeys, toggle }) {
         hasChildren={kids.length > 0}
         label={note.title || 'Untitled note'}
         tag={kids.length ? 'button' : Link}
-        href={kids.length ? undefined : '/notebook'}
+        href={kids.length ? undefined : notebookHref(note)}
         onClick={kids.length ? () => toggle(key) : undefined}
       />
       {open && kids.map((k) => (

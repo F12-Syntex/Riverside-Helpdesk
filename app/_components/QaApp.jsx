@@ -8,6 +8,7 @@ import { commandByName, isMode, modePlaceholder, checksPatientData } from '../..
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
+import { notebookHref } from '../../lib/notebook/links.mjs';
 import {
   isTestQuery, isGeneralTestQuery,
   TEST_STEPS, TEST_STATUS, TEST_ANSWER,
@@ -1184,6 +1185,14 @@ class RiversidePracticeQA extends React.Component {
       text: (c.quote && c.quote.length ? c.quote : (v.text || c.text || c.snippet)) || 'This source has no preview.',
       // The document URL to open/download; pdfSrc also jumps to the right page.
       pdfSrc,
+      // A notebook page has its own address (lib/notebook/links.mjs), so a
+      // cited page can be opened where it is written, not only read here.
+      noteHref: (() => {
+        const m = /^note:(\d+)/.exec(String(c.docId || ''));
+        if (!m) return '';
+        const title = String(c.docTitle || '').replace(/^Notebook:\s*/, '').split(' / ').pop();
+        return notebookHref({ id: Number(m[1]), title });
+      })(),
     };
   }
 

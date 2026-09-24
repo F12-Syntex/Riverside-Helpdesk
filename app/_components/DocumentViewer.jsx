@@ -210,14 +210,21 @@ export default function DocumentViewer({ v }) {
 
         {/* Actions pinned to the bottom of the panel — always visible, never
             requiring a scroll. Only the document content above scrolls. */}
-        {vm.hasFile && (
+        {(vm.hasFile || vm.noteHref) && (
           <div style={s('flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid #d8dde0;background:#fff;')}>
+            {vm.noteHref && (
+              <Hover tag="a" href={vm.noteHref} target="_blank" rel="noopener" base={action + (vm.hasFile ? 'background:#fff;color:#005eb8;border:2px solid #d8dde0;' : 'background:#005eb8;color:#fff;border:none;')} hover={vm.hasFile ? 'border-color:#005eb8;' : 'background:#003087;'}>
+                <Svg w={16} stroke={vm.hasFile ? undefined : '#fff'} sw={2.2}>{Icons.external}</Svg>Open in Notebook
+              </Hover>
+            )}
+{vm.hasFile && (<>
             <Hover tag="a" href={vm.fileUrl} target="_blank" rel="noopener noreferrer" base={action + 'background:#005eb8;color:#fff;border:none;'} hover="background:#003087;">
               <Svg w={16} stroke="#fff" sw={2.2}>{Icons.external}</Svg>Open full document
             </Hover>
             <Hover tag="a" href={vm.fileUrl} download base={action + 'background:#fff;color:#005eb8;border:2px solid #d8dde0;'} hover="border-color:#005eb8;">
               <Svg w={16} sw={2.2} style={s('transform:rotate(180deg);')}>{Icons.up}</Svg>Download
             </Hover>
+            </>)}
           </div>
         )}
       </div>
