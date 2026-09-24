@@ -69,7 +69,6 @@ export default function Page() {
           <Hover tag="button" onClick={suggest} disabled={busy || !text.trim()}
             base={'display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;padding:12px 22px;font:inherit;font-size:16px;font-weight:600;color:#fff;cursor:pointer;background:#005eb8;' + (busy || !text.trim() ? 'opacity:.55;cursor:default;' : '')}
             hover={busy || !text.trim() ? '' : 'background:#00477e;'}>
-            <Svg w={18} sw={2.2}>{Icons.arrow}</Svg>
             {busy ? 'Thinking…' : 'Suggest a pathway'}
           </Hover>
           {result && (

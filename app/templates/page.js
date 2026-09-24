@@ -11,7 +11,7 @@
 // It is a working tool, not a staff page — deliberately absent from the tools
 // index.
 import { useState } from 'react';
-import { s, Hover, Svg, Icons } from '../_components/ui';
+import { s, Hover } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import TemplateView from '../_components/templates/TemplateView';
 import { TEMPLATES, TEMPLATE_GROUPS } from '../../lib/templates/library.mjs';
@@ -58,8 +58,7 @@ export default function Page() {
               <p style={s('font-size:14.5px;line-height:1.5;color:#4c6272;margin:0 0 12px;max-width:64ch;')}>{t.why}</p>
 
               {/* The question a staff member types, above the answer it produces. */}
-              <div style={s('display:flex;gap:10px;align-items:center;margin-bottom:10px;padding:9px 14px;background:#e8eef0;border-radius:10px;')}>
-                <Svg w={15} sw={2.2} style={s('flex:none;color:#4c6272;')}>{Icons.chat}</Svg>
+              <div style={s('margin-bottom:10px;padding:9px 14px;background:#e8eef0;border-radius:10px;')}>
                 <span style={s('font-size:14.5px;font-weight:600;color:#212b32;')}>{t.sample}</span>
               </div>
 

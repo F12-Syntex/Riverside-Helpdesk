@@ -282,7 +282,7 @@ export default function RotaSystem({ page = 'rota' }) {
       {warning && (
         <Sheet maxWidth={470} onClose={() => setWarning(null)}>
           <div style={s('display:flex;align-items:center;gap:12px;padding:22px 24px 14px;')}>
-            <span style={s('flex:none;width:42px;height:42px;border-radius:50%;background:#fff6cc;color:#946800;display:flex;align-items:center;justify-content:center;')}><Svg w={23} sw={2.2}>{Icons.triangle}</Svg></span>
+            <span style={s('flex:none;color:#946800;display:flex;')}><Svg w={23} sw={2.2}>{Icons.triangle}</Svg></span>
             <h2 style={s('font-size:21px;font-weight:700;margin:0;')}>Heads up: this causes an issue</h2>
           </div>
           <div style={s('padding:0 24px 18px;')}>
@@ -379,12 +379,11 @@ export default function RotaSystem({ page = 'rota' }) {
 
         {curStatus === 'done' && !hasRota && !isReadOnly && (
           <div style={s(CARD + 'padding:48px 32px;text-align:center;')}>
-            <div style={s('width:72px;height:72px;border-radius:50%;background:#e8f1f8;color:#005eb8;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;')}><Svg w={36} sw={2}>{Icons.calendar}</Svg></div>
             <h2 style={s('font-size:26px;font-weight:700;margin:0 0 8px;')}>No rota for this week yet</h2>
             <p style={s('font-size:17px;color:#4c6272;margin:0 auto 24px;max-width:30em;')}>Generate a balanced week in one click. We keep 2 staff on every shift, work around annual leave, and share early and late evenly.</p>
             {staff.length === 0
               ? <p style={s('font-size:15px;color:#768692;')}>Add staff on the Staff tab first.</p>
-              : <Hover tag="button" onClick={generate} disabled={busy} base={GREEN_BTN + 'font-size:18px;padding:15px 26px;display:inline-flex;align-items:center;gap:10px;' + (busy ? 'opacity:.6;' : '')} active="transform:translateY(4px);box-shadow:none;"><Svg w={21} sw={2.2}>{Icons.sparkle}</Svg>{busy ? 'Generating…' : 'Auto-generate rota'}</Hover>}
+              : <Hover tag="button" onClick={generate} disabled={busy} base={GREEN_BTN + 'font-size:18px;padding:15px 26px;display:inline-flex;align-items:center;' + (busy ? 'opacity:.6;' : '')} active="transform:translateY(4px);box-shadow:none;">{busy ? 'Generating…' : 'Auto-generate rota'}</Hover>}
           </div>
         )}
 
@@ -481,7 +480,7 @@ export default function RotaSystem({ page = 'rota' }) {
                       base={'display:flex;align-items:center;justify-content:center;min-height:56px;width:100%;padding:0;margin:0;box-sizing:border-box;cursor:pointer;font-family:inherit;border:none;' + border + 'background:' + (isBlankTemp ? '#fcfdfe' : cv.bg) + ';'}
                       hover="filter:brightness(.96);">
                       {isBlankTemp
-                        ? <span style={s('display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:#005eb8;border:1.5px dashed #9fc3e6;border-radius:6px;padding:3px 8px;')}><Svg w={12} sw={2.8}>{Icons.plus}</Svg>Set</span>
+                        ? <span style={s('display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;color:#005eb8;border:1.5px dashed #9fc3e6;border-radius:6px;padding:3px 8px;')}>Set</span>
                         : <span style={s('font-weight:600;font-size:12.5px;color:' + cv.color + ';font-variant-numeric:tabular-nums;')}>{cv.main}</span>}
                     </Hover>
                   );
@@ -545,7 +544,7 @@ export default function RotaSystem({ page = 'rota' }) {
             <h1 className="riva-hero-h1" style={s('font-size:36px;font-weight:700;margin:0;letter-spacing:-0.01em;')}>Staff</h1>
             <p style={s('font-size:17px;color:#4c6272;margin:6px 0 0;')}>{staff.length} {staff.length === 1 ? 'person' : 'people'} on the reception rota</p>
           </div>
-          <Hover tag="button" onClick={() => { setShowAdd((v) => !v); setDraft({ name: '', about: '', phone: '', temporary: false }); }} base={GREEN_BTN + 'font-size:16px;padding:12px 20px;display:inline-flex;align-items:center;gap:9px;'} active="transform:translateY(4px);box-shadow:none;"><Svg w={20} sw={2.4}>{Icons.plus}</Svg>Add staff</Hover>
+          <Hover tag="button" onClick={() => { setShowAdd((v) => !v); setDraft({ name: '', about: '', phone: '', temporary: false }); }} base={GREEN_BTN + 'font-size:16px;padding:12px 20px;display:inline-flex;align-items:center;'} active="transform:translateY(4px);box-shadow:none;">Add staff</Hover>
         </div>
 
         {showAdd && (
@@ -579,7 +578,7 @@ export default function RotaSystem({ page = 'rota' }) {
                       {p.temporary && <span style={s(TEMP_TAG)}>Temp · sets own days</span>}
                     </span>
                     {p.phone
-                      ? <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4c6272;')}><Svg w={14} sw={2.2}>{Icons.phone}</Svg>{p.phone}</span>
+                      ? <span style={s('font-size:14px;font-weight:600;color:#4c6272;')}>{p.phone}</span>
                       : <span style={s('font-size:13px;color:#aa5d00;')}>No number, so WhatsApp will use their name</span>}
                     <p style={s('font-size:16px;line-height:1.5;margin:0;color:#212b32;')}>{p.about || 'No description yet.'}</p>
                     {(p.leave || []).length > 0 && (

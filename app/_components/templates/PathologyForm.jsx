@@ -82,8 +82,8 @@ export default function PathologyForm({ block }) {
 
   return (
     <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
-      <div style={s('display:flex;align-items:center;gap:8px;padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
-        <Svg w={14} stroke="#fff" sw={2.4}>{Icons.check}</Svg>On the blood form
+      <div style={s('padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
+        On the blood form
       </div>
       <div style={s('padding:16px 18px 18px;background:#f0f4f5;')}>
         <div style={s('font-size:20px;font-weight:700;color:' + INK + ';margin:0 0 3px;')}>Test Requests</div>

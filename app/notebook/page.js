@@ -23,7 +23,7 @@ import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
 import {
   NotebookStyles, T, NBIcons, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
-  EmptyState, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
+  EmptyState, EmptyMarquee, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuLabel, MenuSeparator,
   MenuOption, Spinner,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
@@ -33,9 +33,13 @@ import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 /* ------------------------------------------------------------------ *
  * Notebook - the practice's notes, which the assistant reads to answer.
  *
- * The screen is two columns and nothing else: the tree of sections and
- * pages on the left, the page itself on the right with its own header,
- * toolbar and writing surface. Everything that interrupts - a deletion,
+ * The screen is two surfaces on the light, in the shell's language: the
+ * tree of sections and pages on a pane of glass at the left, and the page
+ * itself on a sheet of white paper beside it - a slim bar of where you
+ * are and what you can do, the formatting strip floating over the text,
+ * and the page's own title set large at the head of what it says. On a
+ * phone the glass becomes a drawer over the sheet. Everything that
+ * interrupts - a deletion,
  * a reformat to review, a backup being restored - arrives as the same
  * modal, from the kit next door (kit.jsx), so a dialogue in the Notebook
  * always looks like the last dialogue in the Notebook.
@@ -50,68 +54,155 @@ import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 // Layout and the handful of page-only shapes. Everything reusable - buttons,
 // tabs, modals, menus, rows, the writing surface - is in kit.jsx.
 const PAGE_CSS = `
-.nbk-shell{display:flex;flex-direction:column;height:100vh;min-height:100vh;background:var(--nbk-canvas);}
-.nbk-body{flex:1;min-height:0;display:flex;width:100%;}
+.nbk-shell{display:flex;flex-direction:column;height:100vh;min-height:100vh;}
+.nbk-body{position:relative;flex:1;min-height:0;display:flex;gap:12px;width:100%;padding:14px 14px 14px;}
 
-.nbk-sidebar{flex:none;width:320px;display:flex;flex-direction:column;min-height:0;background:#fff;
-  border-right:1px solid var(--nbk-line);}
-.nbk-sidebar__top{flex:none;display:flex;flex-direction:column;gap:9px;padding:14px 14px 10px;
-  border-bottom:1px solid var(--nbk-line-soft);}
+/* ---- the tree: glass on the light ---- */
+.nbk-sidebar{flex:none;width:300px;display:flex;flex-direction:column;min-height:0;border-radius:20px;overflow:hidden;
+  animation:nbk-side-in .5s var(--nbk-ease) both;}
+@keyframes nbk-side-in{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:none;}}
+.nbk-sidebar__top{flex:none;display:flex;flex-direction:column;gap:10px;padding:14px 12px 10px;}
+.nbk-brand{display:flex;align-items:center;gap:10px;padding:0 2px 2px;}
+.nbk-brand__name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--nbk-ink);line-height:1.15;}
+.nbk-brand__meta{font-size:12px;font-weight:600;color:var(--nbk-dim);font-variant-numeric:tabular-nums;}
 .nbk-sidebar__row{display:flex;align-items:center;gap:8px;}
-.nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:10px 10px 18px;display:flex;flex-direction:column;gap:1px;}
-.nbk-sidebar__foot{flex:none;display:flex;flex-direction:column;gap:9px;padding:12px 14px 14px;
-  border-top:1px solid var(--nbk-line-soft);background:#fcfdfe;}
-.nbk-sidebar__note{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.45;color:var(--nbk-dim);}
-.nbk-foot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:4px 8px 16px;display:flex;flex-direction:column;gap:1px;}
+.nbk-tree__label{padding:8px 8px 5px;}
+.nbk-tree__note{padding:10px 8px;font-size:13.5px;line-height:1.55;color:var(--nbk-mut);}
+.nbk-sidebar__foot{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px;border-top:1px solid rgba(33,43,50,.07);}
+.nbk-sidebar__note{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.45;color:var(--nbk-mut);}
+.nbk-foot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.nbk-foot-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px 8px;border:1px solid transparent;border-radius:12px;
+  background:rgba(255,255,255,.55);font:inherit;font-size:12px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
+  transition:background-color .15s ease,color .15s ease,box-shadow .15s ease,transform .1s ease;}
+.nbk-foot-btn:hover{background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
+.nbk-foot-btn:active{transform:translateY(1px);}
+.nbk-foot-btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
 
-.nbk-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;background:#fff;}
-.nbk-head{flex:none;display:flex;align-items:center;gap:14px;min-height:68px;padding:11px 20px;
-  background:#fff;border-bottom:1px solid var(--nbk-line);}
-.nbk-head__left{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
-.nbk-head__crumbs{display:flex;align-items:center;gap:5px;padding-left:6px;font-size:12.5px;color:var(--nbk-dim);
-  overflow:hidden;white-space:nowrap;}
-.nbk-crumb{border:none;background:none;padding:0;font:inherit;font-size:12.5px;font-weight:600;
-  color:var(--nbk-mut);cursor:pointer;border-radius:4px;}
-.nbk-crumb:hover{color:var(--nbk-blue);text-decoration:underline;}
+/* ---- the page: white paper ---- */
+.nbk-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;border-radius:22px;overflow:hidden;
+  animation:nbk-paper-in .55s .05s var(--nbk-ease) both;}
+@keyframes nbk-paper-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.nbk-head{flex:none;display:flex;align-items:center;gap:10px;min-height:58px;padding:10px 14px 10px 12px;}
+.nbk-head__left{flex:1;min-width:0;display:flex;align-items:center;gap:6px;}
+.nbk-head__crumbs{min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;white-space:nowrap;}
+.nbk-crumb{flex:none;max-width:220px;overflow:hidden;text-overflow:ellipsis;border:none;background:none;padding:5px 8px;font:inherit;font-size:13px;font-weight:600;
+  color:var(--nbk-mut);cursor:pointer;border-radius:8px;transition:background-color .14s ease,color .14s ease;}
+.nbk-crumb:hover{color:var(--nbk-blue);background:var(--nbk-soft);}
+.nbk-crumb--here{color:var(--nbk-ink);cursor:default;flex:0 1 auto;}
+.nbk-crumb--here:hover{color:var(--nbk-ink);background:none;}
+.nbk-crumb-sep{flex:none;color:#b6c2c9;display:flex;}
 .nbk-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
+.nbk-side-toggle{display:inline-flex;}
 
-.nbk-section{flex:1;min-height:0;overflow-y:auto;background:var(--nbk-canvas);padding:22px 24px 40px;}
-.nbk-section__inner{width:100%;max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-.nbk-page-card{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;
-  border:1px solid var(--nbk-line);border-radius:var(--nbk-r-md);box-shadow:var(--nbk-sh-1);padding:13px 15px;
-  font:inherit;font-size:14.5px;font-weight:600;color:var(--nbk-ink);cursor:pointer;
-  transition:border-color .14s ease,background-color .14s ease,transform .08s ease;}
-.nbk-page-card:hover{border-color:#a9c3d6;background:#fafdff;}
-.nbk-page-card:active{transform:translateY(1px);}
-.nbk-add-card{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
-  border:1.5px dashed var(--nbk-line);border-radius:var(--nbk-r-md);background:none;padding:13px 15px;
-  font:inherit;font-size:14px;font-weight:600;color:var(--nbk-mut);cursor:pointer;
-  transition:border-color .14s ease,color .14s ease,background-color .14s ease;}
-.nbk-add-card:hover{border-color:var(--nbk-blue);color:var(--nbk-blue);background:#f8fcff;}
+.nbk-tools{flex:none;position:relative;z-index:2;padding:0 0 10px;}
 
-.nbk-editor{flex:1;min-height:0;overflow-y:auto;background:#fff;cursor:text;display:flex;flex-direction:column;}
-.nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 20px 13px;
-  border-top:1px solid var(--nbk-line-soft);background:#fcfdfe;}
-.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:5px 6px 5px 11px;
-  background:#fff;border:1px solid var(--nbk-line);border-radius:999px;box-shadow:var(--nbk-sh-1);}
+.nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;}
+
+/* The page's own heading, inside the sheet: where it sits, its name as a
+   title, and what it is - so the title is read as the page's, not the bar's. */
+.nbk-doc-head{width:100%;max-width:780px;margin:0 auto;padding:30px 44px 10px;cursor:auto;animation:nbk-in .4s var(--nbk-ease) both;}
+.nbk-kicker{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:11.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--nbk-dim);}
+.nbk-kicker__dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.7;}
+.nbk-kicker .nbk-chip{text-transform:none;letter-spacing:.01em;}
+.nbk-doc-title{display:block;width:calc(100% + 8px);margin:0 0 0 -8px;padding:2px 8px;border:none;outline:none;background:none;border-radius:10px;
+  resize:none;overflow:hidden;field-sizing:content;min-height:0;
+  font:inherit;font-size:34px;font-weight:800;letter-spacing:-.028em;line-height:1.18;color:var(--nbk-ink);
+  transition:background-color .15s ease,box-shadow .15s ease;}
+.nbk-doc-title::placeholder{color:#b6c2c9;}
+.nbk-doc-title:hover{background:rgba(33,43,50,.035);}
+.nbk-doc-title:focus{background:transparent !important;box-shadow:inset 0 -2px 0 var(--nbk-blue) !important;border:none !important;}
+.nbk-doc-rule{height:1px;margin:18px 0 0;background:linear-gradient(90deg,var(--nbk-line-soft),transparent);}
+
+.nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;
+  border-top:1px solid var(--nbk-line-soft);background:rgba(248,250,251,.9);}
+.nbk-dock__label{margin-right:4px;}
+.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 4px 4px 10px;
+  background:#fff;border:1px solid var(--nbk-line);border-radius:12px;box-shadow:var(--nbk-sh-1);animation:nbk-in .3s var(--nbk-ease) both;}
 .nbk-attach a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;
   font-weight:600;color:var(--nbk-ink);text-decoration:none;}
 .nbk-attach a:hover{color:var(--nbk-blue);text-decoration:underline;}
 
-.nbk-dropzone{position:absolute;inset:12px;z-index:5;display:flex;align-items:center;justify-content:center;
-  gap:10px;border:2px dashed var(--nbk-blue);border-radius:var(--nbk-r-lg);background:rgba(233,242,250,.88);
-  font-size:16px;font-weight:700;color:var(--nbk-navy);pointer-events:none;}
+.nbk-dropzone{position:absolute;inset:10px;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;border:2px dashed var(--nbk-blue);border-radius:18px;background:rgba(234,242,251,.9);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  font-size:16px;font-weight:700;color:var(--nbk-navy);pointer-events:none;animation:nbk-fade .15s ease;}
+
+/* ---- a section: its pages as cards ---- */
+.nbk-section{flex:1;min-height:0;overflow-y:auto;padding:0 0 40px;}
+.nbk-section__lede{margin:14px 0 0;max-width:62ch;font-size:14px;line-height:1.6;color:var(--nbk-mut);}
+.nbk-cards{width:100%;max-width:780px;margin:0 auto;padding:8px 44px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.nbk-page-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:128px;width:100%;text-align:left;
+  background:#fff;border:1px solid var(--nbk-line-soft);border-radius:16px;padding:14px 14px 13px;
+  box-shadow:0 1px 2px rgba(33,43,50,.05);font:inherit;color:var(--nbk-ink);cursor:pointer;
+  animation:nbk-in .4s var(--nbk-ease) both;
+  transition:border-color .15s ease,box-shadow .2s ease,transform .2s var(--nbk-ease);}
+.nbk-page-card:hover{border-color:#aac7e0;transform:translateY(-1px);box-shadow:0 1px 2px rgba(33,43,50,.06),0 3px 6px -2px rgba(33,43,50,.08);}
+.nbk-page-card:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
+.nbk-page-card__title{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.nbk-page-card__excerpt{font-size:12.5px;line-height:1.5;color:var(--nbk-mut);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.nbk-page-card__empty{font-size:12px;font-weight:650;color:var(--nbk-dim);}
+.nbk-add-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:128px;width:100%;
+  border:1.5px dashed #c9d5dd;border-radius:16px;background:rgba(248,250,251,.6);padding:14px;
+  font:inherit;font-size:14px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
+  transition:border-color .15s ease,color .15s ease,background-color .15s ease;}
+.nbk-add-card:hover{border-color:var(--nbk-blue);color:var(--nbk-blue);background:var(--nbk-tint);}
+
+/* ---- the map, in the same sheet ---- */
+.nbk-map-lede{font-size:13px;color:var(--nbk-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
-.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 24px;}
+.nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 23px;}
 
-@media (max-width:820px){
-  .nbk-sidebar{width:260px;}
-  .nbk-prose{padding:22px 20px 140px;}
+.nbk-scrim{display:none;}
+
+/* Closed on a wide screen: the sheet takes the whole width. */
+.nbk-body.is-collapsed .nbk-sidebar{display:none;}
+
+@media (max-width:1000px){
+  .nbk-sidebar{width:264px;}
+  .nbk-doc-head,.nbk-cards{padding-left:28px;padding-right:28px;}
+}
+/* A phone: the tree is a drawer over the page, opened from the sheet. */
+@media (max-width:760px){
+  .nbk-body{padding:8px;gap:0;}
+  .nbk-body.is-collapsed .nbk-sidebar{display:flex;}
+  .nbk-sidebar{position:fixed;z-index:60;left:8px;top:calc(var(--rv-top-h,56px) + 8px);bottom:8px;width:min(320px,calc(100vw - 16px));
+    animation:none;transform:translateX(calc(-100% - 16px));transition:transform .32s var(--nbk-ease);
+    background:rgba(255,255,255,.9);}
+  .nbk-body.is-drawer .nbk-sidebar{transform:none;}
+  .nbk-body.is-drawer .nbk-scrim{display:block;position:fixed;inset:0;z-index:55;background:rgba(20,36,48,.25);animation:nbk-fade .2s ease;}
+  .nbk-main{border-radius:18px;}
+  .nbk-head{padding:8px 10px;min-height:52px;}
+  .nbk-crumb{max-width:120px;}
+  .nbk-doc-head{padding:22px 20px 6px;}
+  .nbk-doc-title{font-size:27px;}
+  .nbk-cards{padding:8px 20px 0;grid-template-columns:1fr;}
+  .nbk-page-card,.nbk-add-card{min-height:0;}
+  .nbk-map-lede{display:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  .nbk-sidebar,.nbk-main,.nbk-doc-head,.nbk-page-card,.nbk-attach{animation:none;}
+  .nbk-sidebar{transition:none;}
 }
 `;
 
 const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
+
+// A line of what a page says, for its card: the markdown and HTML taken out.
+function excerpt(body, max = 140) {
+  const text = String(body || '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[#*>`|_~-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > max ? text.slice(0, max).replace(/\s+\S*$/, '') + '...' : text;
+}
 
 function fmtSize(n) {
   if (!n) return '';
@@ -185,7 +276,7 @@ const EXTENSIONS = [
 // Keyed by note id in the parent, so switching pages gets a fresh editor and
 // its own undo history. onChange receives the serialized markdown on every
 // edit and feeds the existing dirty -> interval-save pipeline.
-function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
+function PageEditor({ initialBody, onChange, onReady, uploadImage, header = null }) {
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
   const uploadRef = React.useRef(uploadImage);
@@ -225,6 +316,7 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage }) {
   return (
     <div className="nbk-editor nbk-scroll"
       onMouseDown={(e) => { if (e.target === e.currentTarget && editor) { e.preventDefault(); editor.chain().focus('end').run(); } }}>
+      {header}
       <EditorContent editor={editor} style={{ flex: 1, display: 'flex', flexDirection: 'column' }} />
     </div>
   );
@@ -264,6 +356,7 @@ function SideRow({ n, depth, ctx }) {
   const draggable = !!n.parentId;
   const dropOk = dragId != null && canDropOn(dragId, n.id);
   const cls = ['nbk-row',
+    depth === 0 ? 'nbk-row--top' : '',
     isSel ? 'nbk-row--on' : onPath ? 'nbk-row--path' : '',
     dragId === n.id ? 'nbk-row--drag' : '',
     dropOk && dropId === n.id ? 'nbk-row--drop' : ''].filter(Boolean).join(' ');
@@ -295,14 +388,14 @@ function SideRow({ n, depth, ctx }) {
           moveNoteTo(dragId, n.id);
         }}>
         {kids.length > 0 ? (
-          <IconButton plain size="sm" label={open ? 'Collapse' : 'Expand'} icon={Icons.chevronRight}
-            style={{ transform: 'rotate(' + (open ? 90 : 0) + 'deg)', transition: 'transform .15s ease' }}
-            onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))} />
-        ) : (<span style={{ flex: 'none', width: '28px' }} />)}
-        <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)}>
-          <Svg w={16} sw={2} style={{ flex: 'none', color: isSel ? T.blue : T.dim }}>
-            {depth === 0 || n.isSection ? Icons.book : Icons.fileLines}
-          </Svg>
+          <button type="button" className="nbk-row__twist" aria-expanded={open}
+            aria-label={(open ? 'Collapse ' : 'Expand ') + (n.title || 'Untitled')}
+            onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))}>
+            <Svg w={13} sw={2.6}>{Icons.chevronRight}</Svg>
+          </button>
+        ) : (<span style={{ flex: 'none', width: '22px' }} />)}
+        <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)} aria-current={isSel ? 'page' : undefined}>
+          <span className="nbk-row__icon"><Svg w={15} sw={2}>{depth === 0 || n.isSection ? Icons.folder : Icons.fileLines}</Svg></span>
           <span className="nbk-row__name">{n.title || 'Untitled'}</span>
           {fileCount > 0 && <Svg w={13} sw={2.2} style={{ flex: 'none', color: T.dim }}>{Icons.paperclip}</Svg>}
           {/* The shape answers from here come back in. The CHIP is only on the
@@ -343,6 +436,23 @@ export default function NotebookPage() {
   React.useEffect(() => {
     try { window.localStorage.setItem('nb-expanded', JSON.stringify(expanded)); } catch (e) { /* ignore */ }
   }, [expanded]);
+  // The tree: open or folded away on a wide screen (remembered), and on a
+  // phone a drawer that is shut until asked for.
+  // Read after mounting rather than in the initial state: the class it sets
+  // is on server-rendered markup, and a first render that disagreed with the
+  // server's would keep the server's.
+  const [sideOpen, setSideOpen] = React.useState(true);
+  React.useEffect(() => {
+    try { if (window.localStorage.getItem('nb-side') === '0') setSideOpen(false); } catch (e) { /* ignore */ }
+  }, []);
+  const [drawer, setDrawer] = React.useState(false);
+  const toggleSide = () => {
+    if (window.matchMedia('(max-width: 760px)').matches) { setDrawer((d) => !d); return; }
+    setSideOpen((o) => {
+      try { window.localStorage.setItem('nb-side', o ? '0' : '1'); } catch (e) { /* ignore */ }
+      return !o;
+    });
+  };
   const [search, setSearch] = React.useState('');
   const [saveState, setSaveState] = React.useState('');     // '' | 'saving' | 'saved' | 'unsaved'
   const [view, setView] = React.useState('pages');           // 'pages' - the editor; 'map' - the treemap
@@ -611,6 +721,7 @@ export default function NotebookPage() {
     setUploadErr('');
     setAiFmt(null);
     setAiOrg(null);
+    setDrawer(false);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
     setExpanded((e) => {
@@ -997,10 +1108,53 @@ export default function NotebookPage() {
       { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
     ] : []),
     null,
-    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.sparkle, accent: true, label: 'AI format' },
+    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.edit, accent: true, label: 'AI format' },
   ];
 
   /* ------------------------------ Render ------------------------------- */
+
+  const pageCount = notes.filter((n) => n.parentId && !n.isSection).length;
+  const sectionCount = notes.length - pageCount;
+  const fileCount = selected ? attachments.filter((a) => a.noteId === selected.id).length : 0;
+  const tagInForce = selected ? outputTag(inheritedTag(selected)) : null;
+
+  // The head of the sheet: what this is and where it sits, then its name set
+  // large - the title belongs to the text under it, so it scrolls with it.
+  const docHead = selected ? (
+    <div className="nbk-doc-head">
+      <div className="nbk-kicker">
+        <span>{isSection ? 'Section' : 'Page'}</span>
+        {ancestors.length > 0 && (<><span className="nbk-kicker__dot" /><span>{'In ' + (ancestors[ancestors.length - 1].title || 'Untitled')}</span></>)}
+        {isSection && (<><span className="nbk-kicker__dot" /><span>{sectionPages.length + (sectionPages.length === 1 ? ' page' : ' pages')}</span></>)}
+        {!isSection && fileCount > 0 && (<><span className="nbk-kicker__dot" /><span>{fileCount + (fileCount === 1 ? ' file' : ' files')}</span></>)}
+        {tagInForce && <TagChip tag={tagInForce} />}
+      </div>
+      {/* A textarea so a long title wraps rather than running off the sheet;
+          a title is one line, so Enter goes on into the text instead. */}
+      <textarea
+        ref={titleInput}
+        rows={1}
+        className="nbk-doc-title"
+        value={selected.title || ''}
+        onChange={(e) => editSelected({ title: e.target.value.replace(/[\r\n]+/g, ' ') })}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          if (!isSection && editor) editor.chain().focus('start').run();
+        }}
+        placeholder={isSection ? 'Section name' : 'Page title'}
+        aria-label={isSection ? 'Section name' : 'Page title'}
+        title="Click to rename"
+      />
+      {isSection && (
+        <p className="nbk-section__lede">
+          Sections only have a name. They organise pages, and the assistant uses this grouping to navigate
+          the notebook. Write the content in a page below.
+        </p>
+      )}
+      <div className="nbk-doc-rule" />
+    </div>
+  ) : null;
 
   const menuNote = menu ? byId.get(menu.id) : null;
 
@@ -1012,13 +1166,23 @@ export default function NotebookPage() {
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       <AppHeader subtitle="Notebook" />
 
-      <div className="nbk-body">
-        {/* ------------------------- Sidebar ------------------------- */}
-        <aside className="nbk-sidebar">
+      <div className={'nbk-body' + (sideOpen ? '' : ' is-collapsed') + (drawer ? ' is-drawer' : '')}>
+        {/* ----------------------- The tree, on glass ----------------------- */}
+        <aside className="nbk-sidebar nbk-glass" aria-label="Sections and pages">
           <div className="nbk-sidebar__top">
+            <div className="nbk-brand">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="nbk-brand__name">Notebook</div>
+                <div className="nbk-brand__meta">
+                  {status === 'ready'
+                    ? sectionCount + (sectionCount === 1 ? ' section' : ' sections') + ' · ' + pageCount + (pageCount === 1 ? ' page' : ' pages')
+                    : status === 'error' ? 'Not loaded' : 'Loading...'}
+                </div>
+              </div>
+            </div>
             {/* Pages is the editor; Map is the treemap of every page and what
                 the assistant makes of it. Same notes, two readings of them. */}
-            <Tabs block ariaLabel="Notebook view" value={view} onChange={setView}
+            <Tabs block ariaLabel="Notebook view" value={view} onChange={(v2) => { setView(v2); setDrawer(false); }}
               items={[{ id: 'pages', label: 'Pages', icon: Icons.fileLines }, { id: 'map', label: 'Map', icon: NBIcons.layers }]} />
             <div className="nbk-sidebar__row">
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1030,10 +1194,13 @@ export default function NotebookPage() {
           </div>
 
           <div className="nbk-tree nbk-scroll">
-            {status === 'loading' && <div style={{ padding: '10px 8px', fontSize: '13.5px', color: T.dim }}>Loading...</div>}
-            {status === 'error' && <div style={{ padding: '10px 8px', fontSize: '13.5px', color: T.red }}>Could not load notes. Is the database configured?</div>}
+            {status === 'ready' && sections.length > 0 && (
+              <div className="nbk-label nbk-tree__label">{q ? 'Matches' : 'Sections'}</div>
+            )}
+            {status === 'loading' && <div className="nbk-tree__note">Loading...</div>}
+            {status === 'error' && <div className="nbk-tree__note" style={{ color: T.red }}>Could not load notes. Is the database configured?</div>}
             {status === 'ready' && sections.length === 0 && (
-              <div style={{ padding: '10px 8px', fontSize: '13.5px', lineHeight: 1.55, color: T.dim }}>
+              <div className="nbk-tree__note">
                 {q ? 'No notes match your search.' : 'No sections yet. Create one, for example "Instructions", with pages like "How to book appointments".'}
               </div>
             )}
@@ -1042,61 +1209,64 @@ export default function NotebookPage() {
 
           <div className="nbk-sidebar__foot">
             <span className="nbk-sidebar__note">
-              <Svg w={13} sw={2.2} stroke={T.green} style={{ flex: 'none' }}>{Icons.shield}</Svg>
               Notes are used by the assistant automatically.
             </span>
             {/* Backup: export downloads every note as JSON; import restores it
                 alongside what is here. Saves is the whole notebook at a moment. */}
             <input ref={importInput} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={onImportFile} />
             <div className="nbk-foot-grid">
-              <Button size="sm" icon={NBIcons.download} onClick={() => { window.location.href = '/api/notebook/export'; }}
-                title="Download all notes as a JSON backup">Export</Button>
-              <Button size="sm" icon={NBIcons.upload} onClick={() => importInput.current && importInput.current.click()}
-                title="Restore notes from a JSON backup (added alongside existing notes)">Import</Button>
+              <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/api/notebook/export'; }}
+                title="Download all notes as a JSON backup">
+                <Svg w={16} sw={2}>{NBIcons.download}</Svg>Export
+              </button>
+              <button type="button" className="nbk-foot-btn" onClick={() => importInput.current && importInput.current.click()}
+                title="Restore notes from a JSON backup (added alongside existing notes)">
+                <Svg w={16} sw={2}>{NBIcons.upload}</Svg>Import
+              </button>
+              <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/notebook/saves'; }}
+                title="Saves of the whole notebook - take one, or roll back to one">
+                <Svg w={16} sw={2}>{Icons.undo}</Svg>Saves
+              </button>
             </div>
-            <Button size="sm" block icon={Icons.undo} onClick={() => { window.location.href = '/notebook/saves'; }}
-              title="Saves of the whole notebook - take one, or roll back to one">Saves and rollback</Button>
           </div>
         </aside>
+        <div className="nbk-scrim" onClick={() => setDrawer(false)} aria-hidden="true" />
 
-        {/* -------------------------- Notes area -------------------------- */}
-        <main className="nbk-main" {...dropHandlers}>
-          {view === 'map' && (
-            <MapView notes={notes} onOpenPage={(id) => { setView('pages'); selectNote(id); }} onChanged={reloadAll} />
-          )}
+        {/* ------------------------ The page, on paper ------------------------ */}
+        <main className="nbk-main nbk-paper" {...dropHandlers}>
+          <div className="nbk-head">
+            <div className="nbk-head__left">
+              <IconButton plain icon={NBIcons.sidebar} on={sideOpen} className="nbk-side-toggle"
+                label={sideOpen ? 'Hide sections and pages' : 'Show sections and pages'} onClick={toggleSide} />
+              {view === 'map' ? (
+                <>
+                  <span className="nbk-crumb nbk-crumb--here">Map</span>
+                  <span className="nbk-map-lede">Every page, and whether the assistant can read it</span>
+                </>
+              ) : (
+                <nav className="nbk-head__crumbs" aria-label="Where this page is">
+                  {selected ? (
+                    <>
+                      {ancestors.map((a) => (
+                        <React.Fragment key={a.id}>
+                          <button type="button" className="nbk-crumb" onClick={() => selectNote(a.id)}>{a.title || 'Untitled'}</button>
+                          <span className="nbk-crumb-sep"><Svg w={12} sw={2.4}>{Icons.chevronRight}</Svg></span>
+                        </React.Fragment>
+                      ))}
+                      <span className="nbk-crumb nbk-crumb--here" aria-current="page">{selected.title || 'Untitled'}</span>
+                    </>
+                  ) : (
+                    <span className="nbk-crumb nbk-crumb--here">Notebook</span>
+                  )}
+                </nav>
+              )}
+            </div>
 
-          {view !== 'map' && (<>
-            <div className="nbk-head">
-              <div className="nbk-head__left">
-                {selected && ancestors.length > 0 && (
-                  <div className="nbk-head__crumbs">
-                    {ancestors.map((a, i) => (
-                      <React.Fragment key={a.id}>
-                        {i > 0 && <Svg w={11} sw={2.4} style={{ flex: 'none', color: '#b6c2c9' }}>{Icons.chevronRight}</Svg>}
-                        <button type="button" className="nbk-crumb" onClick={() => selectNote(a.id)}>{a.title || 'Untitled'}</button>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                )}
-                {selected ? (
-                  <input
-                    ref={titleInput}
-                    className="nbk-title-input"
-                    value={selected.title || ''}
-                    onChange={(e) => editSelected({ title: e.target.value })}
-                    placeholder={isSection ? 'Section name' : 'Page title'}
-                    aria-label={isSection ? 'Section name' : 'Page title'}
-                    title="Click to rename"
-                  />
-                ) : (
-                  <span style={{ padding: '4px 6px', fontSize: '17px', fontWeight: 700, color: T.dim }}>Notebook</span>
-                )}
-              </div>
-
+            {view !== 'map' && (
               <div className="nbk-head__actions">
                 <StatusPill state={saveState} />
                 {selected && canOrganize(selected) && (
-                  <Button icon={Icons.sparkle} onClick={() => runAiOrganize()}
+                  <Button variant="soft" icon={Icons.sitemap} onClick={() => runAiOrganize()}
                     disabled={!!aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')}
                     title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)">
                     AI organise
@@ -1113,57 +1283,70 @@ export default function NotebookPage() {
                   <IconButton icon={NBIcons.dots} label="More actions" onClick={(e) => openMenu(e, selected.id, true)} />
                 )}
               </div>
-            </div>
+            )}
+          </div>
 
+          {view === 'map' && (
+            <MapView notes={notes} onOpenPage={(id) => { setView('pages'); selectNote(id); }} onChanged={reloadAll} />
+          )}
+
+          {view !== 'map' && (<>
             {!selected && (
-              <EmptyState icon={Icons.book} title="Nothing open"
-                body="Pick a page on the left, or create a section to start writing. Everything written here is what the assistant answers from."
-                action={<Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}>New section</Button>} />
+              <EmptyMarquee
+                items={notes.filter((n) => n.parentId && !n.isSection).map((n) => ({ id: n.id, title: n.title, meta: (byId.get(n.parentId) || {}).title || '' }))}
+                onPick={selectNote}
+                title={status === 'loading' ? 'Opening the notebook' : pageCount ? 'Nothing open' : 'Nothing written yet'}
+                body={status === 'loading' ? null : pageCount
+                  ? 'Pick a page as it passes, or one from the tree. Everything written here is what the assistant answers from.'
+                  : 'Create a section to start writing. Everything written here is what the assistant answers from.'}
+                action={status === 'loading' ? null : <Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}>New section</Button>} />
             )}
 
             {/* Section view - name only; content lives in the pages beneath it. */}
             {selected && isSection && (
               <div className="nbk-section nbk-scroll">
-                <div className="nbk-section__inner">
-                  <p style={{ margin: '0 0 2px', fontSize: '13.5px', lineHeight: 1.6, color: T.dim }}>
-                    Sections only have a name. They organise pages, and the assistant uses this grouping to navigate
-                    the notebook. Write the content in a page below.
-                  </p>
-                  {sectionPages.map((p) => (
-                    <button key={p.id} type="button" className="nbk-page-card" onClick={() => selectNote(p.id)}>
-                      <Svg w={17} sw={2} style={{ flex: 'none', color: T.blue }}>{Icons.fileLines}</Svg>
-                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.title || 'Untitled'}
-                      </span>
-                      {(p.body || '').trim() ? null : <span style={{ flex: 'none', fontSize: '12px', fontWeight: 600, color: T.dim }}>Empty</span>}
-                      <Svg w={15} sw={2.2} style={{ flex: 'none', color: '#b6c2c9' }}>{Icons.chevronRight}</Svg>
-                    </button>
-                  ))}
+                {docHead}
+                <div className="nbk-cards">
+                  {sectionPages.map((p, i) => {
+                    const text = excerpt(p.body);
+                    return (
+                      <button key={p.id} type="button" className="nbk-page-card" onClick={() => selectNote(p.id)}
+                        style={{ animationDelay: Math.min(i, 12) * 30 + 'ms' }}>
+                        <span className="nbk-page-card__title">{p.title || 'Untitled'}</span>
+                        {text
+                          ? <span className="nbk-page-card__excerpt">{text}</span>
+                          : <span className="nbk-page-card__empty">Empty</span>}
+                      </button>
+                    );
+                  })}
                   <button type="button" className="nbk-add-card" onClick={() => newNote(selected.id)}>
-                    <Svg w={15} sw={2.4}>{Icons.plus}</Svg>New page
+                    <Svg w={18} sw={2}>{Icons.plus}</Svg>New page
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Page view - the title is in the header above; everything here is
-                the writing surface, with files docked underneath it. */}
+            {/* Page view - the formatting strip floats over the sheet, and the
+                title heads the text it names; files dock underneath. */}
             {selected && !isSection && (
               <>
-                <div className="nbk-toolbar" onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
-                  {toolbar.map((btn, i) => btn === null
-                    ? <span key={'sep' + i} className="nbk-tsep" />
-                    : (
-                      <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
-                        aria-pressed={btn.active ? true : undefined}
-                        onClick={() => { if (!editor && !btn.accent) return; btn.run(); }}
-                        className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '') + (btn.accent ? ' nbk-tbtn--accent' : '')}>
-                        {btn.swatch
-                          ? <span className="nbk-swatch" style={{ background: btn.swatch, boxShadow: '0 0 0 1px ' + (btn.active ? T.blue : T.line) }} />
-                          : btn.icon ? <Svg w={16} sw={2}>{btn.icon}</Svg> : null}
-                        {btn.label ? <span>{btn.label}</span> : null}
-                      </button>
-                    ))}
+                <div className="nbk-tools">
+                  <div className="nbk-toolbar nbk-hide-scroll" role="toolbar" aria-label="Formatting"
+                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
+                    {toolbar.map((btn, i) => btn === null
+                      ? <span key={'sep' + i} className="nbk-tsep" />
+                      : (
+                        <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
+                          aria-pressed={btn.active ? true : undefined}
+                          onClick={() => { if (!editor && !btn.accent) return; btn.run(); }}
+                          className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '') + (btn.accent ? ' nbk-tbtn--accent' : '')}>
+                          {btn.swatch
+                            ? <span className="nbk-swatch" style={{ background: btn.swatch, boxShadow: '0 0 0 1px ' + (btn.active ? T.blue : T.line) }} />
+                            : btn.icon ? <Svg w={16} sw={2}>{btn.icon}</Svg> : null}
+                          {btn.label ? <span>{btn.label}</span> : null}
+                        </button>
+                      ))}
+                  </div>
                 </div>
 
                 <PageEditor
@@ -1172,15 +1355,15 @@ export default function NotebookPage() {
                   onChange={(md) => editSelected({ body: md })}
                   onReady={setEditor}
                   uploadImage={uploadInlineImage}
+                  header={docHead}
                 />
 
                 {(selectedFiles.length > 0 || uploadErr || uploading) && (
                   <div className="nbk-dock">
+                    {selectedFiles.length > 0 && <span className="nbk-label nbk-dock__label">Files</span>}
                     {selectedFiles.map((a) => (
                       <span key={a.id} className="nbk-attach">
-                        <Svg w={14} sw={2} style={{ flex: 'none', color: T.blue }}>
-                          {(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}
-                        </Svg>
+                        <Svg w={14} sw={2} style={{ flex: 'none', color: T.dim }}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
                         <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' - ' + fmtSize(a.size) : '')}>
                           {a.filename}
                         </a>
@@ -1188,7 +1371,7 @@ export default function NotebookPage() {
                           onClick={() => askRemoveAttachment(a)} />
                       </span>
                     ))}
-                    {uploading && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: T.dim }}><Spinner w={13} />Uploading...</span>}
+                    {uploading && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: T.mut }}><Spinner w={13} />Uploading...</span>}
                     {uploadErr && <span style={{ fontSize: '13px', fontWeight: 600, color: T.red }}>{uploadErr}</span>}
                   </div>
                 )}
@@ -1198,7 +1381,7 @@ export default function NotebookPage() {
             {/* Drop overlay */}
             {dragging && selected && !isSection && (
               <div className="nbk-dropzone">
-                <Svg w={22} sw={2.2}>{Icons.paperclip}</Svg>
+                <Svg w={28} sw={1.8}>{Icons.paperclip}</Svg>
                 Drop files to attach to &ldquo;{selected.title || 'Untitled'}&rdquo;
               </div>
             )}
@@ -1211,10 +1394,10 @@ export default function NotebookPage() {
           <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
           <MenuItem icon={Icons.plus} onClick={() => { setMenu(null); newNote(menu.id); }}>Add page inside</MenuItem>
           {canOrganize(menuNote) && (
-            <MenuItem icon={Icons.sparkle} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
+            <MenuItem icon={Icons.sitemap} tone="accent" onClick={() => { setMenu(null); runAiOrganize(menu.id); }}>AI organise</MenuItem>
           )}
           {menuNote.parentId ? (
-            <MenuItem icon={menuNote.isSection ? Icons.fileLines : Icons.book}
+            <MenuItem icon={menuNote.isSection ? Icons.fileLines : Icons.folder}
               onClick={() => { setMenu(null); toggleSection(menu.id, !menuNote.isSection); }}>
               {menuNote.isSection ? 'Convert to page' : 'Convert to section'}
             </MenuItem>
@@ -1274,7 +1457,7 @@ export default function NotebookPage() {
 
       {/* --------------------------- AI format review -------------------------- */}
       {aiFmt && aiFmt.status === 'loading' && (
-        <Modal size="sm" icon={Icons.sparkle} title="Reformatting the page" dismissable={false}
+        <Modal size="sm" title="Reformatting the page" dismissable={false}
           subtitle="Restructuring it into headings, lists, tables and highlights. Nothing is saved until you have read it.">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
             <Spinner />Working...
@@ -1282,13 +1465,13 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiFmt && aiFmt.status === 'error' && (
-        <Modal size="sm" tone="warn" icon={Icons.alertCircle} title="Could not reformat" onClose={() => setAiFmt(null)}
+        <Modal size="sm" title="Could not reformat" onClose={() => setAiFmt(null)}
           footer={<Button variant="primary" onClick={() => setAiFmt(null)}>Close</Button>}>
           <p style={{ margin: 0 }}>{aiFmt.message}</p>
         </Modal>
       )}
       {aiFmt && aiFmt.status === 'ready' && (
-        <Modal size="lg" icon={Icons.sparkle} title="Proposed reformat"
+        <Modal size="lg" title="Proposed reformat"
           subtitle="Headings, lists, tables and highlights. Every fact is kept, and nothing is saved until you apply."
           onClose={() => setAiFmt(null)} flush
           footer={<>
@@ -1308,7 +1491,7 @@ export default function NotebookPage() {
 
       {/* --------------------------- AI organise plan -------------------------- */}
       {aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') && (
-        <Modal size="sm" icon={Icons.sparkle} dismissable={false}
+        <Modal size="sm" dismissable={false}
           title={aiOrg.status === 'loading' ? 'Reading this section' : 'Moving the content'}
           subtitle={aiOrg.status === 'loading'
             ? 'Every page in it is read and each part is matched to the section it belongs in.'
@@ -1319,13 +1502,13 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'error' && (
-        <Modal size="sm" tone="warn" icon={Icons.alertCircle} title="Could not organise" onClose={() => setAiOrg(null)}
+        <Modal size="sm" title="Could not organise" onClose={() => setAiOrg(null)}
           footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Close</Button>}>
           <p style={{ margin: 0 }}>{aiOrg.message}</p>
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'done' && (
-        <Modal size="sm" tone="success" icon={Icons.check} title="Organised" onClose={() => setAiOrg(null)}
+        <Modal size="sm" title="Organised" onClose={() => setAiOrg(null)}
           footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Done</Button>}>
           <p style={{ margin: 0 }}>
             {'Moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
@@ -1336,7 +1519,7 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'ready' && (
-        <Modal size="lg" icon={Icons.sparkle} title="Where each page's content will go"
+        <Modal size="lg" title="Where each page's content will go"
           subtitle="Every fact is kept; emptied pages are removed and their files move with the content. Nothing changes until you apply."
           onClose={() => setAiOrg(null)}
           footer={<>

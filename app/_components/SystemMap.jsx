@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { s, Hover, Svg, Icons } from './ui';
+import { s, Hover } from './ui';
 
 /* ------------------------------------------------------------------ *
  * The system map — one diagram, with a detail control.
@@ -35,13 +35,13 @@ const DEP = { A: { c: '#005eb8', t: 'OpenRouter (AI)' }, D: { c: '#8a6100', t: '
  * Level 1 — the request loop.
  * =============================================================== */
 const L1_NODES = [
-  { x: 40, y: 60, w: 190, h: 100, icon: Icons.chat, title: 'Staff', sub: 'ask in plain English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { x: 320, y: 60, w: 200, h: 100, icon: Icons.home, title: 'Practice app', sub: 'the server · /api/agent', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5', ic: '#fff' },
-  { x: 820, y: 60, w: 200, h: 100, icon: Icons.sparkle, title: 'Research loop', sub: 'the AI picks its own tools', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED, ic: BLUE },
-  { x: 820, y: 430, w: 200, h: 100, icon: Icons.shield, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { x: 320, y: 430, w: 200, h: 100, icon: Icons.check, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED, ic: GREEN },
-  { x: 370, y: 245, w: 300, h: 110, icon: Icons.book, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', ic: GREEN, tag: 'FIRST SOURCE' },
-  { x: 110, y: 230, w: 230, h: 84, icon: Icons.refresh, title: 'Answer cache', sub: 'asked before, answered again', fill: '#fffdf5', border: '#e3d3a8', ink: '#6b4d00', subInk: '#8a6100', ic: '#8a6100' },
+  { x: 40, y: 60, w: 190, h: 100, title: 'Staff', sub: 'ask in plain English', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED },
+  { x: 320, y: 60, w: 200, h: 100, title: 'Practice app', sub: 'the server · /api/agent', fill: BLUE, border: BLUE, ink: '#fff', subInk: '#cfe3f5' },
+  { x: 820, y: 60, w: 200, h: 100, title: 'Research loop', sub: 'the AI picks its own tools', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED },
+  { x: 820, y: 430, w: 200, h: 100, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED },
+  { x: 320, y: 430, w: 200, h: 100, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED },
+  { x: 370, y: 245, w: 300, h: 110, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', tag: 'FIRST SOURCE' },
+  { x: 110, y: 230, w: 230, h: 84, title: 'Answer cache', sub: 'asked before, answered again', fill: '#fffdf5', border: '#e3d3a8', ink: '#6b4d00', subInk: '#8a6100' },
 ];
 const L1_EDGES = [
   { d: 'M230 110 L320 110', label: '1 · asks', lx: 275, ly: 100 },
@@ -63,9 +63,8 @@ function L1Node(n, i) {
   return (
     <g key={i}>
       <rect x={n.x} y={n.y} width={n.w} height={n.h} rx="16" fill={n.fill} stroke={n.border} strokeWidth="2" />
-      <g transform={`translate(${n.x + 20}, ${n.y + 18})`} fill="none" stroke={n.ic} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{n.icon}</g>
-      <text x={n.x + 20} y={n.y + 66} fontFamily={FONT} fontSize="18" fontWeight="700" fill={n.ink}>{n.title}</text>
-      <text x={n.x + 20} y={n.y + 88} fontFamily={FONT} fontSize="13" fill={n.subInk}>{n.sub}</text>
+      <text x={n.x + 20} y={n.y + n.h / 2 - 2} fontFamily={FONT} fontSize="18" fontWeight="700" fill={n.ink}>{n.title}</text>
+      <text x={n.x + 20} y={n.y + n.h / 2 + 20} fontFamily={FONT} fontSize="13" fill={n.subInk}>{n.sub}</text>
       {n.tag && (<><rect x={n.x + n.w - 118} y={n.y + 16} width="102" height="22" rx="11" fill={GREEN} /><text x={n.x + n.w - 67} y={n.y + 31} fontFamily={FONT} fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle" letterSpacing="0.4">{n.tag}</text></>)}
     </g>
   );
@@ -118,10 +117,10 @@ const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compo
 // The four services the engine talks to. Everything that leaves the practice
 // leaves through one of the three on the right; see /dpia for what each holds.
 const DATA_NODES = [
-  { cx: 260, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · knowledge · staff · audit log · settings', icon: Icons.book, dep: 'D', hot: true },
-  { cx: 778, w: 420, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis · web search tool', icon: Icons.sparkle, dep: 'A', hot: true },
-  { cx: 1296, w: 420, label: 'Exa · web hosts', sub: 'search query text, then the pages read for a number', icon: Icons.globe, dep: 'A' },
-  { cx: 1814, w: 420, label: 'Vercel Blob', sub: 'Notebook attachments, at public URLs', icon: Icons.paperclip, dep: 'B' },
+  { cx: 260, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · knowledge · staff · audit log · settings', dep: 'D', hot: true },
+  { cx: 778, w: 420, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis · web search tool', dep: 'A', hot: true },
+  { cx: 1296, w: 420, label: 'Exa · web hosts', sub: 'search query text, then the pages read for a number', dep: 'A' },
+  { cx: 1814, w: 420, label: 'Vercel Blob', sub: 'Notebook attachments, at public URLs', dep: 'B' },
 ];
 const RAG_NODES = ['rag/sources', 'parsers', 'chunk', 'embed (AI)', 'rag/processed'];
 
@@ -225,8 +224,7 @@ function ArchDiagram({ full }) {
       {DATA_NODES.map((d, i) => (
         <g key={i}>
           <rect x={d.cx - d.w / 2} y={DATA_Y} width={d.w} height={DATA_H} rx="14" fill="#fff" stroke={DEP[d.dep].c} strokeWidth="2" />
-          <g transform={`translate(${d.cx - d.w / 2 + 18}, ${DATA_Y + 20})`} fill="none" stroke={DEP[d.dep].c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d.icon}</g>
-          <text x={d.cx - d.w / 2 + 52} y={DATA_Y + 34} fontFamily={FONT} fontSize="16" fontWeight="700" fill={INK}>{d.label}</text>
+          <text x={d.cx - d.w / 2 + 18} y={DATA_Y + 34} fontFamily={FONT} fontSize="16" fontWeight="700" fill={INK}>{d.label}</text>
           <text x={d.cx - d.w / 2 + 18} y={DATA_Y + 64} fontFamily={FONT} fontSize="12" fill={MUTED}>{d.sub}</text>
         </g>
       ))}

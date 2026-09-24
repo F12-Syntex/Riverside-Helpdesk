@@ -1,6 +1,6 @@
 'use client';
 
-import { s, Svg, Icons } from '../ui';
+import { s } from '../ui';
 
 /* ------------------------------------------------------------------ *
  * Exact contacts, shown verbatim from structured data — the practice
@@ -39,8 +39,8 @@ export default function ContactsCard({ v }) {
             <span className="riva-contact-nums" style={s('flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px;')}>
               {c.phones.map((p, j) => (
                 <a key={'p' + j} href={'tel:' + p.tel}
-                  style={s('display:inline-flex;align-items:center;gap:7px;font-size:17px;font-weight:700;color:#005eb8;text-decoration:none;font-variant-numeric:tabular-nums;')}>
-                  <Svg w={14} sw={2.2} style={s('flex:none;opacity:.75;')}>{Icons.phone}</Svg>{p.display}
+                  style={s('display:inline-flex;align-items:center;font-size:17px;font-weight:700;color:#005eb8;text-decoration:none;font-variant-numeric:tabular-nums;')}>
+                  {p.display}
                 </a>
               ))}
               {c.emails.map((e, j) => (

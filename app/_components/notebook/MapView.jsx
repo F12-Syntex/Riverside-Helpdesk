@@ -280,16 +280,17 @@ function PagePanel({ page, onOpenPage, onPropose, proposing, onChanged, refreshK
       <div style={s('margin-top:12px;display:flex;flex-direction:column;gap:8px;')}>
         {page.violations.length === 0 && <div style={s('font-size:13.5px;color:#00612f;font-weight:600;')}>Nothing to fix.</div>}
         {page.violations.map((v, i) => (
-          <div key={i} style={s('border-left:3px solid ' + (v.severity === 'error' ? BAND.red : v.severity === 'warn' ? BAND.amber : '#8f9ba3') + ';padding:4px 0 4px 10px;')}>
-            <div style={s('font-size:13px;font-weight:700;color:' + INK + ';')}>{RULE_TITLES[v.rule] || v.rule}{v.line ? <span style={s('font-weight:400;color:' + MUTED + ';')}> · line {v.line}</span> : null}</div>
+          <div key={i} style={s('padding:4px 0;')}>
+            <div style={s('font-size:13px;font-weight:700;color:' + INK + ';')}>
+              <span aria-hidden="true" style={s('display:inline-block;width:7px;height:7px;border-radius:50%;margin:0 7px 1px 0;background:' + (v.severity === 'error' ? BAND.red : v.severity === 'warn' ? BAND.amber : '#8f9ba3') + ';')} />{RULE_TITLES[v.rule] || v.rule}{v.line ? <span style={s('font-weight:400;color:' + MUTED + ';')}> · line {v.line}</span> : null}</div>
             <div style={s('font-size:13px;color:' + MUTED + ';line-height:1.45;margin-top:1px;')}>{v.message}</div>
           </div>
         ))}
       </div>
       <div style={s('margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;')}>
-        <Hover tag="button" onClick={() => onOpenPage(page.id)} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;"><Svg w={14} sw={2.4}>{Icons.edit}</Svg>Open page</Hover>
+        <Hover tag="button" onClick={() => onOpenPage(page.id)} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;"><Svg w={14} sw={2.2}>{Icons.fileLines}</Svg>Open page</Hover>
         <Hover tag="button" onClick={() => onPropose(page.id)} disabled={proposing || page.chars === 0} base={btn('#005eb8', '#fff') + (proposing || page.chars === 0 ? 'opacity:.6;cursor:default;' : '')} hover="background:#003d78;">
-          <Svg w={14} sw={2.4}>{Icons.sparkle}</Svg>{proposing ? 'Proposing…' : 'Propose rewrite'}
+          <Svg w={14} sw={2.2}>{Icons.edit}</Svg>{proposing ? 'Proposing…' : 'Propose rewrite'}
         </Hover>
       </div>
       <History noteId={page.id} onChanged={onChanged} refreshKey={refreshKey} />
@@ -315,7 +316,7 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
   const changed = (meaning.changed || []).length;
   const canApply = validation.ok && meaning.ok && (!unsure || ack) && !editing && !busy;
   return (
-    <Modal size="xl" icon={Icons.sparkle} title="Proposed rewrite" subtitle={before.path}
+    <Modal size="xl" title="Proposed rewrite" subtitle={before.path}
       onClose={busy ? undefined : onClose} dismissable={!busy}
       footer={<>
         <Button variant="quiet-danger" onClick={onReject} disabled={busy}>Reject</Button>
@@ -338,7 +339,7 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
         </div>
 
         {(errors.length > 0 || changed > 0) && (
-          <div style={s('margin-top:12px;border-left:4px solid ' + BAND.red + ';background:' + BAND_TINT.red + ';border-radius:0 10px 10px 0;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.red + ';line-height:1.5;')}>
+          <div style={s('margin-top:12px;background:' + BAND_TINT.red + ';border-radius:10px;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.red + ';line-height:1.5;')}>
             <div style={s('font-weight:700;margin-bottom:4px;')}>This cannot be applied as it stands.</div>
             {errors.slice(0, 8).map((p, i) => <div key={i}>• {p.message}</div>)}
             {(meaning.changed || []).slice(0, 8).map((id) => { const p = validation.pairs.find((x) => x.id === id); return p ? <div key={id}>• Meaning changed: “{p.after.slice(0, 100)}” — {meaning.verdicts[id]?.reason}</div> : null; })}
@@ -346,7 +347,7 @@ function Review({ state, onClose, onDraft, onRecheck, onApply, onReject, ack, on
           </div>
         )}
         {unsure > 0 && changed === 0 && (
-          <label style={s('display:flex;align-items:flex-start;gap:8px;margin-top:12px;border-left:4px solid ' + BAND.amber + ';background:' + BAND_TINT.amber + ';border-radius:0 10px 10px 0;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.amber + ';line-height:1.5;cursor:pointer;')}>
+          <label style={s('display:flex;align-items:flex-start;gap:8px;margin-top:12px;background:' + BAND_TINT.amber + ';border-radius:10px;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.amber + ';line-height:1.5;cursor:pointer;')}>
             <input type="checkbox" checked={!!ack} onChange={(e) => onAck(e.target.checked)} style={s('margin-top:3px;')} />
             <span>The judge was unsure about {unsure} sentence{unsure === 1 ? '' : 's'} (amber on the right). I have read {unsure === 1 ? 'it' : 'them'} and the meaning is unchanged.</span>
           </label>
@@ -629,7 +630,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
   const worst = Object.values(report.pages).sort((a, b) => a.health.score - b.health.score || b.chars - a.chars).slice(0, 8);
 
   return (
-    <div style={s('flex:1;min-height:0;overflow:auto;padding:18px 22px 40px;background:#f0f4f5;position:relative;')}>
+    <div style={s('flex:1;min-height:0;overflow:auto;padding:4px 18px 40px;background:transparent;position:relative;')}>
       <div style={s('display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;')}>
         <Tile value={number(t.pages)} caption="pages" hint={number(t.sections) + ' sections'} />
         <Tile value={number(t.red)} caption="cannot be read" tone={t.red ? 'bad' : 'good'} />

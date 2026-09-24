@@ -215,7 +215,7 @@ function Flag({ flag, onDecide, onOpenPage, busy, error, active }) {
 
   return (
     <div className={active ? 'riva-flag-new' : ''}
-      style={s('border:1px solid ' + (blocking ? '#f2c9c6' : '#e2e9ec') + ';border-left:4px solid ' + BAND[tone] + ';border-radius:0 10px 10px 0;background:' + (blocking ? '#fffbfb' : '#fff') + ';padding:12px 14px;margin-top:10px;')}>
+      style={s('border:1px solid ' + (blocking ? '#f2c9c6' : '#e2e9ec') + ';border-radius:10px;background:' + (blocking ? '#fffbfb' : '#fff') + ';padding:12px 14px;margin-top:10px;')}>
       <div style={s('display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;')}>
         <span style={s('font-size:14px;font-weight:700;color:' + INK + ';')}>
           {!open ? DECIDED_WORD[flag.status] || 'Settled' : blocking ? 'These two pages disagree' : 'Possibly a disagreement'}
@@ -252,7 +252,7 @@ function Flag({ flag, onDecide, onOpenPage, busy, error, active }) {
             title="Not now" hint="— stop it holding the run up, ask me again next time" />
 
           {(choice === 'a' || choice === 'b') && (
-            <div style={s('margin-top:10px;border-left:3px solid #005eb8;background:#f1f8fe;border-radius:0 8px 8px 0;padding:9px 12px;')}>
+            <div style={s('margin-top:10px;background:#f1f8fe;border-radius:8px;padding:9px 12px;')}>
               <div style={s('font-size:12.5px;color:#00437e;font-weight:700;')}>
                 “{sides[loser].title || sides[loser].path}” will read:
               </div>
@@ -351,7 +351,7 @@ export default function RunPanel({ state, driving, error, busy, errors = {}, fre
         {error && <div style={s('margin-top:8px;font-size:13px;color:' + BAND_INK.red + ';')}>{error}</div>}
         <div style={s('margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;')}>
           <Hover tag="button" onClick={() => onStart('all')} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;">
-            <Svg w={14} sw={2.4}>{Icons.sparkle}</Svg>Defragment everything
+            <Svg w={14} sw={2.2}>{Icons.sitemap}</Svg>Defragment everything
           </Hover>
           <Hover tag="button" onClick={() => onStart('needs-attention')} disabled={busy} base={btn('#fff', '#005eb8')} hover="background:#f7fbff;">
             Only the pages that need it
@@ -396,13 +396,13 @@ export default function RunPanel({ state, driving, error, busy, errors = {}, fre
             {driving && <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:' + MUTED + ';')}><Svg w={14} sw={2.4} style={s('animation:rivaSpin 1s linear infinite;')}>{Icons.spinner}</Svg>working</span>}
             {!driving && !state.done && !state.waiting && <Hover tag="button" onClick={onContinue} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;">Continue</Hover>}
             {run.status === 'done'
-              ? <Hover tag="button" onClick={() => onStart('all')} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;"><Svg w={14} sw={2.4}>{Icons.sparkle}</Svg>Defragment again</Hover>
+              ? <Hover tag="button" onClick={() => onStart('all')} disabled={busy} base={btn('#005eb8', '#fff')} hover="background:#003d78;"><Svg w={14} sw={2.2}>{Icons.refresh}</Svg>Defragment again</Hover>
               : <Hover tag="button" onClick={onCancel} disabled={busy} base={btn('#fff', MUTED)} hover="background:#f4f7f8;">Stop</Hover>}
           </div>
         </div>
         {error && <div style={s('margin-top:10px;font-size:13px;color:' + BAND_INK.red + ';')}>{error}</div>}
         {state.waiting && (
-          <div style={s('margin-top:12px;border-left:4px solid ' + BAND.amber + ';background:' + BAND_TINT.amber + ';border-radius:0 10px 10px 0;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.amber + ';line-height:1.5;')}>
+          <div style={s('margin-top:12px;background:' + BAND_TINT.amber + ';border-radius:10px;padding:10px 14px;font-size:13.5px;color:' + BAND_INK.amber + ';line-height:1.5;')}>
             Every page left is one of the pages that disagree. Settle the flags below and the run carries on by itself.
           </div>
         )}

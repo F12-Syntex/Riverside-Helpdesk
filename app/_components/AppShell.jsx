@@ -55,7 +55,7 @@ export const ShellPresence = React.createContext(false);
  * The row is the three tools reception reaches for on an ordinary day.
  * Everything else — Questions, Answer feedback, Settings, the build — is
  * in the menu at the right, and the whole list is one ⌘K away in the
- * palette. On a phone the row folds into that same menu.
+ * palette. On a narrow screen the row stays, as icons.
  *
  * Questions and Answer feedback are marked menuOnly: both are read in a
  * quiet half hour rather than with a patient waiting, and a row that
@@ -67,7 +67,7 @@ const GROUPS = [
     label: 'Ask',
     items: [
       { href: '/', label: 'Ask a question', icon: Icons.chat },
-      { href: '/lookup', label: 'Contact numbers', icon: Icons.search },
+      { href: '/lookup', label: 'Contact numbers', icon: Icons.phone },
       // The other half of asking: the questions the assistant CANNOT answer,
       // because nothing in the practice's material covers them. It stays in
       // the Ask group because that is where it is understood from — a question
@@ -159,10 +159,14 @@ function matchHref(rawPath) {
   return { href: '/' + seg, group: 'Riverside', label: seg.charAt(0).toUpperCase() + seg.slice(1) };
 }
 
-/* The row of tools, with the active one marked by a pill that SLIDES to
-   it rather than jumping: going from one tool to another is shown as a
-   move, the same way the mode menu slides between its pages. The pill is
-   measured off the active link, so it fits whatever the label is. */
+/* The row of tools, a segmented control, with the active one on a white
+   pill that SLIDES to it rather than jumping: going from one tool to
+   another is shown as a move, the same way the mode menu slides between
+   its pages. The pill is measured off the active link, so it fits
+   whatever the label is — and the labels come and go with the width of
+   the screen (see globals.css), so it is measured again on resize. On a
+   narrow screen the row stays, as icons, rather than folding into the
+   menu: three tools are three taps, not four. */
 function TopNav({ current }) {
   const navRef = React.useRef(null);
   const [pill, setPill] = React.useState(null);
@@ -190,7 +194,7 @@ function TopNav({ current }) {
         return (
           <Link key={item.href} href={item.href}
             className={'riva-topnav-item' + (active ? ' is-active' : '')}
-            aria-current={active ? 'page' : undefined}>
+            aria-current={active ? 'page' : undefined} title={item.label}>
             <span className="riva-topnav-ico"><Svg w={15} sw={2}>{item.icon}</Svg></span>
             <span className="riva-topnav-label">{item.label}</span>
           </Link>
@@ -208,7 +212,6 @@ function NavRow({ item, active, onNavigate }) {
       className={'riva-menu-row' + (active ? ' is-active' : '')}
       aria-current={active ? 'page' : undefined}
     >
-      <span className="riva-menu-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
       <span className="riva-menu-label">{item.label}</span>
     </Link>
   );
@@ -259,7 +262,6 @@ function Palette({ onClose }) {
           {rows.map((item, i) => (
             <button key={item.href} type="button" onClick={() => go(item)} onMouseMove={() => setSel(i)}
               className={'riva-palette-row' + (i === sel ? ' is-sel' : '')}>
-              <span className="riva-menu-ico"><Svg w={15} sw={1.9}>{item.icon}</Svg></span>
               <span className="riva-palette-label">{item.label}</span>
               <span className="riva-palette-group">{item.group}</span>
             </button>
@@ -359,8 +361,6 @@ export default function AppShell({ children }) {
             {/* Which build this is, in plain sight on every page; the commit
                 rides in the tooltip. */}
             <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
-            {/* Where the reader is, when the row is folded away. */}
-            <span className="riva-top-here">{current?.label || 'Ask a question'}</span>
           </div>
 
           <TopNav current={current} />

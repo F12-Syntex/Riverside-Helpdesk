@@ -132,5 +132,8 @@ const payload = {
 };
 
 fs.writeFileSync(OUT, zlib.gzipSync(Buffer.from(JSON.stringify(payload)), { level: 9 }));
+// The row count on its own, so the browser can say how big the register is
+// before the server has loaded it (app/_components/contacts).
+fs.writeFileSync(path.join(path.dirname(OUT), 'cqc.meta.json'), JSON.stringify({ rows: out.length }) + '\n');
 const mb = (fs.statSync(OUT).size / 1048576).toFixed(1);
 console.log(`${out.length} locations -> ${path.relative(process.cwd(), OUT)} (${mb} MB gzipped), ${noPhone} without a usable phone number`);

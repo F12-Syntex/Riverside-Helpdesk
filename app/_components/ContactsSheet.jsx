@@ -4,6 +4,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { s, Hover, Svg, Icons } from './ui';
 import { searchContacts } from '@/lib/contacts';
+import ContactSearchLoader, { markRegisterWarm, registerIsWarm } from './contacts/ContactSearchLoader';
 
 /* ------------------------------------------------------------------ *
  * The practice directory, over the page rather than instead of it.
@@ -78,6 +79,19 @@ export default function ContactsSheet({ onClose }) {
 
   React.useEffect(() => setMounted(true), []);
 
+  // The register loads on the server the first time it is asked, which is
+  // the one slow moment. Start that as the sheet opens, so it is done by the
+  // time the second letter is typed, and say what is loading meanwhile.
+  const [warm, setWarm] = React.useState(registerIsWarm);
+  React.useEffect(() => {
+    if (registerIsWarm()) return undefined;
+    let live = true;
+    fetch('/api/cqc', { cache: 'no-store' })
+      .then(() => { markRegisterWarm(); if (live) setWarm(true); })
+      .catch(() => { if (live) setWarm(true); });
+    return () => { live = false; };
+  }, []);
+
   const [cqc, setCqc] = React.useState({ for: '', entries: [], loading: false });
   const results = React.useMemo(() => searchContacts(query), [query]);
   const trimmed = query.trim();
@@ -93,7 +107,7 @@ export default function ContactsSheet({ onClose }) {
     const timer = setTimeout(() => {
       fetch('/api/cqc?q=' + encodeURIComponent(trimmed), { cache: 'no-store', signal: controller.signal })
         .then((r) => (r.ok ? r.json() : { entries: [] }))
-        .then((d) => setCqc({ for: trimmed, entries: d.entries || [], loading: false }))
+        .then((d) => { markRegisterWarm(); setCqc({ for: trimmed, entries: d.entries || [], loading: false }); })
         .catch(() => { if (!controller.signal.aborted) setCqc({ for: trimmed, entries: [], loading: false }); });
     }, CQC_DEBOUNCE_MS);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -152,7 +166,6 @@ export default function ContactsSheet({ onClose }) {
     <div className="riva-modal-overlay" role="dialog" aria-modal="true" aria-label="Contacts" onMouseDown={onClose}>
       <div className="riva-sheet riva-contacts-sheet" style={{ maxWidth: '620px' }} onMouseDown={(e) => e.stopPropagation()}>
         <div style={s('display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #e4eaec;')}>
-          <span style={s('flex:none;display:flex;color:#005eb8;')}><Svg w={19} sw={2.2}>{Icons.phone}</Svg></span>
           <h2 style={s('flex:1;min-width:0;font-size:19px;margin:0;letter-spacing:-0.01em;')}>Contacts</h2>
           <Hover tag="button" type="button" onClick={onClose} aria-label="Close contacts"
             base="flex:none;width:34px;height:34px;border-radius:50%;background:#f0f4f5;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4c6272;padding:0;"
@@ -188,7 +201,6 @@ export default function ContactsSheet({ onClose }) {
             <span>
               {results.length} {results.length === 1 ? 'contact' : 'contacts'}{searching ? ' here' : ''}
               {cqcRows.length ? ' · ' + cqcRows.length + ' on the register' : ''}
-              {cqc.loading && searching ? ' · searching the register…' : ''}
             </span>
             {copied && (
               <span style={s('display:inline-flex;align-items:center;gap:6px;font-weight:600;color:#007f3b;')}>
@@ -197,6 +209,8 @@ export default function ContactsSheet({ onClose }) {
             )}
           </div>
         </div>
+
+        {warm ? null : <div style={s('padding:0 20px;')}><ContactSearchLoader compact verb="Loading" /></div>}
 
         {/* The list scrolls inside the sheet, which is a fixed size: it is the
             same shape with one match as with a hundred, so nothing under the

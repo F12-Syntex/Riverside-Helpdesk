@@ -18,13 +18,12 @@ export default function GuideCard({ v }) {
               <div key={i} style={s('border:1px solid #d8dde0;border-radius:10px;overflow:hidden;')}>
                 {c.isEmergency && <div style={s('background:#8a1538;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}><Svg w={17} stroke="#fff" sw={2.2}>{Icons.triangle}</Svg>{c.title}</div>}
                 {c.isUrgent && <div style={s('background:#d5281b;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}><Svg w={17} stroke="#fff" sw={2.2}>{Icons.alertCircle}</Svg>{c.title}</div>}
-                {c.isInfo && <div style={s('background:#005eb8;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;')}><Svg w={17} stroke="#fff" sw={2.2}>{Icons.infoCircle}</Svg>{c.title}</div>}
+                {c.isInfo && <div style={s('background:#005eb8;color:#fff;padding:10px 16px;font-weight:700;font-size:16px;')}>{c.title}</div>}
                 <div style={s('padding:14px 16px;background:#fff;')}>
                   {c.hasBody && <div style={s('font-size:16px;line-height:1.5;')}>{c.body}</div>}
                   {c.hasSub && <div style={s('margin-top:6px;font-size:14px;color:#768692;line-height:1.45;')}>{c.sub}</div>}
                   {c.hasPhone && (
-                    <div style={s('margin-top:12px;display:flex;align-items:center;gap:10px;')}>
-                      <span style={s('flex:none;width:34px;height:34px;border-radius:50%;background:#e8f1f8;color:#005eb8;display:inline-flex;align-items:center;justify-content:center;')}><Svg w={17}>{Icons.phone}</Svg></span>
+                    <div style={s('margin-top:12px;')}>
                       <span><span style={s('display:block;font-size:12px;color:#768692;')}>{c.phoneLabel}</span><span style={s('display:block;font-size:22px;font-weight:800;letter-spacing:.01em;')}>{c.phone}</span></span>
                     </div>
                   )}
@@ -42,7 +41,7 @@ export default function GuideCard({ v }) {
                 <div style={s('font-size:17px;line-height:1.5;')}>{st.text}</div>
                 {st.hasShot && (
                   <div style={s('margin-top:10px;border:1px solid #d8dde0;border-radius:8px;overflow:hidden;background:#fff;')}>
-                    <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#f7fbff;display:flex;align-items:center;gap:6px;')}><Svg w={13} stroke="#768692">{Icons.image}</Svg>From the EMIS Web guide</div>
+                    <div style={s('font-size:12px;color:#768692;padding:6px 10px;border-bottom:1px solid #d8dde0;background:#f7fbff;')}>From the EMIS Web guide</div>
                     {st.shotEl}
                   </div>
                 )}
@@ -50,8 +49,8 @@ export default function GuideCard({ v }) {
             </div>
           ))}
         </div>
-        {g.hasTip && <div style={s('margin:0 22px 16px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {g.tip}</div>}
-        {g.hasWarning && <div style={s('margin:0 22px 16px;border-left:4px solid #ffb81c;background:#fff6cc;padding:12px 16px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5;')}><strong>Important:</strong> {g.warning}</div>}
+        {g.hasTip && <div style={s('margin:0 22px 16px;background:#e8f1f8;padding:12px 16px;border-radius:8px;font-size:16px;line-height:1.5;')}><strong>Tip:</strong> {g.tip}</div>}
+        {g.hasWarning && <div style={s('margin:0 22px 16px;background:#fff6cc;padding:12px 16px;border-radius:8px;font-size:16px;line-height:1.5;')}><strong>Important:</strong> {g.warning}</div>}
         <div style={s('border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
           {v.showFeedbackButtons && (
             <>

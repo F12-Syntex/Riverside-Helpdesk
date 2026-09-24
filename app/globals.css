@@ -28,7 +28,7 @@ html { scrollbar-gutter: stable; }
   --rv-accent-line: #aac7e0;
   --rv-green:     #007f3b;
 
-  --rv-top-h: 56px;      /* the bar across the top */
+  --rv-top-h: 50px;      /* the bar across the top */
   --rv-radius: 10px;
   /* Glass: what a control is made of when it sits on the light rather
      than on a card. */
@@ -50,7 +50,7 @@ html { scrollbar-gutter: stable; }
  * foot of this file.
  * ------------------------------------------------------------------ */
 :root {
-  --riva-header-h: 56px;          /* the bar across the top; AppHeader renders into it */
+  --riva-header-h: 50px;          /* the bar across the top; AppHeader renders into it */
   --riva-column-pad-t: 28px;      /* .riva-column's top padding */
   --riva-dock-field-h: 68px;
   --riva-dock-strip-h: 32px;
@@ -209,11 +209,14 @@ body {
   }
 }
 
+/* Keyboard focus: an NHS-blue ring round the control, and nothing else.
+   It used to repaint the control itself yellow with a black underline,
+   over the top of every component's own look (the !important saw to
+   that), which is how a highlighted row in the mode menu came out as a
+   yellow slab. A ring says "here" without changing what the thing is. */
 button:focus-visible, [tabindex]:focus-visible {
-  outline: none;
-  background: #ffeb3b !important;
-  color: #212b32 !important;
-  box-shadow: 0 -2px #ffeb3b, 0 4px #212b32 !important;
+  outline: 2px solid #005eb8;
+  outline-offset: 2px;
 }
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 3px solid #ffeb3b;
@@ -286,9 +289,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   /* Scroll without a visible scrollbar (native-app feel). Scrolling still works. */
   body, #riva-scroll { scrollbar-width: none; -ms-overflow-style: none; }
   body::-webkit-scrollbar, #riva-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
-
-  /* Drop the bot avatar on phones so answers use the full width. */
-  .riva-bot-avatar { display: none !important; }
 
   /* Don't hand a whole document to a phone — hide the embedded preview; the
    * passage text and the Open / Download buttons in the citation panel remain. */
@@ -416,7 +416,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .riva-md ol ol > li::before { content: none; }
 .riva-md ol ol > li::marker { color: #005eb8; font-weight: 600; font-variant-numeric: tabular-nums; }
 .riva-md ol ul { margin-top: 6px; }
-.riva-md blockquote { margin: 0 0 12px; border-left: 4px solid #005eb8; background: #e8f1f8; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 15.5px; }
+.riva-md blockquote { margin: 0 0 12px; background: #e8f1f8; padding: 10px 14px; border-radius:8px; font-size: 15.5px; }
 .riva-md blockquote p { margin: 0 0 4px; }
 .riva-md blockquote p:last-child { margin-bottom: 0; }
 /* A table is a surface of its own, like every other block in an answer:
@@ -601,6 +601,9 @@ body { overflow-x: hidden; }
    the same lift — so the two read as one piece. */
 .riva-modes { position: relative; flex: none; z-index: 3; }
 .riva-modes-btn:focus-visible { outline: 2px solid #005eb8; outline-offset: 2px; }
+/* While its menu is open the pill reads as pressed: a soft ring, not a
+   darker fill that sinks the label. */
+.riva-modes-open .riva-modes-btn { box-shadow: 0 0 0 3px rgba(0,94,184,.16); }
 .riva-modes-list {
   position: absolute; left: -4px; bottom: calc(100% + 16px); z-index: 8;
   width: 340px; max-width: calc(100vw - 32px);
@@ -624,25 +627,21 @@ body { overflow-x: hidden; }
 @keyframes rivaModesFolder { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 .riva-modes-sep { display: block; height: 1px; margin: 4px 10px; background: #edf1f3; }
 
-/* One row: an icon tile, the name over what it reads, and a trailing mark. */
+/* One row: the name over what it reads, and a trailing mark. */
 .riva-mode {
   display: flex; align-items: center; gap: 12px; width: 100%;
   padding: 8px 10px; border: none; border-radius: 12px;
   background: transparent; font: inherit; text-align: left; cursor: pointer;
   color: #212b32; transition: background .14s ease;
 }
-.riva-mode:hover, .riva-mode:focus-visible { background: #f2f6f9; outline: none; }
-.riva-mode:focus-visible { box-shadow: inset 0 0 0 2px #005eb8; }
+/* The lit row is the focused row, and the pointer moves the focus (see
+   ModeSwitch), so :hover is not styled at all: styling both lit two rows
+   at once whenever the mouse rested on one and the arrow keys moved to
+   another. The lit row lifts on a soft tint with a hairline; no ring,
+   since the tint is already the "here". */
+.riva-mode:focus, .riva-mode:focus-visible { outline: none; background: #f2f6f9; box-shadow: inset 0 0 0 1px #e1e8ec; }
 .riva-mode.is-on { background: #eaf2fb; }
-.riva-mode.is-on:hover { background: #e1ecf8; }
-.riva-mode-tile {
-  flex: none; display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 10px;
-  background: #eef2f4; color: #4c6272;
-  transition: background .14s ease, color .14s ease;
-}
-.riva-mode:hover .riva-mode-tile { background: #e3ebf0; color: #005eb8; }
-.riva-mode-tile.is-on, .riva-mode:hover .riva-mode-tile.is-on { background: #005eb8; color: #fff; }
+.riva-mode.is-on:focus, .riva-mode.is-on:focus-visible { background: #e1ecf8; box-shadow: inset 0 0 0 1px #c9dcef; }
 .riva-mode-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .riva-mode-label { font-size: 14.5px; font-weight: 650; color: #212b32; }
 .riva-mode.is-on .riva-mode-label { color: #005eb8; }
@@ -653,11 +652,8 @@ body { overflow-x: hidden; }
 
 /* The folder page's header: the way back, and where you are. */
 .riva-mode-back { padding: 7px 8px; margin-bottom: 2px; }
-.riva-mode-backicon {
-  flex: none; display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 999px; background: #eef2f4; color: #4c6272;
-}
-.riva-mode-back:hover .riva-mode-backicon { background: #005eb8; color: #fff; }
+.riva-mode-backicon { flex: none; display: flex; color: #4c6272; }
+.riva-mode-back:focus .riva-mode-backicon { color: #005eb8; }
 .riva-mode-heading { font-size: 13.5px; font-weight: 700; color: #212b32; }
 
 /* Keys, for the keyboard user; gone where there is no keyboard. */
@@ -779,11 +775,11 @@ body { overflow-x: hidden; }
 /* The theme's three colours, for everything CSS draws in them. Kept in
    step with THEMES in app/_components/theme.js, which hands the same
    colours to the shader. */
-:root, [data-theme="sky"] { --rv-sky-a: #41b6e6; --rv-sky-b: #005eb8; --rv-sky-c: #8fd3f4; }
+[data-theme="sky"] { --rv-sky-a: #41b6e6; --rv-sky-b: #005eb8; --rv-sky-c: #8fd3f4; }
 [data-theme="aurora"] { --rv-sky-a: #41b6e6; --rv-sky-b: #00a499; --rv-sky-c: #8f78f5; }
 [data-theme="dusk"] { --rv-sky-a: #8f78f5; --rv-sky-b: #f59ac2; --rv-sky-c: #41b6e6; }
 [data-theme="meadow"] { --rv-sky-a: #00a499; --rv-sky-b: #78be20; --rv-sky-c: #41b6e6; }
-[data-theme="mist"] { --rv-sky-a: #8fa6b8; --rv-sky-b: #c3d1dc; --rv-sky-c: #7fa7c9; }
+:root:not([data-theme]), [data-theme="mist"] { --rv-sky-a: #8fa6b8; --rv-sky-b: #c3d1dc; --rv-sky-c: #7fa7c9; }
 
 /* The still light — shown before the shader's first frame, and for good
    where there is no WebGL or less motion is wanted. */
@@ -821,9 +817,10 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 /* ---- the bar ---------------------------------------------------- */
 
-/* One glass bar floating over the light, the same surface as the
-   composer and the menus: soft white, a hairline edge, the same lift.
-   A thin line in the theme's colours runs along its foot. */
+/* One slim glass bar floating over the light, the same surface as the
+   composer and the menus: soft white, a hairline edge, a shallow lift.
+   Three parts and nothing else: who this is, the tools, and what can be
+   done here. */
 .riva-top {
   flex: none; height: var(--rv-top-h);
   position: relative; z-index: 30;
@@ -832,37 +829,31 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 }
 @keyframes rivaBarIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 .riva-bar {
-  position: relative; height: 46px;
-  display: flex; align-items: center; gap: 10px; padding: 0 6px;
-  border-radius: 16px;
-  background: rgba(255,255,255,.74); border: 1px solid rgba(255,255,255,.95);
+  position: relative; height: 42px;
+  display: flex; align-items: center; gap: 8px; padding: 0 4px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.95);
   -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
-  box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -8px rgba(33,43,50,.12), 0 20px 44px -18px rgba(0,48,135,.20);
+  box-shadow: 0 0 0 1px rgba(33,43,50,.05), 0 1px 2px rgba(33,43,50,.05), 0 6px 16px -8px rgba(33,43,50,.14);
 }
-.riva-bar::after {
-  content: ''; position: absolute; left: 22px; right: 22px; bottom: -1px; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--rv-sky-a), var(--rv-sky-b), var(--rv-sky-c), transparent);
-  opacity: .6; pointer-events: none;
-}
-.riva-top-left { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; }
-.riva-top-right { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.riva-top-left { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 4px; }
+.riva-top-right { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 
 .riva-brand {
-  flex: none; display: flex; align-items: center; gap: 9px;
-  height: 34px; padding: 0 10px 0 5px; border-radius: 11px;
+  flex: none; display: flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 8px 0 5px; border-radius: 10px;
   text-decoration: none; color: inherit;
   transition: background-color .15s ease;
 }
 .riva-brand:hover { background: rgba(255,255,255,.9); }
 .riva-brand-mark { flex: none; display: flex; }
-.riva-brand-mark img { height: 22px; width: auto; display: block; border-radius: 4px; }
-.riva-brand-name { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; color: var(--rv-ink); }
+.riva-brand-mark img { height: 20px; width: auto; display: block; border-radius: 3px; }
+.riva-brand-name { font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; color: var(--rv-ink); }
 .riva-top-ver {
-  flex: none; padding: 2px 8px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
-  color: var(--rv-ink-3); background: rgba(33,43,50,.06); font-variant-numeric: tabular-nums;
+  flex: none; padding: 1px 7px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
+  color: var(--rv-ink-3); background: rgba(33,43,50,.05); font-variant-numeric: tabular-nums;
 }
-.riva-top-here { display: none; }
 
 /* The way back hangs under the brand, on its own. */
 .riva-crumb-lead {
@@ -872,44 +863,47 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 .riva-crumb-lead:empty { display: none; }
 .riva-crumb-back { animation: rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both; border-radius: 11px !important; }
 
-/* The tools: plain words on the bar, and a short line in the theme's
-   colours under the one you are on, which slides to the next when you
-   move. No track, no box — the bar is already the surface. */
+/* The tools: a segmented control. A faint track, and the one you are on
+   lifted out of it on a white pill with its icon in NHS blue — the pill
+   slides to the next tool when you move, so a change of tool reads as a
+   move. When the room runs out the tools you are not on drop to their
+   icons; the one you are on keeps its name, so the bar always says where
+   you are. */
 .riva-topnav {
   flex: none; position: relative;
-  display: flex; align-items: center; gap: 4px;
-  height: 46px;
+  display: flex; align-items: center; gap: 2px;
+  height: 34px; padding: 3px; border-radius: 11px;
+  background: rgba(33,43,50,.055);
+  box-shadow: inset 0 0 0 1px rgba(33,43,50,.03);
 }
 .riva-topnav-pill {
-  position: absolute; left: 0; top: 0; height: 100%; pointer-events: none;
-  transition: transform .45s cubic-bezier(.3,1.2,.5,1), width .45s cubic-bezier(.3,1.2,.5,1);
-}
-.riva-topnav-pill::after {
-  content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 3px; border-radius: 3px;
-  background: linear-gradient(90deg, var(--rv-sky-b), var(--rv-sky-a), var(--rv-sky-c));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--rv-sky-a) 60%, transparent);
+  position: absolute; left: 0; top: 3px; bottom: 3px; pointer-events: none;
+  border-radius: 8px; background: #fff;
+  box-shadow: 0 0 0 1px rgba(33,43,50,.06), 0 1px 2px rgba(33,43,50,.08), 0 2px 6px -2px rgba(33,43,50,.10);
+  transition: transform .4s cubic-bezier(.3,1.15,.5,1), width .4s cubic-bezier(.3,1.15,.5,1);
 }
 .riva-topnav-item {
   position: relative; z-index: 1;
-  display: inline-flex; align-items: center; gap: 7px;
-  height: 30px; padding: 0 13px; border-radius: 9px;
-  font-size: 13.5px; font-weight: 600; color: var(--rv-ink-2);
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 28px; min-width: 32px; padding: 0 11px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: var(--rv-ink-2);
   text-decoration: none; white-space: nowrap;
-  transition: color .2s ease;
+  transition: color .2s ease, background-color .15s ease;
 }
-.riva-topnav-item:hover { color: var(--rv-ink); background: rgba(255,255,255,.7); }
-.riva-topnav-item.is-active { color: var(--rv-accent); }
+.riva-topnav-item:hover:not(.is-active) { color: var(--rv-ink); background: rgba(255,255,255,.55); }
+.riva-topnav-item.is-active { color: var(--rv-ink); }
 .riva-topnav-item:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 1px; }
-.riva-topnav-ico { display: flex; color: currentColor; opacity: .85; }
-.riva-topnav-item.is-active .riva-topnav-ico { opacity: 1; }
+.riva-topnav-ico { display: flex; color: var(--rv-ink-3); transition: color .2s ease; }
+.riva-topnav-item:hover .riva-topnav-ico { color: var(--rv-ink-2); }
+.riva-topnav-item.is-active .riva-topnav-ico { color: var(--rv-accent); }
 
 /* Where a tool's own controls land (see AppHeader). */
 .riva-crumb-actions { display: flex; align-items: center; gap: 8px; }
 .riva-crumb-actions:empty { display: none; }
 
 .riva-top-search {
-  flex: none; display: inline-flex; align-items: center; gap: 8px;
-  height: 34px; padding: 0 5px 0 11px; border-radius: 11px;
+  flex: none; display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 5px 0 10px; margin-right: 2px; border-radius: 10px;
   background: rgba(255,255,255,.7); border: 1px solid rgba(216,221,224,.8);
   font: inherit; font-size: 13px; font-weight: 600; color: var(--rv-ink-3); cursor: pointer;
   transition: background-color .15s ease, color .15s ease, border-color .15s ease;
@@ -919,7 +913,7 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 .riva-top-btn {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 11px;
+  width: 32px; height: 32px; border-radius: 10px;
   background: transparent; border: 1px solid transparent;
   color: var(--rv-ink-2); cursor: pointer;
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
@@ -934,7 +928,7 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   to { opacity: 1; transform: none; }
 }
 .riva-menu {
-  position: absolute; right: 0; top: calc(100% + 10px); z-index: 70;
+  position: absolute; right: 0; top: calc(100% + 9px); z-index: 70;
   width: 272px; padding: 6px;
   background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
   box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
@@ -951,21 +945,13 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 }
 .riva-menu-row {
   display: flex; align-items: center; gap: 11px;
-  height: 40px; padding: 0 8px; border-radius: 12px;
+  height: 40px; padding: 0 10px; border-radius: 12px;
   font-size: 14px; font-weight: 600; color: var(--rv-ink);
   text-decoration: none; cursor: pointer;
   transition: background-color .14s ease, color .14s ease;
 }
 .riva-menu-row:hover, .riva-menu-row:focus-visible { background: #f2f6f9; outline: none; }
 .riva-menu-row.is-active { background: #eaf2fb; color: var(--rv-accent); }
-.riva-menu-ico {
-  flex: none; display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 9px;
-  background: #eef2f4; color: var(--rv-ink-2);
-  transition: background-color .14s ease, color .14s ease;
-}
-.riva-menu-row:hover .riva-menu-ico { background: #e3ebf0; color: var(--rv-accent); }
-.riva-menu-row.is-active .riva-menu-ico { background: var(--rv-accent); color: #fff; }
 .riva-menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-menu-foot {
   display: flex; align-items: baseline; gap: 8px;
@@ -1152,30 +1138,34 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   text-align: left; cursor: pointer;
 }
 .riva-palette-row.is-sel { background: var(--rv-accent-dim); color: var(--rv-accent); }
-.riva-palette-row.is-sel .riva-menu-ico { color: var(--rv-accent); }
 .riva-palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-palette-group { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--rv-ink-3); }
 .riva-palette-empty { padding: 18px 12px; font-size: 13.5px; color: var(--rv-ink-3); text-align: center; }
 
 /* ---- the bar when the room runs out ----------------------------- */
 
+/* Narrower: the build moves to the menu's foot (it is there already), and
+   the tools you are not on drop to their icons. */
 @media (max-width: 1020px) {
-  .riva-topnav { display: none; }
-  .riva-top-here {
-    display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 13.5px; font-weight: 600; color: var(--rv-ink); margin-left: 4px;
-  }
+  .riva-top-ver { display: none; }
+  .riva-topnav-item:not(.is-active) { padding: 0; width: 32px; }
+  .riva-topnav-item:not(.is-active) .riva-topnav-label { display: none; }
 }
+/* A phone: the brand is its mark and every tool is its icon (the name is
+   in the tooltip and read out). The bar is the same three parts at the
+   same height. */
 @media (max-width: 600px) {
   .riva-crumb-back { padding: 0 10px !important; }
   .riva-crumb-back-label { display: none; }
   .riva-brand-name { display: none; }
   .riva-brand { padding: 0 5px; }
   .riva-top { padding: 5px 8px 0; }
-  .riva-bar { height: 44px; }
-  .riva-top-ver { display: none; }
-  .riva-top-search { width: 34px; padding: 0; justify-content: center; }
-  .riva-top-search-label, .riva-top-search .riva-kbd { display: none; }
+  .riva-bar { gap: 4px; }
+  .riva-topnav-item { padding: 0; width: 36px; }
+  .riva-topnav-item .riva-topnav-label { display: none; }
+  /* Go to is a keyboard shortcut at heart, and the menu beside it lists
+     every tool, so on a phone it gives its place back. */
+  .riva-top-search { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .riva-topnav-pill, .riva-menu, .riva-theme-pop, .riva-theme-name { transition: none; animation: none; }
@@ -1329,31 +1319,49 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 /* ---- the opening screen's light ---------------------------------- */
 
-/* One word of the heading in the theme's colours, drifting slowly. */
-.riva-hero-accent {
-  background-image: linear-gradient(100deg, var(--rv-sky-b), var(--rv-sky-a), var(--rv-sky-c), var(--rv-sky-b));
-  background-size: 250% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: rivaAccentDrift 9s ease-in-out infinite alternate;
+/* The heading's turning word (ChatView's HeroRotator): solid NHS blue, a
+   letter at a time out of a blur, in a box whose width eases from one word
+   to the next. */
+.riva-rotate {
+  position: relative; display: inline-block; vertical-align: bottom;
+  color: var(--rv-accent); white-space: nowrap;
+  transition: width .45s cubic-bezier(.2,.8,.3,1);
 }
-@keyframes rivaAccentDrift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+.riva-rotate-measure { position: absolute; left: 0; top: 0; visibility: hidden; white-space: nowrap; }
+.riva-rotate-word { display: inline-block; }
+.riva-rotate-ch {
+  display: inline-block;
+  animation: rivaCharIn .5s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes rivaCharIn {
+  from { opacity: 0; transform: translateY(.35em); filter: blur(8px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
 
-/* A glow in the theme's colours behind the field while nothing has been
-   asked, turning slowly round it: the one thing on the opening screen
-   that says where to start. Gone once there is an answer to read. */
-@property --riva-glow-turn { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+/* A beam of light running round the field's edge while nothing has been
+   asked (the 21st.dev "Border Beam"): a short bright arc in the theme's
+   colours on the border itself, rather than a haze behind the box. Gone
+   once there is an answer to read. */
+@property --riva-beam { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .riva-dock-center .riva-composer::before {
-  content: ''; position: absolute; inset: -6px; z-index: -1; border-radius: 28px; pointer-events: none;
-  background: conic-gradient(from var(--riva-glow-turn), var(--rv-sky-a), var(--rv-sky-c), var(--rv-sky-b), var(--rv-sky-a));
-  filter: blur(22px); opacity: .5;
-  animation: rivaGlowTurn 10s linear infinite, rivaGlowIn 1.2s ease both;
-  transition: opacity .3s ease;
+  content: ''; position: absolute; inset: -2px; z-index: 1; border-radius: inherit; padding: 2px; pointer-events: none;
+  /* Its head is deepened with NHS blue: a pale theme (Mist) is nearly the
+     colour of the border it runs along, and the beam has to read on it. */
+  background: conic-gradient(from var(--riva-beam), transparent 0deg 230deg,
+    color-mix(in srgb, var(--rv-sky-c) 60%, transparent) 280deg, var(--rv-sky-a) 320deg,
+    color-mix(in srgb, var(--rv-sky-b) 35%, #005eb8) 352deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: rivaBeam 6s linear infinite, rivaBeamIn 1.2s ease both;
 }
-.riva-dock-center .riva-dock-form:focus-within .riva-composer::before { opacity: .7; }
-@keyframes rivaGlowTurn { to { --riva-glow-turn: 360deg; } }
-@keyframes rivaGlowIn { from { opacity: 0; } }
+/* The field is focused as the page opens, so the beam stays on through
+   focus; it goes once something has been typed. */
+.riva-dock-center .riva-dock-form:has(.riva-composer-input:not(:placeholder-shown)) .riva-composer::before { opacity: 0; transition: opacity .25s ease; }
+@keyframes rivaBeam { to { --riva-beam: 360deg; } }
+@keyframes rivaBeamIn { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .riva-hero-accent, .riva-dock-center .riva-composer::before { animation: none; }
+  .riva-rotate, .riva-rotate-ch, .riva-dock-center .riva-composer::before { animation: none; transition: none; }
+  .riva-dock-center .riva-composer::before { display: none; }
 }
 
 /* ---- a templated answer (TemplateView) --------------------------- */

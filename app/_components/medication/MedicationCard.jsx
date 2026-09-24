@@ -50,14 +50,9 @@ export default function MedicationCard({ card }) {
   const corrected = !!(r && r.correctedFrom && r.correctedFrom.toLowerCase() !== (r.name || '').toLowerCase());
 
   return (
-    <div style={s('display:flex;gap:12px;align-items:flex-start;animation:rivaUp .25s ease;')}>
-      <div className="riva-bot-avatar" style={s('flex:none;width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #d8dde0;display:flex;align-items:center;justify-content:center;margin-top:2px;color:#005eb8;')}>
-        <Svg w={20} sw={2}>{Icons.pill}</Svg>
-      </div>
-
+    <div style={s('display:flex;align-items:flex-start;animation:rivaUp .25s ease;')}>
       <div style={s('flex:1;min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
-          <span style={s('flex:none;')}><Svg w={16}>{Icons.pill}</Svg></span>
           Medicines information from public UK sources (general information only)
           <Hover tag="button" onClick={card.onRemove} aria-label="Remove this result"
             base="margin-left:auto;flex:none;background:none;border:none;cursor:pointer;color:#4c6272;padding:2px;display:flex;" hover="color:#212b32;">
@@ -84,9 +79,8 @@ export default function MedicationCard({ card }) {
         )}
 
         {status === 'not_found' && (
-          <div style={s('padding:18px 22px;display:flex;gap:13px;align-items:flex-start;')}>
-            <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
-            <div style={s('flex:1;min-width:0;')}>
+          <div style={s('padding:18px 22px;')}>
+            <div>
               <p style={s('margin:0;font-size:17px;line-height:1.5;color:#212b32;')}>{card.message}</p>
               <Hover onClick={card.onRetry} base="margin-top:12px;background:#fff;border:2px solid #d8dde0;border-radius:8px;padding:7px 14px;font:inherit;font-size:15px;font-weight:600;color:#005eb8;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="border-color:#005eb8;"><Svg w={15} sw={2.2}>{Icons.refresh}</Svg>Try again</Hover>
             </div>
@@ -96,8 +90,7 @@ export default function MedicationCard({ card }) {
         {status === 'ok' && r && (
           <>
             {corrected && (
-              <div style={s('display:flex;gap:9px;align-items:flex-start;background:#fff;border-bottom:1px solid #eef2f4;padding:10px 22px;font-size:14px;color:#4c6272;')}>
-                <span style={s('flex:none;color:#768692;margin-top:1px;')}><Svg w={16} sw={2}>{Icons.search}</Svg></span>
+              <div style={s('background:#fff;border-bottom:1px solid #eef2f4;padding:10px 22px;font-size:14px;color:#4c6272;')}>
                 <span>Showing information for <strong style={s('color:#212b32;')}>{r.name}</strong>. You searched “{r.correctedFrom}”.</span>
               </div>
             )}
@@ -138,7 +131,7 @@ export default function MedicationCard({ card }) {
 
             {/* Emergency: urgent-help guidance, shown prominently instead of an answer */}
             {emergency && (
-              <div style={s('margin:16px 22px 4px;display:flex;gap:13px;align-items:flex-start;background:#fdf2f0;border:1px solid #f0bcb4;border-left:4px solid #d5281b;border-radius:0 8px 8px 0;padding:14px 16px;')}>
+              <div style={s('margin:16px 22px 4px;display:flex;gap:13px;align-items:flex-start;background:#fdf2f0;border:1px solid #f0bcb4;border-radius:8px;padding:14px 16px;')}>
                 <span style={s('flex:none;color:#d5281b;margin-top:1px;')}><Svg w={22} sw={2.2}>{Icons.alertCircle}</Svg></span>
                 <div style={s('flex:1;min-width:0;')}>
                   <p style={s('margin:0 0 4px;font-size:18px;font-weight:700;color:#d5281b;')}>Call 999 now</p>
@@ -151,7 +144,7 @@ export default function MedicationCard({ card }) {
             {!emergency && r.queryAnswer && (
               <div style={s('margin:16px 22px 0;')}>
                 <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Your question</div>
-                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;')}>
+                <div style={s('padding:14px 16px;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;')}>
                   <p style={s('margin:0 0 12px;font-size:16px;font-weight:600;line-height:1.5;')}>{r.queryAnswer.question || query}</p>
                   {r.queryAnswer.points.length
                     ? <Points points={r.queryAnswer.points} />
@@ -195,7 +188,7 @@ export default function MedicationCard({ card }) {
 
             <div style={s('margin-top:16px;border-top:1px solid #d8dde0;padding:12px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:#4c6272;')}>
               {r.references.length > 0 && (
-                <span style={s('display:inline-flex;align-items:center;gap:6px;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Every point links to its source</span>
+                <span>Every point links to its source</span>
               )}
               <span style={s('margin-left:auto;color:#768692;')}>
                 {r.fromCache ? 'Saved answer' : 'Retrieved'}{r.retrievedAt ? ' · ' + fmtDate(r.retrievedAt) : ''}

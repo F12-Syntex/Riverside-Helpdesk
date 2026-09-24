@@ -18,7 +18,35 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
-| `6.15.0` | 2026-09-24 | feat | `f4d521e` | feat: redesign the templated answer card |
+| `6.23.5` | 2026-09-23 | fix | `7fe7d68` | fix: drop the coloured left-edge bars from cards and notes |
+| `6.23.4` | 2026-09-23 | fix | `3a2bea2` | fix: show the contacts loader on the first load, not on every search |
+| `6.23.3` | 2026-09-23 | docs | `68247ac` | docs: record 6.22.6 to 6.23.2 in the versions table |
+| `6.23.2` | 2026-09-23 | fix | `7ec023d` | fix: bring plain line icons back to the Notebook |
+| `6.23.1` | 2026-09-23 | fix | `6acb425` | fix: bring standard icons back to answer notes and callouts |
+| `6.23.0` | 2026-09-23 | feat | `a3dab66` | feat: show how many contacts a search is going through while it loads |
+| `6.22.6` | 2026-09-23 | docs | `17f1adb` | docs: record 6.22.4 and 6.22.5 in the versions table |
+| `6.22.5` | 2026-09-23 | fix | `44e4671` | fix: restore the original AccurX card and drop the routing criteria |
+| `6.22.4` | 2026-09-23 | docs | `12e011f` | docs: record 6.22.2 and 6.22.3 in the versions table |
+| `6.22.3` | 2026-09-23 | fix | `4b1a6af` | fix: cut the AccurX card down to where, why, reason and booking |
+| `6.22.2` | 2026-09-23 | docs | `a0d76e9` | docs: record 6.22.0 and 6.22.1 in the versions table |
+| `6.22.1` | 2026-09-23 | fix | `9fb5574` | fix: strip decorative filler icons from the interface |
+| `6.22.0` | 2026-09-23 | feat | `51f2971` | feat: explain AccurX routes with a fixed set of criteria |
+| `6.21.1` | 2026-09-23 | docs | `a8ecb0b` | docs: record 6.20.3 and 6.21.0 in the versions table |
+| `6.21.0` | 2026-09-23 | feat | `40dcfe7` | feat: give AccurX answers a card of their own, led by what gets used |
+| `6.20.2` | 2026-09-23 | docs | `e92cc5e` | docs: record 6.20.0 and 6.20.1 in the versions table |
+| `6.20.1` | 2026-09-23 | fix | `0f1c1a8` | fix: light one row at a time in the mode menu, without the yellow |
+| `6.20.0` | 2026-09-23 | feat | `e87ccfe` | feat: swap the Q&A dot grids for Antigravity-style floating particles |
+| `6.19.1` | 2026-09-23 | docs | `f4b3982` | docs: record 6.19.0 in the versions table |
+| `6.19.0` | 2026-09-23 | feat | `ca697da` | feat: layer dots at three depths behind the Q&A |
+| `6.18.1` | 2026-09-23 | docs | `ad421f6` | docs: record 6.18.0 in the versions table |
+| `6.18.0` | 2026-09-23 | feat | `441963e` | feat: slim the top bar and make the tools a segmented control |
+| `6.17.1` | 2026-09-23 | docs | `44e9384` | docs: record 6.17.0 in the versions table |
+| `6.17.0` | 2026-09-23 | feat | `c145694` | feat: redesign the contact lookup in the shell's glass and paper |
+| `6.16.1` | 2026-09-23 | docs | `f190445` | docs: record 6.16.0 in the versions table |
+| `6.16.0` | 2026-09-23 | feat | `f082148` | feat: swap the glows for 21st.dev motion and hairline edges |
+| `6.15.1` | 2026-09-23 | docs | `9e13bb8` | docs: record 6.14.4 and 6.15.0 in the versions table |
+| `6.15.0` | 2026-09-23 | feat | `dca727f` | feat: redesign the Notebook in the shell's glass and paper |
+| `6.14.8` | 2026-09-23 | chore | `65a5df5` | chore: make Mist the default theme |
 | `6.14.7` | 2026-09-23 | docs | `17e4762` | docs: record 6.14.3 in the versions table |
 | `6.14.6` | 2026-09-23 | style | `e5e4c0c` | style: make the tools plain links with a sliding underline |
 | `6.14.5` | 2026-09-23 | docs | `23c25fd` | docs: record 6.14.2 in the versions table |

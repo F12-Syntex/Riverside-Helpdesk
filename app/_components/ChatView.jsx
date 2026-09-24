@@ -83,6 +83,39 @@ function TurnQuestion({ question }) {
   );
 }
 
+/**
+ * The heading's last word, turning over: what staff come here to do, one
+ * at a time, each arriving a letter at a time out of a blur (the 21st.dev
+ * "Text Rotate"). The width eases between words rather than jumping, so the
+ * centred line does not twitch. Read as one plain sentence by a screen
+ * reader, and held on the first word where less motion is asked for.
+ */
+const HERO_WORDS = ['find', 'book', 'refer', 'check', 'send'];
+function HeroRotator() {
+  const [i, setI] = React.useState(0);
+  const [w, setW] = React.useState(null);
+  const measure = React.useRef(null);
+  React.useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const t = setInterval(() => setI((n) => (n + 1) % HERO_WORDS.length), 2800);
+    return () => clearInterval(t);
+  }, []);
+  React.useLayoutEffect(() => {
+    if (measure.current) setW(measure.current.offsetWidth);
+  }, [i]);
+  const word = HERO_WORDS[i];
+  return (
+    <span className="riva-rotate" style={w ? { width: w + 'px' } : undefined}>
+      <span ref={measure} className="riva-rotate-measure" aria-hidden="true">{word}</span>
+      <span key={word} className="riva-rotate-word" aria-hidden="true">
+        {word.split('').map((ch, k) => (
+          <span key={k} className="riva-rotate-ch" style={{ animationDelay: k * 32 + 'ms' }}>{ch}</span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 export default function ChatView({ v }) {
   return (
     <div className="riva-column" style={s('max-width:820px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
@@ -93,10 +126,10 @@ export default function ChatView({ v }) {
         // dock's own geometry in globals.css (.riva-hero-block), so the gap
         // between this text and the field holds on every screen size.
         <div className="riva-hero-block" style={s('text-align:center;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
-          {/* The heading wears the light's own colours, drifting slowly, so
-              the one line on the opening screen belongs to the page behind
-              it rather than sitting on top of it. */}
-          <h1 className="riva-hero-h1" style={s('font-size:48px;font-weight:800;letter-spacing:-0.03em;margin:0;line-height:1.08;')}>What do you <span className="riva-hero-accent">need?</span></h1>
+          <h1 className="riva-hero-h1" aria-label="What do you need to find?"
+            style={s('font-size:48px;font-weight:800;letter-spacing:-0.03em;margin:0;line-height:1.08;')}>
+            <span aria-hidden="true">What do you need to <HeroRotator />?</span>
+          </h1>
           {/* Only when the host page sets one. The default is nothing: a line
               explaining what can be asked is read once and then sits there. */}
           {v.welcome && <p style={s('font-size:17px;color:#4c6272;max-width:52ch;margin:10px auto 0;text-wrap:pretty;')}>{v.welcome}</p>}
@@ -157,8 +190,7 @@ export default function ChatView({ v }) {
             {v.turn.hasDocs && (
               <div style={s('display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;')}>
                 {v.turn.docNames.map((name, j) => (
-                  <span key={j} style={s('display:inline-flex;align-items:center;gap:7px;max-width:100%;background:#fff;border:1px solid #dde4e7;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#4c6272;')}>
-                    <Svg w={14} sw={2} style={s('flex:none;color:#005eb8;')}>{Icons.file}</Svg>
+                  <span key={j} style={s('display:inline-flex;align-items:center;max-width:100%;background:#fff;border:1px solid #dde4e7;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:#4c6272;')}>
                     <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;')}>{name}</span>
                   </span>
                 ))}
@@ -185,9 +217,9 @@ export default function ChatView({ v }) {
 
           {v.isViewingHistory && (
             <Hover tag="button" onClick={v.onLatest}
-              base="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:2px 0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;cursor:pointer;"
+              base="align-self:flex-start;display:inline-flex;align-items:center;background:none;border:none;padding:2px 0;font:inherit;font-size:14.5px;font-weight:600;color:#005eb8;cursor:pointer;"
               hover="color:#003087;">
-              <Svg w={16} sw={2.4}>{Icons.arrow}</Svg>Back to the latest question
+              Back to the latest question
             </Hover>
           )}
         </div>

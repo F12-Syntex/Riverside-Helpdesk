@@ -1,6 +1,6 @@
 'use client';
 
-import { s, Hover, Svg, Icons } from '../ui';
+import { s, Hover } from '../ui';
 
 export default function SuggestBubble({ v }) {
   return (
@@ -10,7 +10,7 @@ export default function SuggestBubble({ v }) {
         <div style={s('display:flex;flex-direction:column;gap:8px;')}>
           {(v.suggestions || []).map((sug) => (
             <Hover key={sug.id} onClick={sug.onClick} base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f0f4f5;border:1px solid #d8dde0;border-radius:10px;padding:12px 14px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;" hover="border-color:#005eb8;background:#f7fbff;">
-              <span style={s('flex:none;')}><Svg w={17}>{Icons.arrow}</Svg></span><span>{sug.question}</span>
+              <span>{sug.question}</span>
             </Hover>
           ))}
         </div>

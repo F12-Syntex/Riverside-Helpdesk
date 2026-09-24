@@ -55,7 +55,7 @@ export default function PatientDataModal({ v }) {
             </ul>
           )}
 
-          <div style={s('background:#f0f4f5;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;padding:12px 14px;font-size:15px;line-height:1.55;color:#4c6272;')}>
+          <div style={s('background:#f0f4f5;border-radius:8px;padding:12px 14px;font-size:15px;line-height:1.55;color:#4c6272;')}>
             The assistant answers questions about <strong>how the practice works</strong>, so it never needs to know
             which patient. Ask about the process, not the person — “how do I code a discharge summary”, not
             “how do I code Mrs Smith’s”.
@@ -72,7 +72,6 @@ export default function PatientDataModal({ v }) {
             base="background:#005eb8;color:#fff;border:none;border-radius:8px;padding:11px 20px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 0 #003d78;display:inline-flex;align-items:center;gap:8px;"
             active="transform:translateY(4px);box-shadow:none;"
           >
-            <span style={s('display:flex;')}><Svg w={18}>{Icons.edit}</Svg></span>
             Edit the message
           </Hover>
         </div>

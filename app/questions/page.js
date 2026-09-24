@@ -79,7 +79,7 @@ function OriginBadge({ row }) {
   return (
     <span style={s('display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;'
       + (fromBot ? 'background:#fff3ed;color:#a13a00;' : 'background:#eef4f8;color:#4c6272;'))}>
-      <Svg w={12} sw={2.4}>{fromBot ? Icons.sparkle : Icons.chat}</Svg>{label}
+      {label}
     </span>
   );
 }
@@ -97,7 +97,7 @@ function Row({ row, onAnswer, onRemove, busy }) {
   const stale = answered && row.answeredAt && new Date(row.lastAt) > new Date(row.answeredAt);
 
   return (
-    <div style={s(BOX + 'border-left:4px solid ' + (answered ? '#007f3b' : '#ed8b00') + ';border-radius:0 12px 12px 0;padding:14px 16px;')}>
+    <div style={s(BOX + 'border-radius:12px;padding:14px 16px;')}>
       <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;')}>
         <OriginBadge row={row} />
         {answered && (
@@ -144,7 +144,7 @@ function Row({ row, onAnswer, onRemove, busy }) {
             <Hover tag="button" type="button" disabled={busy}
               onClick={() => onAnswer(row, draft).then((saved) => { if (saved) setOpen(false); })}
               base={PRIMARY + (busy ? 'opacity:.6;cursor:default;' : '')} hover={busy ? '' : PRIMARY_HOVER}>
-              <Svg w={15} sw={2.4}>{Icons.check}</Svg>Save the answer
+              Save the answer
             </Hover>
             <Hover tag="button" type="button" onClick={() => { setDraft(row.answer || ''); setOpen(false); }}
               base={QUIET} hover={QUIET_HOVER}>Cancel</Hover>
@@ -158,20 +158,20 @@ function Row({ row, onAnswer, onRemove, busy }) {
       {!open && (
         <div style={s('margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;')}>
           <Hover tag="button" type="button" onClick={() => setOpen(true)} base={QUIET} hover={QUIET_HOVER}>
-            <Svg w={14} sw={2.2}>{Icons.edit}</Svg>{answered ? 'Change the answer' : 'Answer this'}
+            {answered ? 'Change the answer' : 'Answer this'}
           </Hover>
           <Hover tag={Link} href="/notebook" base={QUIET + 'text-decoration:none;'} hover={QUIET_HOVER}>
-            <Svg w={14} sw={2.2}>{Icons.book}</Svg>Write the page
+            Write the page
           </Hover>
           {answered && (
             <Hover tag="button" type="button" disabled={busy} onClick={() => onAnswer(row, '')}
               base={QUIET} hover={QUIET_HOVER}>
-              <Svg w={14} sw={2.2}>{Icons.undo}</Svg>Not settled after all
+              Not settled after all
             </Hover>
           )}
           <Hover tag="button" type="button" disabled={busy} onClick={() => onRemove(row)}
             base={QUIET + 'color:#a51b0f;'} hover="border-color:#a51b0f;color:#a51b0f;">
-            <Svg w={14} sw={2.2}>{Icons.trash}</Svg>Remove
+            Remove
           </Hover>
         </div>
       )}
@@ -310,7 +310,7 @@ export default function Page() {
             <Hover tag="button" type="submit" disabled={busy || !question.trim()}
               base={PRIMARY + (busy || !question.trim() ? 'opacity:.55;cursor:default;' : '')}
               hover={busy || !question.trim() ? '' : PRIMARY_HOVER}>
-              <Svg w={15} sw={2.4}>{Icons.plus}</Svg>Add the question
+              Add the question
             </Hover>
             {asking && <span style={s('font-size:14px;color:#a51b0f;')}>{asking}</span>}
           </div>

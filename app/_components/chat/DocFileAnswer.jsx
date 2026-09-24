@@ -11,7 +11,7 @@ export default function DocFileAnswer({ v }) {
     <div>
       <div style={s('min-width:0;background:#fff;border:1px solid #d8dde0;border-radius:16px;box-shadow:0 1px 3px rgba(33,43,50,.08);overflow:hidden;')}>
         <div style={s('background:#e8f1f8;color:#003087;padding:9px 22px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;border-bottom:1px solid #cfe1f0;')}>
-          <span style={s('flex:none;')}><Svg w={16}>{Icons.file}</Svg></span>Document filing: check the title against the document before filing
+          <span style={s('flex:none;display:flex;')}><Svg w={16}>{Icons.fileLines}</Svg></span>Document filing: check the title against the document before filing
         </div>
 
         {v.aiLoading && (
@@ -37,7 +37,7 @@ export default function DocFileAnswer({ v }) {
             {/* The filing title — the thing the reader came for */}
             <div style={s('padding:18px 22px 0;')}>
               <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:6px;')}>Filing title</div>
-              <div style={s('display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f0f4f5;border:1px solid #d8dde0;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;padding:13px 16px;')}>
+              <div style={s('display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f0f4f5;border:1px solid #d8dde0;border-radius:8px;padding:13px 16px;')}>
                 <span style={s('flex:1;min-width:200px;font-size:17.5px;font-weight:600;line-height:1.45;color:#212b32;word-break:break-word;')}>{v.title}</span>
                 <Hover onClick={v.onCopy} base="flex:none;background:#005eb8;color:#fff;border:none;border-radius:8px;padding:8px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" hover="background:#003087;"><Svg w={15} stroke="#fff">{Icons.copy}</Svg>{v.copyLabel}</Hover>
               </div>
@@ -68,13 +68,13 @@ export default function DocFileAnswer({ v }) {
               </div>
             ) : (
               <div style={s('margin:16px 22px 0;display:flex;gap:10px;align-items:center;background:#eaf5ee;border:1px solid #b8d9c4;border-radius:8px;padding:11px 14px;')}>
-                <span style={s('flex:none;color:#007f3b;')}><Svg w={17} sw={2.4} stroke="#007f3b">{Icons.check}</Svg></span>
+                <span style={s('flex:none;display:flex;color:#007f3b;')}><Svg w={17} sw={2.4} stroke="#007f3b">{Icons.check}</Svg></span>
                 <div style={s('font-size:16px;line-height:1.4;color:#00602c;')}>No immediate action. File only.</div>
               </div>
             )}
 
             <div style={s('border-top:1px solid #d8dde0;margin-top:16px;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;')}>
-              <span style={s('display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#4c6272;')}><Svg w={14} stroke="#007f3b" sw={2.4} style={s('flex:none;')}>{Icons.shield}</Svg>Only explicit practice actions quoted from the document are shown</span>
+              <span style={s('font-size:14px;color:#4c6272;')}>Only explicit practice actions quoted from the document are shown</span>
             </div>
           </>
         )}

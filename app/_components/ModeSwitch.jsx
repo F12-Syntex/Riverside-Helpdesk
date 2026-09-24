@@ -135,12 +135,6 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     if (open && e.key === 'Tab') setOpen(false);
   };
 
-  const tile = (icon, on) => (
-    <span className={'riva-mode-tile' + (on ? ' is-on' : '')} aria-hidden="true">
-      <Svg w={16} sw={2.1}>{Icons[icon] || Icons.search}</Svg>
-    </span>
-  );
-
   const text = (label, summary) => (
     <span className="riva-mode-text">
       <span className="riva-mode-label">{label}</span>
@@ -148,11 +142,15 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     </span>
   );
 
-  const renderRow = (row) => {
+  // The pointer moves the same highlight the arrow keys do, so there is
+  // only ever one lit row: the one Enter would take.
+  const point = (i) => () => { if (i !== at) setAt(i); };
+
+  const renderRow = (row, i) => {
     if (row.kind === 'back') {
       return (
         <button key="back" type="button" role="menuitem" title={row.summary}
-          onClick={leaveFolder} className="riva-mode riva-mode-back">
+          onClick={leaveFolder} onMouseMove={point(i)} className="riva-mode riva-mode-back">
           <span className="riva-mode-backicon" aria-hidden="true">
             <Svg w={15} sw={2.4}>{Icons.arrowLeft}</Svg>
           </span>
@@ -166,8 +164,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
         <React.Fragment key="folder">
           <span className="riva-modes-sep" role="separator" />
           <button type="button" role="menuitem" title={row.summary}
-            onClick={enterFolder} className={'riva-mode riva-mode-folder' + (holds ? ' is-on' : '')}>
-            {tile(row.icon, false)}
+            onClick={enterFolder} onMouseMove={point(i)} className={'riva-mode riva-mode-folder' + (holds ? ' is-on' : '')}>
             {text(row.label, holds ? 'Now: ' + current.label : row.summary)}
             <span className="riva-mode-trail" aria-hidden="true">
               <Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg>
@@ -179,9 +176,8 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     const on = row.name === mode;
     return (
       <button key={row.name || 'qa'} type="button" role="menuitemradio" aria-checked={on}
-        title={row.summary} onClick={() => choose(row.name)}
+        title={row.summary} onClick={() => choose(row.name)} onMouseMove={point(i)}
         className={'riva-mode' + (on ? ' is-on' : '')}>
-        {tile(row.icon, on)}
         {text(row.label, row.summary)}
         <span className="riva-mode-trail riva-mode-check" aria-hidden="true">
           {on ? <Svg w={15} sw={2.8}>{Icons.check}</Svg> : null}
@@ -201,15 +197,15 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
         title={current.summary}
         onClick={() => (open ? setOpen(false) : show())}
         className="riva-modes-btn"
-        base={'display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 9px 0 9px;'
+        base={'display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 9px 0 12px;'
           + 'border:none;border-radius:999px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;'
           + 'transition:color .16s ease,opacity .25s ease;'
           + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eef2f4;color:#4c6272;')
           + (ready ? '' : 'opacity:0;')}
-        hover={armed ? 'background:#003087;' : 'background:#e1e8ec;color:#005eb8;'}>
-        {busy
-          ? <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-          : <Svg w={16} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
+        hover={armed ? 'background:#0068c9;' : 'background:#e1e8ec;color:#005eb8;'}>
+        {/* The label names the mode; the only mark it needs is the spinner
+            while a message is being screened. */}
+        {busy && <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>}
         <span className="riva-modes-label">{current.label}</span>
         <Svg w={13} sw={2.4} style={s('opacity:.7;transition:transform .18s ease;' + (open ? 'transform:rotate(180deg);' : ''))}>{Icons.chevronDown}</Svg>
       </Hover>
@@ -219,7 +215,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           {!inFolder && <div className="riva-modes-title">Answer mode</div>}
           {/* Keyed on the page so switching slides the new list in. */}
           <div key={inFolder ? 'folder' : 'top'} className={'riva-modes-page' + (inFolder ? ' is-folder' : '')}>
-            {rows.map(renderRow)}
+            {rows.map((row, i) => renderRow(row, i))}
           </div>
           <div className="riva-modes-foot" aria-hidden="true">
             <span><kbd>↑</kbd><kbd>↓</kbd> move</span>

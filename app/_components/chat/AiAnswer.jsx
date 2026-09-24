@@ -8,6 +8,7 @@ import WorkingState from './WorkingState';
 import Rich from './Rich';
 import Md from './Md';
 import TemplateView from '../templates/TemplateView';
+import AccurxCard from './AccurxCard';
 import UnresolvedPanel from './UnresolvedPanel';
 import ErsForm from '../templates/ErsForm';
 
@@ -52,7 +53,7 @@ function SourceImages({ images }) {
 function GeneralBar() {
   return (
     <div style={s('display:flex;gap:9px;align-items:flex-start;margin:14px 0 0;border:1px dashed #ecd39a;background:#fffdf5;border-radius:10px;padding:11px 14px;')}>
-      <span style={s('flex:none;display:flex;margin-top:1px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.sparkle}</Svg></span>
+      <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.infoCircle}</Svg></span>
       <span style={s('font-size:13.5px;line-height:1.5;color:#8a6100;')}>
         <strong>Done by the assistant.</strong> This is not from the practice&rsquo;s documents &mdash;
         check anything that has to match how the practice does things.
@@ -103,9 +104,17 @@ function KeyPoints({ points }) {
       <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
         {points.map((p) => (
           <li key={p.key} style={s('display:flex;gap:9px;align-items:flex-start;')}>
-            <span style={s('flex:none;margin-top:2px;display:flex;color:' + (p.isCritical ? '#d5281b' : '#007f3b') + ';')}>
-              <Svg w={15} sw={2.4}>{p.isCritical ? Icons.alertCircle : Icons.check}</Svg>
-            </span>
+            {/* Only a critical point gets an icon — the warning is the
+                information. Every other point takes a plain bullet. */}
+            {p.isCritical ? (
+              <span style={s('flex:none;margin-top:2px;display:flex;color:#d5281b;')}>
+                <Svg w={15} sw={2.4}>{Icons.alertCircle}</Svg>
+              </span>
+            ) : (
+              <span aria-hidden="true" style={s('flex:none;width:15px;display:flex;justify-content:center;padding-top:9px;')}>
+                <span style={s('width:5px;height:5px;border-radius:50%;background:#768692;')} />
+              </span>
+            )}
             <span style={s('font-size:15.5px;line-height:1.45;color:#212b32;' + (p.isCritical ? 'font-weight:700;' : ''))}>
               <Rich text={p.text} />
             </span>
@@ -127,7 +136,7 @@ function Section({ sec }) {
 
   if (sec.isCritical) {
     return (
-      <div style={s('border:1px solid #f0c2bd;border-left:4px solid #d5281b;background:#fdf4f3;border-radius:0 12px 12px 0;padding:13px 16px 14px;')}>
+      <div style={s('border:1px solid #f0c2bd;background:#fdf4f3;border-radius:12px;padding:13px 16px 14px;')}>
         <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#a51b0f;margin-bottom:8px;')}>
           <Svg w={14} stroke="#d5281b" sw={2.4} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
           {sec.hasHeading ? sec.heading : 'Must not be missed'}
@@ -140,7 +149,7 @@ function Section({ sec }) {
   }
 
   return (
-    <div style={s(sec.isWeb ? 'border-left:3px solid #ecd39a;padding-left:13px;' : '')}>
+    <div>
       {heading}
       <Md text={sec.markdown} />
       {sec.hasImages && <SourceImages images={sec.images} />}
@@ -183,7 +192,7 @@ function Determined({ determination }) {
   return (
     <div style={s('padding:11px 16px 12px;border-top:1px solid #eef1f2;background:#fffdf5;font-size:13.5px;line-height:1.5;color:#8a6100;')}>
       <div style={s('display:flex;gap:8px;align-items:flex-start;')}>
-        <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.sparkle}</Svg></span>
+        <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.alertCircle}</Svg></span>
         <span>
           <strong>Not recorded in the practice&rsquo;s notes.</strong> This pairing was determined from the practice&rsquo;s
           own referral data &mdash; check it against the doctor&rsquo;s task before sending.
@@ -249,8 +258,8 @@ export default function AiAnswer({ v }) {
 
         {v.aiDeclined && (
           <>
-            <div style={s('padding:18px 0;display:flex;gap:13px;align-items:flex-start;')}>
-              <span style={s('flex:none;width:30px;height:30px;border-radius:50%;background:#f0f4f5;color:#4c6272;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;')}><Svg w={17}>{Icons.infoCircle}</Svg></span>
+            <div style={s('padding:18px 0;display:flex;gap:11px;align-items:flex-start;')}>
+              <span style={s('flex:none;display:flex;margin-top:4px;color:#4c6272;')}><Svg w={18} sw={2}>{Icons.infoCircle}</Svg></span>
               <div style={s('flex:1;min-width:0;')}>
                 <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
                 <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
@@ -288,7 +297,11 @@ export default function AiAnswer({ v }) {
                 shape, so it renders on its own — the markdown sections, key
                 points and citations below are all empty for these. */}
             {v.hasTemplate && (
-              <div style={s('margin:16px 0 0;')}><TemplateView answer={v.template} /></div>
+              <div style={s('margin:16px 0 0;')}>
+                {/* An AccurX request has its own card: the same answer, drawn
+                    around the three things reception came for. */}
+                {v.template.accurx ? <AccurxCard answer={v.template} /> : <TemplateView answer={v.template} />}
+              </div>
             )}
 
             {/* And beside it, everything the message asked for. The card can
@@ -302,9 +315,9 @@ export default function AiAnswer({ v }) {
                 own material, so the assistant asks which was meant rather than
                 choosing one and hoping. Tapping an answer asks it properly. */}
             {v.hasClarify && (
-              <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-left:4px solid #005eb8;border-radius:0 12px 12px 0;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
+              <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-radius:12px;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
                 <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;margin-bottom:9px;')}>
-                  <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.infoCircle}</Svg>Which did you mean?
+                  <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.question}</Svg>Which did you mean?
                 </div>
                 <p style={s('margin:0 0 13px;font-size:17px;line-height:1.5;color:#212b32;')}>{v.clarifyQuestion}</p>
                 <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
@@ -328,7 +341,7 @@ export default function AiAnswer({ v }) {
                 {v.sections.map((sec) => (sec.isJudgement || sec.isReasoned) ? (
                   <div key={sec.key} style={s('border:1px dashed #ecd39a;background:#fffdf5;border-radius:12px;padding:12px 16px 13px;')}>
                     <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
-                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.sparkle}</Svg>
+                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
                       {sec.isReasoned ? 'Worked out from the practice’s material' : 'AI judgement'}
                     </div>
                     <Md text={sec.markdown} />
@@ -380,13 +393,13 @@ export default function AiAnswer({ v }) {
                     <Svg w={13} sw={2.2}>{Icons.copy}</Svg>{v.copyMessageLabel}
                   </Hover>
                 </div>
-                <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-left:4px solid #005eb8;border-radius:0 8px 8px 0;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
+                <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-radius:8px;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
                 {v.hasMessageImages && <SourceImages images={v.messageImages} />}
                 {v.hasMessageCite ? <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} /> : <JudgementChip label="AI-drafted wording: check before sending" />}
               </div>
             )}
 
-            {v.hasTip && <div style={s('margin:14px 0 4px;border-left:4px solid #005eb8;background:#e8f1f8;padding:12px 16px;border-radius:0 8px 8px 0;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
+            {v.hasTip && <div style={s('margin:14px 0 4px;background:#e8f1f8;padding:12px 16px;border-radius:8px;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
 
             {v.hasFollowUps && (
               // A step with its own procedure behind it is left out of the answer
@@ -399,7 +412,7 @@ export default function AiAnswer({ v }) {
                     <Hover key={f.key} className="riva-lift" onClick={f.onClick}
                       base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:12px 15px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;transition:border-color .16s ease,background-color .16s ease;"
                       hover="border-color:#005eb8;background:#f7fbff;">
-                      <span style={s('flex:none;display:flex;')}><Svg w={17}>{Icons.arrow}</Svg></span><span>{f.question}</span>
+                      <span>{f.question}</span>
                     </Hover>
                   ))}
                 </div>
