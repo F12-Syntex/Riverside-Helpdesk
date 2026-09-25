@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.32.0` | 2026-09-25 | feat | `2f2af1b` | feat: add a 'patient didn't pick up' button to the AccurX card |
+| `6.31.0` | 2026-09-24 | feat | `daa3615` | feat: add an export button that copies /questions as a numbered list |
 | `6.30.0` | 2026-09-24 | feat | `7e6be5d` | feat: extract questions from pasted text with AI on /questions |
 | `6.29.0` | 2026-09-24 | feat | `6cbdf43` | feat: tint the Format with AI button blue and animate formatting |
 | `6.28.1` | 2026-09-24 | fix | `48fef84` | fix: tone down Format with AI into a bottom-right floating button |
