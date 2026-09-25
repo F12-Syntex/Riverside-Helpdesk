@@ -33,3 +33,18 @@ test('the AccurX card carries the note, except on a card that means now', () => 
   });
   assert.equal(now.accurx.noAnswer, '');
 });
+
+test('the reading writes the no-answer line when it has one', async () => {
+  const { renderCommand } = await import('../lib/templates/route.mjs');
+  const line = 'Tried to call pt to book tel appt with GP re: heartburn 3/52; also to advise repeat req sent to pharmacy team. No answer.';
+  const card = renderCommand('accurxTriage', {
+    destination: 'gp', evidence: 'heartburn', reason: 'heartburn 3/52, gaviscon not helping', noAnswer: line,
+  }, 'I have had heartburn for 3 weeks and gaviscon is not helping, also need my repeat');
+  assert.equal(card.accurx.noAnswer, line);
+});
+
+test('the schema asks the reading for the no-answer line, and the prompt says what it is', async () => {
+  const { ACCURX_READ_SCHEMA, accurxReadPrompt } = await import('../lib/templates/accurx-route.mjs');
+  assert.equal(ACCURX_READ_SCHEMA.parse({ destination: 'gp' }).noAnswer, '');
+  assert.match(accurxReadPrompt({ question: 'x' }), /"noAnswer"/);
+});

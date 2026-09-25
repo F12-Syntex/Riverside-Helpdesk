@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.32.1` | 2026-09-25 | docs | `41404a0` | docs: regenerate VERSIONS.md from the full history |
 | `6.32.0` | 2026-09-25 | feat | `2f2af1b` | feat: add a 'patient didn't pick up' button to the AccurX card |
 | `6.31.0` | 2026-09-24 | feat | `daa3615` | feat: add an export button that copies /questions as a numbered list |
 | `6.30.0` | 2026-09-24 | feat | `7e6be5d` | feat: extract questions from pasted text with AI on /questions |
