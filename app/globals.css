@@ -816,17 +816,18 @@ body { overflow-x: hidden; }
     #f8fafc;
 }
 .riva-sky-canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .9s ease; }
-/* The dither: a dot grid in the theme's colour, only towards the edges. */
+/* The sonar grid (SonarGrid.jsx): dots in the theme's colour, quieter
+   through the middle where the reading is, but never gone from it, so a
+   ring can be seen crossing the page. */
 .riva-sky-dots {
-  position: absolute; inset: 0;
-  background-image: radial-gradient(color-mix(in srgb, var(--rv-sky-b) 30%, transparent) 1px, transparent 1.5px);
-  background-size: 22px 22px;
-  -webkit-mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, transparent 38%, #000 100%);
-  mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, transparent 38%, #000 100%);
-  opacity: .45; transition: opacity 1.2s ease;
+  position: absolute; inset: 0; color: var(--rv-sky-b);
+  -webkit-mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(0,0,0,.35) 30%, #000 100%);
+  mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(0,0,0,.35) 30%, #000 100%);
+  opacity: .85; transition: opacity 1.2s ease;
 }
-html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s linear infinite; }
-@keyframes rivaDotsDrift { to { background-position: 22px 22px; } }
+/* Mist's middle colour is too pale to read as dots on the page. */
+:root:not([data-theme]) .riva-sky-dots, [data-theme="mist"] .riva-sky-dots { color: var(--rv-sky-c); }
+html[data-busy] .riva-sky-dots { opacity: 1; }
 
 .riva-shell {
   position: relative; z-index: 1;
@@ -1338,8 +1339,7 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 @media (prefers-reduced-motion: reduce) {
   .riva-work, .riva-work::before, .riva-work-title, .riva-work-step, .riva-work-bar > span::after,
-  .riva-box, .riva-answer-flow > *,
-  html[data-busy] .riva-sky-dots { animation: none !important; }
+  .riva-box, .riva-answer-flow > * { animation: none !important; }
 }
 
 /* ---- the go-to palette, on the same surface --------------------- */

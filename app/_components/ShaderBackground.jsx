@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { themeById, readTheme, hexToRgb } from './theme';
+import SonarGrid from './SonarGrid';
 
 /* ------------------------------------------------------------------ *
  * ShaderBackground — the light behind every page.
@@ -284,9 +285,9 @@ export default function ShaderBackground() {
   return (
     <div aria-hidden="true" className="riva-sky">
       <canvas ref={ref} className="riva-sky-canvas" />
-      {/* A dot grid over the light, fading out towards the middle: the
-          dithered texture of the "neon dither", kept to a whisper. */}
-      <div className="riva-sky-dots" />
+      {/* A dot grid over the light that answers back: rings spread from
+          wherever somebody clicks, and from somewhere now and then. */}
+      <SonarGrid className="riva-sky-dots" />
     </div>
   );
 }
