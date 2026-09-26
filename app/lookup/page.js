@@ -32,23 +32,27 @@ const MAIL = (<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 
 const GLOBE = (<><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" /></>);
 
 const LK_CSS = `
-.lk{flex:1;width:100%;max-width:720px;margin:0 auto;padding:24px 20px;}
+/* The same column, heading and field as Ask a question: 820px wide, the
+   heading centred above, the box drawn exactly like the composer. */
+.lk{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;width:100%;max-width:820px;margin:0 auto;padding:28px 24px 24px;}
+.lk-h1{flex:none;margin:8px 0 6px;text-align:center;font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.08;}
 
-/* ---- the palette: one floating card ---- */
-/* ONE SIZE, ALWAYS. The card never grows, shrinks or moves with what is in
-   it: the box and the foot are fixed, and everything between scrolls. */
-.lk-card{position:relative;display:flex;flex-direction:column;height:min(680px,calc(100vh - 120px));min-height:360px;overflow:hidden;background:rgba(255,255,255,.94);border-radius:22px;
-  -webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);
-  box-shadow:0 0 0 1px rgba(33,43,50,.06),0 2px 4px rgba(33,43,50,.04),0 24px 60px -18px rgba(0,48,135,.22);}
+/* ONE SIZE, ALWAYS. The list never grows, shrinks or moves with what is in
+   it: it fills what the page leaves and everything in it scrolls. */
+.lk-card{position:relative;flex:1;min-height:280px;display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:22px;
+  box-shadow:0 0 0 1px #dde4e7,0 2px 4px rgba(33,43,50,.04);}
 
-/* ---- the box ---- */
-.lk-box{flex:none;display:flex;align-items:center;gap:4px;height:62px;padding:0 10px 0 20px;
-  background:rgba(255,255,255,.96);border-radius:22px 22px 0 0;}
+/* ---- the box: the Ask a question composer ---- */
+.lk-box{flex:none;display:flex;align-items:center;gap:4px;height:68px;padding:0 12px 0 22px;
+  background:#fff;border:2px solid #94aabb;border-radius:22px;
+  box-shadow:0 2px 4px rgba(33,43,50,.05),0 18px 48px rgba(0,48,135,.14);transition:border-color .18s ease,box-shadow .22s ease;}
+.lk-box:hover{border-color:#5f8fb9;}
+.lk-box:focus-within{border-color:#005eb8;box-shadow:0 0 0 3px rgba(0,94,184,.08),0 4px 10px rgba(33,43,50,.07),0 18px 44px rgba(33,43,50,.16);}
 .lk-box__ico{flex:none;display:flex;color:var(--rv-ink-3);transition:color .15s ease;}
 .lk-box:focus-within .lk-box__ico{color:var(--rv-accent);}
 .lk-input{flex:1;min-width:0;height:100%;border:none !important;background:transparent !important;outline:none !important;box-shadow:none !important;
-  font:inherit;font-size:18px;font-weight:500;letter-spacing:-.01em;padding:0 12px;color:var(--rv-ink);}
-.lk-input::placeholder{color:#9aa6ae;font-weight:400;}
+  font:inherit;font-size:19.5px;padding:0 12px;color:#212b32;}
+.lk-input::placeholder{color:#768692;}
 .lk-iconbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:10px;
   background:none;color:var(--rv-ink-3);cursor:pointer;text-decoration:none;transition:background-color .15s ease,color .15s ease,opacity .15s ease;}
 .lk-iconbtn:hover{background:#eef2f5;color:var(--rv-ink);}
@@ -56,7 +60,7 @@ const LK_CSS = `
 .lk-count{flex:none;margin-right:8px;font-size:12px;font-weight:600;color:#9aa6ae;font-variant-numeric:tabular-nums;}
 
 /* ---- the list ---- */
-.lk-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 8px;border-top:1px solid #eef2f4;
+.lk-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 8px;
   scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
 .lk-group{display:flex;align-items:center;gap:8px;padding:12px 12px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
 .lk-tag{padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;background:#fdf6e7;color:#8a5a08;}
@@ -116,9 +120,9 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 .lk-toast__ico{flex:none;display:flex;color:#6fd39b;}
 
 @media (max-width:600px){
-  .lk{padding:12px;}
-  .lk-card{height:calc(100vh - 100px);}
-  .lk-box{height:56px;padding-left:16px;}
+  .lk{padding:16px 16px 12px;gap:12px;}
+  .lk-h1{font-size:30px;margin-top:4px;}
+  .lk-box{height:60px;padding-left:16px;}
   .lk-input{font-size:16px;}
   .lk-count,.lk-foot{display:none;}
   .lk-row{flex-wrap:wrap;gap:8px;padding:10px;}
@@ -383,14 +387,12 @@ export default function Page() {
   const clear = () => { setQuery(''); focusBox(); };
 
   return (
-    <div style={s('min-height:100vh;display:flex;flex-direction:column;')}>
+    <div style={s('height:100vh;display:flex;flex-direction:column;background:#f0f4f5;')}>
       <style data-lk="1" dangerouslySetInnerHTML={{ __html: LK_CSS }} />
       <AppHeader subtitle="Instant lookup" />
 
       <main className="lk">
-        <motion.div className="lk-card"
-          initial={reduce ? false : { opacity: 0, y: 14, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, ease: EASE }}>
+        <h1 className="lk-h1 riva-hero-h1"><span className="riva-hero-grad">Find a number</span></h1>
 
           <div className="lk-box">
             <span className="lk-box__ico" aria-hidden="true"><Svg w={20} sw={2.2}>{Icons.search}</Svg></span>
@@ -411,6 +413,10 @@ export default function Page() {
               </button>
             ) : total ? <span className="lk-count">{total}</span> : null}
           </div>
+
+        <motion.div className="lk-card"
+          initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: EASE }}>
 
             <div className="lk-body">
               {results.length ? (
