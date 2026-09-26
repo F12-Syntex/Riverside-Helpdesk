@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import { REFERRAL_READ_SCHEMA, groundReferralRead, referralReadPrompt } from '../lib/agent/referral-read.mjs';
+import { REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralPages, referralReadPrompt } from '../lib/agent/referral-read.mjs';
 import { referralCardFromRead } from '../lib/templates/referrals.mjs';
 
 // THE GAP THIS FILE EXISTS FOR. The pairing a referral needs was got off the
@@ -127,4 +127,32 @@ test('the prompt puts the Notebook first, so the prefix caches', () => {
 
 test('the schema refuses a route it was not given', () => {
   assert.throws(() => REFERRAL_READ_SCHEMA.parse({ ...READ, route: 'fax' }));
+});
+
+// The read is handed the referral pages only, so a referral turn no longer pays
+// for the whole Notebook twice.
+const MIXED = [
+  ...PAGES,
+  { docTitle: 'Notebook: Appointments / Flu vaccination booking', text: 'Book flu jabs in the nurse clinic.' },
+  { docTitle: 'Notebook: Contacts / Mental health', text: 'Dietitian drop-in on Tuesdays.' },
+];
+
+test('the referral read sees referral pages, plus any page naming the service', () => {
+  const titles = (list) => list.map((p) => p.docTitle);
+  assert.deepEqual(titles(referralPages(MIXED, '')), titles(PAGES));
+  assert.deepEqual(titles(referralPages(MIXED, 'dietitian')), [...titles(PAGES), 'Notebook: Contacts / Mental health']);
+});
+
+test('a Notebook with no referral headings is read whole', () => {
+  const plain = MIXED.slice(2);
+  assert.equal(referralPages(plain, '').length, plain.length);
+});
+
+test('the early read starts only for messages that say refer', () => {
+  for (const q of ['how do I refer for an ECG', 'physio referral', 'ERS for derm', '2ww skin', 'Referring to OT']) {
+    assert.ok(looksLikeReferral(q), q);
+  }
+  for (const q of ['how do I book a flu jab', 'what is a red slot', 'preferred pharmacy change']) {
+    assert.ok(!looksLikeReferral(q), q);
+  }
 });

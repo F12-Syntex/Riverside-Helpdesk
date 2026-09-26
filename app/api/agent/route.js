@@ -55,7 +55,9 @@ import { groundedIn } from '@/lib/questions/grounding.mjs';
 import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import { referralCardFromRead } from '@/lib/templates/referrals.mjs';
-import { REFERRAL_READ_SCHEMA, groundReferralRead, referralReadPrompt } from '@/lib/agent/referral-read.mjs';
+import {
+  REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralPages, referralReadPrompt,
+} from '@/lib/agent/referral-read.mjs';
 import {
   PRACTICE_ANSWER_SCHEMA, groundPracticeAnswer, practiceAnswerPrompt, practiceSources,
 } from '@/lib/agent/practice-answer.mjs';
@@ -1059,21 +1061,38 @@ export async function POST(request) {
         // The parser still runs first and its card is what stands if this
         // read fails, comes back empty or names a page the Notebook does not
         // have. One extra call, on referral turns only.
+        //
+        // IT READS THE REFERRAL PAGES, NOT THE WHOLE NOTEBOOK (referralPages),
+        // and when the message says "refer" it is STARTED BESIDE THE PICKER
+        // rather than after it. It used to be a second full-Notebook call
+        // queued behind the first, which roughly doubled the wait on the
+        // commonest card there is. The picker's choice still decides whether
+        // its result is used at all; a read nobody asked for is thrown away.
+        const readReferral = (name) => readValues({
+          model: seeing ? imageModel : model,
+          schema: REFERRAL_READ_SCHEMA,
+          text: referralReadPrompt({
+            name,
+            question,
+            notebook: notebookFullText(referralPages(notebookPages, name)),
+          }),
+          role: seeing ? 'images' : 'fast',
+          phase: 'referralRead',
+        });
+        const earlyReferral = (!seeing && !decompose && notebookPages.length && looksLikeReferral(question))
+          ? readReferral('').catch((e) => {
+            console.warn('[agent] early referral read failed:', String(e).slice(0, 160));
+            return null;
+          })
+          : null;
         const applyReferralRead = async (selection) => {
           if (!selection || selection.template !== 'referral') return;
           if (!notebookPages.length) return;
           try {
-            const read = await readValues({
-              model: seeing ? imageModel : model,
-              schema: REFERRAL_READ_SCHEMA,
-              text: referralReadPrompt({
-                name: selection.referralName || '',
-                question,
-                notebook: notebookText,
-              }),
-              role: seeing ? 'images' : 'fast',
-              phase: 'referralRead',
-            });
+            // The early read when there was one and it came back; otherwise
+            // the read now, told what the picker says is being referred.
+            const read = (earlyReferral && await earlyReferral)
+              || await readReferral(selection.referralName || '');
             const grounded = groundReferralRead({ read, pages: notebookPages });
             const card = grounded && referralCardFromRead(grounded);
             if (card) templateAnswer = card;
