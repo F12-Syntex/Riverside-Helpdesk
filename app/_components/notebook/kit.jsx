@@ -501,11 +501,12 @@ export function Tabs({ items, value, onChange, block = false, ariaLabel }) {
   );
 }
 
-export function SearchField({ value, onChange, placeholder = 'Search', onClear }) {
+export function SearchField({ value, onChange, placeholder = 'Search', onClear, onEnter }) {
   return (
     <div className="nbk-field">
       <Svg w={16} sw={2} style={{ flex: 'none', color: T.dim }}>{Icons.search}</Svg>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter(); if (e.key === 'Escape') onChange(''); }} />
       {value ? <IconButton plain size="sm" icon={Icons.close} label="Clear search" onClick={() => (onClear ? onClear() : onChange(''))} /> : null}
     </div>
   );
