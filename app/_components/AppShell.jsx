@@ -180,10 +180,15 @@ function TopNav({ current }) {
       setPill(el ? { left: el.offsetLeft, width: el.offsetWidth } : null);
     };
     place();
+    // Anything that moves the pill's target — the screen's width, the web
+    // font landing and widening the labels, the stylesheet arriving after
+    // the first paint — changes the size of an item, so watching the items
+    // catches every one of them rather than the window alone.
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null;
+    if (ro) nav.querySelectorAll('.riva-topnav-item').forEach((el) => ro.observe(el));
     window.addEventListener('resize', place);
-    // The web font can land after the first measure and widen the labels.
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(place).catch(() => {});
-    return () => window.removeEventListener('resize', place);
+    return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', place); };
   }, [activeHref]);
 
   return (

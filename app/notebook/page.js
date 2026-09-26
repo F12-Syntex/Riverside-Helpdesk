@@ -59,7 +59,7 @@ import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 // tabs, modals, menus, rows, the writing surface - is in kit.jsx.
 const PAGE_CSS = `
 .nbk-shell{display:flex;flex-direction:column;height:100vh;min-height:100vh;}
-.nbk-body{position:relative;flex:1;min-height:0;display:flex;gap:12px;width:100%;padding:14px 14px 14px;}
+.nbk-body{position:relative;flex:1;min-height:0;display:flex;gap:var(--rv-gutter,12px);width:100%;padding:var(--rv-gutter,12px);}
 
 /* ---- the tree: glass on the light ---- */
 .nbk-sidebar{flex:none;width:300px;display:flex;flex-direction:column;min-height:0;border-radius:20px;overflow:hidden;
@@ -197,9 +197,9 @@ const PAGE_CSS = `
 }
 /* A phone: the tree is a drawer over the page, opened from the sheet. */
 @media (max-width:760px){
-  .nbk-body{padding:8px;gap:0;}
+  .nbk-body{gap:0;}
   .nbk-body.is-collapsed .nbk-sidebar{display:flex;}
-  .nbk-sidebar{position:fixed;z-index:60;left:8px;top:calc(var(--rv-top-h,56px) + 8px);bottom:8px;width:min(320px,calc(100vw - 16px));
+  .nbk-sidebar{position:fixed;z-index:60;left:8px;top:calc(var(--rv-top-h,56px) + var(--rv-gutter,8px));bottom:8px;width:min(320px,calc(100vw - 16px));
     animation:none;transform:translateX(calc(-100% - 16px));transition:transform .32s var(--nbk-ease);
     background:rgba(255,255,255,.9);}
   .nbk-body.is-drawer .nbk-sidebar{transform:none;}

@@ -28,7 +28,8 @@ html { scrollbar-gutter: stable; }
   --rv-accent-line: #aac7e0;
   --rv-green:     #007f3b;
 
-  --rv-top-h: 50px;      /* the bar across the top */
+  --rv-top-h: 64px;      /* the bar across the top, with its gutter */
+  --rv-gutter: 12px;     /* the one gap between the bar, the page's panels and the screen's edge */
   --rv-radius: 10px;
   /* Glass: what a control is made of when it sits on the light rather
      than on a card. */
@@ -849,14 +850,14 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   /* Above the fixed composer dock (50), so the menus it opens are never
      drawn behind the composer; below the scrims and modals (55+). */
   position: relative; z-index: 52;
-  padding: 5px 14px 0;
+  padding: var(--rv-gutter) var(--rv-gutter) 0;
   animation: rivaBarIn .6s cubic-bezier(.2,.7,.3,1) both;
 }
 @keyframes rivaBarIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 .riva-bar {
-  position: relative; height: 42px;
-  display: flex; align-items: center; gap: 8px; padding: 0 4px;
-  border-radius: 14px;
+  position: relative; height: calc(var(--rv-top-h) - var(--rv-gutter));
+  display: flex; align-items: center; gap: 10px; padding: 0 8px;
+  border-radius: 16px;
   background: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.95);
   -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
   box-shadow: 0 0 0 1px rgba(33,43,50,.05), 0 1px 2px rgba(33,43,50,.05), 0 6px 16px -8px rgba(33,43,50,.14);
@@ -866,17 +867,17 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 .riva-brand {
   flex: none; display: flex; align-items: center; gap: 8px;
-  height: 32px; padding: 0 8px 0 5px; border-radius: 10px;
+  height: 38px; padding: 0 10px 0 6px; border-radius: 11px;
   text-decoration: none; color: inherit;
   transition: background-color .15s ease;
 }
 .riva-brand:hover { background: rgba(255,255,255,.9); }
 .riva-brand-mark { flex: none; display: flex; }
-.riva-brand-mark img { height: 20px; width: auto; display: block; border-radius: 3px; }
-.riva-brand-name { font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; color: var(--rv-ink); }
+.riva-brand-mark img { height: 24px; width: auto; display: block; border-radius: 3px; }
+.riva-brand-name { font-size: 16.5px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; color: var(--rv-ink); }
 .riva-top-ver {
-  flex: none; padding: 1px 7px; border-radius: 999px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
+  flex: none; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
   color: var(--rv-ink-3); background: rgba(33,43,50,.05); font-variant-numeric: tabular-nums;
 }
 
@@ -896,27 +897,27 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
    you are. */
 .riva-topnav {
   flex: none; position: relative;
-  display: flex; align-items: center; gap: 2px;
-  height: 34px; padding: 3px; border-radius: 11px;
-  background: rgba(33,43,50,.055);
-  box-shadow: inset 0 0 0 1px rgba(33,43,50,.03);
+  display: flex; align-items: center; gap: 4px;
 }
+/* One surface, not two: no track behind the row, and the tool you are on
+   is a single soft NHS-blue pill with its name in blue — the tint says
+   "here" on its own, where a white pill inside a grey track said it twice. */
 .riva-topnav-pill {
-  position: absolute; left: 0; top: 3px; bottom: 3px; pointer-events: none;
-  border-radius: 8px; background: #fff;
-  box-shadow: 0 0 0 1px rgba(33,43,50,.06), 0 1px 2px rgba(33,43,50,.08), 0 2px 6px -2px rgba(33,43,50,.10);
+  position: absolute; left: 0; top: 0; bottom: 0; pointer-events: none;
+  border-radius: 11px; background: var(--rv-accent-dim);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rv-accent) 14%, transparent);
   transition: transform .4s cubic-bezier(.3,1.15,.5,1), width .4s cubic-bezier(.3,1.15,.5,1);
 }
 .riva-topnav-item {
   position: relative; z-index: 1;
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  height: 28px; min-width: 32px; padding: 0 11px; border-radius: 8px;
-  font-size: 13px; font-weight: 600; color: var(--rv-ink-2);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 38px; min-width: 38px; padding: 0 14px; border-radius: 11px;
+  font-size: 14px; font-weight: 600; color: var(--rv-ink-2);
   text-decoration: none; white-space: nowrap;
   transition: color .2s ease, background-color .15s ease;
 }
-.riva-topnav-item:hover:not(.is-active) { color: var(--rv-ink); background: rgba(255,255,255,.55); }
-.riva-topnav-item.is-active { color: var(--rv-ink); }
+.riva-topnav-item:hover:not(.is-active) { color: var(--rv-ink); background: rgba(33,43,50,.045); }
+.riva-topnav-item.is-active { color: var(--rv-accent); }
 .riva-topnav-item:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 1px; }
 .riva-topnav-ico { display: flex; color: var(--rv-ink-3); transition: color .2s ease; }
 .riva-topnav-item:hover .riva-topnav-ico { color: var(--rv-ink-2); }
@@ -928,7 +929,7 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 .riva-top-search {
   flex: none; display: inline-flex; align-items: center; gap: 7px;
-  height: 32px; padding: 0 5px 0 10px; margin-right: 2px; border-radius: 10px;
+  height: 38px; padding: 0 7px 0 12px; margin-right: 4px; border-radius: 11px;
   background: rgba(255,255,255,.7); border: 1px solid rgba(216,221,224,.8);
   font: inherit; font-size: 13px; font-weight: 600; color: var(--rv-ink-3); cursor: pointer;
   transition: background-color .15s ease, color .15s ease, border-color .15s ease;
@@ -938,7 +939,7 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
 
 .riva-top-btn {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; border-radius: 10px;
+  width: 38px; height: 38px; border-radius: 11px;
   background: transparent; border: 1px solid transparent;
   color: var(--rv-ink-2); cursor: pointer;
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
@@ -1182,7 +1183,7 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
    the tools you are not on drop to their icons. */
 @media (max-width: 1020px) {
   .riva-top-ver { display: none; }
-  .riva-topnav-item:not(.is-active) { padding: 0; width: 32px; }
+  .riva-topnav-item:not(.is-active) { padding: 0; width: 38px; }
   .riva-topnav-item:not(.is-active) .riva-topnav-label { display: none; }
 }
 /* A phone: the brand is its mark and every tool is its icon (the name is
@@ -1193,9 +1194,9 @@ html[data-busy] .riva-sky-dots { opacity: .75; animation: rivaDotsDrift 3.5s lin
   .riva-crumb-back-label { display: none; }
   .riva-brand-name { display: none; }
   .riva-brand { padding: 0 5px; }
-  .riva-top { padding: 5px 8px 0; }
-  .riva-bar { gap: 4px; }
-  .riva-topnav-item { padding: 0; width: 36px; }
+  :root { --rv-top-h: 58px; --rv-gutter: 8px; }
+  .riva-bar { gap: 4px; padding: 0 5px; }
+  .riva-topnav-item { padding: 0; width: 38px; }
   .riva-topnav-item .riva-topnav-label { display: none; }
   /* Go to is a keyboard shortcut at heart, and the menu beside it lists
      every tool, so on a phone it gives its place back. */
