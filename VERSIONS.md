@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.39.2` | 2026-09-26 | fix | `5ab82e1` | fix: keep the lookup card one size and drop its 3D art |
+| `6.39.1` | 2026-09-26 | docs | `ab8712b` | docs: record the search filter and 3D art in the versions table |
 | `6.39.0` | 2026-09-26 | feat | `17d005e` | feat: add floating 3D illustrations to lookup |
 | `6.38.2` | 2026-09-26 | fix | `9746f3f` | fix: filter the notebook tree on search instead of listing previews |
 | `6.38.1` | 2026-09-26 | docs | `6cb24b0` | docs: record the notebook search change in the versions table |
