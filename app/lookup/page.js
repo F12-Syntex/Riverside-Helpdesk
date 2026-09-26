@@ -34,7 +34,7 @@ const GLOBE = (<><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M
 const LK_CSS = `
 /* The same column, heading and field as Ask a question: 820px wide, the
    heading centred above, the box drawn exactly like the composer. */
-.lk{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;width:100%;max-width:820px;margin:0 auto;padding:28px 24px 24px;}
+.lk{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;width:100%;max-width:820px;margin:0 auto;padding:28px 24px;}
 .lk-h1{flex:none;margin:8px 0 6px;text-align:center;font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.08;}
 
 /* ONE SIZE, ALWAYS. The list never grows, shrinks or moves with what is in
@@ -120,7 +120,7 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 .lk-toast__ico{flex:none;display:flex;color:#6fd39b;}
 
 @media (max-width:600px){
-  .lk{padding:16px 16px 12px;gap:12px;}
+  .lk{padding:16px;gap:12px;}
   .lk-h1{font-size:30px;margin-top:4px;}
   .lk-box{height:60px;padding-left:16px;}
   .lk-input{font-size:16px;}
@@ -387,7 +387,7 @@ export default function Page() {
   const clear = () => { setQuery(''); focusBox(); };
 
   return (
-    <div style={s('height:100vh;display:flex;flex-direction:column;background:#f0f4f5;')}>
+    <div className="riva-page-fill" style={s('height:100vh;overflow:hidden;display:flex;flex-direction:column;background:#f0f4f5;')}>
       <style data-lk="1" dangerouslySetInnerHTML={{ __html: LK_CSS }} />
       <AppHeader subtitle="Instant lookup" />
 
