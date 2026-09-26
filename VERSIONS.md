@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.40.2` | 2026-09-26 | fix | `355dbec` | fix: keep sonar grid out of the top bar and off component clicks |
+| `6.40.1` | 2026-09-26 | docs | `f29710b` | docs: record the sonar grid row in the versions table |
 | `6.40.0` | 2026-09-26 | feat | `f769054` | feat: stack sonar grid over the background light |
 | `6.39.10` | 2026-09-26 | docs | `2c9e888` | docs: record the lookup hover fix in the versions table |
 | `6.39.9` | 2026-09-26 | fix | `58ce47b` | fix: drop lookup hover pill and match heading to Ask a question |
