@@ -18,11 +18,16 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
-| `6.27.3` | 2026-09-26 | fix | `8da2359` | fix: name a converted card after its page when the text never does |
-| `6.27.2` | 2026-09-26 | fix | `9042aaf` | fix: make --live point the kind converter at the live database |
-| `6.27.1` | 2026-09-26 | chore | `293f845` | chore: add the script that types pages under tagged folders |
-| `6.27.0` | 2026-09-26 | feat | `055d623` | feat: pick and fill in a page's type from the notebook |
-| `6.26.0` | 2026-09-26 | feat | `e7b5a58` | feat: give notebook pages a type with their own fields |
+| `6.32.1` | 2026-09-25 | docs | `41404a0` | docs: regenerate VERSIONS.md from the full history |
+| `6.32.0` | 2026-09-25 | feat | `2f2af1b` | feat: add a 'patient didn't pick up' button to the AccurX card |
+| `6.31.0` | 2026-09-24 | feat | `daa3615` | feat: add an export button that copies /questions as a numbered list |
+| `6.30.0` | 2026-09-24 | feat | `7e6be5d` | feat: extract questions from pasted text with AI on /questions |
+| `6.29.0` | 2026-09-24 | feat | `6cbdf43` | feat: tint the Format with AI button blue and animate formatting |
+| `6.28.1` | 2026-09-24 | fix | `48fef84` | fix: tone down Format with AI into a bottom-right floating button |
+| `6.28.0` | 2026-09-24 | feat | `19cd373` | feat: lead the notebook toolbar with a prominent Format with AI button |
+| `6.27.0` | 2026-09-24 | feat | `375484d` | feat: give every notebook page its own URL |
+| `6.26.1` | 2026-09-24 | fix | `c616322` | fix: write reason-line durations as /7, /52, /12 again |
+| `6.26.0` | 2026-09-24 | feat | `690ce58` | feat: EMIS-style reason line and stricter pharmacy-first triage in /accurx |
 | `6.25.1` | 2026-09-24 | fix | `c37bdc0` | fix: draw the top bar's menus above the composer |
 | `6.25.0` | 2026-09-24 | feat | `73f0b2b` | feat: give the mode and tools menus icons, and style the scrollbars |
 | `6.24.4` | 2026-09-24 | chore | `19617fc` | chore: sync the lockfile version with package.json |

@@ -31,6 +31,7 @@ import { lineDiff } from '@/lib/notebook/diff.mjs';
 import {
   CREATABLE_KINDS, emptyFields, isTypedKind, noteIssues, noteKind, normaliseFields, suggestKind,
 } from '@/lib/notebook/kinds.mjs';
+import { notebookHref, noteSegment, resolveNote } from '@/lib/notebook/links.mjs';
 import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -99,6 +100,7 @@ const PAGE_CSS = `
 .nbk-side-toggle{display:inline-flex;}
 
 .nbk-tools{flex:none;position:relative;z-index:2;padding:0 0 10px;}
+.nbk-editor-wrap{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;}
 
 .nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;}
 
@@ -246,6 +248,8 @@ const TIcons = {
   underline: (<><path d="M6 4v6a6 6 0 0 0 12 0V4" /><line x1="4" x2="20" y1="20" y2="20" /></>),
   highlighter: (<><path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4a2 2 0 0 1 2.8 0l5.2 5.2a2 2 0 0 1 0 2.8Z" /></>),
   table: (<><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M12 3v18" /></>),
+  // Lucide "sparkles": the widely recognised mark for an AI action.
+  ai: (<><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>),
 };
 
 // Text-colour swatches for the toolbar (NHS palette).
@@ -528,11 +532,16 @@ export default function NotebookPage() {
         setNotes(list);
         setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
         setStatus('ready');
-        // Open on the first page (sections are name-only), else the first section.
+        // Open the page the address names (/notebook/<title>-<id>), else the
+        // first page (sections are name-only), else the first section.
         if (list.length) {
-          const first = list.find((n) => n.parentId && !n.isSection) || list[0];
+          const named = resolveNote(list, noteSegment(window.location.pathname));
+          const first = named || list.find((n) => n.parentId && !n.isSection) || list[0];
           setSelectedId(first.id);
-          if (first.parentId) setExpanded((e) => ({ ...e, [first.parentId]: true }));
+          const open = {};
+          const ids = new Map(list.map((n) => [n.id, n]));
+          for (let cur = first; cur && cur.parentId; cur = ids.get(cur.parentId)) open[cur.parentId] = true;
+          setExpanded((e) => ({ ...e, ...open }));
         }
       } catch (e) {
         setStatus('error');
@@ -541,6 +550,44 @@ export default function NotebookPage() {
   }, []);
 
   const byId = React.useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
+
+  /* ------------------------------ Addresses --------------------------- *
+   * Every page has its own URL (lib/notebook/links.mjs). Opening a page
+   * pushes its address, so the back button walks the pages read; renaming
+   * one only rewrites the address in place, since it is the same page.   */
+  const selTitle = (byId.get(selectedId) || {}).title || '';
+  const lastUrlId = React.useRef(null);
+  React.useEffect(() => {
+    if (status !== 'ready' || selectedId == null) return;
+    const href = notebookHref({ id: selectedId, title: selTitle });
+    const here = window.location.pathname;
+    if (here !== href) {
+      const samePage = lastUrlId.current === selectedId || lastUrlId.current === null;
+      window.history[samePage ? 'replaceState' : 'pushState'](null, '', href + window.location.search);
+    }
+    lastUrlId.current = selectedId;
+    document.title = (selTitle || 'Untitled') + ' · Notebook';
+  }, [status, selectedId, selTitle]);
+  React.useEffect(() => {
+    const onPop = () => {
+      const hit = resolveNote(notesRef.current, noteSegment(window.location.pathname));
+      if (!hit) return;
+      lastUrlId.current = hit.id; // arriving here is not a new visit to push
+      selectNote(hit.id);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }); // re-bound each render so selectNote sees the current tree
+
+  const [copied, setCopied] = React.useState(false);
+  async function copyLink(id) {
+    const n = byId.get(id);
+    if (!n) return;
+    const url = window.location.origin + notebookHref(n);
+    try { await navigator.clipboard.writeText(url); } catch (e) { window.prompt('Copy this link', url); return; }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
   const selected = byId.get(selectedId) || null;
   const isSection = !!selected && (!selected.parentId || !!selected.isSection);
@@ -1162,8 +1209,6 @@ export default function NotebookPage() {
       { title: 'Delete column', run: () => chain().deleteColumn().run(), label: 'Col off' },
       { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
     ] : []),
-    null,
-    { title: 'AI format: restructure this note into headings, lists, tables and highlights (you confirm the changes first)', run: runAiFormat, icon: Icons.edit, accent: true, label: 'AI format' },
   ];
 
   /* ------------------------------ Render ------------------------------- */
@@ -1334,6 +1379,9 @@ export default function NotebookPage() {
                   </>
                 )}
                 {selected && (
+                  <IconButton icon={copied ? Icons.check : Icons.copy} label={copied ? 'Link copied' : 'Copy link to this page'} onClick={() => copyLink(selected.id)} />
+                )}
+                {selected && (
                   <IconButton icon={NBIcons.dots} label="More actions" onClick={(e) => openMenu(e, selected.id, true)} />
                 )}
               </div>
@@ -1396,8 +1444,8 @@ export default function NotebookPage() {
                       : (
                         <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
                           aria-pressed={btn.active ? true : undefined}
-                          onClick={() => { if (!editor && !btn.accent) return; btn.run(); }}
-                          className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '') + (btn.accent ? ' nbk-tbtn--accent' : '')}>
+                          onClick={() => { if (!editor) return; btn.run(); }}
+                          className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '')}>
                           {btn.swatch
                             ? <span className="nbk-swatch" style={{ background: btn.swatch, boxShadow: '0 0 0 1px ' + (btn.active ? T.blue : T.line) }} />
                             : btn.icon ? <Svg w={16} sw={2}>{btn.icon}</Svg> : null}
@@ -1407,62 +1455,73 @@ export default function NotebookPage() {
                   </div>
                 </div>
 
+                {/* Format with AI floats in the page's bottom-right corner:
+                    always to hand, out of the way of the writing and the files. */}
                 {/* THE CARD, ABOVE THE WRITING. The recorded values are what
                     the reader came for and what the assistant answers from;
                     the prose underneath is what is different about this one.
                     Both are saved the same way, by the same autosave, and sit
                     in the one scrolling sheet under the page's title. */}
-                <PageEditor
-                  key={selected.id}
-                  initialBody={selected.body || ''}
-                  onChange={(md) => editSelected({ body: md })}
-                  onReady={setEditor}
-                  uploadImage={uploadInlineImage}
-                  header={(
-                    <>
-                      {docHead}
-                      {isTypedKind(selected.kind) && (
-                        <>
-                          {selectedIssues.length > 0 && (
-                            <div className="nbk-card-banner">
-                              <Banner tone="warn" icon={Icons.alertCircle}>
-                                <strong>Not finished, so the assistant does not draw this card yet.</strong>{' '}
-                                {selectedIssues.map((i) => i.message).join(' ')}
-                              </Banner>
+                <div className="nbk-editor-wrap">
+                  <PageEditor
+                    key={selected.id}
+                    initialBody={selected.body || ''}
+                    onChange={(md) => editSelected({ body: md })}
+                    onReady={setEditor}
+                    uploadImage={uploadInlineImage}
+                    header={(
+                      <>
+                        {docHead}
+                        {isTypedKind(selected.kind) && (
+                          <>
+                            {selectedIssues.length > 0 && (
+                              <div className="nbk-card-banner">
+                                <Banner tone="warn" icon={Icons.alertCircle}>
+                                  <strong>Not finished, so the assistant does not draw this card yet.</strong>{' '}
+                                  {selectedIssues.map((i) => i.message).join(' ')}
+                                </Banner>
+                              </div>
+                            )}
+                            <div className="nbk-card-wrap">
+                              {/* NOT NORMALISED ON EVERY KEYSTROKE. normaliseFields
+                                  drops empty values, which is right for what is stored
+                                  and wrong for what is being typed: an empty row added
+                                  to a list was deleted before anybody could type into
+                                  it. The server coerces on save (updateNote), which is
+                                  the one place it has to be true. */}
+                              <CardEditor kind={selected.kind} fields={selectedFields} issues={selectedIssues}
+                                onChange={(next) => editSelected({ fields: next })} />
                             </div>
-                          )}
-                          <div className="nbk-card-wrap">
-                            {/* NOT NORMALISED ON EVERY KEYSTROKE. normaliseFields
-                                drops empty values, which is right for what is stored
-                                and wrong for what is being typed: an empty row added
-                                to a list was deleted before anybody could type into
-                                it. The server coerces on save (updateNote), which is
-                                the one place it has to be true. */}
-                            <CardEditor kind={selected.kind} fields={selectedFields} issues={selectedIssues}
-                              onChange={(next) => editSelected({ fields: next })} />
+                            <div className="nbk-card__prose"><span>Differences from the standard process, and anything else worth saying</span></div>
+                          </>
+                        )}
+                        {/* A PAGE THAT LOOKS LIKE A CARD. A deterministic check on
+                            the words the practice already writes - no model, no
+                            tokens - offering the conversion. It never converts
+                            anything on its own. */}
+                        {!isTypedKind(selected.kind) && suggested && (
+                          <div className="nbk-card-banner">
+                            <Banner tone="info" icon={Icons.sparkle}
+                              actions={<Button variant="primary" size="sm" onClick={() => setNoteKindApi(selected.id, suggested)}>
+                                Convert
+                              </Button>}>
+                              This page reads like {noteKind(suggested).label === 'e-RS referral' ? 'an' : 'a'}{' '}
+                              <strong>{noteKind(suggested).label}</strong>. Converting it puts the values in their own
+                              boxes and keeps everything written here underneath.
+                            </Banner>
                           </div>
-                          <div className="nbk-card__prose"><span>Differences from the standard process, and anything else worth saying</span></div>
-                        </>
-                      )}
-                      {/* A PAGE THAT LOOKS LIKE A CARD. A deterministic check on
-                          the words the practice already writes - no model, no
-                          tokens - offering the conversion. It never converts
-                          anything on its own. */}
-                      {!isTypedKind(selected.kind) && suggested && (
-                        <div className="nbk-card-banner">
-                          <Banner tone="info" icon={Icons.sparkle}
-                            actions={<Button variant="primary" size="sm" onClick={() => setNoteKindApi(selected.id, suggested)}>
-                              Convert
-                            </Button>}>
-                            This page reads like {noteKind(suggested).label === 'e-RS referral' ? 'an' : 'a'}{' '}
-                            <strong>{noteKind(suggested).label}</strong>. Converting it puts the values in their own
-                            boxes and keeps everything written here underneath.
-                          </Banner>
-                        </div>
-                      )}
-                    </>
-                  )}
-                />
+                        )}
+                      </>
+                    )}
+                  />
+                  <button type="button" className={'nbk-ai-fab' + (aiFmt && aiFmt.status === 'loading' ? ' nbk-ai-fab--busy' : '')}
+                    onClick={() => { if (!(aiFmt && aiFmt.status === 'loading')) runAiFormat(); }}
+                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
+                    aria-label="Format with AI"
+                    title="Format with AI: restructure this page into headings, lists, tables and highlights (you review the changes first)">
+                    <Svg w={20} sw={1.9}>{TIcons.ai}</Svg>
+                  </button>
+                </div>
 
                 {(selectedFiles.length > 0 || uploadErr || uploading) && (
                   <div className="nbk-dock">
@@ -1512,6 +1571,7 @@ export default function NotebookPage() {
             ))}
           </MenuSub>
           <MenuItem icon={Icons.edit} onClick={() => { setMenu(null); renameNote(menu.id); }}>Rename</MenuItem>
+          <MenuItem icon={Icons.copy} onClick={() => { setMenu(null); copyLink(menu.id); }}>Copy link to page</MenuItem>
           {menuNote.parentId && !menuNote.isSection ? (
             <MenuSub icon={Icons.fileLines} label="Type"
               hint={(CREATABLE_KINDS.find((k) => k.id === String(menuNote.kind || 'note')) || {}).label}>
@@ -1543,8 +1603,19 @@ export default function NotebookPage() {
       {aiFmt && aiFmt.status === 'loading' && (
         <Modal size="sm" title="Reformatting the page" dismissable={false}
           subtitle="Restructuring it into headings, lists, tables and highlights. Nothing is saved until you have read it.">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
-            <Spinner />Working...
+          <div className="nbk-fmt" aria-hidden="true">
+            <span className="nbk-fmt__h" />
+            {['92%', '74%', '84%'].map((w, i) => (
+              <div key={i} className="nbk-fmt__li" style={{ '--i': i }}>
+                <span className="nbk-fmt__dot" />
+                <span className="nbk-fmt__line" style={{ '--w': w }} />
+              </div>
+            ))}
+            <div className="nbk-fmt__tbl">{Array.from({ length: 6 }, (_, i) => <span key={i} className={i < 3 ? 'nbk-fmt__th' : 'nbk-fmt__td'} />)}</div>
+            <span className="nbk-fmt__scan" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 0 12px', fontSize: '13px', color: T.mut }}>
+            <Spinner w={13} />Formatting...
           </div>
         </Modal>
       )}

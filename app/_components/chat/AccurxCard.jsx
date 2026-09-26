@@ -75,6 +75,17 @@ const AX_CSS = `
 .ax-copy--quiet:hover{background:#f7fbff;border-color:#aac7e0;}
 .ax-copy--quiet.is-done{background:#ecf7f0;color:#00632f;border-color:#bfe0cb;}
 
+/* The patient didn't pick up: the line for the EMIS consultation. */
+.ax-noans{display:flex;flex-direction:column;align-items:flex-start;gap:8px;}
+.ax-noans__btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:10px;border:1px solid #d5dee2;
+  background:#fff;color:#324554;font:inherit;font-size:13px;font-weight:650;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.06);
+  transition:background-color .15s ease,border-color .15s ease,color .15s ease;}
+.ax-noans__btn:hover{background:#f7fbff;border-color:#aac7e0;color:#005eb8;}
+.ax-noans__btn.is-done{background:#ecf7f0;color:#00632f;border-color:#bfe0cb;}
+.ax-noans__note{align-self:stretch;display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:#fafbfc;box-shadow:inset 0 0 0 1px #e3e9ed;}
+.ax-noans__text{font-size:14.5px;font-weight:600;color:#212b32;overflow-wrap:anywhere;user-select:all;}
+.ax-noans__hint{font-size:12.5px;color:#768692;}
+
 /* Short things, as chips. */
 .ax-chips{display:flex;flex-wrap:wrap;gap:6px;}
 .ax-chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:3px 10px;border-radius:9px;
@@ -169,6 +180,35 @@ function Copy({ value, label = 'Copy', quiet = false }) {
   );
 }
 
+// THE PATIENT DIDN'T PICK UP. One press copies the short entry for the EMIS
+// consultation — who we tried to book them with, and what for — so whoever
+// takes the call back knows why we rang. The line is shown once copied, so
+// what went on the clipboard is on screen too.
+function NoAnswer({ note }) {
+  const [state, setState] = React.useState('');
+  const run = async () => {
+    const ok = await copyText(note);
+    setState(ok ? 'done' : 'failed');
+  };
+  return (
+    <div className={'ax-noans' + (state ? ' is-open' : '')}>
+      <button type="button" onClick={run} className={'ax-noans__btn' + (state === 'done' ? ' is-done' : '')}
+        title={'Copy for the EMIS consultation: ' + note}>
+        <Svg w={14} sw={2.3}>{state === 'done' ? Icons.check : Icons.phone}</Svg>
+        {state === 'done' ? 'Copied for EMIS' : 'Patient didn’t pick up'}
+      </button>
+      {state ? (
+        <div className="ax-noans__note">
+          <span className="ax-noans__text">{note}</span>
+          <span className="ax-noans__hint">
+            {state === 'done' ? 'Paste into the consultation in EMIS.' : 'Couldn’t copy — select it and press Ctrl+C.'}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function Fold({ label, meta, open: startOpen = false, children }) {
   const [open, setOpen] = React.useState(startOpen);
   return (
@@ -253,6 +293,8 @@ export default function AccurxCard({ answer }) {
             ? <div className="ax-reason__text">{a.reason}</div>
             : <div className="ax-reason__text ax-reason__text--empty">Nothing in the message says what an appointment would be for.</div>}
         </div>
+
+        {a.noAnswer ? <NoAnswer note={a.noAnswer} /> : null}
 
         {(a.appointment || seen || a.clinics.length || notes.length) ? (
           <div className="ax-chips">

@@ -46,6 +46,26 @@ const FILTERS = [
   { id: 'all', label: 'All', match: () => true },
 ];
 
+// Lucide "sparkles", the mark the Notebook's Format with AI button uses, so
+// the AI actions in the app read as the same kind of thing.
+const AI_ICON = (<><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>);
+
+// The shimmer shown while the model reads a paste: grey lines being scanned,
+// then settling into question-shaped rows. Stops under reduced motion.
+const EXTRACT_CSS = `
+.rq-scan{position:relative;overflow:hidden;background:#fff;border:1px solid #dde4e7;border-radius:12px;padding:16px 18px;}
+.rq-scan__line{height:8px;border-radius:4px;background:#e8edf0;margin:0 0 10px;}
+.rq-scan__row{display:flex;align-items:center;gap:10px;margin:0 0 10px;opacity:0;animation:rq-row 2.4s ease-in-out infinite;}
+.rq-scan__row i{flex:none;width:14px;height:14px;border-radius:4px;background:#005eb8;}
+.rq-scan__row b{display:block;height:9px;border-radius:4px;background:#b9d3ee;}
+.rq-scan__beam{position:absolute;left:0;right:0;top:0;height:40px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,94,184,.12) 60%,rgba(0,94,184,.3) 96%,transparent);
+  animation:rq-beam 2.4s ease-in-out infinite;}
+@keyframes rq-beam{0%{transform:translateY(-44px);opacity:0;}10%{opacity:1;}60%{transform:translateY(120px);opacity:1;}70%,100%{transform:translateY(120px);opacity:0;}}
+@keyframes rq-row{0%,35%{opacity:0;transform:translateX(-6px);}55%,90%{opacity:1;transform:none;}100%{opacity:0;}}
+@media (prefers-reduced-motion:reduce){.rq-scan__beam,.rq-scan__row{animation:none;opacity:1;}}
+`;
+
 function when(at) {
   const d = new Date(at);
   if (Number.isNaN(d.getTime())) return '';
@@ -179,6 +199,161 @@ function Row({ row, onAnswer, onRemove, busy }) {
   );
 }
 
+/* Paste a lot, get the questions out. The model only proposes: what it found
+   comes back as a list to tick and correct, and nothing is stored until
+   "Add" — each one through the same POST as a typed question, so a question
+   already on the list is counted as asked again rather than added twice. */
+function BulkAsk({ onAdded }) {
+  const [text, setText] = useState('');
+  const [phase, setPhase] = useState('paste'); // paste | reading | review | saving
+  const [found, setFound] = useState([]);      // [{ question, detail, keep, failed }]
+  const [error, setError] = useState('');
+
+  async function extract() {
+    if (!text.trim()) return;
+    setPhase('reading');
+    setError('');
+    try {
+      const res = await fetch('/api/questions/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'The text could not be read.'); setPhase('paste'); return; }
+      if (!data.questions || !data.questions.length) {
+        setError('No questions found in that text. Try pasting more of it, or ask one at a time.');
+        setPhase('paste');
+        return;
+      }
+      setFound(data.questions.map((q) => ({ ...q, keep: true, failed: '' })));
+      setPhase('review');
+    } catch (err) {
+      setError('The text could not be read. ' + String(err));
+      setPhase('paste');
+    }
+  }
+
+  const edit = (i, patch) => setFound((list) => list.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  const chosen = found.filter((q) => q.keep && q.question.trim());
+
+  async function addAll() {
+    if (!chosen.length) return;
+    setPhase('saving');
+    setError('');
+    let added = 0;
+    let repeats = 0;
+    const left = [];
+    // One at a time, in order: tens of rows at most, and a failure part-way
+    // through should leave exactly the unsaved ones on screen.
+    for (const q of found) {
+      if (!q.keep || !q.question.trim()) continue;
+      try {
+        const res = await fetch('/api/questions/open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q.question.trim(), detail: q.detail.trim() }),
+        });
+        const data = await res.json();
+        if (!res.ok) { left.push({ ...q, failed: data.error || 'Not saved.' }); continue; }
+        if (data.repeat) repeats += 1; else added += 1;
+      } catch (err) {
+        left.push({ ...q, failed: 'Not saved. ' + String(err) });
+      }
+    }
+    const parts = [];
+    if (added) parts.push(added + (added === 1 ? ' question added' : ' questions added'));
+    if (repeats) parts.push(repeats + (repeats === 1 ? ' was already on the list and is now counted as asked again' : ' were already on the list and are now counted as asked again'));
+    if (left.length) parts.push(left.length + ' could not be saved — they are still below');
+    onAdded(parts.join('; ') + '.');
+    if (left.length) {
+      setFound(left);
+      setPhase('review');
+    } else {
+      setFound([]);
+      setText('');
+      setPhase('paste');
+    }
+  }
+
+  if (phase === 'reading') {
+    return (
+      <div>
+        <style>{EXTRACT_CSS}</style>
+        <div className="rq-scan" aria-hidden="true">
+          {['96%', '88%', '72%'].map((w) => <div key={w} className="rq-scan__line" style={{ width: w }} />)}
+          {['64%', '78%', '52%'].map((w, i) => (
+            <div key={w} className="rq-scan__row" style={{ animationDelay: i * 0.15 + 's' }}><i /><b style={{ width: w }} /></div>
+          ))}
+          <span className="rq-scan__beam" />
+        </div>
+        <p style={s('margin:10px 0 0;font-size:14px;color:#4c6272;')} role="status">Reading the text and picking out the questions…</p>
+      </div>
+    );
+  }
+
+  if (phase === 'review' || phase === 'saving') {
+    const saving = phase === 'saving';
+    return (
+      <div>
+        <p style={s('margin:0 0 12px;font-size:14.5px;color:#212b32;')}>
+          <strong>Found {found.length} {found.length === 1 ? 'question' : 'questions'}.</strong>{' '}
+          <span style={s('color:#4c6272;')}>Untick any you do not want and correct the wording, then add them.</span>
+        </p>
+        <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+          {found.map((q, i) => (
+            <div key={i} style={s('display:flex;gap:10px;align-items:flex-start;border:1px solid '
+              + (q.failed ? '#f0b8b1' : q.keep ? '#cfe0ee' : '#e8edf0') + ';border-radius:10px;padding:10px 12px;background:'
+              + (q.keep ? '#f7fafd' : '#fbfcfc') + ';' + (q.keep ? '' : 'opacity:.6;'))}>
+              <input type="checkbox" checked={q.keep} disabled={saving} onChange={(e) => edit(i, { keep: e.target.checked })}
+                aria-label={'Keep: ' + q.question} style={s('flex:none;width:18px;height:18px;margin:9px 0 0;accent-color:#005eb8;cursor:pointer;')} />
+              <div style={s('flex:1;min-width:0;')}>
+                <input value={q.question} disabled={saving} onChange={(e) => edit(i, { question: e.target.value })}
+                  aria-label="Question" style={s(INPUT + 'font-size:15.5px;font-weight:600;padding:7px 10px;')} />
+                <input value={q.detail} disabled={saving} onChange={(e) => edit(i, { detail: e.target.value })}
+                  aria-label="Detail" placeholder="Detail (optional)"
+                  style={s(INPUT + 'margin-top:6px;font-size:14px;color:#4c6272;padding:6px 10px;border-width:1px;')} />
+                {q.failed && <div style={s('margin-top:5px;font-size:13px;color:#a51b0f;')}>{q.failed}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
+          <Hover tag="button" type="button" disabled={saving || !chosen.length} onClick={addAll}
+            base={PRIMARY + (saving || !chosen.length ? 'opacity:.55;cursor:default;' : '')}
+            hover={saving || !chosen.length ? '' : PRIMARY_HOVER}>
+            {saving ? 'Adding…' : 'Add ' + chosen.length + (chosen.length === 1 ? ' question' : ' questions')}
+          </Hover>
+          <Hover tag="button" type="button" disabled={saving} onClick={() => { setFound([]); setPhase('paste'); }}
+            base={QUIET} hover={QUIET_HOVER}>Back to the text</Hover>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label htmlFor="rq-bulk" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:0 0 6px;')}>
+        Paste meeting notes, an email or a list
+      </label>
+      <textarea id="rq-bulk" value={text} onChange={(e) => setText(e.target.value)} rows={9}
+        placeholder={'Paste as much as you like. The AI finds every question in it, including the implied ones ("not sure who orders the flu jabs"), tidies the wording and drops duplicates. You check the list before anything is added.'}
+        style={s(INPUT + 'font-size:15px;line-height:1.5;resize:vertical;')} />
+      <p style={s('margin:10px 0 0;font-size:13px;color:#768692;')}>
+        No patient information. The AI is told to leave out anything that identifies a patient, but check the list before adding it.
+      </p>
+      <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
+        <Hover tag="button" type="button" disabled={!text.trim()} onClick={extract}
+          base={PRIMARY + (!text.trim() ? 'opacity:.55;cursor:default;' : '')} hover={!text.trim() ? '' : PRIMARY_HOVER}>
+          <Svg w={17} sw={1.9}>{AI_ICON}</Svg>Find the questions
+        </Hover>
+        {text.length > 0 && <span style={s('font-size:12.5px;color:#768692;')}>{text.length.toLocaleString('en-GB')} characters</span>}
+        {error && <span style={s('font-size:14px;color:#a51b0f;')}>{error}</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [state, setState] = useState({ loading: true, rows: [], error: '' });
   const [filter, setFilter] = useState('open');
@@ -187,6 +362,7 @@ export default function Page() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [asking, setAsking] = useState('');
+  const [mode, setMode] = useState('one'); // one | bulk
 
   const load = useCallback(() => {
     // The whole list, filtered in the browser: it is a list of gaps in one
@@ -210,6 +386,29 @@ export default function Page() {
     const active = FILTERS.find((f) => f.id === filter) || FILTERS[0];
     return state.rows.filter(active.match);
   }, [state.rows, filter]);
+
+  // Export: the questions under the current filter, as a plain numbered list
+  // ("1. …" one per line) ready to paste into an email or a meeting agenda.
+  const [copied, setCopied] = useState('');
+  async function copyList() {
+    const text = rows.map((r, i) => (i + 1) + '. ' + String(r.question || '').replace(/\s+/g, ' ').trim()).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      // No clipboard API (an http page, an older browser): the old way.
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(area);
+      if (!ok) { setCopied('Could not copy — your browser blocked it'); setTimeout(() => setCopied(''), 3500); return; }
+    }
+    setCopied('Copied ' + rows.length + (rows.length === 1 ? ' question' : ' questions'));
+    setTimeout(() => setCopied(''), 2500);
+  }
 
   async function ask(e) {
     e.preventDefault();
@@ -290,31 +489,54 @@ export default function Page() {
           same list on its own.
         </p>
 
-        <form onSubmit={ask} style={s(BOX + 'padding:16px;margin:0 0 24px;')}>
-          <label htmlFor="rq-question" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:0 0 6px;')}>
-            Ask a question
-          </label>
-          <input id="rq-question" value={question} onChange={(e) => setQuestion(e.target.value)}
-            placeholder="e.g. Who covers the phones when both receptionists are on lunch?"
-            style={s(INPUT)} />
-          <label htmlFor="rq-detail" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:14px 0 6px;')}>
-            Anything else worth knowing <span style={s('font-weight:500;color:#768692;')}>— optional</span>
-          </label>
-          <textarea id="rq-detail" value={detail} onChange={(e) => setDetail(e.target.value)} rows={3}
-            placeholder="What you have already tried, who might know, why it came up."
-            style={s(INPUT + 'font-size:15.5px;resize:vertical;')} />
-          <p style={s('margin:10px 0 0;font-size:13px;color:#768692;')}>
-            No patient information. This is a question about how the practice works, and it is stored as it is typed.
-          </p>
-          <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
-            <Hover tag="button" type="submit" disabled={busy || !question.trim()}
-              base={PRIMARY + (busy || !question.trim() ? 'opacity:.55;cursor:default;' : '')}
-              hover={busy || !question.trim() ? '' : PRIMARY_HOVER}>
-              Add the question
-            </Hover>
-            {asking && <span style={s('font-size:14px;color:#a51b0f;')}>{asking}</span>}
+        <div style={s(BOX + 'padding:16px;margin:0 0 24px;')}>
+          <div role="tablist" aria-label="How to add questions"
+            style={s('display:inline-flex;gap:2px;padding:3px;margin:0 0 14px;background:#f0f4f5;border:1px solid #e3eaed;border-radius:10px;')}>
+            {[
+              { id: 'one', label: 'Ask one' },
+              { id: 'bulk', label: 'Paste lots of text', ai: true },
+            ].map((t) => (
+              <Hover key={t.id} tag="button" type="button" role="tab" aria-selected={mode === t.id} onClick={() => setMode(t.id)}
+                base={'display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:6px 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;'
+                  + (mode === t.id ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.12);' : 'background:none;color:#4c6272;')}
+                hover={mode === t.id ? '' : 'color:#005eb8;'}>
+                {t.ai && <Svg w={15} sw={1.9}>{AI_ICON}</Svg>}{t.label}
+              </Hover>
+            ))}
           </div>
-        </form>
+
+          {mode === 'bulk' && (
+            <BulkAsk onAdded={(msg) => { setNotice(msg); setFilter('open'); load(); }} />
+          )}
+
+          {mode === 'one' && (
+          <form onSubmit={ask}>
+            <label htmlFor="rq-question" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:0 0 6px;')}>
+              Ask a question
+            </label>
+            <input id="rq-question" value={question} onChange={(e) => setQuestion(e.target.value)}
+              placeholder="e.g. Who covers the phones when both receptionists are on lunch?"
+              style={s(INPUT)} />
+            <label htmlFor="rq-detail" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:14px 0 6px;')}>
+              Anything else worth knowing <span style={s('font-weight:500;color:#768692;')}>— optional</span>
+            </label>
+            <textarea id="rq-detail" value={detail} onChange={(e) => setDetail(e.target.value)} rows={3}
+              placeholder="What you have already tried, who might know, why it came up."
+              style={s(INPUT + 'font-size:15.5px;resize:vertical;')} />
+            <p style={s('margin:10px 0 0;font-size:13px;color:#768692;')}>
+              No patient information. This is a question about how the practice works, and it is stored as it is typed.
+            </p>
+            <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
+              <Hover tag="button" type="submit" disabled={busy || !question.trim()}
+                base={PRIMARY + (busy || !question.trim() ? 'opacity:.55;cursor:default;' : '')}
+                hover={busy || !question.trim() ? '' : PRIMARY_HOVER}>
+                Add the question
+              </Hover>
+              {asking && <span style={s('font-size:14px;color:#a51b0f;')}>{asking}</span>}
+            </div>
+          </form>
+          )}
+        </div>
 
         {notice && (
           <p style={s('margin:0 0 18px;font-size:14.5px;color:#005eb8;background:#eef4f8;border:1px solid #cfe0ee;border-radius:8px;padding:9px 12px;')}>
@@ -332,6 +554,15 @@ export default function Page() {
               <span style={s('margin-left:7px;opacity:.75;font-weight:500;')}>{counts[f.id] || 0}</span>
             </Hover>
           ))}
+          <span style={s('flex:1;')} />
+          <Hover tag="button" type="button" disabled={!rows.length} onClick={copyList}
+            title="Copy the questions shown as a numbered list: 1. question, 2. question…"
+            base={QUIET + 'padding:7px 14px;' + (rows.length ? '' : 'opacity:.5;cursor:default;')
+              + (copied.startsWith('Copied') ? 'border-color:#007f3b;color:#007f3b;' : '')}
+            hover={rows.length ? QUIET_HOVER : ''}>
+            <Svg w={14} sw={2}>{copied.startsWith('Copied') ? Icons.check : Icons.copy}</Svg>
+            {copied || 'Export ' + rows.length + (rows.length === 1 ? ' question' : ' questions')}
+          </Hover>
         </div>
 
         {state.loading && <p style={s('color:#4c6272;')}>Loading…</p>}

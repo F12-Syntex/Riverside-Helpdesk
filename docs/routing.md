@@ -255,6 +255,7 @@ Same-day clinical assessment by a doctor. This is the practice's main destinatio
 - Suspected infection needing examination — chest, abdomen, urine, skin, or a hot swollen joint
 - Pain that is new, severe, or escalating
 - A patient assessed recently, calling back no better or worse
+- A young child or baby who is unwell, or a housebound, elderly, frail or palliative patient asking to be seen — they can deteriorate quickly and may need a home visit
 - Any presentation that worries you with no clear alternative destination
 
 #### Do not route here
@@ -627,12 +628,19 @@ An electronic referral to a community pharmacist who can assess and treat, not j
 - Sore throat — 5 and over
 - Acute otitis media (earache) — 1 to 17
 - Minor illness more broadly: cough, cold, diarrhoea, constipation, mouth ulcers, rashes, hay fever, sprains and strains, blocked ear or wax, red or sticky eye, teething, scabies, athlete's foot, wound dressings
+- Anything on the self-care list, where the patient wants an appointment or a prescription for a medicine they could buy — these are **not routinely prescribed**: acute sore throat; conjunctivitis; coughs, colds and nasal congestion; mild irritant dermatitis; cradle cap; dandruff; diarrhoea (adults); mouth ulcers; dry, sore or tired eyes; earwax; excessive sweating; oral thrush; haemorrhoids; head lice; indigestion and heartburn; sunburn; infant colic; infrequent cold sores of the lip; infrequent constipation; threadworms; infrequent migraine; insect bites and stings; mild acne; mild to moderate hay fever; minor burns and scalds; mild cystitis; mild dry skin; nappy rash; minor pain, discomfort and fever (aches and sprains, headache, period pain, back pain); warts and verrucae; travel sickness; prevention of tooth decay; teething or mild toothache; ringworm or athlete's foot; sun protection
+- Eligible patients get those medicines free through CPSAS, but only when we refer them: under 16; 16 to 18 in full-time education; on Universal Credit or another benefit giving free prescriptions; HC2; homeless people, asylum seekers and refugees; care leavers 16 to 25
 
 #### Do not route here
 
 - Anyone outside the age range for that pathway — the pharmacist cannot treat and it stays with us
 - Patients who are systemically unwell, not just locally unwell
-- Pregnant patients with a UTI
+- UTI in men, pregnant or breastfeeding patients, patients with a urinary catheter, or recurrent UTI (2 episodes in 6 months or 3 in 12) — clinical review here
+- UTI with fever, shivering, back or side pain, vomiting or marked illness — possible kidney infection, duty doctor today
+- Bullous impetigo (large fluid-filled blisters)
+- Shingles in pregnancy or in an immunosuppressed patient
+- A bite or sting that is rapidly getting worse — do not tell them to wait 48 hours
+- A "minor" problem that keeps coming back or has gone on for months — points to a long-term condition for a GP
 - Recurrent presentations of the same problem that has already failed pharmacy treatment
 - Suspected shingles affecting the eye or the tip of the nose — duty doctor
 
@@ -641,6 +649,8 @@ An electronic referral to a community pharmacist who can assess and treat, not j
 - Refer electronically through Local Services on EMIS or PharmRefer rather than telling the patient to walk in. The system returns nearby participating pharmacies.
 - Let the patient choose the pharmacy. They have a right to use any participating pharmacy, not just the nearest.
 - The pharmacy sends a consultation notification back to us the same or next working day, which is filed to the record.
+- Reply to the patient in AccuRx with the **Pharmacy First message template**, with Dr R Goel's name beneath the message.
+- A patient asking for a GP for a self-care condition is still the pharmacy's. Explain that medicines that can be bought are not routinely prescribed; the pharmacist will send them back to us if it needs more.
 
 #### Local detail
 
