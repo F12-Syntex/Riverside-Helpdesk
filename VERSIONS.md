@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.27.1` | 2026-09-26 | chore | `293f845` | chore: add the script that types pages under tagged folders |
 | `6.27.0` | 2026-09-26 | feat | `055d623` | feat: pick and fill in a page's type from the notebook |
 | `6.26.0` | 2026-09-26 | feat | `e7b5a58` | feat: give notebook pages a type with their own fields |
 | `6.25.1` | 2026-09-24 | fix | `c37bdc0` | fix: draw the top bar's menus above the composer |

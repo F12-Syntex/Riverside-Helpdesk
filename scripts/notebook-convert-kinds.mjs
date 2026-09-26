@@ -33,7 +33,8 @@
 //     gained its type. The dry run writes nothing at all.
 //
 // USAGE
-//   node scripts/notebook-convert-kinds.mjs .                 # dry run, writes the plan
+//   node scripts/notebook-convert-kinds.mjs .                 # dry run on DEV_DATABASE_URL
+//   node scripts/notebook-convert-kinds.mjs . --live          # dry run on DATABASE_URL (live)
 //   node scripts/notebook-convert-kinds.mjs . --apply         # applies it (DEV_DATABASE_URL)
 //   node scripts/notebook-convert-kinds.mjs . --apply --live  # applies it to DATABASE_URL
 import fs from 'node:fs';
@@ -51,9 +52,13 @@ for (const line of fs.readFileSync(path.join(root, '.env.local'), 'utf8').split(
   const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
   if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
-const url = process.env.DEV_DATABASE_URL || process.env.DATABASE_URL;
+// --live means the live database, whether or not .env.local also names a
+// development one: the dry run that shows what will happen to live must read
+// live, not whatever branch this checkout happens to point at.
+const onLive = LIVE || !process.env.DEV_DATABASE_URL;
+const url = onLive ? process.env.DATABASE_URL : process.env.DEV_DATABASE_URL;
 const sql = neon(url, { fetchOptions: { cache: 'no-store' } });
-console.log('database:', new URL(url).host, process.env.DEV_DATABASE_URL ? '(DEV_DATABASE_URL)' : '(DATABASE_URL - LIVE)');
+console.log('database:', new URL(url).host, onLive ? '(DATABASE_URL - LIVE)' : '(DEV_DATABASE_URL)');
 
 const TAG_KIND = { ers: 'ersReferral', profMessage: 'emailReferral', pathology: 'bloodTestSet' };
 
@@ -191,7 +196,7 @@ if (!APPLY) {
   report(results);
   console.log('\nplan written to', PLAN, '- rerun with --apply to write it.');
 } else {
-  if (!process.env.DEV_DATABASE_URL && !LIVE) throw new Error('Refusing to write to the live database: set DEV_DATABASE_URL, or pass --live.');
+  if (onLive && !LIVE) throw new Error('Refusing to write to the live database: set DEV_DATABASE_URL, or pass --live.');
   const saved = JSON.parse(fs.readFileSync(PLAN, 'utf8'));
   if (saved.host !== new URL(url).host) throw new Error('The plan was made against ' + saved.host + ', not this database.');
   const todo = saved.results.filter((x) => x.action === 'convert' || x.action === 'convert-draft');
