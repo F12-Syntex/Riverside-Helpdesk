@@ -31,6 +31,7 @@ import Md from '../chat/Md';
 import CopyButton from './CopyButton';
 import ErsForm from './ErsForm';
 import ProfMessage from './ProfMessage';
+import EmailForm from './EmailForm';
 import PathologyForm from './PathologyForm';
 
 const TONES = ['info', 'warn', 'critical'];
@@ -190,6 +191,7 @@ export function Blocks({ blocks, leadFirst = false }) {
         if (b.type === 'fields') return <Fields key={i} title={b.title} items={b.items} footnote={b.footnote} lead={i === lead} />;
         if (b.type === 'ers') return <ErsForm key={i} block={b} />;
         if (b.type === 'profMessage') return <ProfMessage key={i} block={b} />;
+        if (b.type === 'emailForm') return <EmailForm key={i} block={b} />;
         if (b.type === 'pathology') return <PathologyForm key={i} block={b} />;
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
         if (b.type === 'expandGroup') return <ExpandGroup key={i} items={b.items} />;

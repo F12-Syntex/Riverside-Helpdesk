@@ -3,7 +3,7 @@
 // A typed note, edited as the screen it is about.
 //
 // THE EDITOR IS THE CARD. The three screens a referral is actually typed into
-// are already drawn for the reader (ErsForm, ProfMessage, PathologyForm), and
+// are already drawn for the reader (ErsForm, EmailForm, PathologyForm), and
 // this hands those same components the note's fields plus a way to write them
 // back. So the person filling a card in sees the e-RS screen, in the e-RS
 // order, with the e-RS wording — not a form of labelled inputs that happens to
@@ -22,7 +22,7 @@
 import React from 'react';
 import { s } from '../ui';
 import ErsForm from '../templates/ErsForm';
-import ProfMessage from '../templates/ProfMessage';
+import EmailForm from '../templates/EmailForm';
 import PathologyForm from '../templates/PathologyForm';
 import { noteKind } from '@/lib/notebook/kinds.mjs';
 import { EditBox, EditHint, EditList } from '../templates/edit';
@@ -110,7 +110,7 @@ export default function CardEditor({ kind, fields, issues = [], onChange }) {
 
   if (def.id === 'emailReferral') {
     return (
-      <ProfMessage
+      <EmailForm
         edit={edit}
         head={(
           <Head>
@@ -118,17 +118,7 @@ export default function CardEditor({ kind, fields, issues = [], onChange }) {
             {aliases}
           </Head>
         )}
-        block={{
-          to: fields.to,
-          // The rule for finding the address sits in the To box's own second
-          // line, which is where the reader is told about it, so the editor
-          // writes it there too.
-          toMissing: fields.toRule,
-          org: fields.org,
-          body: fields.body,
-          attach: fields.attach,
-          form: fields.form,
-        }}
+        block={{ form: fields.form, to: fields.to, notes: fields.notes }}
       />
     );
   }

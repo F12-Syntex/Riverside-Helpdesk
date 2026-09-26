@@ -65,12 +65,19 @@ test('what is missing is named per box, never as "incomplete"', () => {
   assert.equal(noteIssues('ersReferral', { ...ERS, clinicType: '', clinicTypeOptions: ['A', 'B'] }).length, 0);
 });
 
-test('an email referral needs an address or a rule for finding one', () => {
-  assert.ok(noteIssues('emailReferral', { service: 'Echo' }).some((i) => i.field === 'to'));
-  assert.equal(noteIssues('emailReferral', { service: 'Echo', toRule: 'Fills in from the document' }).length, 0);
-  assert.equal(noteIssues('emailReferral', { service: 'Echo', to: 'echo@example.nhs.uk' }).length, 0);
-  // A thing that is not an address is refused rather than drawn into the To box.
-  assert.ok(noteIssues('emailReferral', { service: 'Echo', to: 'the cardiology team' }).some((i) => i.field === 'to'));
+test('an email referral needs the form; the address and notes are optional', () => {
+  assert.ok(noteIssues('emailReferral', { service: 'Echo' }).some((i) => i.field === 'form'));
+  assert.equal(noteIssues('emailReferral', { service: 'Echo', form: 'RP Echo' }).length, 0);
+  assert.equal(noteIssues('emailReferral', { service: 'Echo', form: 'RP Echo', to: 'echo@example.nhs.uk', notes: 'Mark urgent.' }).length, 0);
+  // A thing that is not an address is refused rather than shown as one.
+  assert.ok(noteIssues('emailReferral', { service: 'Echo', form: 'RP Echo', to: 'the cardiology team' }).some((i) => i.field === 'to'));
+});
+
+test('an email referral saved in the old shape keeps its address rule as notes', () => {
+  const old = normaliseFields('emailReferral', { service: 'Echo', form: 'RP Echo', toRule: 'same address as ECG', attach: 'EMIS file' });
+  assert.equal(old.notes, 'Email: same address as ECG');
+  // Once saved in the new shape, notes are the practice's own and nothing is added.
+  assert.equal(normaliseFields('emailReferral', { service: 'Echo', form: 'RP Echo', toRule: 'x', notes: '' }).notes, '');
 });
 
 test('the values are written out in one shape, built from the fields', () => {
@@ -84,7 +91,7 @@ test('the values are written out in one shape, built from the fields', () => {
 test('rendering is pure and per kind, and a plain note draws no screen', () => {
   assert.equal(renderKind('note', {}), null);
   assert.equal(renderKind('ersReferral', ERS).type, 'ers');
-  assert.equal(renderKind('emailReferral', { to: 'echo@example.nhs.uk' }).type, 'profMessage');
+  assert.equal(renderKind('emailReferral', { form: 'RP Echo' }).type, 'emailForm');
   assert.equal(renderKind('bloodTestSet', { ordered: ['FBC'] }).type, 'pathology');
 });
 
