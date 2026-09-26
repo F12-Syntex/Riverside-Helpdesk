@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
 import { s, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { markRegisterWarm, registerIsWarm } from '../_components/contacts/ContactSearchLoader';
@@ -93,6 +93,12 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 /* ---- a state that is not a list ---- */
 .lk-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:30px 20px 26px;}
 .lk-state__ico{display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:14px;background:#f1f5f9;color:#8a979f;margin-bottom:6px;}
+.lk-state__art{width:120px;height:120px;margin:-8px 0 2px;pointer-events:none;user-select:none;}
+
+/* ---- the 3D art over the opening screen ---- */
+.lk-hero{display:flex;justify-content:center;margin:0 0 -34px;perspective:900px;pointer-events:none;position:relative;z-index:1;}
+.lk-hero img{width:210px;height:210px;user-select:none;filter:drop-shadow(0 26px 30px rgba(0,48,135,.18));}
+@media (max-width:600px){ .lk-hero img{width:150px;height:150px;} .lk-hero{margin-bottom:-24px;} }
 .lk-state__title{margin:0;font-size:15.5px;font-weight:650;color:var(--rv-ink);overflow-wrap:anywhere;}
 .lk-state__acts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px;}
 .lk-btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:none;font:inherit;font-size:14px;
@@ -196,10 +202,34 @@ function Skeleton({ rows = 4 }) {
   );
 }
 
-function State({ icon, title, children }) {
+// A generated 3D render (Higgsfield, public/assets/3d) that floats: a slow
+// bob, and on the opening screen a tilt that follows the pointer, so the
+// object reads as sitting in space above the card rather than printed on it.
+function Float3D({ src, className, amplitude = 8, tilt = false }) {
+  const reduce = useReducedMotion();
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const rx = useSpring(useTransform(my, [-1, 1], [10, -10]), { stiffness: 120, damping: 18 });
+  const ry = useSpring(useTransform(mx, [-1, 1], [-14, 14]), { stiffness: 120, damping: 18 });
+  React.useEffect(() => {
+    if (!tilt || reduce) return undefined;
+    const move = (e) => { mx.set((e.clientX / window.innerWidth) * 2 - 1); my.set((e.clientY / window.innerHeight) * 2 - 1); };
+    window.addEventListener('pointermove', move);
+    return () => window.removeEventListener('pointermove', move);
+  }, [tilt, reduce, mx, my]);
+  return (
+    <motion.img src={src} alt="" aria-hidden="true" draggable={false} className={className}
+      style={tilt && !reduce ? { rotateX: rx, rotateY: ry } : undefined}
+      animate={reduce ? undefined : { y: [0, -amplitude, 0] }}
+      transition={reduce ? undefined : { duration: 5.5, repeat: Infinity, ease: 'easeInOut' }} />
+  );
+}
+
+function State({ icon, art, title, children }) {
   return (
     <motion.div className="lk-state" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: EASE }}>
-      <span className="lk-state__ico" aria-hidden="true"><Svg w={20} sw={2}>{icon}</Svg></span>
+      {art ? <Float3D src={art} className="lk-state__art" amplitude={5} />
+        : <span className="lk-state__ico" aria-hidden="true"><Svg w={20} sw={2}>{icon}</Svg></span>}
       <p className="lk-state__title">{title}</p>
       {children ? <div className="lk-state__acts">{children}</div> : null}
     </motion.div>
@@ -389,6 +419,16 @@ export default function Page() {
       <AppHeader subtitle="Instant lookup" />
 
       <main className={'lk ' + (trimmed ? 'is-busy' : 'is-idle')}>
+        <AnimatePresence initial={false}>
+          {!trimmed ? (
+            <motion.div key="hero" className="lk-hero"
+              initial={{ opacity: 0, scale: 0.9, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -8, transition: { duration: 0.2 } }}
+              transition={{ duration: 0.6, ease: EASE }}>
+              <Float3D src="/assets/3d/lookup.webp" amplitude={10} tilt />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         <motion.div className={'lk-card' + (hasBody ? '' : ' is-flat')}
           initial={reduce ? false : { opacity: 0, y: 14, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, ease: EASE }}>
@@ -436,7 +476,7 @@ export default function Page() {
               {searching || (!trimmed && !warm && !results.length) ? <Skeleton /> : null}
 
               {nothingFound && !webShown ? (
-                <State icon={SEARCH_X} title={'Nothing on the register for “' + trimmed + '”'}>
+                <State art="/assets/3d/nomatch.webp" title={'Nothing on the register for “' + trimmed + '”'}>
                   <button type="button" className="lk-btn lk-btn--primary" onClick={() => searchWeb(trimmed)}>
                     <Svg w={15} sw={2.2}>{GLOBE}</Svg>Search the web <Kbd>Enter</Kbd>
                   </button>
@@ -474,7 +514,7 @@ export default function Page() {
                         </div>
                       ))}
                       {!web.contacts.length ? (
-                        <State icon={SEARCH_X} title={web.reason || 'No number found'}>
+                        <State art="/assets/3d/web.webp" title={web.reason || 'No number found'}>
                           <a href={'https://www.google.com/search?q=' + encodeURIComponent(trimmed + ' phone number')}
                             target="_blank" rel="noreferrer" className="lk-btn lk-btn--ghost">
                             <Svg w={14} sw={2.2}>{Icons.external}</Svg>Google it
