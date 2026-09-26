@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.38.0` | 2026-09-26 | feat | `56aff8e` | feat: rank notebook search, match sidebar to the page, hide the map |
+| `6.37.1` | 2026-09-26 | docs | `9bba2b9` | docs: record the lookup redesign in the versions table |
 | `6.37.0` | 2026-09-26 | feat | `42ae138` | feat: redesign lookup as one minimal floating search palette |
 | `6.36.4` | 2026-09-26 | docs | `c94ebad` | docs: record the optional email fields in the versions table |
 | `6.36.3` | 2026-09-26 | fix | `81e9ea0` | fix: require nothing on an email referral note |
