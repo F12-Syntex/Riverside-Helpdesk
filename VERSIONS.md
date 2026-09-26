@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.40.5` | 2026-09-26 | fix | `1988a82` | fix: name typed referral cards by their service, not their route |
+| `6.40.4` | 2026-09-26 | perf | `4194783` | perf: read referrals beside the picker, off referral pages only |
+| `6.40.3` | 2026-09-26 | docs | `54339e2` | docs: record the sonar grid fix in the versions table |
 | `6.40.2` | 2026-09-26 | fix | `355dbec` | fix: keep sonar grid out of the top bar and off component clicks |
 | `6.40.1` | 2026-09-26 | docs | `f29710b` | docs: record the sonar grid row in the versions table |
 | `6.40.0` | 2026-09-26 | feat | `f769054` | feat: stack sonar grid over the background light |
