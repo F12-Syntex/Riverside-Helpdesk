@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.39.5` | 2026-09-26 | docs | `43cf41f` | docs: record the lookup restyle in the versions table |
 | `6.39.4` | 2026-09-26 | fix | `fe50cbb` | fix: match lookup to the Ask a question column and composer |
 | `6.39.3` | 2026-09-26 | docs | `96d7f06` | docs: record the fixed lookup card in the versions table |
 | `6.39.2` | 2026-09-26 | fix | `5ab82e1` | fix: keep the lookup card one size and drop its 3D art |
