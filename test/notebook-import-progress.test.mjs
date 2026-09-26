@@ -127,16 +127,24 @@ test('the server is the only place a step is given a name', () => {
 
 /* ------------------------------------------------- what a backup carries */
 
-test('an output tag survives a backup, and an old backup has none', () => {
+test('a note kind and its fields survive a backup, and an old backup has neither', () => {
   const clean = normalisePayload({
     notes: [
-      { id: 1, parentId: null, title: 'Referrals', isSection: true, outputTag: 'ers' },
-      { id: 2, parentId: 1, title: 'Dermatology', body: 'x' },
+      { id: 1, parentId: null, title: 'Referrals', isSection: true },
+      { id: 2, parentId: 1, title: 'Dermatology', body: 'x', kind: 'ersReferral', fields: { specialty: 'Dermatology' } },
+      { id: 3, parentId: 1, title: 'How referrals work', body: 'y' },
+      { id: 4, parentId: 1, title: 'Made up', body: 'z', kind: 'somethingElse', fields: 'not an object' },
     ],
   });
-  assert.equal(clean.notes[0].outputTag, 'ers');
-  // A file written before tags existed restores as untagged, which is right.
-  assert.equal(clean.notes[1].outputTag, '');
+  assert.equal(clean.notes[1].kind, 'ersReferral');
+  assert.equal(clean.notes[1].fields.specialty, 'Dermatology');
+  // A file written before notes had a kind restores as free writing, which is
+  // exactly what those pages were.
+  assert.equal(clean.notes[2].kind, 'note');
+  assert.deepEqual(clean.notes[2].fields, {});
+  // A kind this build does not have is a page, not a card half-rendered as one.
+  assert.equal(clean.notes[3].kind, 'note');
+  assert.deepEqual(clean.notes[3].fields, {});
 });
 
 /* ----------------------------------------------- the awkward backup files */

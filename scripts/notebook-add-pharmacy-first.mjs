@@ -25,7 +25,7 @@ for (const line of fs.readFileSync(path.join(root, '.env.local'), 'utf8').split(
   const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
   if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
-const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } });
+const sql = neon((process.env.DEV_DATABASE_URL || process.env.DATABASE_URL), { fetchOptions: { cache: 'no-store' } });
 
 const TITLE = 'Pharmacy First and CPSAS';
 const BODY = `Community pharmacy takes three different kinds of referral, and which one it is decides what the pharmacist can do. All referrals go electronically through **Local Services** on EMIS, or **PharmRefer**.

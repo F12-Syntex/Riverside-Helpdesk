@@ -38,7 +38,7 @@ for (const line of fs.readFileSync(path.join(root, '.env.local'), 'utf8').split(
   const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
   if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
-const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } });
+const sql = neon((process.env.DEV_DATABASE_URL || process.env.DATABASE_URL), { fetchOptions: { cache: 'no-store' } });
 
 /* ---------------------------------------------------------------- slicing */
 

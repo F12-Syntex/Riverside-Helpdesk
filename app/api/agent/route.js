@@ -40,9 +40,8 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
   commandPrompt, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
-  taggedNotebookPage,
+  typedNotebookPage, withKindCard,
 } from '@/lib/templates/route.mjs';
-import { outputTagPrompt, withTaggedOutput } from '@/lib/templates/output-tags.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
 import { needsAppointmentMode } from '@/lib/triage/destinations.mjs';
@@ -1022,35 +1021,18 @@ export async function POST(request) {
         // existed, and costs exactly what it used to.
         const decompose = looksMultiIntent(question);
 
-        // THE FOLDER'S OWN SHAPE, when the practice has given it one.
+        // THE PAGE'S OWN SCREEN, when it is a typed page.
         //
         // A Notebook page normally answers as itself — the page, as they
-        // wrote it. Where the practice has tagged the folder it sits in (the
-        // notebook sidebar, right-click → Format answers as), the values on
-        // that screen are lifted out of the page and the screen is drawn
-        // above it. ONE focused read, of one page, and only for a tagged
-        // page: every other turn costs exactly what it did before.
-        //
-        // The page is still shown underneath, so a read that comes back thin
-        // — or does not come back at all — leaves the reader with what they
-        // had before the tag existed. That is why this is allowed to fail
-        // quietly. Shared by the router's hit and the picker's choice, so a
-        // page reached either way is drawn the same.
-        const applyOutputTag = async (selection) => {
-          const tagged = templateAnswer ? taggedNotebookPage(selection, notebookPages) : null;
-          if (!tagged) return;
-          try {
-            const values = await readValues({
-              model,
-              schema: tagged.tag.schema,
-              text: outputTagPrompt({ tag: tagged.tag, page: tagged.page, question }),
-              role: 'fast',
-              phase: 'format',
-            });
-            templateAnswer = withTaggedOutput(templateAnswer, tagged.tag, values);
-          } catch (e) {
-            console.warn('[agent] tagged output read failed:', String(e).slice(0, 160));
-          }
+        // wrote it. A page the practice has given a type (the notebook
+        // sidebar, right-click → Type) carries the values on that screen as
+        // saved fields, so the screen is drawn above the page straight from
+        // them: no model reads the page for it, and a draft is not drawn.
+        // Shared by the router's hit and the picker's choice, so a page
+        // reached either way is drawn the same.
+        const applyKindCard = (selection) => {
+          const typed = templateAnswer ? typedNotebookPage(selection, notebookPages) : null;
+          if (typed) templateAnswer = withKindCard(templateAnswer, typed);
         };
 
         // THE REFERRAL PAIRING, READ BY THE MODEL RATHER THAN PARSED.
@@ -1119,7 +1101,7 @@ export async function POST(request) {
           picked = 'notebook:router';
           const selection = { template: 'notebook', pages: [routed.page.docTitle] };
           templateAnswer = renderSelection(selection, question, notebookPages, {});
-          if (templateAnswer) await applyOutputTag(selection);
+          if (templateAnswer) applyKindCard(selection);
         } else if (routed && routed.decision === 'ambiguous' && routed.clarify) {
           clarify = routed.clarify;
         }
@@ -1155,9 +1137,9 @@ export async function POST(request) {
             gist: (scan.routed && scan.routed.gist) || '',
           });
 
-          // The folder's own shape, when the practice has given it one — see
-          // applyOutputTag above.
-          await applyOutputTag(selection.object);
+          // The page's own screen, when it is a typed page — see
+          // applyKindCard above.
+          applyKindCard(selection.object);
           // And the referral pairing, read off the page rather than parsed
           // out of it — see applyReferralRead above.
           await applyReferralRead(selection.object);

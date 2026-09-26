@@ -9,6 +9,7 @@ import { MIN_NORMALISED_CHARS, routeQuestion } from '../lib/routing/router.mjs';
 // No database in these tests. Anything that reaches for one would throw from
 // getSql, and the router must swallow that into a miss.
 delete process.env.DATABASE_URL;
+delete process.env.DEV_DATABASE_URL;
 
 const OFF = { enabled: false, hitCos: 0.82, askCos: 0.7, minMargin: 0.15 };
 const ON = { ...OFF, enabled: true };

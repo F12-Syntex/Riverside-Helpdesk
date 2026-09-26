@@ -30,7 +30,7 @@ for (const line of fs.readFileSync(path.join(root, '.env.local'), 'utf8').split(
   const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(line);
   if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
 }
-if (!process.env.DATABASE_URL) { console.error('DATABASE_URL is not set'); process.exit(1); }
+if (!(process.env.DEV_DATABASE_URL || process.env.DATABASE_URL)) { console.error('Neither DEV_DATABASE_URL nor DATABASE_URL is set'); process.exit(1); }
 if (!process.env.OPENROUTER_API_KEY) { console.error('OPENROUTER_API_KEY is not set — the vector arm cannot run'); process.exit(1); }
 
 const args = process.argv.slice(2);
@@ -77,7 +77,7 @@ await ensureNotebookSchema();
 const sql = getSql();
 const notes = await sql`
   SELECT id, parent_id AS "parentId", title, body, position,
-         is_section AS "isSection", output_tag AS "outputTag", updated_at AS "updatedAt"
+         is_section AS "isSection", kind, fields, status, updated_at AS "updatedAt"
   FROM notes ORDER BY position ASC, id ASC
 `;
 const pages = buildFullNotebookSources(notes, []);

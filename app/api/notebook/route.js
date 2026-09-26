@@ -1,17 +1,17 @@
 // Notebook CRUD. Backed by the Neon `notes` table (see lib/notebook.js).
 //   GET    /api/notebook          — list all notes (flat; the client builds the tree)
-//   POST   /api/notebook          — create a note { title?, parentId? }
-//   PATCH  /api/notebook          — update a note { id, title?, body? } (autosave)
+//   POST   /api/notebook          — create a note { title?, parentId?, kind? }
+//   PATCH  /api/notebook          — update a note { id, title?, body?, fields? } (autosave)
 //                                   or move it { id, parentId } (drag to a section)
-//                                   or tag it { id, outputTag } (right-click → Format answers as)
+//                                   or change what it is { id, kind } (convert)
 //   DELETE /api/notebook?id=123   — delete a note (its sub-notes cascade)
 //
 // Notes written here are automatically mirrored into canonical knowledge as
 // citable sources (no re-ingest or redeploy).
 import { NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
-import { listNotes, createNote, updateNote, moveNote, deleteNote, listAttachments, attachmentsUnderNote, setNoteOutputTag } from '@/lib/notebook';
-import { isOutputTag } from '@/lib/templates/output-tags.mjs';
+import { listNotes, createNote, updateNote, moveNote, deleteNote, listAttachments, attachmentsUnderNote, setNoteKind } from '@/lib/notebook';
+import { isNoteKind } from '@/lib/notebook/kinds.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,13 @@ export async function POST(request) {
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   try {
-    const note = await createNote({ title: body?.title, parentId: body?.parentId });
+    // An unknown kind is refused rather than stored as something else: a note
+    // created as a referral by a client this server does not understand would
+    // look like a page and answer like one.
+    if (body?.kind != null && !isNoteKind(body.kind)) {
+      return NextResponse.json({ error: 'Not a note kind.' }, { status: 400 });
+    }
+    const note = await createNote({ title: body?.title, parentId: body?.parentId, kind: body?.kind || 'note' });
     return NextResponse.json({ note });
   } catch (e) {
     return NextResponse.json({ error: 'Could not create note.', detail: String(e).slice(0, 300) }, { status: 500 });
@@ -43,14 +49,14 @@ export async function PATCH(request) {
   let body;
   try { body = await request.json(); } catch (e) { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
   if (!parseInt(body?.id, 10)) return NextResponse.json({ error: 'A valid id is required.' }, { status: 400 });
-  if (body?.title == null && body?.body == null && typeof body?.isSection !== 'boolean' && body?.parentId == null && body?.outputTag == null) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
+  if (body?.title == null && body?.body == null && typeof body?.isSection !== 'boolean' && body?.parentId == null && body?.kind == null && body?.fields == null) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
   try {
-    // Tagging is its own operation: it is the only field a SECTION can carry
-    // besides its title, and the value is checked against what can actually be
-    // rendered rather than stored as whatever the client sent.
-    if (body?.outputTag != null) {
-      if (!isOutputTag(body.outputTag)) return NextResponse.json({ error: 'Not an output tag.' }, { status: 400 });
-      const note = await setNoteOutputTag({ id: body.id, outputTag: body.outputTag });
+    // CHANGING WHAT A NOTE IS is its own operation, never part of an autosave.
+    // The fields are re-coerced to the new kind, so what the two kinds share is
+    // kept and the rest is dropped — and the page's own writing is untouched.
+    if (body?.kind != null) {
+      if (!isNoteKind(body.kind)) return NextResponse.json({ error: 'Not a note kind.' }, { status: 400 });
+      const note = await setNoteKind({ id: body.id, kind: body.kind, fields: body.fields ?? null });
       if (!note) return NextResponse.json({ error: 'Note not found.' }, { status: 404 });
       return NextResponse.json({ note });
     }
@@ -60,7 +66,7 @@ export async function PATCH(request) {
       if (out.error) return NextResponse.json({ error: out.error }, { status: 400 });
       return NextResponse.json({ note: out.note });
     }
-    const note = await updateNote({ id: body.id, title: body.title, body: body.body, isSection: body.isSection });
+    const note = await updateNote({ id: body.id, title: body.title, body: body.body, isSection: body.isSection, fields: body.fields });
     if (!note) return NextResponse.json({ error: 'Note not found.' }, { status: 404 });
     return NextResponse.json({ note });
   } catch (e) {
