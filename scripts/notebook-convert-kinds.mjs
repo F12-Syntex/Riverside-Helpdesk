@@ -166,6 +166,12 @@ async function plan() {
         else dropped.push(field.key + ': ' + value);
       }
     }
+    // A page is named for the service it describes, so a card whose page
+    // never repeats the name in its text takes the title rather than going
+    // into draft over the one value everybody can see.
+    if (def.fields.some((f) => f.key === 'service') && !String(kept.service || '').trim()) {
+      kept.service = String(r.title || '').trim();
+    }
     const fields = normaliseFields(kind, kept);
     const issues = noteIssues(kind, fields);
     results.push({ ...base, fields, dropped, issues: issues.map((i) => i.message),
