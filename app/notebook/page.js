@@ -72,6 +72,10 @@ const PAGE_CSS = `
 .nbk-sidebar__row{display:flex;align-items:center;gap:8px;}
 .nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:4px 8px 16px;display:flex;flex-direction:column;gap:1px;}
 .nbk-tree__label{padding:8px 8px 5px;}
+.nbk-tree__empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:18px 12px;font-size:13.5px;line-height:1.5;color:var(--nbk-mut);}
+.nbk-tree__empty img{width:110px;height:110px;user-select:none;animation:nbk-float 5.5s ease-in-out infinite;}
+@keyframes nbk-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@media (prefers-reduced-motion:reduce){.nbk-tree__empty img{animation:none;}}
 .nbk-tree__note{padding:10px 8px;font-size:13.5px;line-height:1.55;color:var(--nbk-mut);}
 .nbk-sidebar__foot{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px;border-top:1px solid rgba(33,43,50,.07);}
 .nbk-sidebar__note{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.45;color:var(--nbk-mut);}
@@ -90,19 +94,6 @@ const PAGE_CSS = `
 .nbk-sidebar .nbk-row--on,.nbk-sidebar .nbk-row--on:hover{background:#eef4fa;box-shadow:none;}
 .nbk-sidebar .nbk-foot-btn{background:#f4f7f9;}
 .nbk-sidebar .nbk-foot-btn:hover{background:#eef4fa;box-shadow:none;}
-
-/* ---- search: one ranked list in place of the tree ---- */
-.nbk-hits{display:flex;flex-direction:column;gap:2px;}
-.nbk-hit{display:block;width:100%;text-align:left;border:none;background:none;font:inherit;padding:9px 10px;border-radius:11px;cursor:pointer;
-  transition:background-color .14s ease;}
-.nbk-hit:hover,.nbk-hit.is-first{background:#f4f7f9;}
-.nbk-hit.is-on{background:#eef4fa;}
-.nbk-hit:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:1px;}
-.nbk-hit__title{display:block;font-size:14px;font-weight:650;color:var(--nbk-ink);line-height:1.35;overflow-wrap:anywhere;}
-.nbk-hit__path{display:block;margin-top:1px;font-size:11.5px;font-weight:600;color:var(--nbk-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.nbk-hit__snip{margin-top:3px;font-size:12.5px;line-height:1.45;color:var(--nbk-mut);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.nbk-hit mark{background:rgba(0,94,184,.12);color:var(--nbk-blue);border-radius:3px;padding:0 1px;}
 
 /* ---- the page: white paper ---- */
 .nbk-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;border-radius:22px;overflow:hidden;
@@ -228,14 +219,6 @@ const PAGE_CSS = `
   .nbk-sidebar{transition:none;}
 }
 `;
-
-// The search words, marked where they appear in a line.
-function marked(text, words) {
-  const src = String(text || '');
-  if (!words.length) return src;
-  const re = new RegExp('(' + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
-  return src.split(re).map((part, i) => (i % 2 ? <mark key={i}>{part}</mark> : part));
-}
 
 const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
 
@@ -680,20 +663,15 @@ export default function NotebookPage() {
     return out;
   }, [notes]);
 
-  // Search: a note matching by title/body keeps its whole ancestor chain visible.
+  // Search: a page matches when every word is in its title, its typed fields
+  // or its writing. The tree is filtered to those pages, each keeping its
+  // ancestor chain so it is found where it lives; nothing is previewed.
   const q = search.trim().toLowerCase();
-  const selfMatch = (n) => !q || (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q);
-  const treeMatch = React.useCallback(function treeMatch(n) {
-    return selfMatch(n) || childrenOf(n.id).some(treeMatch);
-  }, [childrenOf, q]); // eslint-disable-line react-hooks/exhaustive-deps
-  const sections = notes.filter((n) => !n.parentId).filter(treeMatch);
 
-  // SEARCH AS A RANKED LIST. The tree filtered to matches kept every ancestor
-  // on screen and ranked nothing, so the page that was called the thing sat
-  // among twenty that merely mentioned it. Now every word has to appear
-  // somewhere in the page; a word in the title counts for most, in its typed
-  // fields (service, aliases, form) next, in the writing least. Sections are
-  // containers, not answers, and are left out.
+  // THE MATCHES, BEST FIRST. Every word has to appear somewhere in the page;
+  // a word in the title counts for most, in its typed fields (service,
+  // aliases, form) next, in the writing least. The order decides which page
+  // Enter opens; the set decides what the tree shows.
   const searchWords = React.useMemo(() => q.split(/\s+/).filter(Boolean), [q]);
   const hits = React.useMemo(() => {
     if (!searchWords.length) return [];
@@ -702,8 +680,7 @@ export default function NotebookPage() {
       if (!n.parentId || n.isSection) continue;
       const title = (n.title || '').toLowerCase();
       const fieldText = Object.values(n.fields || {}).flat().join(' ').toLowerCase();
-      const plain = excerpt(n.body, 100000);
-      const body = plain.toLowerCase();
+      const body = excerpt(n.body, 100000).toLowerCase();
       let score = 0;
       let all = true;
       for (const w of searchWords) {
@@ -716,14 +693,16 @@ export default function NotebookPage() {
       }
       if (!all) continue;
       if (title === q) score += 20;
-      const path = [];
-      for (let p = byId.get(n.parentId); p; p = p.parentId ? byId.get(p.parentId) : null) path.unshift(p.title || 'Untitled');
-      const at = searchWords.map((w) => body.indexOf(w)).filter((i) => i >= 0).sort((a, b) => a - b)[0];
-      const snippet = at == null ? '' : (at > 40 ? '...' : '') + plain.slice(Math.max(0, at - 40), at + 120).trim();
-      out.push({ note: n, score, path: path.join(' \u203a '), snippet });
+      out.push({ note: n, score });
     }
-    return out.sort((a, b) => b.score - a.score || (a.note.title || '').localeCompare(b.note.title || '')).slice(0, 40);
-  }, [notes, byId, searchWords, q]);
+    return out.sort((a, b) => b.score - a.score || (a.note.title || '').localeCompare(b.note.title || ''));
+  }, [notes, searchWords, q]);
+  const hitIds = React.useMemo(() => new Set(hits.map((h) => h.note.id)), [hits]);
+  const selfMatch = (n) => !q || hitIds.has(n.id);
+  const treeMatch = React.useCallback(function treeMatch(n) {
+    return selfMatch(n) || childrenOf(n.id).some(treeMatch);
+  }, [childrenOf, hitIds, q]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sections = notes.filter((n) => !n.parentId).filter(treeMatch);
 
   /* ------------------------------ Saving ------------------------------ *
    * Time-based, not per-keystroke: edits mark the note dirty; after 1.8s quiet
@@ -1372,34 +1351,18 @@ export default function NotebookPage() {
           </div>
 
           <div className="nbk-tree nbk-scroll">
-            {q && status === 'ready' ? (
-              hits.length ? (
-                <>
-                  <div className="nbk-label nbk-tree__label">{hits.length + (hits.length === 1 ? ' match' : ' matches')}</div>
-                  <div className="nbk-hits">
-                    {hits.map((h, i) => (
-                      <button key={h.note.id} type="button" onClick={() => { selectNote(h.note.id); setDrawer(false); }}
-                        className={'nbk-hit' + (h.note.id === selectedId ? ' is-on' : i === 0 ? ' is-first' : '')}>
-                        <span className="nbk-hit__title">{marked(h.note.title || 'Untitled', searchWords)}</span>
-                        {h.path ? <span className="nbk-hit__path">{h.path}</span> : null}
-                        {h.snippet ? <span className="nbk-hit__snip">{marked(h.snippet, searchWords)}</span> : null}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : <div className="nbk-tree__note">Nothing matches &ldquo;{search.trim()}&rdquo;.</div>
-            ) : null}
-            {!q && status === 'ready' && sections.length > 0 && (
-              <div className="nbk-label nbk-tree__label">{q ? 'Matches' : 'Sections'}</div>
+            {status === 'ready' && sections.length > 0 && (
+              <div className="nbk-label nbk-tree__label">{q ? hits.length + (hits.length === 1 ? ' page' : ' pages') : 'Sections'}</div>
             )}
             {status === 'loading' && <div className="nbk-tree__note">Loading...</div>}
             {status === 'error' && <div className="nbk-tree__note" style={{ color: T.red }}>Could not load notes. Is the database configured?</div>}
-            {!q && status === 'ready' && sections.length === 0 && (
-              <div className="nbk-tree__note">
-                No sections yet. Create one, for example "Instructions", with pages like "How to book appointments".
+            {status === 'ready' && sections.length === 0 && (
+              <div className="nbk-tree__empty">
+                <img src="/assets/3d/notebook.webp" alt="" aria-hidden="true" draggable={false} />
+                <span>{q ? 'No pages match.' : 'No sections yet. Create one, for example "Instructions", with pages like "How to book appointments".'}</span>
               </div>
             )}
-            {!q && sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
+            {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
           </div>
 
           <div className="nbk-sidebar__foot">
