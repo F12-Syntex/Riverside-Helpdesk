@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.36.3` | 2026-09-26 | fix | `81e9ea0` | fix: require nothing on an email referral note |
+| `6.36.2` | 2026-09-26 | docs | `f4dcda4` | docs: record the email simplification in the versions table |
 | `6.36.1` | 2026-09-26 | chore | `18d6517` | chore: let the dev preview pick a free port |
 | `6.36.0` | 2026-09-26 | feat | `d3e4d5f` | feat: simplify the email referral card to the doctor's form |
 | `6.35.7` | 2026-09-26 | fix | `4a465ac` | fix: keep spaces while typing into a typed note's boxes |
