@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.39.0` | 2026-09-26 | feat | `17d005e` | feat: add floating 3D illustrations to lookup |
+| `6.38.2` | 2026-09-26 | fix | `9746f3f` | fix: filter the notebook tree on search instead of listing previews |
+| `6.38.1` | 2026-09-26 | docs | `6cb24b0` | docs: record the notebook search change in the versions table |
 | `6.38.0` | 2026-09-26 | feat | `56aff8e` | feat: rank notebook search, match sidebar to the page, hide the map |
 | `6.37.1` | 2026-09-26 | docs | `9bba2b9` | docs: record the lookup redesign in the versions table |
 | `6.37.0` | 2026-09-26 | feat | `42ae138` | feat: redesign lookup as one minimal floating search palette |
