@@ -25,6 +25,23 @@ const MAX_DPR = 2;
 const TAU = Math.PI * 2;
 const AREA = [0.12, 0.15, 0.88, 0.85];
 
+// Things that are used, not looked through: a click on them is theirs.
+const CONTROL = 'a, button, input, textarea, select, label, summary, video, audio, canvas, iframe, [role], [contenteditable], [tabindex], header, nav, dialog';
+
+// A click belongs to the grid only when it lands on bare page: nothing
+// under the pointer is a control, and nothing between it and the page
+// paints a surface of its own (a card, a panel, the top bar).
+function onBackdrop(target) {
+  for (let el = target; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+    if (el.matches && el.matches(CONTROL)) return false;
+    const cs = getComputedStyle(el);
+    const bg = cs.backgroundColor;
+    if (bg && bg !== 'transparent' && !/,\s*0\)$/.test(bg)) return false;
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') return false;
+  }
+  return true;
+}
+
 export default function SonarGrid({
   spacing = 24,
   dotRadius = 1.2,
@@ -161,7 +178,7 @@ export default function SonarGrid({
     };
 
     const onDown = (e) => {
-      if (reduceMotion.matches) return;
+      if (reduceMotion.matches || !onBackdrop(e.target)) return;
       const rect = host.getBoundingClientRect();
       addRing(e.clientX - rect.left, e.clientY - rect.top, performance.now());
       wake();
