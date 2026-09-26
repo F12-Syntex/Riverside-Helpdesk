@@ -18,6 +18,14 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.35.5` | 2026-09-26 | chore | `c23026f` | chore: merge origin/main into the note-types port |
+| `6.35.4` | 2026-09-26 | docs | `59040f0` | docs: record the note-types port in the versions table |
+| `6.35.3` | 2026-09-26 | fix | `8da2359` | fix: name a converted card after its page when the text never does |
+| `6.35.2` | 2026-09-26 | fix | `9042aaf` | fix: make --live point the kind converter at the live database |
+| `6.35.1` | 2026-09-26 | chore | `293f845` | chore: add the script that types pages under tagged folders |
+| `6.35.0` | 2026-09-26 | feat | `055d623` | feat: pick and fill in a page's type from the notebook |
+| `6.34.0` | 2026-09-26 | feat | `e7b5a58` | feat: give notebook pages a type with their own fields |
+| `6.33.0` | 2026-09-25 | feat | `3d4fe06` | feat: have the AccurX reading write the no-answer EMIS line |
 | `6.32.1` | 2026-09-25 | docs | `41404a0` | docs: regenerate VERSIONS.md from the full history |
 | `6.32.0` | 2026-09-25 | feat | `2f2af1b` | feat: add a 'patient didn't pick up' button to the AccurX card |
 | `6.31.0` | 2026-09-24 | feat | `daa3615` | feat: add an export button that copies /questions as a numbered list |
