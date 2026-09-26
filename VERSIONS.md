@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.39.8` | 2026-09-26 | fix | `5adfc01` | fix: enlarge top bar, even out gutters and simplify active nav |
 | `6.39.7` | 2026-09-26 | fix | `5f44049` | fix: keep lookup to the screen so only its list scrolls |
 | `6.39.6` | 2026-09-26 | docs | `ec867f7` | docs: record the lookup restyle row in the versions table |
 | `6.39.5` | 2026-09-26 | docs | `43cf41f` | docs: record the lookup restyle in the versions table |

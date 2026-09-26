@@ -16,15 +16,14 @@ import { highlightRanges } from '../../lib/lookup/fuzzy';
  * verbatim from the published CQC extract and are never authored by a model.
  *
  * THE SHAPE: one floating palette, after the 21st.dev "Command Search"
- * component. The box, the list and the keyboard hints are one card, and a
- * pill glides behind the row the keyboard or pointer is on. What the box
+ * component. The box, the list and the keyboard hints are one card, and the
+ * row the arrow keys are on is tinted in place. What the box
  * takes is shown by typing examples into its placeholder rather than
  * explained in text, and every state that is not a list is an icon, a line
  * and a button.
  * ------------------------------------------------------------------ */
 
 const EXAMPLES = ['dentist barnsley', 'Barnsley Hospital', 'S70 2RD', 'care home sheffield'];
-const PILL = { type: 'spring', stiffness: 420, damping: 36 };
 const EASE = [0.2, 0.8, 0.3, 1];
 
 const SEARCH_X = (<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /><path d="m8.5 8.5 5 5" /><path d="m13.5 8.5-5 5" /></>);
@@ -65,8 +64,8 @@ const LK_CSS = `
 .lk-group{display:flex;align-items:center;gap:8px;padding:12px 12px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
 .lk-tag{padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;background:#fdf6e7;color:#8a5a08;}
 .lk-list{position:relative;}
-.lk-pill{position:absolute;left:0;right:0;top:0;border-radius:14px;background:#edf3f9;box-shadow:inset 0 0 0 1px #dfe9f3;pointer-events:none;}
 .lk-row{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;scroll-margin:8px;cursor:default;}
+.lk-row.is-sel{background:#f1f5f9;}
 .lk-row__text{flex:1;min-width:0;}
 .lk-row__label{display:block;font-size:15px;font-weight:600;color:var(--rv-ink);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .lk-row__sub{display:block;margin-top:1px;font-size:12.5px;color:#8a979f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -243,10 +242,10 @@ function subline(entry) {
   return [type, entry.authority].filter(Boolean).join(' · ');
 }
 
-function Row({ entry, query, selected, onHover, flash, rowRef }) {
+function Row({ entry, query, selected, flash, rowRef }) {
   const sub = subline(entry);
   return (
-    <div id={'lk-' + entry.id} ref={rowRef} className={'lk-row' + (selected ? ' is-sel' : '')} onMouseEnter={onHover}>
+    <div id={'lk-' + entry.id} ref={rowRef} className={'lk-row' + (selected ? ' is-sel' : '')}>
       <span className="lk-row__text">
         <span className="lk-row__label"><Highlighted label={entry.label} query={query} /></span>
         {sub ? <span className="lk-row__sub">{sub}</span> : null}
@@ -288,7 +287,6 @@ export default function Page() {
   const [web, setWeb] = React.useState({ for: '', contacts: [], results: [], loading: false, reason: '' });
   const inputRef = React.useRef(null);
   const rowRefs = React.useRef(new Map());
-  const [pill, setPill] = React.useState(null);
 
   const trimmed = query.trim();
   const results = trimmed ? cqc.entries : suggested;
@@ -329,15 +327,6 @@ export default function Page() {
       })
       .catch(() => setWarm(true));
   }, []);
-
-  // The pill is one element, re-measured from the row it sits behind — the
-  // 21st component's approach, which stays right while the list reflows.
-  const selId = selIdx >= 0 && results[selIdx] ? results[selIdx].id : null;
-  React.useLayoutEffect(() => {
-    const row = selId != null ? rowRefs.current.get(selId) : null;
-    const next = row ? { y: row.offsetTop, h: row.offsetHeight } : null;
-    setPill((prev) => (prev && next && prev.y === next.y && prev.h === next.h ? prev : next));
-  }, [selId, results]);
 
   const flashCopied = (label) => {
     setFlash(label);
@@ -392,7 +381,7 @@ export default function Page() {
       <AppHeader subtitle="Instant lookup" />
 
       <main className="lk">
-        <h1 className="lk-h1 riva-hero-h1"><span className="riva-hero-grad">Find a number</span></h1>
+        <h1 className="lk-h1 riva-hero-h1">Find a <span style={{ color: 'var(--rv-accent)' }}>number</span></h1>
 
           <div className="lk-box">
             <span className="lk-box__ico" aria-hidden="true"><Svg w={20} sw={2.2}>{Icons.search}</Svg></span>
@@ -424,13 +413,10 @@ export default function Page() {
                   <div className="lk-group">
                     {trimmed ? results.length + (results.length >= 25 ? '+' : '') + ' results' : 'Hospitals'}
                   </div>
-                  <div className="lk-list" onMouseLeave={() => { if (!trimmed) setSelIdx(-1); }}>
-                    <motion.span className="lk-pill" aria-hidden="true" initial={false}
-                      animate={{ y: pill ? pill.y : 0, height: pill ? pill.h : 0, opacity: pill ? 1 : 0 }}
-                      transition={reduce ? { duration: 0 } : PILL} />
+                  <div className="lk-list">
                     {results.map((entry, i) => (
                       <Row key={entry.id} entry={entry} query={trimmed} selected={i === selIdx}
-                        onHover={() => setSelIdx(i)} flash={() => flashCopied(entry.label)}
+                        flash={() => flashCopied(entry.label)}
                         rowRef={(el) => { if (el) rowRefs.current.set(entry.id, el); else rowRefs.current.delete(entry.id); }} />
                     ))}
                   </div>
