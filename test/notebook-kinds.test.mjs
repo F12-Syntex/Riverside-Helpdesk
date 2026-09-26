@@ -65,8 +65,8 @@ test('what is missing is named per box, never as "incomplete"', () => {
   assert.equal(noteIssues('ersReferral', { ...ERS, clinicType: '', clinicTypeOptions: ['A', 'B'] }).length, 0);
 });
 
-test('an email referral needs the form; the address and notes are optional', () => {
-  assert.ok(noteIssues('emailReferral', { service: 'Echo' }).some((i) => i.field === 'form'));
+test('an email referral requires nothing; only a wrong address is refused', () => {
+  assert.equal(noteIssues('emailReferral', {}).length, 0);
   assert.equal(noteIssues('emailReferral', { service: 'Echo', form: 'RP Echo' }).length, 0);
   assert.equal(noteIssues('emailReferral', { service: 'Echo', form: 'RP Echo', to: 'echo@example.nhs.uk', notes: 'Mark urgent.' }).length, 0);
   // A thing that is not an address is refused rather than shown as one.

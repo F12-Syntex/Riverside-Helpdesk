@@ -56,7 +56,7 @@ export default function EmailForm({ block, edit = null, head = null }) {
           <>
             <EditBox value={b.form} onChange={(v) => edit.set('form', v)} placeholder="RP Echo"
               invalid={!!bad('form')} label="Form" />
-            <EditHint bad={!!bad('form')}>{bad('form') ? bad('form').message : 'The form the doctor fills in, as it is named in EMIS.'}</EditHint>
+            <EditHint bad={!!bad('form')}>{bad('form') ? bad('form').message : 'Optional. The form the doctor fills in, as it is named in EMIS.'}</EditHint>
           </>
         ) : (
           <span style={s('font-size:15px;font-weight:700;color:' + INK + ';')}>{form || 'The referral form the doctor created'}</span>
