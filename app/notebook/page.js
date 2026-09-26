@@ -594,10 +594,24 @@ export default function NotebookPage() {
   // The open page's typed values, always complete for its kind: an editor
   // handed an undefined value renders an uncontrolled box that React then
   // complains about the first time somebody types in it.
-  const selectedFields = React.useMemo(
-    () => (selected && isTypedKind(selected.kind) ? { ...emptyFields(selected.kind), ...normaliseFields(selected.kind, selected.fields) } : {}),
-    [selected],
-  );
+  //
+  // WHAT IS BEING TYPED IS KEPT AS TYPED. normaliseFields trims, which run on
+  // every keystroke ate the space at the end of a box before the next word
+  // could follow it, and dropped a list's new empty row. So it only supplies
+  // the shape: a stored value of the right type wins, untrimmed. The server
+  // coerces on save (updateNote).
+  const selectedFields = React.useMemo(() => {
+    if (!selected || !isTypedKind(selected.kind)) return {};
+    const shape = { ...emptyFields(selected.kind), ...normaliseFields(selected.kind, selected.fields) };
+    const raw = selected.fields && typeof selected.fields === 'object' ? selected.fields : {};
+    for (const key of Object.keys(shape)) {
+      const value = raw[key];
+      if (Array.isArray(shape[key]) ? Array.isArray(value) : typeof value === 'string') {
+        shape[key] = Array.isArray(value) ? value.map((v) => String(v == null ? '' : v)) : value;
+      }
+    }
+    return shape;
+  }, [selected]);
   // WHAT IS MISSING, WORKED OUT HERE AS WELL AS ON THE SERVER. The server
   // decides whether the note is servable; this is the same rules run against
   // what is on screen, so a box turns red as it is emptied rather than 1.8
