@@ -498,3 +498,27 @@ Hospital: the first one that is not a telederm`,
   assert.equal(entry.hospital, '');
   assert.equal(entry.hospitalRule, 'the first one that is not a telederm');
 });
+
+// A typed page draws its own card first, under a bold "e-RS referral" title,
+// then the page as written. The card title is a route, not a referral's name.
+test('a typed page card is named by its Service, not by its route', () => {
+  const page = {
+    docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / ERS referrals / Foot Health referral (ERS) – At Risk Foot podiatry',
+    text: [
+      '**e-RS referral**',
+      '- **Service:** Foot Health',
+      '- **Speciality:** Podiatry',
+      '- **Clinic type:** At Risk Foot',
+      '',
+      '## Foot Health Referral (ERS)',
+      '',
+      '**Speciality:** Podiatry',
+      '**Clinic type:** At Risk Foot',
+    ].join('\n'),
+  };
+  const names = readPathways([page]).map((e) => e.name);
+  assert.ok(!names.some((n) => /^e-?rs referral$/i.test(n)), names.join(' | '));
+  assert.ok(names.includes('Foot Health'), names.join(' | '));
+  const card = referralAnswer({ question: 'foot health referral', name: 'foot health', pages: [page] });
+  assert.doesNotMatch(card.title, /referral referral/i);
+});
