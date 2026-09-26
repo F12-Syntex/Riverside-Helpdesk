@@ -17,9 +17,15 @@
 //
 // Nothing is interactive. The boxes are pictures of the state the screen should
 // end up in, not controls, and they are marked as such for a screen reader.
+//
+// Nothing is interactive UNLESS IT IS BEING WRITTEN — see the same note at the
+// head of ErsForm. Given an `edit` prop the screen is the editor: the tests are
+// typed into the left-hand boxes and the Ordered Items list fills as they are,
+// which is what the real screen does.
 import React from 'react';
 import { s, Svg, Icons } from '../ui';
 import CopyButton from './CopyButton';
+import { EditBox, EditHint, EditList } from './edit';
 
 const INK = '#212b32';
 const LINE = '#4c6272';
@@ -59,8 +65,11 @@ function Missing({ text }) {
 
 // `block` is the pathology block from lib/templates/blocks.mjs, or anything
 // with the same keys.
-export default function PathologyForm({ block }) {
+// `edit` is `{ set(key, value), issues }` — see ErsForm. `head` is the strip
+// above the screen for what the note needs and EMIS does not.
+export default function PathologyForm({ block, edit = null, head = null }) {
   const b = block || {};
+  const bad = (key) => (edit ? (edit.issues || []).find((i) => i.field === key) : null);
   const ticked = (b.groups || []).filter((g) => g && (g.tests || []).length);
   const ordered = (b.ordered || []).filter(Boolean);
   const details = String(b.clinicalDetails || '').trim();
@@ -85,6 +94,7 @@ export default function PathologyForm({ block }) {
       <div style={s('padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
         On the blood form
       </div>
+      {head}
       <div style={s('padding:16px 18px 18px;background:#f0f4f5;')}>
         <div style={s('font-size:20px;font-weight:700;color:' + INK + ';margin:0 0 3px;')}>Test Requests</div>
         <div style={s('font-size:13.5px;color:' + LINE + ';margin:0 0 14px;')}>Order tab → {b.section || 'Pathology'}</div>
@@ -94,7 +104,30 @@ export default function PathologyForm({ block }) {
               reader can find each one without scrolling the whole form. */}
           <div style={s('flex:1 1 240px;min-width:0;')}>
             <Label>{offered.length ? (on.size ? 'Tick these' : 'The boxes on the form') : 'Tick these'}</Label>
-            {sections.length ? sections.map((g) => (
+            {edit ? (
+              <div style={s('background:#fff;border:2px solid ' + (bad('ordered') ? '#d5281b' : LINE) + ';padding:10px 12px 12px;')}>
+                {/* Each row is a box on the form, ticked because it is one the
+                    practice orders. Typing the name is what ticks it; there is
+                    no separate control, because a ticked box with no name and a
+                    name with no tick are both states the screen cannot be in. */}
+                {/* `b.ordered`, NOT the filtered `ordered` above. That one
+                    drops empty entries, which is right for drawing a card and
+                    wrong here: the blank row this adds was being filtered out
+                    before anybody could type into it. */}
+                <EditList value={b.ordered} onChange={(v) => edit.set('ordered', v)}
+                  placeholder="Electrolytes + Creatinine" addLabel="Add a test" label="Test"
+                  renderBefore={(row) => (
+                    <span aria-hidden="true" style={s('flex:none;width:19px;height:19px;border:2px solid ' + LINE + ';background:#fff;display:inline-flex;align-items:center;justify-content:center;')}>
+                      {String(row || '').trim() ? <Svg w={13} stroke="#007f3b" sw={3.2}>{Icons.check}</Svg> : null}
+                    </span>
+                  )} />
+                <EditHint bad={!!bad('ordered')}>
+                  {bad('ordered')
+                    ? bad('ordered').message
+                    : 'Named exactly as the EMIS screen lists them, in the order it lists them.'}
+                </EditHint>
+              </div>
+            ) : sections.length ? sections.map((g) => (
               <div key={g.heading} style={s('margin:0 0 10px;background:#fff;border:2px solid ' + LINE + ';padding:8px 12px 10px;')}>
                 <div style={s('font-size:13.5px;font-weight:700;color:' + LINE + ';margin:0 0 2px;')}>{g.heading}</div>
                 {(g.tests || []).map((t) => <Box key={t} test={t} on={on.has(t)} />)}
@@ -117,17 +150,25 @@ export default function PathologyForm({ block }) {
             </div>
 
             <Label>Clinical details</Label>
-            <div style={s('display:flex;align-items:flex-start;gap:8px;')}>
-              <div role="img" aria-label={'Clinical details: ' + (details || b.detailsMissing || 'empty')}
-                style={s('flex:1 1 auto;min-width:0;background:#fff;border:2px solid ' + (details ? LINE : '#b58500') + ';padding:9px 12px;min-height:44px;')}>
-                {details
-                  ? <span style={s('font-size:16px;font-weight:700;color:' + INK + ';overflow-wrap:anywhere;')}>{details}</span>
-                  : <Missing text={b.detailsMissing || 'The type of health check'} />}
+            {edit ? (
+              <>
+                <EditBox value={b.clinicalDetails} onChange={(v) => edit.set('clinicalDetails', v)}
+                  placeholder="New patient health check" label="Clinical details" />
+                <EditHint>What goes in the Clinical Details box — usually the type of review. The laboratory reads it.</EditHint>
+              </>
+            ) : (
+              <div style={s('display:flex;align-items:flex-start;gap:8px;')}>
+                <div role="img" aria-label={'Clinical details: ' + (details || b.detailsMissing || 'empty')}
+                  style={s('flex:1 1 auto;min-width:0;background:#fff;border:2px solid ' + (details ? LINE : '#b58500') + ';padding:9px 12px;min-height:44px;')}>
+                  {details
+                    ? <span style={s('font-size:16px;font-weight:700;color:' + INK + ';overflow-wrap:anywhere;')}>{details}</span>
+                    : <Missing text={b.detailsMissing || 'The type of health check'} />}
+                </div>
+                {/* It gets typed into a box on another screen, so it carries its
+                    own Copy — the same argument every other copied value makes. */}
+                {details && <CopyButton value={details} />}
               </div>
-              {/* It gets typed into a box on another screen, so it carries its
-                  own Copy — the same argument every other copied value makes. */}
-              {details && <CopyButton value={details} />}
-            </div>
+            )}
           </div>
         </div>
       </div>

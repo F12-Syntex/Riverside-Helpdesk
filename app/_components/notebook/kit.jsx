@@ -250,12 +250,10 @@ export const KIT_CSS = `
 .nbk-menu__icon{flex:none;display:flex;color:var(--nbk-dim);}
 .nbk-menu__item--accent .nbk-menu__icon{color:var(--nbk-blue);}
 .nbk-menu__item--danger .nbk-menu__icon{color:var(--nbk-red);}
-.nbk-menu__label{padding:9px 10px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--nbk-dim);}
+.nbk-menu__item--open{background:var(--nbk-soft);}
+.nbk-menu__hint{flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;color:var(--nbk-dim);}
 .nbk-menu__sep{height:1px;background:var(--nbk-line-soft);margin:5px 6px;}
-.nbk-menu__opt{display:flex;align-items:flex-start;gap:10px;width:100%;border:none;background:none;border-radius:12px;
-  padding:8px 10px;margin:1px 0;font:inherit;text-align:left;cursor:pointer;transition:background-color .14s ease;}
-.nbk-menu__opt:hover{background:var(--nbk-soft);}
-.nbk-menu__swatch{flex:none;margin-top:3px;width:11px;height:11px;border-radius:3px;}
+.nbk-menu__swatch{flex:none;width:9px;height:9px;border-radius:50%;margin:0 3.5px;}
 
 /* ------------------------------ progress ---------------------------- */
 /* The working card's bar: the theme's colours, a sheen, only forward. */
@@ -712,21 +710,73 @@ export function MenuItem({ icon, tone = '', children, ...rest }) {
   );
 }
 
-export function MenuLabel({ children }) { return <div className="nbk-menu__label">{children}</div>; }
 export function MenuSeparator() { return <div className="nbk-menu__sep" />; }
 
-/** A menu row that is a choice: swatch, name, one line of help, and a tick. */
-export function MenuOption({ swatch, hollow = false, label, help, selected = false, colour, ...rest }) {
-  const c = colour || { ink: T.mut, tint: T.soft, edge: T.line };
+/**
+ * A row that opens a second menu beside it - where a list of choices goes, so
+ * the first menu stays one line per action. It opens on hover or click, sits
+ * to the right of its row (left when the window has no room), and survives
+ * the pointer crossing the gap between the two.
+ */
+export function MenuSub({ icon, label, hint, children }) {
+  const ref = React.useRef(null);
+  const timer = React.useRef(null);
+  const [anchor, setAnchor] = React.useState(null);
+  const open = () => {
+    clearTimeout(timer.current);
+    if (ref.current) setAnchor(ref.current.getBoundingClientRect());
+  };
+  const close = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setAnchor(null), 140); };
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+
   return (
-    <button type="button" {...rest} className="nbk-menu__opt" style={selected ? { background: c.tint } : undefined}>
+    <div onMouseEnter={open} onMouseLeave={close}>
+      <button ref={ref} type="button" aria-haspopup="menu" aria-expanded={!!anchor} onClick={open}
+        onKeyDown={(e) => { if (e.key === 'ArrowRight') open(); if (e.key === 'ArrowLeft') setAnchor(null); }}
+        className={cx('nbk-menu__item', anchor && 'nbk-menu__item--open')}>
+        {icon && <span className="nbk-menu__icon"><Svg w={16} sw={2}>{icon}</Svg></span>}
+        <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
+        {hint && <span className="nbk-menu__hint">{hint}</span>}
+        <span className="nbk-menu__icon"><Svg w={14} sw={2.2}>{Icons.chevronRight}</Svg></span>
+      </button>
+      {anchor && <SubPanel anchor={anchor} onMouseEnter={open}>{children}</SubPanel>}
+    </div>
+  );
+}
+
+function SubPanel({ anchor, children, onMouseEnter }) {
+  const ref = React.useRef(null);
+  const [box, setBox] = React.useState(null);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const m = 8;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    let left = anchor.right + 6;
+    if (left + w > window.innerWidth - m) left = Math.max(m, anchor.left - w - 6);
+    let top = anchor.top - 7;
+    if (top + h > window.innerHeight - m) top = Math.max(m, window.innerHeight - h - m);
+    setBox({ left, top });
+  }, [anchor]);
+  return (
+    <div ref={ref} role="menu" className="nbk-menu" onMouseEnter={onMouseEnter}
+      style={{ left: (box ? box.left : anchor.right) + 'px', top: (box ? box.top : anchor.top) + 'px',
+        minWidth: '176px', visibility: box ? 'visible' : 'hidden' }}>
+      {children}
+    </div>
+  );
+}
+
+/** One choice in a submenu: a coloured dot, its name, and a tick on the current one. */
+export function MenuChoice({ colour, hollow = false, selected = false, children, ...rest }) {
+  const ink = (colour && colour.ink) || T.mut;
+  return (
+    <button type="button" role="menuitemradio" aria-checked={selected} {...rest} className="nbk-menu__item">
       <span className="nbk-menu__swatch"
-        style={{ background: hollow ? '#fff' : swatch || c.ink, boxShadow: 'inset 0 0 0 1px ' + (hollow ? T.line : swatch || c.ink) }} />
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: '14px', fontWeight: selected ? 700 : 500, color: selected ? c.ink : T.ink }}>{label}</span>
-        {help && <span style={{ display: 'block', marginTop: '1px', fontSize: '11.5px', lineHeight: 1.45, color: T.dim }}>{help}</span>}
-      </span>
-      <span style={{ flex: 'none', width: '14px', marginTop: '2px', display: 'flex', color: c.ink }}>
+        style={{ background: hollow ? 'transparent' : ink, boxShadow: hollow ? 'inset 0 0 0 1.5px ' + T.line : 'none' }} />
+      <span style={{ flex: 1, minWidth: 0, fontWeight: selected ? 700 : 600 }}>{children}</span>
+      <span style={{ flex: 'none', width: '14px', display: 'flex', color: T.blue }}>
         {selected ? <Svg w={14} sw={2.8}>{Icons.check}</Svg> : null}
       </span>
     </button>
