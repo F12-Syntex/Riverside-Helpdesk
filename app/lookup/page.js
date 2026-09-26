@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { s, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { markRegisterWarm, registerIsWarm } from '../_components/contacts/ContactSearchLoader';
@@ -32,19 +32,18 @@ const MAIL = (<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 
 const GLOBE = (<><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" /></>);
 
 const LK_CSS = `
-.lk{flex:1;width:100%;max-width:720px;margin:0 auto;padding:0 20px 80px;transition:padding-top .5s cubic-bezier(.2,.8,.3,1);}
-.lk.is-idle{padding-top:9vh;}
-.lk.is-busy{padding-top:18px;}
+.lk{flex:1;width:100%;max-width:720px;margin:0 auto;padding:24px 20px;}
 
 /* ---- the palette: one floating card ---- */
-.lk-card{position:relative;background:rgba(255,255,255,.94);border-radius:22px;
+/* ONE SIZE, ALWAYS. The card never grows, shrinks or moves with what is in
+   it: the box and the foot are fixed, and everything between scrolls. */
+.lk-card{position:relative;display:flex;flex-direction:column;height:min(680px,calc(100vh - 120px));min-height:360px;overflow:hidden;background:rgba(255,255,255,.94);border-radius:22px;
   -webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);
   box-shadow:0 0 0 1px rgba(33,43,50,.06),0 2px 4px rgba(33,43,50,.04),0 24px 60px -18px rgba(0,48,135,.22);}
 
 /* ---- the box ---- */
-.lk-box{position:sticky;top:12px;z-index:5;display:flex;align-items:center;gap:4px;height:62px;padding:0 10px 0 20px;
+.lk-box{flex:none;display:flex;align-items:center;gap:4px;height:62px;padding:0 10px 0 20px;
   background:rgba(255,255,255,.96);border-radius:22px 22px 0 0;}
-.lk-card.is-flat .lk-box{border-radius:22px;}
 .lk-box__ico{flex:none;display:flex;color:var(--rv-ink-3);transition:color .15s ease;}
 .lk-box:focus-within .lk-box__ico{color:var(--rv-accent);}
 .lk-input{flex:1;min-width:0;height:100%;border:none !important;background:transparent !important;outline:none !important;box-shadow:none !important;
@@ -57,12 +56,13 @@ const LK_CSS = `
 .lk-count{flex:none;margin-right:8px;font-size:12px;font-weight:600;color:#9aa6ae;font-variant-numeric:tabular-nums;}
 
 /* ---- the list ---- */
-.lk-body{position:relative;padding:4px 8px 8px;border-top:1px solid #eef2f4;}
+.lk-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 8px;border-top:1px solid #eef2f4;
+  scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
 .lk-group{display:flex;align-items:center;gap:8px;padding:12px 12px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
 .lk-tag{padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;background:#fdf6e7;color:#8a5a08;}
 .lk-list{position:relative;}
 .lk-pill{position:absolute;left:0;right:0;top:0;border-radius:14px;background:#edf3f9;box-shadow:inset 0 0 0 1px #dfe9f3;pointer-events:none;}
-.lk-row{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;scroll-margin:140px;cursor:default;}
+.lk-row{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;scroll-margin:8px;cursor:default;}
 .lk-row__text{flex:1;min-width:0;}
 .lk-row__label{display:block;font-size:15px;font-weight:600;color:var(--rv-ink);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .lk-row__sub{display:block;margin-top:1px;font-size:12.5px;color:#8a979f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -93,12 +93,6 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 /* ---- a state that is not a list ---- */
 .lk-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:30px 20px 26px;}
 .lk-state__ico{display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:14px;background:#f1f5f9;color:#8a979f;margin-bottom:6px;}
-.lk-state__art{width:120px;height:120px;margin:-8px 0 2px;pointer-events:none;user-select:none;}
-
-/* ---- the 3D art over the opening screen ---- */
-.lk-hero{display:flex;justify-content:center;margin:0 0 -34px;perspective:900px;pointer-events:none;position:relative;z-index:1;}
-.lk-hero img{width:210px;height:210px;user-select:none;filter:drop-shadow(0 26px 30px rgba(0,48,135,.18));}
-@media (max-width:600px){ .lk-hero img{width:150px;height:150px;} .lk-hero{margin-bottom:-24px;} }
 .lk-state__title{margin:0;font-size:15.5px;font-weight:650;color:var(--rv-ink);overflow-wrap:anywhere;}
 .lk-state__acts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px;}
 .lk-btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:none;font:inherit;font-size:14px;
@@ -112,7 +106,7 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 .lk-btn .riva-kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff;}
 
 /* ---- the foot ---- */
-.lk-foot{display:flex;align-items:center;gap:14px;padding:10px 20px;border-top:1px solid #eef2f4;font-size:12px;font-weight:550;color:#9aa6ae;}
+.lk-foot{flex:none;display:flex;align-items:center;gap:14px;padding:10px 20px;border-top:1px solid #eef2f4;font-size:12px;font-weight:550;color:#9aa6ae;}
 .lk-foot span{display:inline-flex;align-items:center;gap:5px;}
 
 /* ---- the copied toast ---- */
@@ -122,8 +116,8 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 .lk-toast__ico{flex:none;display:flex;color:#6fd39b;}
 
 @media (max-width:600px){
-  .lk{padding:0 12px 60px;}
-  .lk.is-idle{padding-top:4vh;}
+  .lk{padding:12px;}
+  .lk-card{height:calc(100vh - 100px);}
   .lk-box{height:56px;padding-left:16px;}
   .lk-input{font-size:16px;}
   .lk-count,.lk-foot{display:none;}
@@ -202,34 +196,10 @@ function Skeleton({ rows = 4 }) {
   );
 }
 
-// A generated 3D render (Higgsfield, public/assets/3d) that floats: a slow
-// bob, and on the opening screen a tilt that follows the pointer, so the
-// object reads as sitting in space above the card rather than printed on it.
-function Float3D({ src, className, amplitude = 8, tilt = false }) {
-  const reduce = useReducedMotion();
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-1, 1], [10, -10]), { stiffness: 120, damping: 18 });
-  const ry = useSpring(useTransform(mx, [-1, 1], [-14, 14]), { stiffness: 120, damping: 18 });
-  React.useEffect(() => {
-    if (!tilt || reduce) return undefined;
-    const move = (e) => { mx.set((e.clientX / window.innerWidth) * 2 - 1); my.set((e.clientY / window.innerHeight) * 2 - 1); };
-    window.addEventListener('pointermove', move);
-    return () => window.removeEventListener('pointermove', move);
-  }, [tilt, reduce, mx, my]);
-  return (
-    <motion.img src={src} alt="" aria-hidden="true" draggable={false} className={className}
-      style={tilt && !reduce ? { rotateX: rx, rotateY: ry } : undefined}
-      animate={reduce ? undefined : { y: [0, -amplitude, 0] }}
-      transition={reduce ? undefined : { duration: 5.5, repeat: Infinity, ease: 'easeInOut' }} />
-  );
-}
-
-function State({ icon, art, title, children }) {
+function State({ icon, title, children }) {
   return (
     <motion.div className="lk-state" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: EASE }}>
-      {art ? <Float3D src={art} className="lk-state__art" amplitude={5} />
-        : <span className="lk-state__ico" aria-hidden="true"><Svg w={20} sw={2}>{icon}</Svg></span>}
+      <span className="lk-state__ico" aria-hidden="true"><Svg w={20} sw={2}>{icon}</Svg></span>
       <p className="lk-state__title">{title}</p>
       {children ? <div className="lk-state__acts">{children}</div> : null}
     </motion.div>
@@ -411,25 +381,14 @@ export default function Page() {
 
   const focusBox = () => { if (inputRef.current) inputRef.current.focus(); };
   const clear = () => { setQuery(''); focusBox(); };
-  const hasBody = results.length || searching || (!trimmed && !warm) || nothingFound || webShown;
 
   return (
     <div style={s('min-height:100vh;display:flex;flex-direction:column;')}>
       <style data-lk="1" dangerouslySetInnerHTML={{ __html: LK_CSS }} />
       <AppHeader subtitle="Instant lookup" />
 
-      <main className={'lk ' + (trimmed ? 'is-busy' : 'is-idle')}>
-        <AnimatePresence initial={false}>
-          {!trimmed ? (
-            <motion.div key="hero" className="lk-hero"
-              initial={{ opacity: 0, scale: 0.9, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: -8, transition: { duration: 0.2 } }}
-              transition={{ duration: 0.6, ease: EASE }}>
-              <Float3D src="/assets/3d/lookup.webp" amplitude={10} tilt />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-        <motion.div className={'lk-card' + (hasBody ? '' : ' is-flat')}
+      <main className="lk">
+        <motion.div className="lk-card"
           initial={reduce ? false : { opacity: 0, y: 14, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, ease: EASE }}>
 
@@ -453,7 +412,6 @@ export default function Page() {
             ) : total ? <span className="lk-count">{total}</span> : null}
           </div>
 
-          {hasBody ? (
             <div className="lk-body">
               {results.length ? (
                 <>
@@ -476,7 +434,7 @@ export default function Page() {
               {searching || (!trimmed && !warm && !results.length) ? <Skeleton /> : null}
 
               {nothingFound && !webShown ? (
-                <State art="/assets/3d/nomatch.webp" title={'Nothing on the register for “' + trimmed + '”'}>
+                <State icon={SEARCH_X} title={'Nothing on the register for “' + trimmed + '”'}>
                   <button type="button" className="lk-btn lk-btn--primary" onClick={() => searchWeb(trimmed)}>
                     <Svg w={15} sw={2.2}>{GLOBE}</Svg>Search the web <Kbd>Enter</Kbd>
                   </button>
@@ -514,7 +472,7 @@ export default function Page() {
                         </div>
                       ))}
                       {!web.contacts.length ? (
-                        <State art="/assets/3d/web.webp" title={web.reason || 'No number found'}>
+                        <State icon={SEARCH_X} title={web.reason || 'No number found'}>
                           <a href={'https://www.google.com/search?q=' + encodeURIComponent(trimmed + ' phone number')}
                             target="_blank" rel="noreferrer" className="lk-btn lk-btn--ghost">
                             <Svg w={14} sw={2.2}>{Icons.external}</Svg>Google it
@@ -540,15 +498,12 @@ export default function Page() {
                 </section>
               ) : null}
             </div>
-          ) : null}
 
-          {tooShort ? null : (
             <div className="lk-foot" aria-hidden="true">
               <span><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
               <span><Kbd>Enter</Kbd> copy</span>
               <span><Kbd>Esc</Kbd> clear</span>
             </div>
-          )}
         </motion.div>
       </main>
 
