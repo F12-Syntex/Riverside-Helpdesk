@@ -507,6 +507,13 @@ body { overflow-x: hidden; }
   min-height: max(0px, calc(100dvh - var(--riva-header-h) - var(--riva-column-pad-t) - var(--riva-hero-clear) - var(--riva-dock-attached)));
 }
 
+/* Page headings are labels, not content: a stray drag or double-click
+ * shouldn't paint them. */
+.riva-hero-block, .riva-hero-h1 {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* The opening screen arrives a line at a time rather than as one block. */
 .riva-hero-block > * { animation: rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both; }
 .riva-hero-block > :nth-child(1) { animation-delay: .04s; }
