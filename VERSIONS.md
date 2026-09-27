@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.41.0` | 2026-09-27 | feat | `f9f1329` | feat: redraw the dot grid in three.js and calm its rings |
+| `6.40.8` | 2026-09-27 | docs | `b8eb8ee` | docs: record the heading selection fix in the versions table |
 | `6.40.7` | 2026-09-27 | style | `0ab7406` | style: stop page headings being highlighted on drag or double-click |
 | `6.40.6` | 2026-09-26 | docs | `776be37` | docs: record the referral speed-up in the versions table |
 | `6.40.5` | 2026-09-26 | fix | `1988a82` | fix: name typed referral cards by their service, not their route |
