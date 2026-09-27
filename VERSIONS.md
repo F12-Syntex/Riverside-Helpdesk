@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.40.7` | 2026-09-27 | style | `0ab7406` | style: stop page headings being highlighted on drag or double-click |
+| `6.40.6` | 2026-09-26 | docs | `776be37` | docs: record the referral speed-up in the versions table |
 | `6.40.5` | 2026-09-26 | fix | `1988a82` | fix: name typed referral cards by their service, not their route |
 | `6.40.4` | 2026-09-26 | perf | `4194783` | perf: read referrals beside the picker, off referral pages only |
 | `6.40.3` | 2026-09-26 | docs | `54339e2` | docs: record the sonar grid fix in the versions table |
