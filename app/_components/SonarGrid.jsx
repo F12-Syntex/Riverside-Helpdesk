@@ -5,25 +5,28 @@ import React from 'react';
 /* ------------------------------------------------------------------ *
  * SonarGrid — the dot grid over the light, answering back.
  *
- * Ported from n1m4mz's "Sonar Grid" (21st.dev, MIT). A canvas of dots in
- * the theme's colour; rings of brighter, larger dots spread out from
- * wherever somebody clicks, and an ambient ping now and then keeps it
- * alive. One ring is already mid-flight at first paint.
+ * Drawn with three.js: one Points object, every dot on the GPU. The
+ * grid breathes — a slow swell rolls across it, a few dots at a time
+ * growing and fading — and a ring now and then spreads out through it.
+ * Rings are rare while the page is idle and come more often while an
+ * answer is being worked out (<html data-busy>), so the page still says
+ * it is working without asking to be looked at the rest of the time.
  *
  * It sits behind the shell with pointer-events off, so clicks are heard
- * on the window rather than on the canvas: a click anywhere on the page
- * sends a ring out from under it. While an answer is being worked out
- * (<html data-busy>) the pings come three times as often.
+ * on the window rather than on the canvas: a click on bare page sends a
+ * ring out from under it.
  *
  * COST
  * ----
- * Idles between rings (a timeout, not a frame loop), pauses in a hidden
- * tab, and draws a still grid under reduced motion.
+ * three.js is loaded only once the page is up (a dynamic import). One
+ * draw call, thirty frames a second, paused in a hidden tab, and a still
+ * grid under reduced motion. No WebGL: nothing is drawn, and the light
+ * behind (ShaderBackground) is left on its own.
  * ------------------------------------------------------------------ */
 
 const MAX_DPR = 2;
-const TAU = Math.PI * 2;
-const AREA = [0.12, 0.15, 0.88, 0.85];
+const MAX_RINGS = 4;
+const AREA = [0.12, 0.18, 0.88, 0.82];
 
 // Things that are used, not looked through: a click on them is theirs.
 const CONTROL = 'a, button, input, textarea, select, label, summary, video, audio, canvas, iframe, [role], [contenteditable], [tabindex], header, nav, dialog';
@@ -42,182 +45,263 @@ function onBackdrop(target) {
   return true;
 }
 
+const VERT = `
+uniform float uTime;
+uniform float uPx;
+uniform float uRadius;
+uniform float uBase;
+uniform float uSpeed;
+uniform float uWidth;
+uniform float uLife;
+uniform float uAmp;
+uniform vec4 uRings[${MAX_RINGS}];
+varying float vAlpha;
+varying float vSize;
+
+void main() {
+  vec2 p = position.xy;
+
+  // The swell: two slow waves crossing at an angle, so the bright patches
+  // wander rather than march. Only the top of each wave shows at all.
+  float s1 = sin(dot(p, vec2(0.0042, 0.0027)) - uTime * 0.32);
+  float s2 = sin(dot(p, vec2(-0.0021, 0.0038)) - uTime * 0.21 + 1.7);
+  float swell = smoothstep(0.35, 1.0, (s1 + s2) * 0.5 + 0.5);
+
+  // Rings: x, y, born (seconds), and w = 1 while the slot is in use.
+  float ring = 0.0;
+  for (int i = 0; i < ${MAX_RINGS}; i++) {
+    vec4 r = uRings[i];
+    if (r.w < 0.5) continue;
+    float age = uTime - r.z;
+    if (age < 0.0 || age > uLife) continue;
+    float d = abs(distance(p, r.xy) - age * uSpeed);
+    if (d >= uWidth) continue;
+    float t = 1.0 - d / uWidth;
+    float k = t * t * (3.0 - 2.0 * t) * (1.0 - age / uLife);
+    ring = max(ring, k);
+  }
+
+  float e = max(ring, swell * 0.35);
+  vAlpha = uBase + (1.0 - uBase) * e;
+  vSize = uRadius * (1.0 + uAmp * e);
+  // Two spare pixels so the edge can be smoothed in the fragment shader.
+  gl_PointSize = (vSize * 2.0 + 2.0) * uPx;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 0.0, 1.0);
+}
+`;
+
+const FRAG = `
+uniform vec3 uColor;
+varying float vAlpha;
+varying float vSize;
+
+void main() {
+  // Distance from the centre in CSS pixels; a one-pixel soft edge.
+  float half_ = vSize + 1.0;
+  float d = length(gl_PointCoord - 0.5) * 2.0 * half_;
+  float a = 1.0 - smoothstep(vSize - 0.5, vSize + 0.5, d);
+  if (a <= 0.0) discard;
+  gl_FragColor = vec4(uColor, a * vAlpha);
+}
+`;
+
 export default function SonarGrid({
-  spacing = 24,
-  dotRadius = 1.2,
-  baseOpacity = 0.4,
-  pingEvery = 3.2,
-  speed = 240,
-  ringWidth = 90,
-  amplitude = 2.2,
-  maxRings = 6,
+  spacing = 30,
+  dotRadius = 1.1,
+  baseOpacity = 0.3,
+  pingEvery = 14,
+  busyPingEvery = 5,
+  speed = 170,
+  ringWidth = 130,
+  amplitude = 1.3,
   pingArea = AREA,
   className,
 }) {
   const hostRef = React.useRef(null);
-  const canvasRef = React.useRef(null);
 
   React.useEffect(() => {
     const host = hostRef.current;
-    const canvas = canvasRef.current;
-    if (!host || !canvas) return undefined;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return undefined;
+    if (!host) return undefined;
+    let disposed = false;
+    let teardown = () => {};
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let rings = [];
-    let width = 0;
-    let height = 0;
-    let raf = 0;
-    let timer = 0;
-    let fill = '';
+    import('three').then((THREE) => {
+      if (disposed) return;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    const every = () => pingEvery * 1000 / (document.documentElement.dataset.busy ? 3 : 1);
-    let nextPing = performance.now() + every();
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: 'low-power' });
+      } catch {
+        return;
+      }
+      renderer.setClearColor(0x000000, 0);
+      const canvas = renderer.domElement;
+      canvas.style.display = 'block';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      host.appendChild(canvas);
 
-    const readColor = () => { fill = getComputedStyle(canvas).color; };
+      const scene = new THREE.Scene();
+      // Pixel units with the origin at the top left, like the page.
+      const camera = new THREE.OrthographicCamera(0, 1, 0, 1, -1, 1);
 
-    const addRing = (x, y, born) => {
-      rings.push({ x, y, born });
-      while (rings.length > maxRings) rings.shift();
-    };
-
-    const draw = (now) => {
-      const lifetime = (Math.hypot(width, height) + ringWidth) / speed;
-      rings = rings.filter((r) => (now - r.born) / 1000 < lifetime);
-      const live = rings.map((r) => {
-        const age = (now - r.born) / 1000;
-        const radius = age * speed;
-        return { x: r.x, y: r.y, radius, reach: radius + ringWidth, fade: 1 - age / lifetime };
+      const rings = Array.from({ length: MAX_RINGS }, () => new THREE.Vector4(0, 0, 0, 0));
+      let nextSlot = 0;
+      const uniforms = {
+        uTime: { value: 0 },
+        uPx: { value: 1 },
+        uRadius: { value: dotRadius },
+        uBase: { value: baseOpacity },
+        uSpeed: { value: speed },
+        uWidth: { value: ringWidth },
+        uLife: { value: 1 },
+        uAmp: { value: amplitude },
+        uRings: { value: rings },
+        uColor: { value: new THREE.Color() },
+      };
+      const material = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
       });
+      const geometry = new THREE.BufferGeometry();
+      const points = new THREE.Points(geometry, material);
+      points.frustumCulled = false;
+      scene.add(points);
 
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = fill;
+      const start = performance.now();
+      const clock = () => (performance.now() - start) / 1000;
+      const every = () => (document.documentElement.dataset.busy ? busyPingEvery : pingEvery);
+      // The first ambient ring waits a full interval: the page opens quiet.
+      let nextPing = every();
+      let width = 1;
+      let height = 1;
+      let raf = 0;
+      let last = 0;
 
-      const cols = Math.ceil(width / spacing) + 1;
-      const rows = Math.ceil(height / spacing) + 1;
-      const offsetX = (width - (cols - 1) * spacing) / 2;
-      const offsetY = (height - (rows - 1) * spacing) / 2;
+      const readColor = () => { uniforms.uColor.value.setStyle(getComputedStyle(host).color); };
 
-      // Pass 1: every resting dot in one path and one fill.
-      const hot = [];
-      ctx.globalAlpha = baseOpacity;
-      ctx.beginPath();
-      for (let i = 0; i < cols; i++) {
-        const cx = offsetX + i * spacing;
-        for (let j = 0; j < rows; j++) {
-          const cy = offsetY + j * spacing;
-          let energy = 0;
-          for (const r of live) {
-            if (Math.abs(cx - r.x) > r.reach || Math.abs(cy - r.y) > r.reach) continue;
-            const dist = Math.abs(Math.hypot(cx - r.x, cy - r.y) - r.radius);
-            if (dist >= ringWidth) continue;
-            const t = 1 - dist / ringWidth;
-            const k = t * t * (3 - 2 * t) * r.fade;
-            if (k > energy) energy = k;
-          }
-          if (energy < 0.01) {
-            ctx.moveTo(cx + dotRadius, cy);
-            ctx.arc(cx, cy, dotRadius, 0, TAU);
-          } else {
-            hot.push(cx, cy, energy);
+      const addRing = (x, y) => {
+        rings[nextSlot].set(x, y, clock(), 1);
+        nextSlot = (nextSlot + 1) % MAX_RINGS;
+      };
+
+      const render = () => {
+        uniforms.uTime.value = reduceMotion.matches ? 0 : clock();
+        renderer.render(scene, camera);
+      };
+
+      const resize = () => {
+        const rect = host.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect.width));
+        height = Math.max(1, Math.round(rect.height));
+        const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(width, height, false);
+        camera.right = width;
+        camera.bottom = height;
+        camera.updateProjectionMatrix();
+        uniforms.uPx.value = dpr;
+        uniforms.uLife.value = (Math.hypot(width, height) * 0.6 + ringWidth) / speed;
+
+        const cols = Math.ceil(width / spacing) + 1;
+        const rows = Math.ceil(height / spacing) + 1;
+        const ox = (width - (cols - 1) * spacing) / 2;
+        const oy = (height - (rows - 1) * spacing) / 2;
+        const pos = new Float32Array(cols * rows * 3);
+        let k = 0;
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            pos[k++] = ox + i * spacing;
+            pos[k++] = oy + j * spacing;
+            pos[k++] = 0;
           }
         }
-      }
-      ctx.fill();
+        geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        render();
+      };
 
-      // Pass 2: only the dots on a wavefront get their own alpha and size.
-      for (let k = 0; k < hot.length; k += 3) {
-        const energy = hot[k + 2];
-        ctx.globalAlpha = baseOpacity + (1 - baseOpacity) * energy;
-        ctx.beginPath();
-        ctx.arc(hot[k], hot[k + 1], dotRadius * (1 + amplitude * energy), 0, TAU);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    };
+      const loop = (now) => {
+        raf = requestAnimationFrame(loop);
+        if (now - last < 33) return;
+        last = now;
+        const t = clock();
+        if (t >= nextPing) {
+          const [x0, y0, x1, y1] = pingArea;
+          addRing(width * (x0 + Math.random() * (x1 - x0)), height * (y0 + Math.random() * (y1 - y0)));
+          nextPing = t + every();
+        }
+        render();
+      };
 
-    const tick = (now) => {
-      raf = 0;
-      if (document.hidden) return;
-      if (reduceMotion.matches) { rings = []; draw(now); return; }
-      if (now >= nextPing) {
-        const [x0, y0, x1, y1] = pingArea;
-        addRing(width * (x0 + Math.random() * (x1 - x0)), height * (y0 + Math.random() * (y1 - y0)), now);
-        nextPing = now + every();
-      }
-      draw(now);
-      if (rings.length > 0) raf = requestAnimationFrame(tick);
-      else {
-        window.clearTimeout(timer);
-        timer = window.setTimeout(() => tick(performance.now()), Math.max(16, nextPing - now));
-      }
-    };
+      const run = () => {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        if (reduceMotion.matches) { render(); return; }
+        if (!document.hidden) raf = requestAnimationFrame(loop);
+      };
 
-    const wake = () => {
-      if (raf) return;
-      window.clearTimeout(timer);
-      raf = requestAnimationFrame(tick);
-    };
+      const onDown = (e) => {
+        if (reduceMotion.matches || !onBackdrop(e.target)) return;
+        const rect = host.getBoundingClientRect();
+        addRing(e.clientX - rect.left, e.clientY - rect.top);
+      };
+      const onVisibility = () => run();
+      const onTheme = () => { readColor(); render(); };
+      const onLost = (e) => { e.preventDefault(); cancelAnimationFrame(raf); raf = 0; };
+      const onRestored = () => { resize(); run(); };
+      // Busy flips the ping rate; when it starts, pull the next ring in so
+      // the page answers soon. Only a real flip counts: the root's style
+      // changes for other reasons too.
+      let wasBusy = !!document.documentElement.dataset.busy;
+      const mo = new MutationObserver(() => {
+        const busy = !!document.documentElement.dataset.busy;
+        if (busy !== wasBusy) {
+          wasBusy = busy;
+          nextPing = Math.min(nextPing, clock() + (busy ? 0.6 : every()));
+        }
+        readColor();
+      });
 
-    let seeded = false;
-    const resize = () => {
-      const rect = host.getBoundingClientRect();
-      width = Math.max(1, Math.round(rect.width));
-      height = Math.max(1, Math.round(rect.height));
-      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!seeded) {
-        seeded = true;
-        const [x0, y0, x1, y1] = pingArea;
-        if (!reduceMotion.matches) addRing(width * (x0 + (x1 - x0) * 0.68), height * (y0 + (y1 - y0) * 0.34), performance.now() - 500);
-      }
-      draw(performance.now());
-    };
-
-    const onDown = (e) => {
-      if (reduceMotion.matches || !onBackdrop(e.target)) return;
-      const rect = host.getBoundingClientRect();
-      addRing(e.clientX - rect.left, e.clientY - rect.top, performance.now());
-      wake();
-    };
-    const onVisibility = () => { if (!document.hidden) wake(); };
-    const onTheme = () => { readColor(); wake(); };
-    // Busy flips the ping rate; pull the next ping in so it answers at once.
-    const mo = new MutationObserver(() => {
-      nextPing = Math.min(nextPing, performance.now() + every());
+      const ro = new ResizeObserver(resize);
       readColor();
-      wake();
+      resize();
+      ro.observe(host);
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-busy', 'data-theme', 'class', 'style'] });
+      window.addEventListener('pointerdown', onDown, { passive: true });
+      window.addEventListener('riva-theme', onTheme);
+      document.addEventListener('visibilitychange', onVisibility);
+      reduceMotion.addEventListener('change', run);
+      canvas.addEventListener('webglcontextlost', onLost);
+      canvas.addEventListener('webglcontextrestored', onRestored);
+      run();
+
+      teardown = () => {
+        cancelAnimationFrame(raf);
+        ro.disconnect();
+        mo.disconnect();
+        window.removeEventListener('pointerdown', onDown);
+        window.removeEventListener('riva-theme', onTheme);
+        document.removeEventListener('visibilitychange', onVisibility);
+        reduceMotion.removeEventListener('change', run);
+        canvas.removeEventListener('webglcontextlost', onLost);
+        canvas.removeEventListener('webglcontextrestored', onRestored);
+        geometry.dispose();
+        material.dispose();
+        renderer.dispose();
+        canvas.remove();
+      };
     });
 
-    const ro = new ResizeObserver(resize);
-    readColor();
-    resize();
-    ro.observe(host);
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-busy', 'data-theme', 'class', 'style'] });
-    window.addEventListener('pointerdown', onDown, { passive: true });
-    window.addEventListener('riva-theme', onTheme);
-    document.addEventListener('visibilitychange', onVisibility);
-    reduceMotion.addEventListener('change', wake);
-    wake();
-
     return () => {
-      ro.disconnect();
-      mo.disconnect();
-      window.removeEventListener('pointerdown', onDown);
-      window.removeEventListener('riva-theme', onTheme);
-      document.removeEventListener('visibilitychange', onVisibility);
-      reduceMotion.removeEventListener('change', wake);
-      cancelAnimationFrame(raf);
-      window.clearTimeout(timer);
+      disposed = true;
+      teardown();
     };
-  }, [spacing, dotRadius, baseOpacity, pingEvery, speed, ringWidth, amplitude, maxRings, pingArea]);
+  }, [spacing, dotRadius, baseOpacity, pingEvery, busyPingEvery, speed, ringWidth, amplitude, pingArea]);
 
-  return (
-    <div ref={hostRef} aria-hidden="true" className={className}>
-      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
-    </div>
-  );
+  return <div ref={hostRef} aria-hidden="true" className={className} />;
 }

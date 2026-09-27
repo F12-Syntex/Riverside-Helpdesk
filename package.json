@@ -1,6 +1,6 @@
 {
   "name": "riverside-emis-helper",
-  "version": "6.40.8",
+  "version": "6.41.0",
   "private": true,
   "description": "Riverside Practice Q&A: a document-grounded reception assistant for The Riverside Practice, using OpenRouter.",
   "scripts": {
@@ -57,6 +57,7 @@
     "pdfjs-dist": "^6.0.227",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "three": "^0.186.1",
     "tiptap-markdown": "^0.8.10",
     "word-extractor": "^1.0.4",
     "zod": "^3.25.76"
