@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.43.2` | 2026-09-28 | fix | `8e12741` | fix: send adult MSK pain to the FCP and name the exact pharmacy condition |
+| `6.43.1` | 2026-09-28 | docs | `31b7b72` | docs: record the Spell it out mode in the versions table |
 | `6.43.0` | 2026-09-28 | feat | `a96f484` | feat: add a Spell it out mode that reads text back letter by letter |
 | `6.42.1` | 2026-09-28 | docs | `c00aac5` | docs: record the Pharmacy First reason check in the versions table |
 | `6.42.0` | 2026-09-28 | feat | `fb973ae` | feat: make /accurx justify Pharmacy First from the practice's lists |
