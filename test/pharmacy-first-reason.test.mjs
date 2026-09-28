@@ -187,3 +187,19 @@ test('nothing changes for a card that is not going to the pharmacy', () => {
   assert.equal(built.accurx.pharmacy, null);
   assert.equal(built.accurx.pharmacyRefused, '');
 });
+
+test('an adult’s musculoskeletal pain named as a pharmacy reason goes to the FCP', () => {
+  const message = 'lower back pain since gardening yesterday, what can I take';
+  const checked = checkPharmacyReason({ condition: 'Minor illness: Sprains, strains and aches', evidence: 'lower back pain' }, message);
+  assert.equal(checked.ok, false);
+  assert.equal(checked.redirect, 'fcp');
+
+  const built = card({ condition: 'Self-care: Minor pain, discomfort and fever (aches and sprains, headache, period pain, back pain)', evidence: 'lower back pain' }, message);
+  assert.equal(built.destination, 'fcp');
+  assert.match(words(built), /First Contact Physiotherapist/);
+
+  // A headache on the same catch-all entry is not musculoskeletal and stays.
+  assert.equal(checkPharmacyReason({ condition: 'Self-care: Minor pain, discomfort and fever (aches and sprains, headache, period pain, back pain)', evidence: 'headache' }, 'headache for two days').ok, true);
+  // Nor is a child's sprain, which the FCP would not see.
+  assert.equal(checkPharmacyReason({ condition: 'Minor illness: Sprains, strains and aches', evidence: 'sprained his ankle' }, 'my 10 year old sprained his ankle').ok, true);
+});

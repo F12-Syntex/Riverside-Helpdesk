@@ -634,6 +634,7 @@ An electronic referral to a community pharmacist who can assess and treat, not j
 #### Do not route here
 
 - Anyone outside the age range for that pathway — the pharmacist cannot treat and it stays with us
+- Musculoskeletal problems in adults — back, neck, joint or muscle pain, sprains and strains — go to the FCP, even though back pain and sprains appear on the lists above
 - Patients who are systemically unwell, not just locally unwell
 - UTI in men, pregnant or breastfeeding patients, patients with a urinary catheter, or recurrent UTI (2 episodes in 6 months or 3 in 12) — clinical review here
 - UTI with fever, shivering, back or side pain, vomiting or marked illness — possible kidney infection, duty doctor today

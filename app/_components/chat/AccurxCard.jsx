@@ -278,7 +278,7 @@ export default function AccurxCard({ answer }) {
         {a.pharmacyRefused ? (
           <div className="ax-strip ax-strip--warn" role="alert">
             <Svg w={16} sw={2.2}>{Icons.alertCircle}</Svg>
-            <span><b>Not sent to the pharmacy.</b> The reading proposed Pharmacy First but couldn’t show which condition on the practice’s lists this is. {a.pharmacyRefused} It’s with the <b>duty doctor</b> instead.</span>
+            <span><b>Not sent to the pharmacy.</b> The reading proposed Pharmacy First but couldn’t show which condition on the practice’s lists this is. {a.pharmacyRefused} It’s with <b>{a.pharmacyRefusedTo || 'the duty doctor'}</b> instead.</span>
           </div>
         ) : null}
 

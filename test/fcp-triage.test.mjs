@@ -112,15 +112,20 @@ test('the pharmacy template refuses the same message on its own', () => {
   assert.doesNotMatch(json, /Free medicines/);
 });
 
-test('simple backache still goes to the pharmacy, with the FCP as the next step', () => {
+test('simple backache in an adult goes to the FCP, not the pharmacy', () => {
+  // The practice's routing guide: "MSK pain in an adult with no red flags —
+  // this goes to the FCP". Back pain is on two pharmacy lists, and matching
+  // them used to send simple backache there with the FCP only as a next step.
   const card = triagePatientAnswer({
     condition: 'back pain',
     text: 'Patient rang about a bit of lower back pain since gardening yesterday, asking what they can take.',
   });
+  assert.equal(card.destination, 'fcp');
   const json = flat(card);
-  assert.match(json, /Community pharmacy \(Pharmacy First\)/);
-  assert.match(json, /Minor illness referral/);
-  assert.match(json, /FCP new patient/, 'the card must say where it goes if self-care does not settle it');
+  assert.match(json, /First Contact Physiotherapist/);
+  assert.doesNotMatch(json, /Community pharmacy \(Pharmacy First\)/);
+  // And the pharmacy template, asked directly, says the same.
+  assert.match(flat(pharmacyFirstAnswer({ condition: 'back pain', text: 'lower back pain since gardening yesterday' })), /First Contact Physiotherapist/);
 });
 
 test('a red flag anywhere in the message still wins over the pharmacy lists', () => {
@@ -205,14 +210,24 @@ test('a mechanism of injury does not on its own make a message musculoskeletal',
   assert.doesNotMatch(flat(card), /FCP new patient/, 'this must not read as a physio appointment');
 });
 
-test('an injury does not jump the pharmacy check', () => {
-  // "Soft tissue injury" is one of the 24 CPSAS conditions. A mechanism of
-  // injury must not divert something the pharmacy is funded to handle.
+test('a soft tissue injury in an adult is the FCP’s too', () => {
+  // "Soft tissue injury" is a CPSAS condition, and it is still musculoskeletal
+  // pain in an adult — the guide's FCP rule, not the free-medicine list, decides.
   const card = triagePatientAnswer({
     condition: 'soft tissue injury',
     text: 'Soft tissue injury to the calf after football, asking what they can take.',
   });
-  assert.match(flat(card), /Community pharmacy \(Pharmacy First\)/);
+  assert.equal(card.destination, 'fcp');
+});
+
+test('a child the message says is under 16 does not go to the FCP', () => {
+  const card = triagePatientAnswer({ condition: 'sprained ankle', text: 'my 10 year old sprained his ankle' });
+  assert.notEqual(card.destination, 'fcp');
+});
+
+test('a foot problem that is the pharmacy’s in its own right stays there', () => {
+  const card = triagePatientAnswer({ condition: 'athletes foot', text: "athlete's foot, sore between my toes" });
+  assert.equal(card.destination, 'pharmacy');
 });
 
 /* ------------------------------- what is not the physio's problem at all */
