@@ -55,6 +55,13 @@ const AX_CSS = `
 .ax-label{flex:none;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;}
 .ax-send__value{flex:1;min-width:0;font-size:15px;font-weight:650;color:#212b32;overflow-wrap:anywhere;}
 
+/* Why Pharmacy First: the condition from the practice's lists, checked in code. */
+.ax-pf{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:#f2f8f4;box-shadow:inset 0 0 0 1px #cfe5d7;font-size:14px;line-height:1.5;color:#212b32;}
+.ax-pf__row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;}
+.ax-pf__name{font-size:15px;font-weight:650;}
+.ax-pf__kind{color:#425563;}
+.ax-pf__age{color:#6b4a00;}
+
 /* The reason line: the thing most people came for. */
 .ax-reason{position:relative;border-radius:16px;padding:14px 16px 14px;background:#f5f9fc;box-shadow:inset 0 0 0 1px #dce8f2;}
 .ax-reason__head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
@@ -268,6 +275,13 @@ export default function AccurxCard({ answer }) {
           </div>
         ) : null}
 
+        {a.pharmacyRefused ? (
+          <div className="ax-strip ax-strip--warn" role="alert">
+            <Svg w={16} sw={2.2}>{Icons.alertCircle}</Svg>
+            <span><b>Not sent to the pharmacy.</b> The reading proposed Pharmacy First but couldn’t show which condition on the practice’s lists this is. {a.pharmacyRefused} It’s with the <b>duty doctor</b> instead.</span>
+          </div>
+        ) : null}
+
         {a.conflicts.length ? (
           <div className="ax-strip ax-strip--warn">
             <Svg w={16} sw={2.2}>{Icons.alertCircle}</Svg>
@@ -283,6 +297,22 @@ export default function AccurxCard({ answer }) {
             {a.copySendTo ? <Copy value={a.sendTo} quiet /> : null}
           </div>
         )}
+
+        {a.pharmacy ? (
+          <div className="ax-pf">
+            <span className="ax-label">Why Pharmacy First</span>
+            <span className="ax-pf__row">
+              <span className="ax-pf__name">{a.pharmacy.condition}</span>
+              <span className="ax-pf__kind">{a.pharmacy.kind}{a.pharmacy.age ? ' · ' + a.pharmacy.age : ''}</span>
+            </span>
+            <span>Patient’s words: <span className="ax-quote">“{a.pharmacy.quote}”</span></span>
+            {a.pharmacy.age && a.pharmacy.ageCheck !== 'fits' ? (
+              <span className="ax-pf__age">
+                {a.pharmacy.ageCheck === 'unclear' ? 'More than one age in the message' : 'No age in the message'} — check the record is within {a.pharmacy.age.toLowerCase()} before referring.
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={'ax-reason' + (bookable ? '' : ' ax-reason--handover')}>
           <div className="ax-reason__head">

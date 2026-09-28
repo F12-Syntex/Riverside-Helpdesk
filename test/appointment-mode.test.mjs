@@ -33,10 +33,13 @@ const words = (card) => flat(card.blocks)
   .join(' ');
 
 // A reading, as the one /accurx call returns it.
+// A pharmacy reading has to say which condition on the practice's lists it is,
+// or the card refuses it — see lib/triage/pharmacy-first.mjs.
 const read = ({ destination = 'gp', mode = 'unsure', why = '' } = {}) => readingVerdict({
   reasoning: 'stable and not urgent',
   destination,
   evidence: '',
+  pharmacyReason: destination === 'pharmacy' ? { condition: 'Minor illness: Earache', evidence: 'ear has been sore' } : undefined,
   appointment: { mode, why },
   condition: 'ear pain',
   reason: 'ear pain 3/12',

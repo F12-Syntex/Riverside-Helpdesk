@@ -389,6 +389,7 @@ test('a nurse clinic that lost still gets named on the card', () => {
       destination: 'pharmacy',
       evidence: '',
       page: '',
+      pharmacyReason: { condition: 'Pathway: Sore throat', evidence: 'sore throat since friday' },
       saidYes: [{ id: 'nurse', evidence: 'my smear is due', page: '' }, { id: 'pharmacy', evidence: '', page: '' }],
     },
   });
@@ -435,6 +436,7 @@ test('a nurse quote that is not in the message is dropped, and the note stands',
     reason: 'sore throat 3/7',
     route: {
       destination: 'pharmacy',
+      pharmacyReason: { condition: 'Pathway: Sore throat', evidence: 'sore throat since friday' },
       saidYes: [{ id: 'nurse', evidence: 'the patient asked for a cervical screening appointment', page: '' }],
     },
   });
@@ -531,6 +533,7 @@ test('the reasoning shows even when the reading agreed with the patterns', () =>
     route: {
       destination: 'pharmacy',
       evidence: 'sore throat since friday',
+      pharmacyReason: { condition: 'Pathway: Sore throat', evidence: 'sore throat since friday' },
       reasoning: 'Three days, nothing tried yet, no fever, and the sore throat pathway takes 5 and over.',
       ruledOut: [],
     },
