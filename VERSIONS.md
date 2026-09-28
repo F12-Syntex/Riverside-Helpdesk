@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.43.0` | 2026-09-28 | feat | `a96f484` | feat: add a Spell it out mode that reads text back letter by letter |
+| `6.42.1` | 2026-09-28 | docs | `c00aac5` | docs: record the Pharmacy First reason check in the versions table |
 | `6.42.0` | 2026-09-28 | feat | `fb973ae` | feat: make /accurx justify Pharmacy First from the practice's lists |
 | `6.41.1` | 2026-09-27 | docs | `a46c651` | docs: record the three.js dot grid in the versions table |
 | `6.41.0` | 2026-09-27 | feat | `f9f1329` | feat: redraw the dot grid in three.js and calm its rings |
