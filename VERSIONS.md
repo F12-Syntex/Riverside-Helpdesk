@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.42.0` | 2026-09-28 | feat | `fb973ae` | feat: make /accurx justify Pharmacy First from the practice's lists |
+| `6.41.1` | 2026-09-27 | docs | `a46c651` | docs: record the three.js dot grid in the versions table |
 | `6.41.0` | 2026-09-27 | feat | `f9f1329` | feat: redraw the dot grid in three.js and calm its rings |
 | `6.40.8` | 2026-09-27 | docs | `b8eb8ee` | docs: record the heading selection fix in the versions table |
 | `6.40.7` | 2026-09-27 | style | `0ab7406` | style: stop page headings being highlighted on drag or double-click |
