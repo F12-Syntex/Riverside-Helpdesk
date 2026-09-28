@@ -4,7 +4,8 @@ import React from 'react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, isMode, modePlaceholder, checksPatientData } from '../../lib/commands.mjs';
+import { commandByName, isMode, modePlaceholder, modePresets, checksPatientData, localCommand } from '../../lib/commands.mjs';
+import { spellAnswer } from '../../lib/spell.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -781,8 +782,28 @@ class RiversidePracticeQA extends React.Component {
     });
   }
 
+  // A mode answered here, in the browser, with nothing sent: see `local` in
+  // lib/commands.mjs. Null for every template the server answers.
+  localAnswer(template, question) {
+    const command = localCommand(template);
+    if (!command) return null;
+    if (command.template === 'spellOut') return spellAnswer(question);
+    return null;
+  }
+
   async fetchAI(question, idx) {
     if (isTestQuery(question)) { this.mockAI(idx, isGeneralTestQuery(question)); return; }
+    // NOTHING LEAVES FOR A LOCAL MODE. Checked here rather than in ask() so a
+    // retry of one is answered the same way, and can never fall through to the
+    // server with text that was not screened.
+    const asked = this.state.messages[idx];
+    const local = this.localAnswer(asked && asked.commandTemplate, question);
+    if (local) {
+      // `local` also keeps the verdict row off it: a verdict posts the question
+      // to /api/feedback, and a local mode's text is not to leave the browser.
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', local: true, template: local, sections: [], intro: '', keyPoints: [], message: '', messageCite: null, tip: '', gaps: '', followUps: [], citations: [], contacts: [], alerts: [], panel: null });
+      return;
+    }
     // History is the conversation BEFORE this question (idx-1 = the user message
     // we're answering). On the first question this is empty, so the server skips
     // the follow-up query-condensing step — no point enriching a standalone query.
@@ -911,7 +932,7 @@ class RiversidePracticeQA extends React.Component {
   // failed write costs one row (see /api/feedback).
   sendFeedback(idx, verdict) {
     const m = this.state.messages[idx];
-    if (!m || m.feedbackSent) return;
+    if (!m || m.feedbackSent || m.local) return;
     this.updateAi(idx, { feedbackSent: verdict });
     try {
       fetch('/api/feedback', {
@@ -1418,7 +1439,7 @@ class RiversidePracticeQA extends React.Component {
           // Five one-click verdicts under every answer. No typing: someone with
           // a patient at the desk will press a button and will not write a
           // sentence, so the sentence is not asked for.
-          feedback: VERDICTS.map((fb) => ({ ...fb, onClick: () => self.sendFeedback(idx, fb.id) })),
+          feedback: m.local ? [] : VERDICTS.map((fb) => ({ ...fb, onClick: () => self.sendFeedback(idx, fb.id) })),
           feedbackSent: m.feedbackSent || '',
           feedbackLabel: (VERDICTS.find((fb) => fb.id === m.feedbackSent) || {}).label || '',
           // A templated answer: built from the practice's recorded material by
@@ -1686,6 +1707,9 @@ class RiversidePracticeQA extends React.Component {
       // app/_components/ModeSwitch.jsx.
       mode: this.state.mode,
       modeReady: this.state.modeReady,
+      // Quick options under the field for the armed mode — the practice email
+      // in Spell it out. One tap asks it, exactly as if it had been typed.
+      presets: modePresets(this.state.mode),
       onPickMode: (name) => self.pickMode(name),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
@@ -1872,6 +1896,18 @@ class RiversidePracticeQA extends React.Component {
             {/* The field is the whole dock: no send button, no attach
                 control. Enter asks; an image can still be pasted into the
                 box, which is how it is actually done. */}
+            {v.presets.length ? (
+              <div className="riva-presets" style={s('display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px;')}>
+                {v.presets.map((p) => (
+                  <Hover key={p.label} tag="button" type="button" onClick={() => v.onAskText(p.value)} title={p.value}
+                    base="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;border:1px solid #d5dee2;background:#fff;color:#005eb8;font:inherit;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(33,43,50,.06);"
+                    hover="background:#f7fbff;border-color:#aac7e0;">
+                    {p.label}
+                  </Hover>
+                ))}
+              </div>
+            ) : null}
+
             <form className="riva-dock-form" onSubmit={v.onSubmit} style={s('position:relative;display:flex;')}>
               {/* The composer. The shape of the 21st.dev Agent Elements
                   "Input Bar", in this project's idiom: one card, the question

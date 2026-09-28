@@ -544,22 +544,24 @@ test('every mode carries the words the picker needs', () => {
 });
 
 test('the modes are Q&A first, then every command, and nothing else', () => {
-  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication', 'form', 'template', 'practice']);
+  assert.deepEqual(MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication', 'spell', 'form', 'template', 'practice']);
   assert.equal(MODES[0].label, 'Q&A');
   assert.equal(MODES[0].name, '', 'the resting mode is not a command');
   // Every mode but the first must be a real command, or the picker offers
-  // something the server will not honour.
+  // something the server will not honour — except a local one, which the
+  // server must NOT honour, because it is answered in the browser.
   for (const m of MODES.slice(1)) {
-    assert.ok(commandByName(m.name), `${m.name} is not a command`);
-    assert.equal(forcedTemplate(commandByName(m.name).template), commandByName(m.name).template);
+    const c = commandByName(m.name);
+    assert.ok(c, `${m.name} is not a command`);
+    assert.equal(forcedTemplate(c.template), c.fill === 'local' ? '' : c.template, m.name);
   }
-  assert.deepEqual(COMMAND_TEMPLATES, COMMANDS.map((c) => c.template));
+  assert.deepEqual(COMMAND_TEMPLATES, COMMANDS.filter((c) => c.fill !== 'local').map((c) => c.template));
 });
 
 // The picker draws the writing modes at the top and the lookups behind a
 // folder. Splitting the list must lose nothing: the two halves are the whole.
 test('the folder holds the lookups, and the two halves are every mode', () => {
-  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication']);
+  assert.deepEqual(TOP_MODES.map((m) => m.name), ['', 'accurx', 'consultation', 'medication', 'spell']);
   assert.deepEqual(FOLDER_MODES.map((m) => m.name), ['form', 'template', 'practice']);
   assert.deepEqual(TOP_MODES.concat(FOLDER_MODES).map((m) => m.name).sort(), MODES.map((m) => m.name).sort());
   assert.equal(QA_MODE.folder, undefined, 'the resting mode is never behind the folder');
@@ -591,8 +593,11 @@ test('every command is offered', () => {
 // Two guards read a message for patient data: the name-and-address redaction
 // and the screen. One flag answers for both, and no mode switches it off now
 // that Coding is withdrawn.
-test('every mode is checked for patient data', () => {
-  for (const c of COMMANDS) assert.equal(checksPatientData(c), true, `${c.name} is unguarded`);
+test('every mode that sends anything is checked for patient data', () => {
+  // A local mode sends nothing — it is answered in the browser — so there is
+  // nothing to guard, and redacting it would stop it spelling a surname.
+  for (const c of COMMANDS) assert.equal(checksPatientData(c), c.fill !== 'local', `${c.name}`);
+  assert.deepEqual(COMMANDS.filter((c) => c.fill === 'local').map((c) => c.name), ['spell']);
   assert.equal(checksPatientData(null), true);
   assert.equal(checksPatientData(undefined), true);
   assert.equal(checksPatientData(commandByTemplate('documentCoding')), true);

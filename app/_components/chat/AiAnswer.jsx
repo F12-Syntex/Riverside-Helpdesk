@@ -9,6 +9,7 @@ import Rich from './Rich';
 import Md from './Md';
 import TemplateView from '../templates/TemplateView';
 import AccurxCard from './AccurxCard';
+import SpellCard from './SpellCard';
 import UnresolvedPanel from './UnresolvedPanel';
 import ErsForm from '../templates/ErsForm';
 
@@ -70,6 +71,8 @@ function GeneralBar() {
 // arrives. Pressing one replaces the row with a thank-you — there is nothing
 // further to do and no second chance to get wrong.
 function Feedback({ v }) {
+  // An answer made in the browser has no verdict row — see `local` in QaApp.
+  if (!v.feedbackSent && !(v.feedback || []).length) return null;
   if (v.feedbackSent) {
     return (
       <div style={s('display:flex;align-items:center;gap:8px;padding:12px 0 4px;font-size:13.5px;color:#4c6272;')}>
@@ -300,7 +303,7 @@ export default function AiAnswer({ v }) {
               <div style={s('margin:16px 0 0;')}>
                 {/* An AccurX request has its own card: the same answer, drawn
                     around the three things reception came for. */}
-                {v.template.accurx ? <AccurxCard answer={v.template} /> : <TemplateView answer={v.template} />}
+                {v.template.accurx ? <AccurxCard answer={v.template} /> : v.template.spell ? <SpellCard answer={v.template} /> : <TemplateView answer={v.template} />}
               </div>
             )}
 
