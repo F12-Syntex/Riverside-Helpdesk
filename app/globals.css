@@ -823,21 +823,6 @@ body { overflow-x: hidden; }
     #f8fafc;
 }
 .riva-sky-canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .9s ease; }
-/* The sonar grid (SonarGrid.jsx, three.js): dots in the theme's colour,
-   quieter through the middle where the reading is, but never gone from
-   it, so a ring can be seen crossing the page. */
-.riva-sky-dots {
-  position: absolute; inset: 0; color: var(--rv-sky-b);
-  /* Never under the top bar: the grid starts below it and fades in. */
-  -webkit-mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(0,0,0,.35) 30%, #000 100%), linear-gradient(to bottom, transparent calc(var(--rv-top-h) + 4px), #000 calc(var(--rv-top-h) + 40px));
-  -webkit-mask-composite: source-in;
-  mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(0,0,0,.35) 30%, #000 100%), linear-gradient(to bottom, transparent calc(var(--rv-top-h) + 4px), #000 calc(var(--rv-top-h) + 40px));
-  mask-composite: intersect;
-  opacity: .85; transition: opacity 1.2s ease;
-}
-/* Mist's middle colour is too pale to read as dots on the page. */
-:root:not([data-theme]) .riva-sky-dots, [data-theme="mist"] .riva-sky-dots { color: var(--rv-sky-c); }
-html[data-busy] .riva-sky-dots { opacity: 1; }
 
 .riva-shell {
   position: relative; z-index: 1;
