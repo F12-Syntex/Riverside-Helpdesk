@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.55.0` | 2026-10-01 | feat | `a936593` | feat: questions in a title / context / question template, with AI tidy-up |
+| `6.54.5` | 2026-10-01 | docs | `44733f2` | docs: record the quieter assistant context in the versions table |
 | `6.54.4` | 2026-10-01 | fix | `81d24cb` | fix: stop showing the assistant's reason and reply on /questions |
 | `6.54.3` | 2026-10-01 | docs | `9bcb09d` | docs: record the Notebook ask fix in the versions table |
 | `6.54.2` | 2026-10-01 | fix | `c9ed5f3` | fix: let staff ask about Notebook words that had a removed question |
