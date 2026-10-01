@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.54.0` | 2026-10-01 | feat | `63c71d2` | feat: answer questions one at a time, with their context |
+| `6.53.1` | 2026-10-01 | docs | `405364e` | docs: record the compact question cards in the versions table |
 | `6.53.0` | 2026-10-01 | feat | `3ae1c25` | feat: compact question cards with an Answer button that opens the box |
 | `6.52.1` | 2026-10-01 | docs | `01d3ceb` | docs: record the question cards in the versions table |
 | `6.52.0` | 2026-10-01 | feat | `e046f3d` | feat: show each question as a large card you can answer in place |
