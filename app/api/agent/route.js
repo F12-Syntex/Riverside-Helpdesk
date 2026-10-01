@@ -75,7 +75,7 @@ import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
-import { getDirectory } from '@/lib/lookup/directory';
+import { contactEntries } from '@/lib/contacts-store';
 import { scanNotes, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
@@ -276,7 +276,10 @@ export async function POST(request) {
   // same flag (lib/commands.mjs), and a template no command claims is redacted
   // as everything else is.
   const checked = checksPatientData(commandByTemplate(command));
-  const question = checked ? redactIdentifiers(asked, { allow: getDirectory() }).text : asked;
+  // Every contact the practice holds, added ones included (lib/contacts-store.js):
+  // the names the guard leaves alone, and the rows the directory card answers from.
+  const contacts = await contactEntries();
+  const question = checked ? redactIdentifiers(asked, { allow: contacts }).text : asked;
   const history = typeof body?.history === 'string' ? body.history : '';
   const images = Array.isArray(body?.images)
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)
@@ -526,7 +529,7 @@ export async function POST(request) {
         // message that is not asking for one, or names something the directory
         // does not hold, returns null here and the turn goes on exactly as
         // before — the check costs a few string comparisons.
-        const directoryCard = command ? null : directoryAnswerIn(getDirectory(), question);
+        const directoryCard = command ? null : directoryAnswerIn(contacts, question);
         if (directoryCard) {
           send({
             type: 'tool-result',

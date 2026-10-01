@@ -548,17 +548,28 @@ clickable sources they can open in-browser.
   the same store. See `rag/context/README.md`.
 - **`lib/contacts.js`** + **`lib/contacts.data.json`** — the deterministic
   telephone directory (exact numbers shown verbatim, never authored by the AI).
-- **`lib/lookup/`** + **`/lookup`** — Instant Lookup, a search of the **CQC
-  register**: every service registered in England, ~57k rows in
+- **`lib/contacts-store.js`** + **`/api/contacts`** + **`/lookup`** — the
+  practice's own contacts, as one list that can be added to. Opened with
+  nothing typed, `/lookup` lists every one by category; a search runs over all
+  of them first, with the CQC register below in a box of its own. Contacts are
+  added, changed and removed from the same page (and a register row can be
+  saved as a contact). They are the `knowledge_entries` rows of kind
+  `contact` that the bundled sheet is synced into; a save sets
+  `data.backendOverride`, which the sync leaves alone, and an added one carries
+  `data.source = 'manual'`. The chat's directory card and the patient-data
+  guard's list of names read the same list, so a number added at the desk is
+  answerable at once. Without a database the bundled sheet stands in,
+  read-only.
+- **`lib/lookup/`** + **`/lookup`** — the **CQC register** half of the page:
+  every service registered in England, ~57k rows in
   `cqc.data.json.gz`. Far too large for a phone, so `cqc.js` searches it on the
   server behind `/api/cqc`. Matches on name, town, postcode (either half),
   service type, phone number, and **acronyms** taken from the initials of each
   name — HUH reaches Homerton University Hospital, MEH reaches Moorfields.
   Rebuild from a newer CQC CSV export with `npm run data:cqc -- <path-to-csv>`;
   numbers are verbatim from the export (the script only restores the leading
-  zero the spreadsheet drops). The practice's own directory
-  (`lib/contacts.data.json`, `/api/directory`) is no longer searched here — it
-  still backs the assistant's contacts card.
+  zero the spreadsheet drops). It is never mixed into the practice's own list:
+  nobody here wrote it.
 - **`lib/lookup/contact-extract.mjs`** + **`lib/lookup/web-contact.mjs`** — how a
   number is found for something neither the directory nor the register holds.
   The web search picks the pages; the pages are then **fetched and read**, and

@@ -28,7 +28,7 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { PATIENT_DATA_SCHEMA, blocksSend, kindsOf, patientDataMessage, patientDataPrompt } from '@/lib/safety/patient-data.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
-import { getDirectory } from '@/lib/lookup/directory';
+import { contactEntries } from '@/lib/contacts-store';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
@@ -87,7 +87,7 @@ export async function POST(request) {
   // The same redaction the browser ran before calling, run again here — for the
   // reason /api/agent runs it again: the guard is a property of the endpoint
   // rather than of the page, so anything else posting here is held to it too.
-  const text = redactIdentifiers(asked, { allow: getDirectory() }).text.trim();
+  const text = redactIdentifiers(asked, { allow: await contactEntries() }).text.trim();
 
   // Nothing to screen, and no key to screen it with, are the same answer: the
   // message goes. Neither is worth a round trip to say so.
