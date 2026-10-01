@@ -289,7 +289,17 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
     const { from, to } = selection;
     const isText = selection.toJSON().type === 'text';
     const quote = isText && from < to ? doc.textBetween(from, to, ' ', ' ').replace(/\s+/g, ' ').trim() : '';
-    const taken = quote && editor.schema.marks.question && doc.rangeHasMark(from, to, editor.schema.marks.question);
+    // Words already carrying a LIVE question are left to that question. A
+    // marker whose question has gone (removed or cleared on /questions) is
+    // not a question: it must not stop anybody asking, and asking over it
+    // simply replaces it.
+    const live = new Set(rows.map((r) => r.anchor));
+    let taken = false;
+    if (quote) {
+      doc.nodesBetween(from, to, (node) => {
+        if (!taken && node.marks && node.marks.some((m) => m.type.name === 'question' && live.has(m.attrs.id))) taken = true;
+      });
+    }
     if (quote && !taken) {
       const a = editor.view.coordsAtPos(from);
       const b = editor.view.coordsAtPos(to);
