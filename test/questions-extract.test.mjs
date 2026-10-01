@@ -4,19 +4,19 @@ import { parseExtracted, MAX_FOUND } from '../lib/questions/extract.mjs';
 
 test('reads the object the prompt asks for', () => {
   const raw = JSON.stringify({ questions: [
-    { question: 'Who orders the flu vaccines?', detail: 'Raised by the practice manager.' },
-    { question: 'Where is the spare printer toner kept?', detail: '' },
+    { title: 'Flu vaccine orders', points: ['Raised by the practice manager.', 'Stock ran out in "October 2025".'], question: 'Who orders the flu vaccines?' },
+    { question: 'Where is the spare printer toner kept?', detail: 'Asked twice.' },
   ] });
   assert.deepEqual(parseExtracted(raw), [
-    { question: 'Who orders the flu vaccines?', detail: 'Raised by the practice manager.' },
-    { question: 'Where is the spare printer toner kept?', detail: '' },
+    { title: 'Flu vaccine orders', points: ['Raised by the practice manager.', 'Stock ran out in "October 2025".'], question: 'Who orders the flu vaccines?', detail: '' },
+    { title: '', points: ['Asked twice.'], question: 'Where is the spare printer toner kept?', detail: '' },
   ]);
 });
 
 test('survives a code fence, prose round the JSON, a bare array and plain strings', () => {
   assert.equal(parseExtracted('```json\n{"questions":[{"question":"A?"}]}\n```').length, 1);
   assert.equal(parseExtracted('Here you go: {"questions":[{"question":"A?"}]} Hope that helps').length, 1);
-  assert.deepEqual(parseExtracted('["Who locks up on Fridays?"]'), [{ question: 'Who locks up on Fridays?', detail: '' }]);
+  assert.deepEqual(parseExtracted('["Who locks up on Fridays?"]'), [{ title: '', points: [], question: 'Who locks up on Fridays?', detail: '' }]);
 });
 
 test('drops empties, near-duplicates and anything the store would refuse', () => {
@@ -41,4 +41,12 @@ test('nothing usable reads as an empty list, not an error', () => {
   assert.deepEqual(parseExtracted(''), []);
   assert.deepEqual(parseExtracted('I could not find any questions.'), []);
   assert.deepEqual(parseExtracted('{"questions":"none"}'), []);
+});
+
+test('the same question under two different titles is kept twice', () => {
+  const raw = JSON.stringify({ questions: [
+    { title: 'Chest pain clinic type (C15)', points: [], question: 'Which clinic type do we select?' },
+    { title: 'Diabetes clinic type (D2)', points: [], question: 'Which clinic type do we select?' },
+  ] });
+  assert.equal(parseExtracted(raw).length, 2);
 });

@@ -35,6 +35,7 @@ import { machineCode } from '../../lib/audit/machine';
 import { notebookHref } from '../../lib/notebook/links.mjs';
 import { lineDiff } from '../../lib/notebook/diff.mjs';
 import { stripQuestionMarks } from '../../lib/notebook/questions.mjs';
+import { parseTemplate } from '../../lib/questions/template.mjs';
 
 const STATUS = [
   { id: 'open', label: 'Open', match: (r) => r.status === 'open' },
@@ -154,11 +155,17 @@ const CSS = `
 .rq-grow{flex:1;}
 .rq-hint{font-size:12.5px;color:#768692;}
 .rq-err{margin-top:8px;font-size:13.5px;font-weight:600;color:#a51b0f;}
-.rq-found{display:flex;flex-direction:column;gap:6px;}
-.rq-found__item{display:flex;align-items:center;gap:10px;}
-.rq-found__item input[type=checkbox]{flex:none;width:17px;height:17px;margin:0;accent-color:#005eb8;cursor:pointer;}
-.rq-found__item .rq-input{height:38px;font-size:15px;}
-.rq-found__item--off .rq-input{opacity:.5;}
+.rq-found{display:flex;flex-direction:column;gap:10px;max-height:min(60vh,640px);overflow:auto;padding-right:2px;}
+.rq-found__item{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid #e3e9ec;border-radius:12px;background:#fbfcfd;}
+.rq-found__item input[type=checkbox]{flex:none;width:17px;height:17px;margin:10px 0 0;accent-color:#005eb8;cursor:pointer;}
+.rq-found__fields{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.rq-found__fields .rq-input{height:38px;font-size:15px;}
+.rq-found__fields .rq-area{margin:0;}
+.rq-found__item--off{opacity:.5;}
+.rq-input--title{font-weight:700;}
+.rq-area--points{font-size:14.5px;line-height:1.5;field-sizing:content;min-height:44px;max-height:260px;}
+.rq-compose > .rq-input,.rq-compose > .rq-area{margin-top:8px;}
+.rq-compose > :first-child{margin-top:0;}
 .rq-found__fail{margin:2px 0 4px 27px;font-size:12.5px;color:#a51b0f;}
 .rq-scan{display:flex;flex-direction:column;gap:9px;padding:6px 2px;}
 .rq-scan i{display:block;height:9px;border-radius:5px;background:linear-gradient(90deg,#e8edf0 0%,#d3e3f3 50%,#e8edf0 100%);
@@ -183,6 +190,12 @@ const CSS = `
 .rq-card{padding:14px 14px 14px 18px;background:#fff;border:1px solid #e1e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(33,43,50,.04);}
 .rq-card__row{display:flex;align-items:flex-start;gap:12px;}
 .rq-card__main{flex:1;min-width:0;}
+.rq-card__title{margin:0 0 2px;font-size:13px;font-weight:750;color:#005eb8;overflow-wrap:anywhere;}
+.rq-points{list-style:disc;margin:8px 0 0;padding:0 0 0 18px;font-size:14px;line-height:1.5;color:#4c6272;overflow-wrap:anywhere;}
+.rq-points li{margin:2px 0;}
+.rq-points li::marker{color:#9aa8b1;}
+.rq-ctx .rq-points{margin-top:2px;font-size:15px;line-height:1.55;}
+.rq-fbody__label--title{font-size:15px;letter-spacing:0;color:#005eb8;}
 .rq-card__q{margin:0;font-size:17px;font-weight:700;line-height:1.4;color:#212b32;overflow-wrap:anywhere;}
 .rq-card__meta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin-top:4px;font-size:13px;color:#768692;}
 .rq-card__meta a{color:#005eb8;font-weight:650;text-decoration:none;}
@@ -251,6 +264,14 @@ const CSS = `
 .rq-diff .rq-diff--add{background:#eaf6ef;color:#14532d;}
 .rq-diff .rq-diff--del{background:#fdeeec;color:#7f1d1d;text-decoration:line-through;text-decoration-color:rgba(127,29,29,.35);}
 .rq-diff .rq-diff--gap{justify-content:center;color:#9aa8b1;background:#fafcfd;}
+.rq-tidy{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 0 27px;}
+.rq-tidy__side{padding:10px 12px;border-radius:10px;background:#f4f7f9;font-size:14px;line-height:1.5;color:#4c6272;min-width:0;overflow-wrap:anywhere;}
+.rq-tidy__side--after{background:#eef6fd;border:1px solid #d3e5f5;}
+.rq-tidy__side > b{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.06em;color:#768692;}
+.rq-tidy__q{font-weight:700;color:#212b32;}
+.rq-tidy__note{margin-top:4px;white-space:pre-wrap;}
+.rq-tidy .rq-points{margin-top:4px;}
+@media (max-width:640px){.rq-tidy{grid-template-columns:1fr;margin-left:0;}}
 .rq-done{display:flex;align-items:flex-start;gap:9px;padding:9px 0;font-size:14.5px;line-height:1.45;}
 .rq-done a{color:#005eb8;font-weight:650;text-decoration:none;}
 .rq-done a:hover{text-decoration:underline;}
@@ -304,11 +325,13 @@ async function send(method, body, query = '') {
  * ------------------------------------------------------------------ */
 function Composer({ onClose, onAdded }) {
   const [mode, setMode] = useState('one');           // one | paste | reading | review | saving
+  // The template: a title, the context points (one per line, word for word)
+  // and the question - lib/questions/template.mjs.
+  const [title, setTitle] = useState('');
+  const [pointsText, setPointsText] = useState('');
   const [question, setQuestion] = useState('');
-  const [detail, setDetail] = useState('');
-  const [withDetail, setWithDetail] = useState(false);
   const [paste, setPaste] = useState('');
-  const [found, setFound] = useState([]);            // [{ question, detail, keep, failed }]
+  const [found, setFound] = useState([]);            // [{ title, pointsText, question, keep, failed }]
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -325,7 +348,7 @@ function Composer({ onClose, onAdded }) {
     setBusy(true);
     setError('');
     try {
-      const { ok, data } = await send('POST', { question: text, detail: detail.trim() });
+      const { ok, data } = await send('POST', { title: title.trim(), points: pointsText, question: text });
       // Only cleared once stored: a box emptied by a failed save is a
       // question somebody has to type twice.
       if (!ok) { setError(data.error || 'The question could not be saved.'); return; }
@@ -335,6 +358,17 @@ function Composer({ onClose, onAdded }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Something pasted in the template's own shape - a title, bullet points,
+  // "Question: …" - is split into the three boxes rather than dropped into one.
+  function pasteTemplate(e) {
+    const parsed = parseTemplate(e.clipboardData ? e.clipboardData.getData('text') : '');
+    if (!parsed) return;
+    e.preventDefault();
+    setTitle(parsed.title);
+    setPointsText(parsed.points.join('\n'));
+    setQuestion(parsed.question);
   }
 
   async function findQuestions() {
@@ -352,7 +386,9 @@ function Composer({ onClose, onAdded }) {
         setMode('paste');
         return;
       }
-      setFound(data.questions.map((q) => ({ question: q.question || '', detail: q.detail || '', keep: true, failed: '' })));
+      setFound(data.questions.map((q) => ({
+        title: q.title || '', pointsText: (q.points || []).join('\n'), question: q.question || '', keep: true, failed: '',
+      })));
       setMode('review');
     } catch (err) {
       setError('The text could not be read.');
@@ -374,7 +410,7 @@ function Composer({ onClose, onAdded }) {
     for (const q of found) {
       if (!q.keep || !q.question.trim()) continue;
       try {
-        const { ok, data } = await send('POST', { question: q.question.trim(), detail: q.detail.trim() });
+        const { ok, data } = await send('POST', { title: q.title.trim(), points: q.pointsText, question: q.question.trim() });
         if (!ok) left.push({ ...q, failed: data.error || 'Not saved.' });
         else if (data.repeat) repeats += 1;
         else added += 1;
@@ -398,20 +434,20 @@ function Composer({ onClose, onAdded }) {
   if (mode === 'one') {
     return (
       <form className="rq-compose" onSubmit={askOne}>
-        <input className="rq-input" autoFocus value={question} onChange={(e) => setQuestion(e.target.value)}
-          placeholder="What do you need to know?" aria-label="Your question" maxLength={400} />
-        {withDetail && (
-          <textarea className="rq-area" rows={3} value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={2000}
-            placeholder="Anything that helps — what you have tried, who might know." aria-label="Detail" />
-        )}
+        <input className="rq-input rq-input--title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onPaste={pasteTemplate}
+          placeholder="Title — what it is about, e.g. Chest pain clinic type (C15)" aria-label="Title" maxLength={120} />
+        <textarea className="rq-area rq-area--points" rows={Math.min(Math.max(pointsText.split('\n').length, 2), 8)} value={pointsText}
+          onChange={(e) => setPointsText(e.target.value)} onPaste={pasteTemplate}
+          placeholder="Context — one point per line, word for word as you found it" aria-label="Context points, one per line" />
+        <input className="rq-input" value={question} onChange={(e) => setQuestion(e.target.value)} onPaste={pasteTemplate}
+          placeholder="The question — e.g. Which clinic type do we select?" aria-label="Your question" maxLength={400} />
         {error && <div className="rq-err">{error}</div>}
         <div className="rq-compose__bar">
-          {!withDetail && <button type="button" className="rq-link" onClick={() => setWithDetail(true)}>Add detail</button>}
           <button type="button" className="rq-link" onClick={() => { setMode('paste'); setError(''); }}>
             <Svg w={14} sw={2}>{AI_ICON}</Svg>Paste lots of text
           </button>
           <span className="rq-grow" />
-          <span className="rq-hint">No patient information</span>
+          <span className="rq-hint">Pasting a title, bullets and "Question: …" fills all three</span>
           <button type="button" className="rq-ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="rq-primary rq-primary--sm" disabled={!question.trim() || busy}>
             {busy ? 'Asking…' : 'Ask'}
@@ -439,12 +475,21 @@ function Composer({ onClose, onAdded }) {
         <div className="rq-found">
           {found.map((q, i) => (
             <div key={i}>
-              <label className={'rq-found__item' + (q.keep ? '' : ' rq-found__item--off')}>
+              <div className={'rq-found__item' + (q.keep ? '' : ' rq-found__item--off')}>
                 <input type="checkbox" checked={q.keep} disabled={saving} onChange={(e) => edit(i, { keep: e.target.checked })}
                   aria-label={'Keep: ' + q.question} />
-                <input className="rq-input" value={q.question} disabled={saving}
-                  onChange={(e) => edit(i, { question: e.target.value })} aria-label="Question" />
-              </label>
+                <div className="rq-found__fields">
+                  <input className="rq-input rq-input--title" value={q.title} disabled={saving} placeholder="Title"
+                    onChange={(e) => edit(i, { title: e.target.value })} aria-label="Title" />
+                  {(q.pointsText || !saving) && (
+                    <textarea className="rq-area rq-area--points" value={q.pointsText} disabled={saving} placeholder="Context — one point per line"
+                      rows={Math.min(Math.max(q.pointsText.split('\n').length, 1), 8)}
+                      onChange={(e) => edit(i, { pointsText: e.target.value })} aria-label="Context points, one per line" />
+                  )}
+                  <input className="rq-input" value={q.question} disabled={saving}
+                    onChange={(e) => edit(i, { question: e.target.value })} aria-label="Question" />
+                </div>
+              </div>
               {q.failed && <div className="rq-found__fail">{q.failed}</div>}
             </div>
           ))}
@@ -529,6 +574,7 @@ function Row({ row, onAnswer, onRemove, busy }) {
     <li className="rq-card">
       <div className="rq-card__row">
         <div className="rq-card__main">
+          {row.title && <div className="rq-card__title">{row.title}</div>}
           <h3 className="rq-card__q">{row.question}</h3>
           <div className="rq-card__meta">
             <span className={'rq-status ' + (answered ? 'rq-status--done' : 'rq-status--open')}>
@@ -562,6 +608,7 @@ function Row({ row, onAnswer, onRemove, busy }) {
       </div>
 
       {row.quote && <div className="rq-quote">“{row.quote}”</div>}
+      <Points points={row.points} />
       {row.detail && <div className="rq-detail">{row.detail}</div>}
 
       {answered && !editing && row.answer && (
@@ -766,6 +813,17 @@ function WriteIn({ onClose, onDone }) {
   );
 }
 
+/* The template's context points, word for word, as a list. */
+function Points({ points, label = false }) {
+  if (!Array.isArray(points) || !points.length) return null;
+  return (
+    <>
+      {label && <span className="rq-ctx__label">CONTEXT</span>}
+      <ul className="rq-points">{points.map((p, i) => <li key={i}>{p}</li>)}</ul>
+    </>
+  );
+}
+
 /* What a question is about, so it can be answered without going to look:
    the Notebook paragraph with the asked-about words marked, how often the
    assistant was asked it, or the asker's own note. */
@@ -786,6 +844,7 @@ function Context({ row }) {
         ) : row.quote ? (
           <div className="rq-ctx__text"><mark>{row.quote}</mark> <em style={{ fontSize: 13.5 }}>— no longer on the page</em></div>
         ) : null}
+        <Points points={row.points} label />
       </div>
     );
   }
@@ -797,6 +856,7 @@ function Context({ row }) {
           <span>Asked of the assistant{row.askedCount > 1 ? ' ' + row.askedCount + ' times' : ''}</span>
           <span className="rq-ctx__when">{when(row.lastAt || row.at)}</span>
         </div>
+        <Points points={row.points} label />
       </div>
     );
   }
@@ -807,9 +867,9 @@ function Context({ row }) {
         <span>Asked by staff{row.machineId ? ' on machine ' + machineCode(row.machineId) : ''}{row.askedCount > 1 ? ' · ' + row.askedCount + ' times' : ''}</span>
         <span className="rq-ctx__when">{when(row.lastAt || row.at)}</span>
       </div>
-      {row.detail
-        ? (<><span className="rq-ctx__label">THEIR NOTE</span><div className="rq-ctx__text" style={{ marginTop: 0, whiteSpace: 'pre-wrap' }}>{row.detail}</div></>)
-        : <div className="rq-ctx__text" style={{ fontSize: 14.5 }}>No more detail was given.</div>}
+      <Points points={row.points} label />
+      {row.detail && (<><span className="rq-ctx__label">THEIR NOTE</span><div className="rq-ctx__text" style={{ marginTop: 0, whiteSpace: 'pre-wrap' }}>{row.detail}</div></>)}
+      {!row.detail && !(row.points && row.points.length) && <div className="rq-ctx__text" style={{ fontSize: 14.5 }}>No more detail was given.</div>}
     </div>
   );
 }
@@ -878,7 +938,7 @@ function Focus({ rows, onAnswer, onRemove, busy, onShowAll, onAsk }) {
       <article className="rq-focus" key={row.id}>
         <Context row={row} />
         <div className="rq-fbody">
-          <div className="rq-fbody__label">THE QUESTION</div>
+          <div className={'rq-fbody__label' + (row.title ? ' rq-fbody__label--title' : '')}>{row.title || 'THE QUESTION'}</div>
           <h2>{row.question}</h2>
 
           {answering && (
@@ -927,6 +987,147 @@ function Focus({ rows, onAnswer, onRemove, busy, onShowAll, onAsk }) {
   );
 }
 
+/* Older questions, tidied into the template by the AI: each shown as it is
+   now beside the proposed title, word-for-word points and question, ticked
+   to keep. Nothing is saved before "Save". A question left unticked is
+   left as it is and not offered again. */
+function Tidy({ onClose, onDone }) {
+  const [step, setStep] = useState({ name: 'planning' }); // planning | review | saving | done | error
+  const [chosen, setChosen] = useState({});
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/questions/reformat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'plan' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!live) return;
+        if (!res.ok) { setStep({ name: 'error', message: data.error || 'The questions could not be tidied.' }); return; }
+        const items = Array.isArray(data.items) ? data.items : [];
+        setChosen(Object.fromEntries(items.map((it) => [it.id, !!it.after])));
+        setStep({ name: 'review', items, more: !!data.more });
+      } catch (e) {
+        if (live) setStep({ name: 'error', message: 'The questions could not be tidied.' });
+      }
+    })();
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && step.name !== 'saving' && step.name !== 'planning') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [step.name, onClose]);
+
+  const items = step.items || [];
+  const kept = items.filter((it) => it.after && chosen[it.id]);
+
+  async function save() {
+    const skipIds = items.filter((it) => it.after && !chosen[it.id]).map((it) => it.id);
+    setStep((st) => ({ ...st, name: 'saving' }));
+    try {
+      const res = await fetch('/api/questions/reformat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'apply', items: kept.map((it) => ({ id: it.id, ...it.after })), skipIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setStep({ name: 'error', message: data.error || 'The questions could not be saved.' }); return; }
+      setStep({ name: 'done', saved: data.saved || 0, more: step.more });
+      onDone();
+    } catch (e) {
+      setStep({ name: 'error', message: 'The questions could not be saved.' });
+    }
+  }
+
+  const busy = step.name === 'planning' || step.name === 'saving';
+  return (
+    <div className="rq-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div className="rq-modal" role="dialog" aria-modal="true" aria-labelledby="rq-tidy-title">
+        <div className="rq-modal__head">
+          <div>
+            <h2 id="rq-tidy-title">Tidy questions into the template</h2>
+            <p>
+              {step.name === 'done'
+                ? 'Done.'
+                : 'Each older question gets a short title, its context as word-for-word points, and the question itself. Check each one before saving.'}
+            </p>
+          </div>
+          {!busy && <button type="button" className="rq-x" aria-label="Close" onClick={onClose}><Svg w={17} sw={2.2}>{Icons.close}</Svg></button>}
+        </div>
+
+        <div className="rq-modal__body">
+          {step.name === 'planning' && (
+            <div role="status">
+              <div className="rq-scan" aria-hidden="true" style={{ padding: '10px 0' }}>
+                {['88%', '64%', '76%', '52%'].map((w, i) => <i key={i} style={{ width: w, animationDelay: i * 0.12 + 's' }} />)}
+              </div>
+              <p className="rq-hint" style={{ display: 'block', margin: '6px 0 0' }}>Reading the questions…</p>
+            </div>
+          )}
+          {step.name === 'error' && <div className="rq-err">{step.message}</div>}
+          {(step.name === 'review' || step.name === 'saving') && !items.length && (
+            <div className="rq-empty" style={{ padding: '24px 0' }}>Every question is already in the template.</div>
+          )}
+          {(step.name === 'review' || step.name === 'saving') && items.map((it) => (
+            <div key={it.id} className="rq-wp">
+              <label className="rq-wp__head">
+                <input type="checkbox" checked={!!(it.after && chosen[it.id])} disabled={!it.after || step.name === 'saving'}
+                  onChange={() => setChosen((c) => ({ ...c, [it.id]: !c[it.id] }))} aria-label={'Tidy: ' + it.before.question} />
+                <span className="rq-wp__title">{it.after ? (it.after.title || it.after.question) : it.before.question}</span>
+              </label>
+              <div className="rq-tidy">
+                <div className="rq-tidy__side">
+                  <b>NOW</b>
+                  <div className="rq-tidy__q">{it.before.question}</div>
+                  {it.before.detail && <div className="rq-tidy__note">{it.before.detail}</div>}
+                </div>
+                <div className="rq-tidy__side rq-tidy__side--after">
+                  <b>TIDIED</b>
+                  {it.after ? (
+                    <>
+                      {it.after.title && <div className="rq-card__title">{it.after.title}</div>}
+                      <Points points={it.after.points} />
+                      <div className="rq-tidy__q" style={{ marginTop: 6 }}>{it.after.question}</div>
+                    </>
+                  ) : <div className="rq-tidy__note">The AI did not return this one — it will be offered again next time.</div>}
+                </div>
+              </div>
+            </div>
+          ))}
+          {step.name === 'done' && (
+            <div className="rq-done">
+              <Svg w={16} sw={2.4} style={{ flex: 'none', marginTop: 2, color: '#007f3b' }}>{Icons.check}</Svg>
+              <span>{plural(step.saved, 'question', 'questions')} tidied into the template.{step.more ? ' More are waiting — run it again.' : ''}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="rq-modal__foot">
+          {step.name === 'done' ? (
+            <>
+              <span className="rq-grow" />
+              <button type="button" className="rq-primary rq-primary--sm" onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <span className="rq-hint" style={{ display: 'inline' }}>
+                {step.name === 'review' && items.length ? plural(kept.length, 'question', 'questions') + ' to save' + (step.more ? ' · more wait for the next run' : '') : ''}
+              </span>
+              <span className="rq-grow" />
+              <button type="button" className="rq-ghost" disabled={busy} onClick={onClose}>Cancel</button>
+              <button type="button" className="rq-primary rq-primary--sm" disabled={step.name !== 'review' || !items.length} onClick={save}>
+                {step.name === 'saving' ? 'Saving…' : 'Save ' + plural(kept.length, 'question', 'questions')}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [state, setState] = useState({ loading: true, rows: [], error: '' });
   const [status, setStatus] = useState('open');
@@ -934,6 +1135,7 @@ export default function Page() {
   const [view, setView] = useState('one'); // one | all
   const [composing, setComposing] = useState(false);
   const [writing, setWriting] = useState(false);
+  const [tidying, setTidying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState(false);
@@ -959,6 +1161,8 @@ export default function Page() {
   const counts = useMemo(() => Object.fromEntries(STATUS.map((f) => [f.id, fromSource.filter(f.match).length])), [fromSource]);
   const rows = useMemo(() => fromSource.filter((STATUS.find((f) => f.id === status) || STATUS[0]).match), [fromSource, status]);
 
+  // Not in the template yet: what "Tidy with AI" would offer.
+  const untidy = useMemo(() => state.rows.filter((r) => !r.formattedAt).length, [state.rows]);
   const openAll = useMemo(() => state.rows.filter((r) => r.status === 'open').length, [state.rows]);
   const answeredAll = state.rows.length - openAll;
 
@@ -987,7 +1191,7 @@ export default function Page() {
 
   // Export: the questions shown, as a numbered list ready for an email or an agenda.
   async function copyList() {
-    const text = rows.map((r, i) => (i + 1) + '. ' + String(r.question || '').replace(/\s+/g, ' ').trim()).join('\n');
+    const text = rows.map((r, i) => (i + 1) + '. ' + (r.title ? r.title + ' — ' : '') + String(r.question || '').replace(/\s+/g, ' ').trim()).join('\n');
     try {
       await navigator.clipboard.writeText(text);
     } catch (e) {
@@ -1057,6 +1261,12 @@ export default function Page() {
               </p>
             </div>
             <div className="rq-hero__actions">
+              {untidy > 0 && (
+                <button type="button" className="rq-soft" onClick={() => setTidying(true)}
+                  title="Give older questions a title and their context as word-for-word points — you check each one first">
+                  <Svg w={16} sw={1.9}>{AI_ICON}</Svg><span>Tidy with AI</span><b>{untidy}</b>
+                </button>
+              )}
               {unwritten > 0 && (
                 <button type="button" className="rq-soft" onClick={() => setWriting(true)}
                   title="Write the answered questions into the Notebook pages they belong on — you check every change first">
@@ -1153,6 +1363,7 @@ export default function Page() {
       </main>
 
       {writing && <WriteIn onClose={closeWriting} onDone={load} />}
+      {tidying && <Tidy onClose={() => setTidying(false)} onDone={load} />}
     </div>
   );
 }

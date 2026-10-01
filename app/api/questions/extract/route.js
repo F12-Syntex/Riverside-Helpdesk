@@ -40,7 +40,8 @@ export async function POST(request) {
     const res = await fetch(...chatRequest(apiKey, {
       model,
       temperature: 0,
-      max_tokens: 6000,
+      // Word-for-word points are long: room for a full meeting's worth.
+      max_tokens: 16000,
       response_format: { type: 'json_object' },
       messages: [{ role: 'user', content: EXTRACT_PROMPT + text }],
     }));

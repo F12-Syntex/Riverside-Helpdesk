@@ -1,7 +1,7 @@
 // The questions nobody has an answer for yet.
 //
 //   GET    /api/questions/open            the list, newest activity first
-//   POST   /api/questions/open            ask one — { question, detail }
+//   POST   /api/questions/open            ask one — { title, points, question, detail }
 //   PATCH  /api/questions/open            answer one — { id, answer }
 //   DELETE /api/questions/open?id=12      remove one that should not be there
 //   DELETE /api/questions/open?status=answered[&origin=asked]
@@ -63,6 +63,10 @@ export async function POST(request) {
     const result = await addOpenQuestion({
       question: body.question,
       detail: body.detail,
+      // The template (lib/questions/template.mjs): asked here, it is asked in it.
+      title: body.title,
+      points: body.points,
+      formatted: true,
       origin: 'asked',
       machineId: machineFromCookie(request),
     });
