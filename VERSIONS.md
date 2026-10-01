@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.47.0` | 2026-10-01 | feat | `4d05e85` | feat: swap the drifting lines for a faint swirl of colour while busy |
+| `6.46.1` | 2026-10-01 | docs | `435c040` | docs: record the drifting lines in the versions table |
 | `6.46.0` | 2026-10-01 | feat | `3895477` | feat: drift thin lines across the page while an answer is worked out |
 | `6.45.3` | 2026-10-01 | docs | `54fc27e` | docs: record the quieter add-contact link in the versions table |
 | `6.45.2` | 2026-10-01 | style | `3bc3bec` | style: move adding a contact out of the way on /lookup |
