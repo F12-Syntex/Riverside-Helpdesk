@@ -4,6 +4,8 @@
 //   POST   /api/questions/open            ask one — { question, detail }
 //   PATCH  /api/questions/open            answer one — { id, answer }
 //   DELETE /api/questions/open?id=12      remove one that should not be there
+//   DELETE /api/questions/open?status=answered[&origin=asked]
+//                                         clear the answered ones off the list
 //
 // The list has two kinds of row in it and only one of them is written here: the
 // other half arrives from the question log, which files every turn the
@@ -16,7 +18,7 @@
 // keeps what was typed.
 import { NextResponse } from 'next/server';
 import {
-  addOpenQuestion, answerOpenQuestion, deleteOpenQuestion, listOpenQuestions,
+  addOpenQuestion, answerOpenQuestion, clearAnsweredQuestions, deleteOpenQuestion, listOpenQuestions,
 } from '@/lib/questions/open';
 
 export const runtime = 'nodejs';
@@ -98,9 +100,12 @@ export async function PATCH(request) {
 }
 
 export async function DELETE(request) {
-  const id = Number(new URL(request.url).searchParams.get('id')) || 0;
+  const params = new URL(request.url).searchParams;
+  const id = Number(params.get('id')) || 0;
   try {
-    const result = await deleteOpenQuestion(id);
+    const result = params.get('status') === 'answered' && !id
+      ? await clearAnsweredQuestions({ origin: params.get('origin') || '' })
+      : await deleteOpenQuestion(id);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400, headers: noStore });
     return NextResponse.json(result, { headers: noStore });
   } catch (e) {

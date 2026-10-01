@@ -14,6 +14,11 @@
  * its question where the next person to ask can read it this afternoon,
  * and the row still says to write the page.
  *
+ * ANSWERS INTO THE NOTEBOOK. "Add to Notebook" takes every answer not
+ * yet written in to the page it belongs on and proposes each page's new
+ * text - new facts added, contradictions corrected - for the reader to
+ * check page by page before anything is saved (lib/questions/writein.js).
+ *
  * THE LIST IS THE PAGE. Asking is a button that opens a box, not a form
  * that is always there; each question is one quiet row, with its answer
  * under it and its actions on hover.
@@ -26,6 +31,8 @@ import AppHeader from '../_components/AppHeader';
 import { gapReason } from '../../lib/questions/gaps.mjs';
 import { machineCode } from '../../lib/audit/machine';
 import { notebookHref } from '../../lib/notebook/links.mjs';
+import { lineDiff } from '../../lib/notebook/diff.mjs';
+import { stripQuestionMarks } from '../../lib/notebook/questions.mjs';
 
 const STATUS = [
   { id: 'open', label: 'Open', match: (r) => r.status === 'open' },
@@ -152,7 +159,53 @@ const CSS = `
 .rq-menu .rq-act--red{color:#a51b0f;}
 .rq-menu .rq-act--red:hover{background:#fdeeec;}
 
+.rq-sub{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin:10px 0 0;font-size:13px;color:#768692;}
+.rq-sub .rq-grow{min-width:8px;}
+.rq-link--red{color:#a51b0f;}
+.rq-soft{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px 0 12px;border:1px solid #cfe0ee;border-radius:10px;
+  background:#eaf2fb;color:#005eb8;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background-color .15s ease;}
+.rq-soft:hover{background:#dcebf8;color:#003087;}
+.rq-soft b{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+  background:#005eb8;color:#fff;font-size:11.5px;font-weight:800;}
+
+/* ---- writing answers into the Notebook ---- */
+.rq-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:rgba(33,43,50,.38);backdrop-filter:blur(2px);animation:rq-fade .15s ease;}
+@keyframes rq-fade{from{opacity:0;}to{opacity:1;}}
+.rq-modal{display:flex;flex-direction:column;width:min(780px,100%);max-height:calc(100vh - 32px);background:#fff;border-radius:18px;
+  box-shadow:0 30px 60px -12px rgba(33,43,50,.35);animation:rq-in .2s cubic-bezier(.2,.8,.3,1);overflow:hidden;}
+.rq-modal__head{flex:none;display:flex;align-items:flex-start;gap:12px;padding:18px 18px 12px 22px;}
+.rq-modal__head h2{margin:0;font-size:19px;font-weight:800;letter-spacing:-.015em;}
+.rq-modal__head p{margin:4px 0 0;font-size:13.5px;line-height:1.45;color:#4c6272;}
+.rq-modal__body{flex:1;min-height:0;overflow:auto;padding:4px 22px 18px;}
+.rq-modal__foot{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:12px 18px 12px 22px;border-top:1px solid #edf1f3;background:#fafcfd;}
+.rq-x{flex:none;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;border-radius:9px;
+  background:none;color:#768692;cursor:pointer;}
+.rq-x:hover{background:rgba(33,43,50,.06);color:#212b32;}
+.rq-wp{padding:14px 0;border-bottom:1px solid #edf1f3;}
+.rq-wp:last-child{border-bottom:none;}
+.rq-wp__head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;cursor:pointer;}
+.rq-wp__head input{flex:none;width:17px;height:17px;margin:0;accent-color:#005eb8;cursor:pointer;}
+.rq-wp__title{font-size:15.5px;font-weight:700;}
+.rq-wp__path{flex-basis:100%;margin-left:27px;font-size:12.5px;color:#768692;}
+.rq-tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:#eaf2fb;color:#005eb8;font-size:11.5px;font-weight:700;}
+.rq-wp__qs{margin:8px 0 0 27px;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:13.5px;line-height:1.45;color:#4c6272;}
+.rq-wp__qs li::before{content:"?";display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-right:7px;
+  border-radius:50%;background:#005eb8;color:#fff;font-size:10px;font-weight:800;vertical-align:1px;}
+.rq-wp__warn{margin:8px 0 0 27px;padding:6px 10px;border-radius:8px;background:#fff6e5;color:#8a5a00;font-size:12.5px;line-height:1.45;}
+.rq-wp__more{margin:6px 0 0 25px;}
+.rq-diff{margin:8px 0 0 27px;border:1px solid #e3e9ec;border-radius:10px;overflow:hidden;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;}
+.rq-diff div{display:flex;gap:8px;padding:1px 10px;white-space:pre-wrap;overflow-wrap:anywhere;color:#4c6272;}
+.rq-diff i{flex:none;width:10px;font-style:normal;color:#9aa8b1;}
+.rq-diff .rq-diff--add{background:#eaf6ef;color:#14532d;}
+.rq-diff .rq-diff--del{background:#fdeeec;color:#7f1d1d;text-decoration:line-through;text-decoration-color:rgba(127,29,29,.35);}
+.rq-diff .rq-diff--gap{justify-content:center;color:#9aa8b1;background:#fafcfd;}
+.rq-done{display:flex;align-items:flex-start;gap:9px;padding:9px 0;font-size:14.5px;line-height:1.45;}
+.rq-done a{color:#005eb8;font-weight:650;text-decoration:none;}
+.rq-done a:hover{text-decoration:underline;}
+
 @media (max-width:560px){
+  .rq-soft span{display:none;}
   .rq{padding-top:26px;}
   .rq-head{align-items:center;}
   .rq-head h1{font-size:25px;}
@@ -165,7 +218,7 @@ const CSS = `
   .rq-acts{opacity:1;width:100%;padding-left:12px;}
   .rq-menu{left:12px;right:auto;}
 }
-@media (prefers-reduced-motion:reduce){.rq-compose,.rq-menu,.rq-scan i{animation:none;}}
+@media (prefers-reduced-motion:reduce){.rq-compose,.rq-menu,.rq-scan i,.rq-overlay,.rq-modal{animation:none;}}
 `;
 
 function when(at) {
@@ -493,11 +546,186 @@ function Row({ row, onAnswer, onRemove, busy }) {
   );
 }
 
+// A diff with long unchanged stretches folded away, so a page with one new
+// line reads as one new line.
+function foldDiff(diff, around = 1) {
+  const keep = diff.map((l, i) => l.t !== ' ' || diff.slice(Math.max(0, i - around), i + around + 1).some((x) => x.t !== ' '));
+  const out = [];
+  diff.forEach((l, i) => {
+    if (keep[i]) out.push(l);
+    else if (out.length === 0 || out[out.length - 1].t !== 'gap') out.push({ t: 'gap', s: '' });
+  });
+  return out;
+}
+
+function PageChange({ page, on, onToggle }) {
+  const [open, setOpen] = useState(false);
+  const diff = useMemo(
+    () => (open ? foldDiff(lineDiff(stripQuestionMarks(page.before || ''), stripQuestionMarks(page.after || ''))) : []),
+    [open, page.before, page.after],
+  );
+  const usable = !page.error;
+  return (
+    <div className="rq-wp">
+      <label className="rq-wp__head">
+        <input type="checkbox" checked={usable && on} disabled={!usable} onChange={onToggle} aria-label={'Write into ' + page.title} />
+        <span className="rq-wp__title">{page.title}</span>
+        {page.isNew && <span className="rq-tag">New page</span>}
+        <span className="rq-wp__path">{page.path}</span>
+      </label>
+      <ul className="rq-wp__qs">
+        {page.questions.map((q) => <li key={q.id}>{q.question}</li>)}
+      </ul>
+      {page.error && <div className="rq-err" style={{ marginLeft: 27 }}>{page.error}</div>}
+      {page.warnings.map((w) => <div key={w} className="rq-wp__warn">{w}</div>)}
+      {usable && (
+        <div className="rq-wp__more">
+          <button type="button" className="rq-link" onClick={() => setOpen((o) => !o)}>{open ? 'Hide changes' : 'Show changes'}</button>
+        </div>
+      )}
+      {open && (
+        <div className="rq-diff">
+          {diff.map((l, i) => (l.t === 'gap'
+            ? <div key={i} className="rq-diff--gap">⋯</div>
+            : <div key={i} className={l.t === '+' ? 'rq-diff--add' : l.t === '-' ? 'rq-diff--del' : ''}><i>{l.t === ' ' ? '' : l.t}</i>{l.s || ' '}</div>))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Every answered question not yet in the Notebook, written into the page it
+   belongs on. Proposed, read, then applied - nothing is saved before the
+   reader presses the button. */
+function WriteIn({ onClose, onDone }) {
+  const [step, setStep] = useState({ name: 'planning' }); // planning | review | applying | done | error
+  const [chosen, setChosen] = useState({});
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/questions/writein', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'plan' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!live) return;
+        if (!res.ok) { setStep({ name: 'error', message: data.error || 'The answers could not be placed.' }); return; }
+        const pages = Array.isArray(data.pages) ? data.pages : [];
+        setChosen(Object.fromEntries(pages.map((p) => [p.key, !p.error])));
+        setStep({ name: 'review', pages, more: !!data.more });
+      } catch (e) {
+        if (live) setStep({ name: 'error', message: 'The answers could not be placed.' });
+      }
+    })();
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && step.name !== 'applying' && step.name !== 'planning') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [step.name, onClose]);
+
+  const pages = step.pages || [];
+  const kept = pages.filter((p) => chosen[p.key] && !p.error);
+  const answers = kept.reduce((n, p) => n + p.questions.length, 0);
+
+  async function apply() {
+    const body = kept.map((p) => ({ noteId: p.noteId, title: p.title, body: p.after, sourceHash: p.sourceHash, questionIds: p.questions.map((q) => q.id) }));
+    setStep((s) => ({ ...s, name: 'applying' }));
+    try {
+      const res = await fetch('/api/questions/writein', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'apply', pages: body }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setStep({ name: 'error', message: data.error || 'The answers could not be written in.' }); return; }
+      setStep({ name: 'done', results: data.results || [], more: step.more });
+      onDone();
+    } catch (e) {
+      setStep({ name: 'error', message: 'The answers could not be written in.' });
+    }
+  }
+
+  const busy = step.name === 'planning' || step.name === 'applying';
+  return (
+    <div className="rq-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div className="rq-modal" role="dialog" aria-modal="true" aria-labelledby="rq-wi-title">
+        <div className="rq-modal__head">
+          <div>
+            <h2 id="rq-wi-title">Add answers to the Notebook</h2>
+            <p>
+              {step.name === 'done'
+                ? 'Done. The assistant answers from these pages now.'
+                : 'Each answer goes into the page it belongs on — new facts added, anything it contradicts corrected. Check each page before writing it in.'}
+            </p>
+          </div>
+          {!busy && <button type="button" className="rq-x" aria-label="Close" onClick={onClose}><Svg w={17} sw={2.2}>{Icons.close}</Svg></button>}
+        </div>
+
+        <div className="rq-modal__body">
+          {step.name === 'planning' && (
+            <div role="status">
+              <div className="rq-scan" aria-hidden="true" style={{ padding: '10px 0' }}>
+                {['88%', '64%', '76%', '52%', '70%'].map((w, i) => <i key={i} style={{ width: w, animationDelay: i * 0.12 + 's' }} />)}
+              </div>
+              <p className="rq-hint" style={{ display: 'block', margin: '6px 0 0' }}>Finding the page for each answer and writing it in. This can take a minute.</p>
+            </div>
+          )}
+          {step.name === 'error' && <div className="rq-err">{step.message}</div>}
+          {(step.name === 'review' || step.name === 'applying') && !pages.length && (
+            <div className="rq-empty" style={{ padding: '24px 0' }}>Every answer is already in the Notebook.</div>
+          )}
+          {(step.name === 'review' || step.name === 'applying') && pages.map((p) => (
+            <PageChange key={p.key} page={p} on={!!chosen[p.key]}
+              onToggle={() => setChosen((c) => ({ ...c, [p.key]: !c[p.key] }))} />
+          ))}
+          {step.name === 'done' && step.results.map((r, i) => (
+            <div key={i} className="rq-done">
+              <Svg w={16} sw={2.4} style={{ flex: 'none', marginTop: 2, color: r.error ? '#a51b0f' : '#007f3b' }}>{r.error ? Icons.close : Icons.check}</Svg>
+              <span>
+                {r.noteId && !r.error ? <Link href={notebookHref({ id: r.noteId, title: r.title })}>{r.title}</Link> : <strong>{r.title}</strong>}
+                {r.error ? ' — ' + r.error : ' — ' + plural(r.written || 0, 'answer', 'answers') + ' written in' + (r.isNew ? ', as a new page in Uncategorised' : '')}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="rq-modal__foot">
+          {step.name === 'done' ? (
+            <>
+              <span className="rq-hint" style={{ display: 'inline' }}>
+                {step.more ? 'More answers are waiting — run it again. ' : ''}A save was taken first: Notebook › Saves can put it back.
+              </span>
+              <span className="rq-grow" />
+              <button type="button" className="rq-primary rq-primary--sm" onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <span className="rq-hint" style={{ display: 'inline' }}>
+                {step.name === 'review' && pages.length
+                  ? plural(answers, 'answer', 'answers') + ' into ' + plural(kept.length, 'page', 'pages') + (step.more ? ' · more wait for the next run' : '')
+                  : ''}
+              </span>
+              <span className="rq-grow" />
+              <button type="button" className="rq-ghost" disabled={busy} onClick={onClose}>Cancel</button>
+              <button type="button" className="rq-primary rq-primary--sm" disabled={step.name !== 'review' || !kept.length} onClick={apply}>
+                {step.name === 'applying' ? 'Writing…' : 'Write into ' + plural(kept.length, 'page', 'pages')}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [state, setState] = useState({ loading: true, rows: [], error: '' });
   const [status, setStatus] = useState('open');
   const [source, setSource] = useState('');
   const [composing, setComposing] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState(false);
@@ -518,9 +746,33 @@ export default function Page() {
     return () => clearTimeout(t);
   }, [notice]);
 
+  const sourceLabel = (SOURCES.find((x) => x.id === source) || SOURCES[0]).label;
   const fromSource = useMemo(() => state.rows.filter((r) => !source || r.origin === source), [state.rows, source]);
   const counts = useMemo(() => Object.fromEntries(STATUS.map((f) => [f.id, fromSource.filter(f.match).length])), [fromSource]);
   const rows = useMemo(() => fromSource.filter((STATUS.find((f) => f.id === status) || STATUS[0]).match), [fromSource, status]);
+
+  // Answered, with an answer, and not yet in the Notebook: what "Add to
+  // Notebook" would write in.
+  const unwritten = useMemo(() => state.rows.filter((r) => r.status === 'answered' && !r.writtenAt && String(r.answer || '').trim()).length, [state.rows]);
+
+  async function clearAnswered() {
+    const answeredHere = fromSource.filter((r) => r.status === 'answered');
+    const notIn = answeredHere.filter((r) => !r.writtenAt).length;
+    const what = plural(answeredHere.length, 'answered question', 'answered questions') + (source ? ' (' + sourceLabel.toLowerCase() + ')' : '');
+    if (!window.confirm('Clear ' + what + ' off the list? Their answers go with them.'
+      + (notIn ? '\n\n' + notIn + ' of them ' + (notIn === 1 ? 'is' : 'are') + ' not in the Notebook yet — "Add to Notebook" first keeps those answers.' : ''))) return;
+    setBusy(true);
+    try {
+      const { ok, data } = await send('DELETE', null, '?status=answered' + (source ? '&origin=' + encodeURIComponent(source) : ''));
+      if (!ok) { setNotice(data.error || 'The answered questions could not be cleared.'); return; }
+      setNotice('Cleared ' + plural(data.removed || 0, 'answered question', 'answered questions') + '.');
+      load();
+    } catch (err) {
+      setNotice('The answered questions could not be cleared.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // Export: the questions shown, as a numbered list ready for an email or an agenda.
   async function copyList() {
@@ -574,7 +826,7 @@ export default function Page() {
   }
 
   const closeComposer = useCallback(() => setComposing(false), []);
-  const sourceLabel = (SOURCES.find((x) => x.id === source) || SOURCES[0]).label;
+  const closeWriting = useCallback(() => setWriting(false), []);
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f5', display: 'flex', flexDirection: 'column' }}>
@@ -592,6 +844,12 @@ export default function Page() {
               aria-label="Copy these questions as a list" title="Copy these questions as a numbered list">
               <Svg w={17} sw={2}>{copied ? Icons.check : Icons.copy}</Svg>
             </button>
+            {unwritten > 0 && (
+              <button type="button" className="rq-soft" onClick={() => setWriting(true)}
+                title="Write the answered questions into the Notebook pages they belong on — you check every change first">
+                <Svg w={16} sw={1.9}>{AI_ICON}</Svg><span>Add to Notebook</span><b>{unwritten}</b>
+              </button>
+            )}
             {!composing && (
               <button type="button" className="rq-primary" onClick={() => setComposing(true)}>
                 <Svg w={17} sw={2.4}>{Icons.plus}</Svg>Ask
@@ -624,6 +882,20 @@ export default function Page() {
           </select>
         </div>
 
+        {status !== 'open' && counts.answered > 0 && (
+          <div className="rq-sub">
+            <span>
+              {plural(counts.answered, 'answered', 'answered')}
+              {(() => {
+                const notIn = fromSource.filter((r) => r.status === 'answered' && !r.writtenAt).length;
+                return notIn ? ' · ' + notIn + ' not in the Notebook yet' : ' · all in the Notebook';
+              })()}
+            </span>
+            <span className="rq-grow" />
+            <button type="button" className="rq-link rq-link--red" disabled={busy} onClick={clearAnswered}>Clear answered</button>
+          </div>
+        )}
+
         {notice && <p className="rq-notice" role="status">{notice}</p>}
 
         {state.loading && <div className="rq-empty">Loading…</div>}
@@ -642,6 +914,8 @@ export default function Page() {
           ))}
         </ul>
       </main>
+
+      {writing && <WriteIn onClose={closeWriting} onDone={load} />}
     </div>
   );
 }

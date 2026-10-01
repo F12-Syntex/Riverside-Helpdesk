@@ -59,3 +59,11 @@ test('the quote is the marked words as plain text, across every segment', () => 
   assert.equal(questionQuote('A <span data-q="k3v9x2m7qa">**bold** <span style="color:red">red</span></span>', 'k3v9x2m7qa'), 'bold red');
   assert.equal(questionQuote(PAGE, 'missing123'), '');
 });
+
+test('stripping can be limited to some anchors, leaving the rest marked', () => {
+  const out = stripQuestionMarks(PAGE, ['k3v9x2m7qa']);
+  assert.ok(out.includes('go to the duty doctor by task'));
+  assert.deepEqual(questionAnchorsIn(out), ['ab12cd34ef']);
+  assert.ok(out.includes('<span style="color:#d5281b"><span data-q="ab12cd34ef">999 for chest pain</span></span>'));
+  assert.equal(stripQuestionMarks(PAGE, []), PAGE);
+});
