@@ -20,9 +20,8 @@
  * check page by page before anything is saved (lib/questions/writein.js).
  *
  * THE LIST IS THE PAGE. Asking is a button that opens a box, not a form
- * that is always there. Each question is a card in large type, with its
- * answer under it - or, while it is open, a box to answer it in, already
- * there - and its actions as plain buttons along the bottom.
+ * that is always there. Each question is a compact card with an Answer
+ * button; the box to write the answer in opens only when that is pressed.
  * ------------------------------------------------------------------ */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -53,7 +52,7 @@ const SOURCES = [
 const AI_ICON = (<><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>);
 
 const CSS = `
-.rq{flex:1;width:100%;max-width:820px;margin:0 auto;padding:40px 20px 72px;color:#212b32;}
+.rq{flex:1;width:100%;max-width:780px;margin:0 auto;padding:40px 20px 72px;color:#212b32;}
 .rq-head{display:flex;align-items:flex-end;gap:16px;margin:0 0 22px;}
 .rq-head__text{flex:1;min-width:0;}
 .rq-head h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.15;}
@@ -79,7 +78,7 @@ const CSS = `
   color:#005eb8;cursor:pointer;}
 .rq-link:hover{text-decoration:underline;}
 .rq-link:disabled{opacity:.5;cursor:default;text-decoration:none;}
-.rq-primary:focus-visible,.rq-ghost:focus-visible,.rq-icon:focus-visible,.rq-link:focus-visible,.rq-tab:focus-visible,.rq-act:focus-visible{
+.rq-primary:focus-visible,.rq-ghost:focus-visible,.rq-icon:focus-visible,.rq-link:focus-visible,.rq-tab:focus-visible,.rq-answer-btn:focus-visible,.rq-ico:focus-visible{
   outline:2px solid #005eb8;outline-offset:2px;}
 
 /* ---- asking ---- */
@@ -123,39 +122,38 @@ const CSS = `
 .rq-notice{margin:10px 0 0;font-size:13.5px;color:#005eb8;}
 .rq-empty{padding:44px 12px;text-align:center;font-size:14.5px;line-height:1.55;color:#768692;}
 
-/* ---- the list: one card per question ---- */
-.rq-list{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:14px;}
+/* ---- the list: one compact card per question ---- */
+.rq-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
 .rq-list:empty{display:none;}
-.rq-card{padding:20px 22px 14px;background:#fff;border:1px solid #e1e8ec;border-radius:18px;box-shadow:0 1px 3px rgba(33,43,50,.05);}
-.rq-card__top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13.5px;color:#4c6272;}
-.rq-card__top a{color:#005eb8;font-weight:650;text-decoration:none;}
-.rq-card__top a:hover{text-decoration:underline;}
-.rq-card__top > .rq-seen::before{content:"·";margin-right:10px;color:#b6c2c9;}
-.rq-status{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;font-size:12.5px;font-weight:750;}
+.rq-card{padding:14px 14px 14px 18px;background:#fff;border:1px solid #e1e8ec;border-radius:14px;box-shadow:0 1px 2px rgba(33,43,50,.04);}
+.rq-card__row{display:flex;align-items:flex-start;gap:12px;}
+.rq-card__main{flex:1;min-width:0;}
+.rq-card__q{margin:0;font-size:17px;font-weight:700;line-height:1.4;color:#212b32;overflow-wrap:anywhere;}
+.rq-card__meta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin-top:4px;font-size:13px;color:#768692;}
+.rq-card__meta a{color:#005eb8;font-weight:650;text-decoration:none;}
+.rq-card__meta a:hover{text-decoration:underline;}
+.rq-status{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:750;}
 .rq-status--open{background:#fff4dc;color:#8a5a00;}
 .rq-status--done{background:#e6f4ec;color:#00612f;}
 .rq-src--bot{color:#a13a00;font-weight:650;}
-.rq-card__q{margin:10px 0 0;font-size:20px;font-weight:750;line-height:1.35;letter-spacing:-.01em;color:#212b32;overflow-wrap:anywhere;}
-.rq-quote{margin-top:10px;padding:8px 12px;border-radius:10px;background:#f4f7f9;font-size:15px;line-height:1.5;color:#4c6272;overflow-wrap:anywhere;}
-.rq-quote b{display:block;font-size:11.5px;letter-spacing:.05em;color:#768692;font-weight:700;margin-bottom:1px;}
-.rq-detail{margin-top:8px;font-size:16px;line-height:1.55;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;}
-.rq-reply{margin-top:14px;padding:12px 14px;border-radius:12px;background:#f0f7f2;border:1px solid #cce4d6;}
-.rq-reply b{display:block;font-size:11.5px;letter-spacing:.05em;color:#007f3b;font-weight:800;margin-bottom:3px;}
-.rq-reply p{margin:0;font-size:16.5px;line-height:1.55;color:#212b32;white-space:pre-wrap;overflow-wrap:anywhere;}
-.rq-reply__note{display:block;margin-top:6px;font-size:13px;}
-.rq-answerbox{margin-top:14px;}
-.rq-answerbox .rq-area{font-size:16px;min-height:52px;background:#fbfcfd;}
-.rq-answerbox .rq-area:focus{background:#fff;}
+.rq-quote{margin-top:6px;padding-left:10px;border-left:3px solid #f0c674;font-size:14px;line-height:1.45;color:#4c6272;overflow-wrap:anywhere;}
+.rq-detail{margin-top:6px;font-size:14.5px;line-height:1.5;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;}
+.rq-reply{margin-top:10px;padding:2px 0 2px 12px;border-left:3px solid #6fbf8f;font-size:15.5px;line-height:1.5;color:#212b32;white-space:pre-wrap;overflow-wrap:anywhere;}
+.rq-reply__note{display:block;margin-top:3px;font-size:12.5px;white-space:normal;}
+.rq-card__acts{flex:none;display:flex;align-items:center;gap:2px;}
+.rq-answer-btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border:1px solid #cfe0ee;border-radius:9px;background:#eaf2fb;
+  color:#005eb8;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background-color .15s ease;}
+.rq-answer-btn:hover{background:#dcebf8;color:#003087;}
+.rq-answer-btn--quiet{background:#fff;border-color:#dde4e7;color:#4c6272;}
+.rq-answer-btn--quiet:hover{background:#f4f7f9;color:#212b32;}
+.rq-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:9px;background:none;
+  color:#768692;cursor:pointer;text-decoration:none;}
+.rq-ico:hover:not(:disabled){background:rgba(33,43,50,.06);color:#212b32;}
+.rq-ico--red:hover:not(:disabled){background:#fdeeec;color:#a51b0f;}
+.rq-ico:disabled{opacity:.5;cursor:default;}
+.rq-answerbox{margin-top:10px;}
+.rq-answerbox .rq-area{font-size:15.5px;}
 .rq-answerbox .rq-compose__bar{margin-top:8px;}
-.rq-card__foot{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:12px -8px 0;padding-top:10px;border-top:1px solid #f0f3f5;}
-.rq-act{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:none;border-radius:8px;background:none;
-  font:inherit;font-size:13.5px;font-weight:650;color:#4c6272;cursor:pointer;text-decoration:none;white-space:nowrap;}
-.rq-act:hover:not(:disabled){background:rgba(33,43,50,.06);color:#212b32;}
-.rq-act:disabled{opacity:.5;cursor:default;}
-.rq-act--blue{color:#005eb8;}
-.rq-act--blue:hover:not(:disabled){background:#eaf2fb;color:#003087;}
-.rq-act--red{color:#a51b0f;}
-.rq-act--red:hover:not(:disabled){background:#fdeeec;color:#a51b0f;}
 
 .rq-sub{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin:10px 0 0;font-size:13px;color:#768692;}
 .rq-sub .rq-grow{min-width:8px;}
@@ -209,8 +207,13 @@ const CSS = `
   .rq-head h1{font-size:25px;}
   .rq-head p{display:none;}
   .rq-hint{display:none;}
-  .rq-card{padding:16px 16px 10px;border-radius:16px;}
-  .rq-card__q{font-size:18px;}
+  .rq-card{padding:12px 10px 12px 14px;}
+  .rq-card__q{font-size:16px;}
+  .rq-answer-btn{padding:0 11px;}
+  /* No room beside the question: the buttons go on a line under it. */
+  .rq-card__row{flex-wrap:wrap;row-gap:8px;}
+  .rq-card__main{flex-basis:100%;}
+  .rq-card__acts{order:2;margin-left:-4px;}
 }
 @media (prefers-reduced-motion:reduce){.rq-compose,.rq-scan i,.rq-overlay,.rq-modal{animation:none;}}
 `;
@@ -442,10 +445,9 @@ function Source({ row }) {
   return <span>Asked by staff</span>;
 }
 
-/* One question, as a card: where it came from, the question in large type,
-   and either its answer or a box to write one in - open, right there, so
-   answering is typing and pressing Save. Every action is a plain button
-   along the bottom; nothing hides behind a hover or a menu. */
+/* One question, as a compact card: the question, one grey line saying
+   where it came from, and its answer under it once it has one. Answering
+   is a button; the box to write in opens only when it is pressed. */
 function Row({ row, onAnswer, onRemove, busy }) {
   const answered = row.status === 'answered';
   const [editing, setEditing] = useState(false);
@@ -455,8 +457,8 @@ function Row({ row, onAnswer, onRemove, busy }) {
   // the Notebook. Worth saying, quietly.
   const stale = answered && row.answeredAt && new Date(row.lastAt) > new Date(row.answeredAt);
   const href = pageHref(row);
-  const writing = !answered || editing;
 
+  const open = () => { setDraft(row.answer || ''); setEditing(true); };
   const cancel = () => { setDraft(row.answer || ''); setEditing(false); };
   const save = () => {
     if (!draft.trim() || busy) return;
@@ -465,70 +467,67 @@ function Row({ row, onAnswer, onRemove, busy }) {
 
   return (
     <li className="rq-card">
-      <div className="rq-card__top">
-        <span className={'rq-status ' + (answered ? 'rq-status--done' : 'rq-status--open')}>
-          {answered && <Svg w={12} sw={3}>{Icons.check}</Svg>}{answered ? 'Answered' : 'Open'}
-        </span>
-        <Source row={row} />
-        <span className="rq-seen">
-          {when(row.lastAt || row.at)}
-          {row.askedCount > 1 ? ' · asked ' + row.askedCount + ' times' : ''}
-          {row.origin !== 'assistant' && row.machineId ? ' · machine ' + machineCode(row.machineId) : ''}
-        </span>
+      <div className="rq-card__row">
+        <div className="rq-card__main">
+          <h3 className="rq-card__q">{row.question}</h3>
+          <div className="rq-card__meta">
+            <span className={'rq-status ' + (answered ? 'rq-status--done' : 'rq-status--open')}>
+              {answered && <Svg w={11} sw={3}>{Icons.check}</Svg>}{answered ? 'Answered' : 'Open'}
+            </span>
+            <Source row={row} />
+            <span>
+              {when(row.lastAt || row.at)}
+              {row.askedCount > 1 ? ' · asked ' + row.askedCount + ' times' : ''}
+            </span>
+          </div>
+        </div>
+        {!editing && (
+          <div className="rq-card__acts">
+            <button type="button" className={'rq-answer-btn' + (answered ? ' rq-answer-btn--quiet' : '')} onClick={open}>
+              {answered ? 'Edit' : 'Answer'}
+            </button>
+            {onPage
+              ? href && <Link className="rq-ico" href={href} title="Go to the text" aria-label="Go to the text"><Svg w={16} sw={2.1}>{Icons.external}</Svg></Link>
+              : <Link className="rq-ico" href="/notebook" title="Write the page in the Notebook" aria-label="Write the page"><Svg w={16} sw={2.1}>{Icons.book}</Svg></Link>}
+            {answered && (
+              <button type="button" className="rq-ico" disabled={busy} onClick={() => onAnswer(row, '')} title="Reopen" aria-label="Reopen">
+                <Svg w={16} sw={2.1}>{Icons.undo}</Svg>
+              </button>
+            )}
+            <button type="button" className="rq-ico rq-ico--red" disabled={busy} onClick={() => onRemove(row)} title="Remove" aria-label="Remove">
+              <Svg w={16} sw={2.1}>{Icons.trash}</Svg>
+            </button>
+          </div>
+        )}
       </div>
 
-      <h3 className="rq-card__q">{row.question}</h3>
-      {row.quote && <div className="rq-quote"><b>ABOUT THE WORDS</b>“{row.quote}”</div>}
+      {row.quote && <div className="rq-quote">“{row.quote}”</div>}
       {row.detail && <div className="rq-detail">{row.detail}</div>}
 
       {answered && !editing && row.answer && (
         <div className="rq-reply">
-          <b>ANSWER</b>
-          <p>{row.answer}</p>
+          {row.answer}
           {onPage && row.writtenAt && <span className="rq-reply__note" style={{ color: '#007f3b' }}>Written into the page.</span>}
           {stale && <span className="rq-reply__note" style={{ color: '#a13a00' }}>Asked again since — it may not be in the Notebook yet.</span>}
         </div>
       )}
 
-      {writing && (
+      {editing && (
         <div className="rq-answerbox">
-          <textarea className="rq-area" rows={draft.includes('\n') || draft.length > 70 ? 4 : 2} value={draft}
-            autoFocus={editing} onChange={(e) => setDraft(e.target.value)}
+          <textarea className="rq-area" rows={3} autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
             aria-label={'Answer: ' + row.question} placeholder="Write the answer…" maxLength={4000}
             onKeyDown={(e) => {
-              if (e.key === 'Escape' && editing) cancel();
+              if (e.key === 'Escape') cancel();
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save();
             }} />
           <div className="rq-compose__bar">
-            <span className="rq-hint">Ctrl + Enter to save</span>
+            <span className="rq-hint">Ctrl + Enter to save · Esc to cancel</span>
             <span className="rq-grow" />
-            {editing && <button type="button" className="rq-ghost" onClick={cancel}>Cancel</button>}
-            <button type="button" className="rq-primary rq-primary--sm" disabled={busy || !draft.trim()} onClick={save}>
-              <Svg w={14} sw={2.6}>{Icons.check}</Svg>{editing ? 'Save answer' : 'Answer'}
-            </button>
+            <button type="button" className="rq-ghost" onClick={cancel}>Cancel</button>
+            <button type="button" className="rq-primary rq-primary--sm" disabled={busy || !draft.trim()} onClick={save}>Save answer</button>
           </div>
         </div>
       )}
-
-      <div className="rq-card__foot">
-        {answered && !editing && (
-          <button type="button" className="rq-act rq-act--blue" onClick={() => { setDraft(row.answer || ''); setEditing(true); }}>
-            <Svg w={14} sw={2.2}>{Icons.edit}</Svg>Edit answer
-          </button>
-        )}
-        {onPage
-          ? href && <Link className="rq-act" href={href}><Svg w={14} sw={2.2}>{Icons.external}</Svg>Go to the text</Link>
-          : <Link className="rq-act" href="/notebook"><Svg w={14} sw={2.2}>{Icons.book}</Svg>Write the page</Link>}
-        {answered && !editing && (
-          <button type="button" className="rq-act" disabled={busy} onClick={() => onAnswer(row, '')}>
-            <Svg w={14} sw={2.2}>{Icons.undo}</Svg>Reopen
-          </button>
-        )}
-        <span className="rq-grow" />
-        <button type="button" className="rq-act rq-act--red" disabled={busy} onClick={() => onRemove(row)}>
-          <Svg w={14} sw={2.2}>{Icons.trash}</Svg>Remove
-        </button>
-      </div>
     </li>
   );
 }
