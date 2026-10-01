@@ -250,7 +250,7 @@ export default function AiAnswer({ v }) {
       <div style={s('min-width:0;')}>
         {/* The agent is working: one readable line saying what it is doing
             now, rather than a grid of every lookup in unreadable type. */}
-        {v.aiLoading && <WorkingState steps={v.steps} statusText={v.statusText} />}
+        {v.aiLoading && <WorkingState steps={v.steps} statusText={v.statusText} progress={v.progress} />}
 
         {v.aiError && (
           <div style={s('padding:18px 0;font-size:17px;line-height:1.5;color:#212b32;')}>

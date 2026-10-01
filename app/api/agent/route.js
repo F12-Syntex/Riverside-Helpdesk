@@ -76,6 +76,7 @@ import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { getDirectory } from '@/lib/lookup/directory';
+import { scanNotes, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
 import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
@@ -599,6 +600,10 @@ export async function POST(request) {
             try {
               const hits = await searchKnowledge(question, 12, { kind: 'document', semantic: true });
               chunks = hits.map(knowledgeHitToDocumentChunk);
+              // What the search found, for the working card: the documents
+              // the passages came from, in the order they ranked.
+              const titles = [...new Set(chunks.map((c) => c.docTitle).filter(Boolean))];
+              send({ type: 'progress', stage: 'documents', matched: chunks.length, matches: titles.slice(0, 6).map((title) => ({ title })) });
             } catch (e) {
               // A search that cannot run says so, rather than answering the
               // question some other way â€” /practice means these documents.
@@ -1005,6 +1010,13 @@ export async function POST(request) {
         // that already loaded it for a list command does not load it twice.
         const notebookPages = await notebook();
         const notebookText = notebookPages.length ? notebookFullText(notebookPages) : '';
+        // The working card's pass over every page for the question's words:
+        // real, and in code, but display only — nothing below reads it. See
+        // lib/agent/note-scan.mjs.
+        const noteScan = notebookPages.length ? scanNotes(question, notebookPages) : null;
+        if (noteScan) send(scanEvent(noteScan));
+        // The page(s) the turn settled on, for the card to mark on that scan.
+        let chosenTitles = [];
 
         let templateAnswer = null;
         let clarify = null;
@@ -1119,6 +1131,7 @@ export async function POST(request) {
         if (routed && routed.decision === 'hit' && routed.page) {
           picked = 'notebook:router';
           const selection = { template: 'notebook', pages: [routed.page.docTitle] };
+          chosenTitles = selection.pages;
           templateAnswer = renderSelection(selection, question, notebookPages, {});
           if (templateAnswer) applyKindCard(selection);
         } else if (routed && routed.decision === 'ambiguous' && routed.clarify) {
@@ -1143,6 +1156,7 @@ export async function POST(request) {
             }),
           };
           picked = selection.object.template;
+          chosenTitles = selection.object.pages || [];
           scan = safetyScan({ message: question, requests: selection.object.requests });
           // A question back, when the message could mean two different things
           // and they have different answers. Null when the model asked without
@@ -1172,6 +1186,11 @@ export async function POST(request) {
         const safety = safetyOutput(scan, {
           cardScans: !!templateAnswer && CLINICAL_TEMPLATES.includes(picked),
         });
+
+        if (templateAnswer && noteScan) {
+          const chosen = chosenOnScan(noteScan, chosenTitles);
+          if (chosen.length) send({ type: 'progress', stage: 'chosen', chosen });
+        }
 
         send({
           type: 'tool-result',

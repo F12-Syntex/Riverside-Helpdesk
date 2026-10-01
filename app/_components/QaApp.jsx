@@ -12,7 +12,7 @@ import { machineId } from '../../lib/audit/client';
 import { notebookHref } from '../../lib/notebook/links.mjs';
 import {
   isTestQuery, isGeneralTestQuery,
-  TEST_STEPS, TEST_STATUS, TEST_ANSWER,
+  TEST_STEPS, TEST_STATUS, TEST_PROGRESS, TEST_ANSWER,
   TEST_GENERAL_STEPS, TEST_GENERAL_STATUS, TEST_GENERAL_ANSWER,
 } from '../../lib/test-answer';
 
@@ -762,6 +762,10 @@ class RiversidePracticeQA extends React.Component {
       at(st.at, () => this.onAgentEvent(idx, { type: 'status', text: st.text }));
     }
 
+    if (!general) {
+      for (const p of TEST_PROGRESS) at(p.at, () => this.onAgentEvent(idx, p.event));
+    }
+
     for (const step of steps) {
       const startedAt = clock;
       at(startedAt, () => this.onAgentEvent(idx, {
@@ -896,6 +900,12 @@ class RiversidePracticeQA extends React.Component {
   onAgentEvent(idx, ev) {
     if (!ev || !ev.type) return;
     if (ev.type === 'status') { this.updateAi(idx, { statusText: ev.text || '' }); return; }
+    // Real progress on the search itself — the Notebook scanned, the page
+    // chosen, the documents found — kept by stage for the working card.
+    if (ev.type === 'progress' && ev.stage) {
+      this.updateAi(idx, (msg) => ({ progress: Object.assign({}, msg.progress, { [ev.stage]: ev }) }));
+      return;
+    }
     if (ev.type === 'tool-start') {
       this.updateAi(idx, (msg) => ({
         statusText: '',
@@ -1469,6 +1479,7 @@ class RiversidePracticeQA extends React.Component {
           steps,
           hasSteps: steps.length > 0,
           statusText: m.statusText || '',
+          progress: m.progress || null,
           usedJudgement,
           usedReasoning,
           usedWeb,
