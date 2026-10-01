@@ -18,6 +18,11 @@
  * them into two pages would have meant the half that writes itself is
  * the half nobody opens.
  *
+ * A THIRD WAY IN: the Notebook. Somebody reading a page highlights the
+ * words they are unsure of and asks about them there; the question lands
+ * here too, with the words it was asked about and a link straight back to
+ * them, and an answer written in either place is the same answer.
+ *
  * AN ANSWER HERE IS NOT THE RECORD. The Notebook is. So an answered
  * question still says to write the page, and the answer sits under the
  * question where the next person to ask it can read it this afternoon —
@@ -30,6 +35,7 @@ import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { gapReason } from '../../lib/questions/gaps.mjs';
 import { machineCode } from '../../lib/audit/machine';
+import { notebookHref } from '../../lib/notebook/links.mjs';
 
 const BOX = 'background:#fff;border:1px solid #dde4e7;border-radius:12px;';
 const INPUT = 'width:100%;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:16px;border:2px solid #d8dde0;border-radius:8px;background:#fff;color:#212b32;';
@@ -43,6 +49,7 @@ const FILTERS = [
   { id: 'answered', label: 'Answered', match: (r) => r.status === 'answered' },
   { id: 'assistant', label: 'From the assistant', match: (r) => r.origin === 'assistant' },
   { id: 'asked', label: 'Asked here', match: (r) => r.origin === 'asked' },
+  { id: 'notebook', label: 'On Notebook pages', match: (r) => r.origin === 'notebook' },
   { id: 'all', label: 'All', match: () => true },
 ];
 
@@ -79,7 +86,7 @@ function Provenance({ row }) {
   const reason = gapReason(row.reason);
   const bits = [when(row.lastAt || row.at)];
   if (row.askedCount > 1) bits.push('asked ' + row.askedCount + ' times');
-  if (row.origin === 'asked' && row.machineId) bits.push('from machine ' + machineCode(row.machineId));
+  if (row.origin !== 'assistant' && row.machineId) bits.push('from machine ' + machineCode(row.machineId));
   return (
     <div style={s('margin-top:6px;font-size:12.5px;color:#768692;')}>
       {bits.join(' · ')}
@@ -93,6 +100,13 @@ function Provenance({ row }) {
    was actually put to the app and came back empty — so they are the ones
    that carry a colour. */
 function OriginBadge({ row }) {
+  if (row.origin === 'notebook') {
+    return (
+      <span style={s('display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:#eaf2fb;color:#005eb8;')}>
+        {row.noteTitle ? 'On the page “' + row.noteTitle + '”' : 'On a Notebook page that has since been deleted'}
+      </span>
+    );
+  }
   const fromBot = row.origin === 'assistant';
   const reason = gapReason(row.reason);
   const label = fromBot ? (reason ? reason.label : 'The assistant could not answer') : 'Asked by staff';
@@ -111,6 +125,7 @@ function Row({ row, onAnswer, onRemove, busy }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(row.answer || '');
   const answered = row.status === 'answered';
+  const onPage = row.origin === 'notebook';
   // Asked again since it was answered: the answer is here but the gap is
   // evidently still being hit, which usually means it never reached the
   // Notebook. Worth saying, quietly, rather than showing a tick.
@@ -131,6 +146,12 @@ function Row({ row, onAnswer, onRemove, busy }) {
         {row.question}
       </div>
 
+      {row.quote && (
+        <div style={s('margin-top:6px;padding-left:10px;border-left:3px solid #f0c674;font-size:14.5px;line-height:1.5;color:#4c6272;overflow-wrap:anywhere;')}>
+          “{row.quote}”
+        </div>
+      )}
+
       {row.detail && (
         <div style={s('margin-top:6px;font-size:15px;line-height:1.5;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;')}>
           {row.detail}
@@ -147,6 +168,11 @@ function Row({ row, onAnswer, onRemove, busy }) {
           <div style={s('margin-top:4px;font-size:15.5px;line-height:1.5;color:#212b32;white-space:pre-wrap;overflow-wrap:anywhere;')}>
             {row.answer}
           </div>
+          {onPage && row.writtenAt && (
+            <div style={s('margin-top:6px;font-size:12.5px;color:#007f3b;')}>
+              Written into the page, so the assistant answers from it now.
+            </div>
+          )}
           {stale && (
             <div style={s('margin-top:6px;font-size:12.5px;color:#a13a00;')}>
               Asked again since this was written — it may not have reached the Notebook yet.
@@ -169,7 +195,9 @@ function Row({ row, onAnswer, onRemove, busy }) {
             <Hover tag="button" type="button" onClick={() => { setDraft(row.answer || ''); setOpen(false); }}
               base={QUIET} hover={QUIET_HOVER}>Cancel</Hover>
             <span style={s('font-size:12.5px;color:#768692;')}>
-              Then write it into the Notebook, so the assistant can answer it next time.
+              {onPage
+                ? 'Then use Format with AI on the page to write it in, so the assistant can answer from it.'
+                : 'Then write it into the Notebook, so the assistant can answer it next time.'}
             </span>
           </div>
         </div>
@@ -180,9 +208,16 @@ function Row({ row, onAnswer, onRemove, busy }) {
           <Hover tag="button" type="button" onClick={() => setOpen(true)} base={QUIET} hover={QUIET_HOVER}>
             {answered ? 'Change the answer' : 'Answer this'}
           </Hover>
-          <Hover tag={Link} href="/notebook" base={QUIET + 'text-decoration:none;'} hover={QUIET_HOVER}>
-            Write the page
-          </Hover>
+          {onPage ? (row.noteTitle && (
+            <Hover tag={Link} href={notebookHref({ id: row.noteId, title: row.noteTitle }) + '?q=' + encodeURIComponent(row.anchor || '')}
+              base={QUIET + 'text-decoration:none;'} hover={QUIET_HOVER}>
+              Go to the text
+            </Hover>
+          )) : (
+            <Hover tag={Link} href="/notebook" base={QUIET + 'text-decoration:none;'} hover={QUIET_HOVER}>
+              Write the page
+            </Hover>
+          )}
           {answered && (
             <Hover tag="button" type="button" disabled={busy} onClick={() => onAnswer(row, '')}
               base={QUIET} hover={QUIET_HOVER}>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { archiveKnowledgeEntry, getKnowledgeEntry, listKnowledge, syncKnowledgeClaims, upsertKnowledgeEntry } from '@/lib/knowledge';
 import { denyNonLocalKnowledgeAdmin } from '@/lib/knowledge-admin-access';
 import { deleteNote, updateNote } from '@/lib/notebook';
+import { stripQuestionMarks } from '@/lib/notebook/questions.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ async function save(body) {
     // keeps the entry's data/authority in step, but notebook pages never carry
     // vectors — embed:false avoids re-embedding image-markdown/blob-URL text.
     return upsertKnowledgeEntry({
-      ...body, id: `note:${note.id}`, content: note.body, data,
+      ...body, id: `note:${note.id}`, content: stripQuestionMarks(note.body), data,
       sourceRef: `notebook:${note.id}`, authority: body.authority ?? 90,
     }, { embed: false });
   }

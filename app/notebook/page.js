@@ -22,12 +22,14 @@ import { Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import MapView from '../_components/notebook/MapView';
 import CardEditor from '../_components/notebook/CardEditor';
+import { QuestionLayer, QuestionMark, QuestionsChip, pageQuestions } from '../_components/notebook/Questions';
 import {
   NotebookStyles, T, NBIcons, Banner, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
   EmptyState, EmptyMarquee, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuSeparator,
   MenuSub, MenuChoice, Spinner,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
+import { hasQuestionAnchor, questionAnchorsIn, stripQuestionMarks } from '@/lib/notebook/questions.mjs';
 import {
   CREATABLE_KINDS, emptyFields, isTypedKind, noteIssues, noteKind, normaliseFields, suggestKind,
 } from '@/lib/notebook/kinds.mjs';
@@ -113,6 +115,10 @@ const PAGE_CSS = `
 
 .nbk-tools{flex:none;position:relative;z-index:2;padding:0 0 10px;}
 .nbk-editor-wrap{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;}
+.nbk-qopt{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--nbk-line);border-radius:12px;background:#fffaf0;
+  font-size:14px;line-height:1.5;color:var(--nbk-ink);cursor:pointer;}
+.nbk-qopt input{flex:none;width:17px;height:17px;margin:2px 0 0;accent-color:var(--nbk-blue);cursor:pointer;}
+.nbk-qopt small{display:block;margin-top:4px;font-size:12.5px;color:var(--nbk-mut);}
 
 .nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;}
 
@@ -290,6 +296,8 @@ const Kbd = Mark.create({
 const EXTENSIONS = [
   StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
   Underline, Kbd, Highlight, TextStyle, Color,
+  // Words somebody has asked a question about (../_components/notebook/Questions).
+  QuestionMark,
   TaskList, TaskItem.configure({ nested: true }),
   Table, TableRow, TableHeader, TableCell,
   Link.configure({ openOnClick: false, autolink: true }),
@@ -514,6 +522,12 @@ export default function NotebookPage() {
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
   const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections)
   const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page
+  // Questions asked about words on the open page (Questions.jsx): the rows,
+  // tagged with the page they were read for; the one whose card is open; and
+  // a question to jump to, from a /questions link (?q=<anchor>).
+  const [pageQs, setPageQs] = React.useState({ noteId: null, rows: [] });
+  const [qOpen, setQOpen] = React.useState(null);
+  const [jumpQ, setJumpQ] = React.useState(null);
   const dragDepth = React.useRef(0);
   const saved = React.useRef(new Map());   // id -> { title, body } last persisted
   const dirty = React.useRef(new Set());   // ids edited since their last save
@@ -532,6 +546,15 @@ export default function NotebookPage() {
     editor.on('transaction', onEditorTx);
     return () => { editor.off('transaction', onEditorTx); };
   }, [editor]);
+
+  // A link to a question (/notebook/<page>?q=<anchor>): remember it and take
+  // it off the address, which otherwise follows the reader from page to page.
+  React.useEffect(() => {
+    const anchor = new URLSearchParams(window.location.search).get('q');
+    if (!anchor) return;
+    setJumpQ(anchor);
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   React.useEffect(() => {
     (async () => {
@@ -641,6 +664,32 @@ export default function NotebookPage() {
   // the text, so the file can still be removed (or re-embedded) from the strip.
   const selectedFiles = attachments.filter((a) => a.noteId === selectedId
     && !(selected && (selected.body || '').includes(a.url)));
+
+  // THE OPEN PAGE'S QUESTIONS. Read once per page opened; everything after is
+  // kept in step locally by whatever changed it (asking, answering, removing).
+  const selectedPageId = selected && !isSection ? selected.id : null;
+  React.useEffect(() => {
+    if (selectedPageId == null) return undefined;
+    let live = true;
+    fetch('/api/notebook/questions?noteId=' + selectedPageId)
+      .then((r) => (r.ok ? r.json() : { rows: [] }))
+      .then((d) => { if (live) setPageQs({ noteId: selectedPageId, rows: Array.isArray(d.rows) ? d.rows : [] }); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [selectedPageId]);
+  const qRows = pageQs.noteId === selectedPageId ? pageQs.rows : [];
+  const setQRows = React.useCallback((fn) => {
+    setPageQs((p) => (p.noteId === selectedPageId ? { ...p, rows: fn(p.rows) } : p));
+  }, [selectedPageId]);
+  const selectedBody = selected ? selected.body || '' : '';
+  const shownQs = React.useMemo(() => pageQuestions(qRows, questionAnchorsIn(selectedBody)), [qRows, selectedBody]);
+  // Answered, and still marked on the page: what Format with AI can write in.
+  const answeredOnPage = shownQs.filter((q) => q.status === 'answered' && !q.detached);
+  function pickQuestion(q, rect) {
+    const el = !q.detached && editor ? editor.view.dom.querySelector('[data-q="' + q.anchor + '"]') : null;
+    if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setQOpen({ anchor: q.anchor }); }
+    else setQOpen({ anchor: q.anchor, rect });
+  }
 
   // Ancestor chain of the selection, root first (breadcrumb + auto-expand).
   const ancestors = React.useMemo(() => {
@@ -790,20 +839,42 @@ export default function NotebookPage() {
 
   // AI format: send the body off, then show the proposed change as a diff the
   // user must confirm - nothing is applied (or saved) until they accept.
-  async function runAiFormat() {
+  //
+  // WITH QUESTION DATA. A page with answered questions on it asks first whether
+  // to include them: if so, the answers go along and are written into the page,
+  // and each one whose marker comes back gone is recorded as written in when
+  // the change is applied. Open questions keep their markers either way.
+  function startAiFormat() {
+    if (aiFmt && aiFmt.status === 'loading') return;
+    if (answeredOnPage.length) setAiFmt({ status: 'options', include: true });
+    else runAiFormat(false);
+  }
+
+  async function runAiFormat(includeQuestions) {
     const original = (selected && selected.body) || '';
     if (!original.trim() || (aiFmt && aiFmt.status === 'loading')) return;
+    const asked = includeQuestions ? answeredOnPage : [];
     setAiFmt({ status: 'loading' });
     try {
       const res = await fetch('/api/notebook/format', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: original }),
+        body: JSON.stringify({
+          text: original,
+          questions: asked.map((q) => ({ anchor: q.anchor, question: q.question, answer: q.answer, quote: q.quote })),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Formatting failed.');
       const formatted = String(data.formatted || '');
       if (formatted.trim() === original.trim()) { setAiFmt({ status: 'error', message: 'Nothing to change: the note is already tidy.' }); return; }
-      setAiFmt({ status: 'ready', formatted, diff: lineDiff(original, formatted) });
+      const written = asked.filter((q) => !hasQuestionAnchor(formatted, q.anchor));
+      // Markers the model should have kept and did not: said, so nobody wonders
+      // where a highlight went. The questions themselves are safe in the list.
+      const lost = shownQs.filter((q) => !q.detached && !asked.includes(q) && !hasQuestionAnchor(formatted, q.anchor));
+      setAiFmt({
+        status: 'ready', formatted, written, lost, noteId: selected.id,
+        diff: lineDiff(stripQuestionMarks(original), stripQuestionMarks(formatted)),
+      });
     } catch (e) {
       setAiFmt({ status: 'error', message: String(e.message || e) });
     }
@@ -860,6 +931,17 @@ export default function NotebookPage() {
       dirty.current.add(selectedId);
       setSaveState('saving');
     }
+    // The answers now in the page's text: say so on their rows. Best-effort -
+    // the page is what matters, and it is already applied.
+    const written = (aiFmt.written || []).map((q) => q.id);
+    if (written.length) {
+      const stamp = new Date().toISOString();
+      setQRows((rows) => rows.map((r) => (written.includes(r.id) ? { ...r, writtenAt: stamp } : r)));
+      fetch('/api/notebook/questions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'written', noteId: aiFmt.noteId, ids: written }),
+      }).catch(() => {});
+    }
     setAiFmt(null);
   }
   /* --------------------------- Note actions --------------------------- */
@@ -869,6 +951,7 @@ export default function NotebookPage() {
     setUploadErr('');
     setAiFmt(null);
     setAiOrg(null);
+    setQOpen(null);
     setDrawer(false);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
@@ -1286,6 +1369,7 @@ export default function NotebookPage() {
         {isSection && (<><span className="nbk-kicker__dot" /><span>{sectionPages.length + (sectionPages.length === 1 ? ' page' : ' pages')}</span></>)}
         {!isSection && fileCount > 0 && (<><span className="nbk-kicker__dot" /><span>{fileCount + (fileCount === 1 ? ' file' : ' files')}</span></>)}
         {!isSection && <KindChip kind={selected.kind} draft={String(selected.status || 'live') === 'draft'} full />}
+        {!isSection && <QuestionsChip questions={shownQs} onPick={pickQuestion} />}
       </div>
       {/* A textarea so a long title wraps rather than running off the sheet;
           a title is one line, so Enter goes on into the text instead. */}
@@ -1574,12 +1658,14 @@ export default function NotebookPage() {
                     )}
                   />
                   <button type="button" className={'nbk-ai-fab' + (aiFmt && aiFmt.status === 'loading' ? ' nbk-ai-fab--busy' : '')}
-                    onClick={() => { if (!(aiFmt && aiFmt.status === 'loading')) runAiFormat(); }}
+                    onClick={startAiFormat}
                     onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
                     aria-label="Format with AI"
                     title="Format with AI: restructure this page into headings, lists, tables and highlights (you review the changes first)">
                     <Svg w={20} sw={1.9}>{TIcons.ai}</Svg>
                   </button>
+                  <QuestionLayer editor={editor} noteId={selected.id} rows={qRows} setRows={setQRows}
+                    open={qOpen} setOpen={setQOpen} jumpTo={jumpQ} onJumped={() => setJumpQ(null)} />
                 </div>
 
                 {(selectedFiles.length > 0 || uploadErr || uploading) && (
@@ -1678,6 +1764,24 @@ export default function NotebookPage() {
           </div>
         </Modal>
       )}
+      {aiFmt && aiFmt.status === 'options' && (
+        <Modal size="sm" title="Format with AI" onClose={() => setAiFmt(null)}
+          subtitle="Restructure this page into headings, lists, tables and highlights. You review the changes first."
+          footer={<>
+            <Button variant="ghost" onClick={() => setAiFmt(null)}>Cancel</Button>
+            <Button variant="primary" icon={TIcons.ai} onClick={() => runAiFormat(aiFmt.include)}>Format</Button>
+          </>}>
+          <label className="nbk-qopt">
+            <input type="checkbox" checked={aiFmt.include} onChange={(e) => setAiFmt({ ...aiFmt, include: e.target.checked })} />
+            <span>
+              <strong>Include question data</strong>
+              {' - write the answer' + (answeredOnPage.length === 1 ? '' : 's') + ' to '
+                + (answeredOnPage.length === 1 ? 'the answered question' : 'the ' + answeredOnPage.length + ' answered questions') + ' into the page.'}
+              <small>Each answer becomes part of the page where it belongs, and its highlight comes off. Open questions keep theirs either way.</small>
+            </span>
+          </label>
+        </Modal>
+      )}
       {aiFmt && aiFmt.status === 'error' && (
         <Modal size="sm" title="Could not reformat" onClose={() => setAiFmt(null)}
           footer={<Button variant="primary" onClick={() => setAiFmt(null)}>Close</Button>}>
@@ -1686,7 +1790,13 @@ export default function NotebookPage() {
       )}
       {aiFmt && aiFmt.status === 'ready' && (
         <Modal size="lg" title="Proposed reformat"
-          subtitle="Headings, lists, tables and highlights. Every fact is kept, and nothing is saved until you apply."
+          subtitle={'Headings, lists, tables and highlights. Every fact is kept, and nothing is saved until you apply.'
+            + (aiFmt.written && aiFmt.written.length
+              ? ' ' + aiFmt.written.length + (aiFmt.written.length === 1 ? ' answer is' : ' answers are') + ' written in, and ' + (aiFmt.written.length === 1 ? 'its highlight comes' : 'their highlights come') + ' off.'
+              : '')
+            + (aiFmt.lost && aiFmt.lost.length
+              ? ' ' + aiFmt.lost.length + (aiFmt.lost.length === 1 ? ' question highlight was' : ' question highlights were') + ' lost in the rewrite; the questions stay on the page\'s list.'
+              : '')}
           onClose={() => setAiFmt(null)} flush
           footer={<>
             <Button variant="ghost" onClick={() => setAiFmt(null)}>Cancel</Button>

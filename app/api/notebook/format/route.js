@@ -3,6 +3,11 @@
 // highlights and colour-coded warnings) while preserving every fact. The
 // client shows the result as a diff the user must confirm — nothing is saved
 // here.
+//
+// QUESTIONS ON THE PAGE. Words somebody has asked about carry a marker
+// (lib/notebook/questions.mjs), which the formatter keeps. When the editor
+// ticks "include questions", the answered ones come too, as `questions`, and
+// their answers are written into the page and their markers taken off.
 import { NextResponse } from 'next/server';
 import { getAiModel } from '@/lib/settings';
 import { chatRequest } from '@/lib/ai/openrouter.mjs';
@@ -22,18 +27,50 @@ Structure — apply all of these wherever they fit:
 - Use > blockquotes for tips, asides and "good to know" notes.
 - Bold (**…**) the key facts a reader scans for: names, phone numbers, times, deadlines, quantities, form/document names.
 - <mark>Highlight</mark> safety-critical warnings and must-not-miss rules.
-- Colour-code emphasis where it earns its place: <span style="color:#d5281b">red for never-do / emergency actions</span>, <span style="color:#007f3b">green for always-do / confirmations</span>, <span style="color:#005eb8">blue for key informational callouts</span>. Also available: <u>underline</u> and <kbd>keyboard keys</kbd>. No other HTML tags or attributes.
+- Colour-code emphasis where it earns its place: <span style="color:#d5281b">red for never-do / emergency actions</span>, <span style="color:#007f3b">green for always-do / confirmations</span>, <span style="color:#005eb8">blue for key informational callouts</span>. Also available: <u>underline</u> and <kbd>keyboard keys</kbd>. No other HTML tags or attributes, apart from the question markers below.
 - Fix spelling, punctuation and grammar throughout.
 
 Content rules — never break these:
 - Keep EVERY fact. Do not invent, drop, merge away or summarise away any information.
 - The note may contain inline images, written as ![alt](url) on their own line. Keep every image, character-for-character (never alter or shorten the URL), and place each one where it belongs in the new structure — directly after the step, section or fact it illustrates. Never invent an image.
 - You may tighten and clarify wording, but medical/procedural meaning, names, phone numbers, doses and times must stay exactly as written.
+- The note may contain question markers: <span data-q="ID">words</span>, where a colleague has asked a question about those words. Keep every marker with its data-q value exactly as written, wrapped around the same words (or your rewording of them), unless the instructions after the note say to remove it. Never add a marker.
 - Do not add a # title — the page already has one. Start at ##.
 - Output ONLY the reformatted note text. No preamble, no explanation, no code fences.
 
 NOTE:
 `;
+
+// Answered questions the page's editor asked to be worked in: each answer
+// becomes part of the page, as fact, and its marker comes off. A question left
+// out of this list keeps its marker whatever happens.
+function answersBlock(questions) {
+  const lines = questions.map((q, i) => [
+    `${i + 1}. Marker data-q="${q.anchor}"${q.quote ? ` (on the words "${q.quote}")` : ''}`,
+    `   Question: ${q.question}`,
+    `   Answer: ${q.answer}`,
+  ].join('\n'));
+  return `
+
+ANSWERED QUESTIONS — colleagues asked these about the note above, and they have been answered:
+${lines.join('\n')}
+
+For each one: write what the answer establishes into the note, where it belongs, in the note's own style — as part of the page, never as a "Q:"/"A:" pair or a note about a question having been asked. Treat each answer as fact with the same rules as the rest of the note: keep its names, numbers and times exactly. Where an answer corrects the note, the answer wins. Then remove that question's marker, keeping the words that were inside it. Keep every other marker exactly as it is.`;
+}
+
+const ANCHOR_RE = /^[a-z0-9]{6,24}$/;
+function cleanQuestions(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((q) => ({
+      anchor: String(q?.anchor || ''),
+      question: String(q?.question || '').replace(/\s+/g, ' ').trim().slice(0, 400),
+      answer: String(q?.answer || '').trim().slice(0, 4000),
+      quote: String(q?.quote || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+    }))
+    .filter((q) => ANCHOR_RE.test(q.anchor) && q.question && q.answer)
+    .slice(0, 40);
+}
 
 export async function POST(request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -48,11 +85,12 @@ export async function POST(request) {
   const text = String(body?.text || '');
   if (!text.trim()) return NextResponse.json({ error: 'Nothing to format.' }, { status: 400 });
   if (text.length > 60000) return NextResponse.json({ error: 'Note is too long to format.' }, { status: 400 });
+  const questions = cleanQuestions(body?.questions);
 
   try {
     // No-retention routing and no extended reasoning, both from lib/ai/openrouter.
     const res = await fetch(...chatRequest(apiKey, {
-      model, temperature: 0, messages: [{ role: 'user', content: PROMPT + text }],
+      model, temperature: 0, messages: [{ role: 'user', content: PROMPT + text + (questions.length ? answersBlock(questions) : '') }],
     }));
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
