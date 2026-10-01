@@ -1011,7 +1011,7 @@ export async function POST(request) {
         const notebookPages = await notebook();
         const notebookText = notebookPages.length ? notebookFullText(notebookPages) : '';
         // The working card's pass over every page for the question's words:
-        // real, and in code, but display only — nothing below reads it. See
+        // real, and in code, but display only â€” nothing below reads it. See
         // lib/agent/note-scan.mjs.
         const noteScan = notebookPages.length ? scanNotes(question, notebookPages) : null;
         if (noteScan) send(scanEvent(noteScan));
