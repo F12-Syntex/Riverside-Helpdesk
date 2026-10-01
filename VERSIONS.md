@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.54.2` | 2026-10-01 | fix | `c9ed5f3` | fix: let staff ask about Notebook words that had a removed question |
+| `6.54.1` | 2026-10-01 | docs | `673ae9e` | docs: record one-at-a-time questions in the versions table |
 | `6.54.0` | 2026-10-01 | feat | `63c71d2` | feat: answer questions one at a time, with their context |
 | `6.53.1` | 2026-10-01 | docs | `405364e` | docs: record the compact question cards in the versions table |
 | `6.53.0` | 2026-10-01 | feat | `3ae1c25` | feat: compact question cards with an Answer button that opens the box |
