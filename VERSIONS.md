@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.43.4` | 2026-10-01 | chore | `efb8505` | chore: remove the background dot grid and drop three.js |
+| `6.43.3` | 2026-09-28 | docs | `f1716f1` | docs: record the MSK-to-FCP fix in the versions table |
 | `6.43.2` | 2026-09-28 | fix | `8e12741` | fix: send adult MSK pain to the FCP and name the exact pharmacy condition |
 | `6.43.1` | 2026-09-28 | docs | `31b7b72` | docs: record the Spell it out mode in the versions table |
 | `6.43.0` | 2026-09-28 | feat | `a96f484` | feat: add a Spell it out mode that reads text back letter by letter |
