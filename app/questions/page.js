@@ -19,9 +19,11 @@
  * text - new facts added, contradictions corrected - for the reader to
  * check page by page before anything is saved (lib/questions/writein.js).
  *
- * THE LIST IS THE PAGE. Asking is a button that opens a box, not a form
- * that is always there. Each question is a compact card with an Answer
- * button; the box to write the answer in opens only when that is pressed.
+ * ONE AT A TIME FIRST. A long list of questions is a wall; the page opens
+ * on the open ones one by one, each with what it is about - the Notebook
+ * paragraph round it, or what the assistant replied - and Answer or Skip.
+ * "All questions" is the full list of compact cards. Asking is a button
+ * that opens a box, not a form that is always there.
  * ------------------------------------------------------------------ */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -41,10 +43,10 @@ const STATUS = [
 ];
 
 const SOURCES = [
-  { id: '', label: 'Every source' },
-  { id: 'asked', label: 'Asked by staff' },
-  { id: 'notebook', label: 'On Notebook pages' },
-  { id: 'assistant', label: 'The assistant could not answer' },
+  { id: '', short: 'Everything', label: 'Every source' },
+  { id: 'asked', short: 'Staff', label: 'Asked by staff' },
+  { id: 'notebook', short: 'Notebook', label: 'On Notebook pages' },
+  { id: 'assistant', short: 'Assistant', label: 'The assistant could not answer' },
 ];
 
 // Lucide "sparkles", the mark the Notebook's Format with AI button uses, so
@@ -52,12 +54,72 @@ const SOURCES = [
 const AI_ICON = (<><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>);
 
 const CSS = `
-.rq{flex:1;width:100%;max-width:780px;margin:0 auto;padding:40px 20px 72px;color:#212b32;}
-.rq-head{display:flex;align-items:flex-end;gap:16px;margin:0 0 22px;}
-.rq-head__text{flex:1;min-width:0;}
-.rq-head h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.15;}
-.rq-head p{margin:5px 0 0;font-size:15px;color:#4c6272;}
-.rq-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
+.rq{flex:1;width:100%;max-width:820px;margin:0 auto;padding:36px 20px 72px;color:#212b32;}
+
+/* ---- the header, in the app's own language: a large title, a pill
+   switch for the two views and a segmented control for the source ---- */
+.rq-hero{margin:0 0 22px;}
+.rq-hero__top{display:flex;align-items:flex-start;gap:16px;}
+.rq-hero__text{flex:1;min-width:0;}
+.rq-hero h1{margin:0;font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1.15;color:#212b32;}
+.rq-hero p{margin:6px 0 0;font-size:16px;line-height:1.5;color:#4c6272;}
+.rq-hero p b{color:#212b32;font-weight:750;}
+.rq-hero__actions{flex:none;display:flex;align-items:center;gap:8px;padding-top:2px;}
+.rq-hero__bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin-top:18px;}
+.rq-pills{display:flex;gap:6px;}
+.rq-pill{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;border:1px solid #dde4e7;border-radius:999px;background:#fff;
+  font:inherit;font-size:14.5px;font-weight:700;color:#4c6272;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease;}
+.rq-pill:hover{color:#212b32;border-color:#c5d0d6;}
+.rq-pill--on,.rq-pill--on:hover{background:#005eb8;border-color:#005eb8;color:#fff;box-shadow:0 1px 2px rgba(0,48,135,.25);}
+.rq-pill span{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+  background:rgba(33,43,50,.07);font-size:12px;font-weight:800;}
+.rq-pill--on span{background:rgba(255,255,255,.22);}
+.rq-seg{display:inline-flex;margin-left:auto;padding:3px;gap:2px;background:rgba(255,255,255,.7);border:1px solid #dde4e7;border-radius:12px;}
+.rq-seg button{height:30px;padding:0 12px;border:none;border-radius:9px;background:none;font:inherit;font-size:13.5px;font-weight:650;color:#4c6272;cursor:pointer;}
+.rq-seg button:hover{color:#212b32;}
+.rq-seg .rq-seg--on{background:#fff;color:#005eb8;box-shadow:0 1px 3px rgba(33,43,50,.14);}
+.rq-pill:focus-visible,.rq-seg button:focus-visible,.rq-nav:focus-visible{outline:2px solid #005eb8;outline-offset:2px;}
+
+/* ---- one at a time ---- */
+.rq-progress{display:flex;align-items:center;gap:12px;margin:0 0 12px;}
+.rq-progress__text{font-size:14px;font-weight:650;color:#4c6272;white-space:nowrap;}
+.rq-progress__text b{color:#212b32;}
+.rq-progress__bar{flex:1;height:6px;border-radius:999px;background:#e3e9ec;overflow:hidden;}
+.rq-progress__bar i{display:block;height:100%;border-radius:999px;background:#005eb8;transition:width .25s ease;}
+.rq-nav{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid #dde4e7;border-radius:10px;background:#fff;
+  color:#4c6272;cursor:pointer;}
+.rq-nav:hover:not(:disabled){border-color:#005eb8;color:#005eb8;}
+.rq-nav:disabled{opacity:.4;cursor:default;}
+.rq-focus{background:#fff;border:1px solid #e1e8ec;border-radius:20px;box-shadow:0 1px 3px rgba(33,43,50,.05),0 12px 32px -18px rgba(33,43,50,.25);
+  overflow:hidden;animation:rq-in .2s cubic-bezier(.2,.8,.3,1);}
+.rq-ctx{padding:18px 24px;background:#f6f9fb;border-bottom:1px solid #e8eef1;}
+.rq-ctx__head{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13.5px;font-weight:650;color:#4c6272;}
+.rq-ctx__head svg{flex:none;color:#005eb8;}
+.rq-ctx__head > span:not(.rq-ctx__when){flex:1;min-width:0;}
+.rq-ctx__head a{color:#005eb8;text-decoration:none;}
+.rq-ctx__head a:hover{text-decoration:underline;}
+.rq-ctx__when{margin-left:auto;font-weight:500;color:#768692;}
+.rq-ctx__text{margin-top:10px;font-size:16px;line-height:1.6;color:#4c6272;overflow-wrap:anywhere;}
+.rq-ctx__text mark{background:#fff1b8;color:#212b32;border-radius:3px;padding:1px 3px;box-shadow:inset 0 -2px 0 #f0b429;}
+.rq-ctx__label{display:block;margin:12px 0 4px;font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#768692;}
+.rq-ctx__said{padding:10px 12px;background:#fff;border:1px solid #e3e9ec;border-radius:10px;font-size:14.5px;line-height:1.55;color:#4c6272;
+  white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;}
+.rq-ctx__reason{margin-top:8px;font-size:14.5px;line-height:1.5;color:#a13a00;}
+.rq-fbody{padding:22px 24px 22px;}
+.rq-fbody__label{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#768692;}
+.rq-fbody h2{margin:6px 0 0;font-size:25px;font-weight:800;line-height:1.3;letter-spacing:-.02em;color:#212b32;overflow-wrap:anywhere;}
+.rq-fbody .rq-area{margin-top:16px;font-size:16px;}
+.rq-factions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px;}
+.rq-big{height:44px;padding:0 20px;font-size:15.5px;border-radius:11px;}
+.rq-skip{height:44px;padding:0 16px;font-size:15px;}
+.rq-keys{margin:12px 0 0;text-align:center;font-size:13px;color:#768692;}
+.rq-keys kbd{display:inline-block;min-width:18px;padding:1px 6px;border:1px solid #d3dce1;border-bottom-width:2px;border-radius:5px;background:#fff;
+  font:inherit;font-size:12px;font-weight:700;color:#4c6272;}
+.rq-clear-state{padding:48px 24px;text-align:center;background:#fff;border:1px solid #e1e8ec;border-radius:20px;}
+.rq-clear-state__icon{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:#e6f4ec;color:#007f3b;}
+.rq-clear-state h2{margin:14px 0 4px;font-size:21px;font-weight:800;}
+.rq-clear-state p{margin:0;font-size:15px;color:#4c6272;}
+.rq-clear-state .rq-factions{justify-content:center;}
 
 .rq-primary{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px 0 13px;border:1px solid #004f9c;border-radius:10px;
   background:#005eb8;color:#fff;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
@@ -114,10 +176,6 @@ const CSS = `
 .rq-tab--on{color:#212b32;}
 .rq-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:#005eb8;}
 .rq-tab span{margin-left:5px;font-weight:600;color:#9aa8b1;font-variant-numeric:tabular-nums;}
-.rq-select{margin-left:auto;max-width:48%;height:30px;padding:0 26px 0 10px;border:1px solid transparent;border-radius:8px;
-  font:inherit;font-size:13px;font-weight:600;color:#4c6272;cursor:pointer;appearance:none;-webkit-appearance:none;
-  background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234c6272' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;}
-.rq-select:hover,.rq-select:focus{border-color:#dde4e7;background-color:#fff;outline:none;}
 
 .rq-notice{margin:10px 0 0;font-size:13.5px;color:#005eb8;}
 .rq-empty{padding:44px 12px;text-align:center;font-size:14.5px;line-height:1.55;color:#768692;}
@@ -202,10 +260,15 @@ const CSS = `
 
 @media (max-width:560px){
   .rq-soft span{display:none;}
-  .rq{padding-top:26px;}
-  .rq-head{align-items:center;}
-  .rq-head h1{font-size:25px;}
-  .rq-head p{display:none;}
+  .rq{padding-top:24px;}
+  .rq-hero h1{font-size:26px;}
+  .rq-hero p{font-size:14.5px;}
+  .rq-hero__actions .rq-primary span{display:none;}
+  .rq-seg{margin-left:0;}
+  .rq-ctx,.rq-fbody{padding-left:16px;padding-right:16px;}
+  .rq-fbody h2{font-size:21px;}
+  .rq-ctx__head{align-items:flex-start;}
+  .rq-ctx__when,.rq-keys{display:none;}
   .rq-hint{display:none;}
   .rq-card{padding:12px 10px 12px 14px;}
   .rq-card__q{font-size:16px;}
@@ -706,10 +769,175 @@ function WriteIn({ onClose, onDone }) {
   );
 }
 
+/* What a question is about, so it can be answered without going to look:
+   the Notebook paragraph with the asked-about words marked, what the
+   assistant replied when it could not answer, or the asker's own note. */
+function Context({ row }) {
+  const ctx = row.context;
+  if (row.origin === 'notebook') {
+    return (
+      <div className="rq-ctx">
+        <div className="rq-ctx__head">
+          <Svg w={16} sw={2}>{Icons.book}</Svg>
+          {row.noteTitle
+            ? <span>Asked on the Notebook page <Link href={pageHref(row)}>{row.noteTitle}</Link>{ctx && ctx.section ? ' › ' + ctx.section : ''}</span>
+            : <span>Asked on a Notebook page that has since been deleted</span>}
+          <span className="rq-ctx__when">{when(row.at)}</span>
+        </div>
+        {ctx ? (
+          <div className="rq-ctx__text">{ctx.before}<mark>{ctx.quote}</mark>{ctx.after}</div>
+        ) : row.quote ? (
+          <div className="rq-ctx__text"><mark>{row.quote}</mark> <em style={{ fontSize: 13.5 }}>— no longer on the page</em></div>
+        ) : null}
+      </div>
+    );
+  }
+  if (row.origin === 'assistant') {
+    const reason = gapReason(row.reason);
+    return (
+      <div className="rq-ctx">
+        <div className="rq-ctx__head">
+          <Svg w={16} sw={2}>{Icons.chat}</Svg>
+          <span>Asked of the assistant{row.askedCount > 1 ? ' ' + row.askedCount + ' times' : ''}</span>
+          <span className="rq-ctx__when">{when(row.lastAt || row.at)}</span>
+        </div>
+        {reason && <div className="rq-ctx__reason">{reason.note}</div>}
+        {row.assistantSaid && (<><span className="rq-ctx__label">WHAT IT REPLIED</span><div className="rq-ctx__said">{row.assistantSaid}</div></>)}
+      </div>
+    );
+  }
+  return (
+    <div className="rq-ctx">
+      <div className="rq-ctx__head">
+        <Svg w={16} sw={2}>{Icons.question}</Svg>
+        <span>Asked by staff{row.machineId ? ' on machine ' + machineCode(row.machineId) : ''}{row.askedCount > 1 ? ' · ' + row.askedCount + ' times' : ''}</span>
+        <span className="rq-ctx__when">{when(row.lastAt || row.at)}</span>
+      </div>
+      {row.detail
+        ? (<><span className="rq-ctx__label">THEIR NOTE</span><div className="rq-ctx__text" style={{ marginTop: 0, whiteSpace: 'pre-wrap' }}>{row.detail}</div></>)
+        : <div className="rq-ctx__text" style={{ fontSize: 14.5 }}>No more detail was given.</div>}
+    </div>
+  );
+}
+
+/* The open questions, one at a time: where it came from and what it is
+   about, the question large, and Answer or Skip. Saving moves straight on
+   to the next. */
+function Focus({ rows, onAnswer, onRemove, busy, onShowAll, onAsk }) {
+  const [index, setIndex] = useState(0);
+  const [answering, setAnswering] = useState(false);
+  const [draft, setDraft] = useState('');
+  const total = rows.length;
+  const at = Math.min(index, Math.max(total - 1, 0));
+  const row = rows[at];
+
+  const go = useCallback((to) => {
+    if (!total) return;
+    setIndex(((to % total) + total) % total);
+    setAnswering(false);
+    setDraft('');
+  }, [total]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'ArrowRight') go(at + 1);
+      if (e.key === 'ArrowLeft') go(at - 1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [go, at]);
+
+  if (!row) {
+    return (
+      <div className="rq-clear-state">
+        <span className="rq-clear-state__icon"><Svg w={28} sw={2.6}>{Icons.check}</Svg></span>
+        <h2>No open questions</h2>
+        <p>Everything asked so far has an answer.</p>
+        <div className="rq-factions">
+          <button type="button" className="rq-ghost rq-skip" onClick={onShowAll}>See all questions</button>
+          <button type="button" className="rq-primary rq-big" onClick={onAsk}><Svg w={17} sw={2.4}>{Icons.plus}</Svg>Ask a question</button>
+        </div>
+      </div>
+    );
+  }
+
+  const save = () => {
+    if (!draft.trim() || busy) return;
+    onAnswer(row, draft).then((ok) => { if (ok) { setAnswering(false); setDraft(''); } });
+  };
+
+  return (
+    <div>
+      <div className="rq-progress">
+        <span className="rq-progress__text">Question <b>{at + 1}</b> of {total}</span>
+        <span className="rq-progress__bar"><i style={{ width: ((at + 1) / total) * 100 + '%' }} /></span>
+        <button type="button" className="rq-nav" aria-label="Previous question" disabled={total < 2} onClick={() => go(at - 1)}>
+          <Svg w={17} sw={2.4}>{Icons.chevronLeft}</Svg>
+        </button>
+        <button type="button" className="rq-nav" aria-label="Next question" disabled={total < 2} onClick={() => go(at + 1)}>
+          <Svg w={17} sw={2.4}>{Icons.chevronRight}</Svg>
+        </button>
+      </div>
+
+      <article className="rq-focus" key={row.id}>
+        <Context row={row} />
+        <div className="rq-fbody">
+          <div className="rq-fbody__label">THE QUESTION</div>
+          <h2>{row.question}</h2>
+
+          {answering && (
+            <textarea className="rq-area" rows={4} autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
+              aria-label={'Answer: ' + row.question} placeholder="Write the answer, as you would tell somebody at the desk…" maxLength={4000}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setAnswering(false); setDraft(''); }
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save();
+              }} />
+          )}
+
+          <div className="rq-factions">
+            {answering ? (
+              <>
+                <button type="button" className="rq-primary rq-big" disabled={busy || !draft.trim()} onClick={save}>
+                  <Svg w={16} sw={2.6}>{Icons.check}</Svg>Save answer
+                </button>
+                <button type="button" className="rq-ghost rq-skip" onClick={() => { setAnswering(false); setDraft(''); }}>Cancel</button>
+                <span className="rq-grow" />
+                <span className="rq-hint">Ctrl + Enter to save</span>
+              </>
+            ) : (
+              <>
+                <button type="button" className="rq-primary rq-big" onClick={() => setAnswering(true)}>
+                  <Svg w={16} sw={2.2}>{Icons.edit}</Svg>Answer
+                </button>
+                {total > 1 && (
+                  <button type="button" className="rq-ghost rq-skip" onClick={() => go(at + 1)}>
+                    Skip<Svg w={15} sw={2.4}>{Icons.chevronRight}</Svg>
+                  </button>
+                )}
+                <span className="rq-grow" />
+                {row.origin === 'notebook' && pageHref(row) && (
+                  <Link className="rq-ico" href={pageHref(row)} title="Go to the text" aria-label="Go to the text"><Svg w={17} sw={2.1}>{Icons.external}</Svg></Link>
+                )}
+                <button type="button" className="rq-ico rq-ico--red" disabled={busy} onClick={() => onRemove(row)} title="Remove this question" aria-label="Remove this question">
+                  <Svg w={17} sw={2.1}>{Icons.trash}</Svg>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </article>
+      {total > 1 && !answering && <p className="rq-keys"><kbd>←</kbd> <kbd>→</kbd> to move between questions</p>}
+    </div>
+  );
+}
+
 export default function Page() {
   const [state, setState] = useState({ loading: true, rows: [], error: '' });
   const [status, setStatus] = useState('open');
   const [source, setSource] = useState('');
+  const [view, setView] = useState('one'); // one | all
   const [composing, setComposing] = useState(false);
   const [writing, setWriting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -736,6 +964,9 @@ export default function Page() {
   const fromSource = useMemo(() => state.rows.filter((r) => !source || r.origin === source), [state.rows, source]);
   const counts = useMemo(() => Object.fromEntries(STATUS.map((f) => [f.id, fromSource.filter(f.match).length])), [fromSource]);
   const rows = useMemo(() => fromSource.filter((STATUS.find((f) => f.id === status) || STATUS[0]).match), [fromSource, status]);
+
+  const openAll = useMemo(() => state.rows.filter((r) => r.status === 'open').length, [state.rows]);
+  const answeredAll = state.rows.length - openAll;
 
   // Answered, with an answer, and not yet in the Notebook: what "Add to
   // Notebook" would write in.
@@ -787,6 +1018,7 @@ export default function Page() {
     try {
       const { ok, data } = await send('PATCH', { id: row.id, answer: text });
       if (!ok) { setNotice(data.error || 'The answer could not be saved.'); return false; }
+      setNotice(text ? 'Answer saved.' : 'Reopened.');
       load();
       return true;
     } catch (err) {
@@ -820,29 +1052,43 @@ export default function Page() {
       <AppHeader subtitle="Questions" />
 
       <main className="rq">
-        <div className="rq-head">
-          <div className="rq-head__text">
-            <h1>Questions</h1>
-            <p>What the practice has not written down yet.</p>
-          </div>
-          <div className="rq-head__actions">
-            <button type="button" className={'rq-icon' + (copied ? ' rq-icon--done' : '')} disabled={!rows.length} onClick={copyList}
-              aria-label="Copy these questions as a list" title="Copy these questions as a numbered list">
-              <Svg w={17} sw={2}>{copied ? Icons.check : Icons.copy}</Svg>
-            </button>
-            {unwritten > 0 && (
-              <button type="button" className="rq-soft" onClick={() => setWriting(true)}
-                title="Write the answered questions into the Notebook pages they belong on — you check every change first">
-                <Svg w={16} sw={1.9}>{AI_ICON}</Svg><span>Add to Notebook</span><b>{unwritten}</b>
+        <header className="rq-hero">
+          <div className="rq-hero__top">
+            <div className="rq-hero__text">
+              <h1>Questions</h1>
+              <p>
+                {state.loading ? 'Loading…' : (
+                  <><b>{openAll} open</b> · {answeredAll} answered</>
+                )}
+              </p>
+            </div>
+            <div className="rq-hero__actions">
+              {unwritten > 0 && (
+                <button type="button" className="rq-soft" onClick={() => setWriting(true)}
+                  title="Write the answered questions into the Notebook pages they belong on — you check every change first">
+                  <Svg w={16} sw={1.9}>{AI_ICON}</Svg><span>Add to Notebook</span><b>{unwritten}</b>
+                </button>
+              )}
+              <button type="button" className="rq-primary" onClick={() => setComposing(true)} disabled={composing}>
+                <Svg w={17} sw={2.4}>{Icons.plus}</Svg><span>Ask a question</span>
               </button>
-            )}
-            {!composing && (
-              <button type="button" className="rq-primary" onClick={() => setComposing(true)}>
-                <Svg w={17} sw={2.4}>{Icons.plus}</Svg>Ask
-              </button>
-            )}
+            </div>
           </div>
-        </div>
+          <div className="rq-hero__bar">
+            <div className="rq-pills" role="tablist" aria-label="How to show the questions">
+              <button type="button" role="tab" aria-selected={view === 'one'} className={'rq-pill' + (view === 'one' ? ' rq-pill--on' : '')}
+                onClick={() => setView('one')}>One at a time<span>{counts.open || 0}</span></button>
+              <button type="button" role="tab" aria-selected={view === 'all'} className={'rq-pill' + (view === 'all' ? ' rq-pill--on' : '')}
+                onClick={() => setView('all')}>All questions</button>
+            </div>
+            <div className="rq-seg" role="group" aria-label="Where the questions came from">
+              {SOURCES.map((x) => (
+                <button key={x.id} type="button" aria-pressed={source === x.id} className={source === x.id ? 'rq-seg--on' : ''}
+                  onClick={() => setSource(x.id)} title={x.label}>{x.short}</button>
+              ))}
+            </div>
+          </div>
+        </header>
 
         {composing && (
           <Composer onClose={closeComposer}
@@ -854,6 +1100,14 @@ export default function Page() {
             }} />
         )}
 
+        {notice && view === 'one' && <p className="rq-notice" role="status" style={{ margin: '0 0 12px' }}>{notice}</p>}
+
+        {view === 'one' && !state.loading && !state.error && (
+          <Focus rows={fromSource.filter((r) => r.status === 'open')} onAnswer={answer} onRemove={remove} busy={busy}
+            onShowAll={() => { setView('all'); setStatus('all'); }} onAsk={() => setComposing(true)} />
+        )}
+
+        {view === 'all' && (<>
         <div className="rq-bar">
           <div className="rq-tabs" role="tablist" aria-label="Which questions">
             {STATUS.map((f) => (
@@ -863,9 +1117,11 @@ export default function Page() {
               </button>
             ))}
           </div>
-          <select className="rq-select" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Where the questions came from">
-            {SOURCES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
-          </select>
+          <button type="button" className={'rq-icon' + (copied ? ' rq-icon--done' : '')} disabled={!rows.length} onClick={copyList}
+            style={{ marginLeft: 'auto', width: 34, height: 34 }}
+            aria-label="Copy these questions as a list" title="Copy these questions as a numbered list">
+            <Svg w={16} sw={2}>{copied ? Icons.check : Icons.copy}</Svg>
+          </button>
         </div>
 
         {status !== 'open' && counts.answered > 0 && (
@@ -883,10 +1139,11 @@ export default function Page() {
         )}
 
         {notice && <p className="rq-notice" role="status">{notice}</p>}
+        </>)}
 
         {state.loading && <div className="rq-empty">Loading…</div>}
         {state.error && <div className="rq-empty" style={{ color: '#a51b0f' }}>{state.error}</div>}
-        {!state.loading && !state.error && !rows.length && (
+        {view === 'all' && !state.loading && !state.error && !rows.length && (
           <div className="rq-empty">
             {status === 'open'
               ? (source ? 'Nothing open from ' + sourceLabel.toLowerCase() + '.' : 'Nothing open. Everything asked so far has an answer.')
@@ -895,7 +1152,7 @@ export default function Page() {
         )}
 
         <ul className="rq-list">
-          {rows.map((row) => (
+          {view === 'all' && rows.map((row) => (
             <Row key={row.id + ':' + row.status + ':' + (row.answer || '').length} row={row} onAnswer={answer} onRemove={remove} busy={busy} />
           ))}
         </ul>
