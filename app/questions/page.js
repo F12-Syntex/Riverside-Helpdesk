@@ -21,7 +21,7 @@
  *
  * ONE AT A TIME FIRST. A long list of questions is a wall; the page opens
  * on the open ones one by one, each with what it is about - the Notebook
- * paragraph round it, or what the assistant replied - and Answer or Skip.
+ * paragraph round it, or the asker's note - and Answer or Skip.
  * "All questions" is the full list of compact cards. Asking is a button
  * that opens a box, not a form that is always there.
  * ------------------------------------------------------------------ */
@@ -102,9 +102,6 @@ const CSS = `
 .rq-ctx__text{margin-top:10px;font-size:16px;line-height:1.6;color:#4c6272;overflow-wrap:anywhere;}
 .rq-ctx__text mark{background:#fff1b8;color:#212b32;border-radius:3px;padding:1px 3px;box-shadow:inset 0 -2px 0 #f0b429;}
 .rq-ctx__label{display:block;margin:12px 0 4px;font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#768692;}
-.rq-ctx__said{padding:10px 12px;background:#fff;border:1px solid #e3e9ec;border-radius:10px;font-size:14.5px;line-height:1.55;color:#4c6272;
-  white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;}
-.rq-ctx__reason{margin-top:8px;font-size:14.5px;line-height:1.5;color:#a13a00;}
 .rq-fbody{padding:22px 24px 22px;}
 .rq-fbody__label{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#768692;}
 .rq-fbody h2{margin:6px 0 0;font-size:25px;font-weight:800;line-height:1.3;letter-spacing:-.02em;color:#212b32;overflow-wrap:anywhere;}
@@ -500,7 +497,7 @@ function Source({ row }) {
   if (row.origin === 'assistant') {
     const reason = gapReason(row.reason);
     return (
-      <span className="rq-src--bot" title={reason ? reason.note : ''}>
+      <span className="rq-src--bot">
         {reason ? 'The assistant could not answer — ' + reason.label.toLowerCase() : 'The assistant could not answer'}
       </span>
     );
@@ -770,8 +767,8 @@ function WriteIn({ onClose, onDone }) {
 }
 
 /* What a question is about, so it can be answered without going to look:
-   the Notebook paragraph with the asked-about words marked, what the
-   assistant replied when it could not answer, or the asker's own note. */
+   the Notebook paragraph with the asked-about words marked, how often the
+   assistant was asked it, or the asker's own note. */
 function Context({ row }) {
   const ctx = row.context;
   if (row.origin === 'notebook') {
@@ -793,7 +790,6 @@ function Context({ row }) {
     );
   }
   if (row.origin === 'assistant') {
-    const reason = gapReason(row.reason);
     return (
       <div className="rq-ctx">
         <div className="rq-ctx__head">
@@ -801,8 +797,6 @@ function Context({ row }) {
           <span>Asked of the assistant{row.askedCount > 1 ? ' ' + row.askedCount + ' times' : ''}</span>
           <span className="rq-ctx__when">{when(row.lastAt || row.at)}</span>
         </div>
-        {reason && <div className="rq-ctx__reason">{reason.note}</div>}
-        {row.assistantSaid && (<><span className="rq-ctx__label">WHAT IT REPLIED</span><div className="rq-ctx__said">{row.assistantSaid}</div></>)}
       </div>
     );
   }
