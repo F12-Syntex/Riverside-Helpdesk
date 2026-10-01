@@ -117,11 +117,20 @@ function markerCss(rows, active) {
 }
 
 const LAYER_CSS = `
-.nbk-qask{position:fixed;z-index:120;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 10px;
-  border:1px solid #e7c26b;border-radius:999px;background:#fffaf0;color:#8a5a00;font:inherit;font-size:13px;font-weight:700;
-  box-shadow:var(--nbk-sh-2);cursor:pointer;transform:translate(-50%,-100%);animation:nbk-qin .14s var(--nbk-ease);white-space:nowrap;}
-.nbk-qask:hover{background:#fff3d6;border-color:#d9a441;}
-.nbk-qask:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
+/* The button over a highlight: an NHS-blue tooltip with a white "?" and the
+   words, pointing down at what is selected. */
+.nbk-qask{position:fixed;z-index:120;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px 0 5px;
+  border:none;border-radius:999px;background:#005eb8;color:#fff;font:inherit;font-size:13.5px;font-weight:700;letter-spacing:.005em;
+  box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 20px -6px rgba(0,48,135,.55);cursor:pointer;
+  transform:translate(-50%,-100%);animation:nbk-qin .14s var(--nbk-ease);white-space:nowrap;transition:background-color .15s ease;}
+.nbk-qask::after{content:"";position:absolute;left:50%;bottom:-4px;width:10px;height:10px;margin-left:-5px;background:inherit;
+  transform:rotate(45deg);border-radius:0 0 2px 0;}
+.nbk-qask:hover{background:#0052a3;}
+.nbk-qask:focus-visible{outline:2px solid #ffeb3b;outline-offset:2px;}
+.nbk-qmark{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+  background:#fff;color:#005eb8;font-size:15px;font-weight:900;line-height:1;}
+.nbk-qcard--ask .nbk-qcard__quote{border-left-color:#9ec5ea;}
+.nbk-qcard--ask .nbk-qmark{width:18px;height:18px;font-size:12px;background:#005eb8;color:#fff;}
 @keyframes nbk-qin{from{opacity:0;margin-top:4px;}to{opacity:1;margin-top:0;}}
 .nbk-qcard{position:fixed;z-index:120;width:340px;max-width:calc(100vw - 24px);padding:14px;border-radius:16px;background:#fff;
   border:1px solid #e1e8ec;box-shadow:var(--nbk-sh-3);animation:nbk-qin .16s var(--nbk-ease);font-size:14px;color:var(--nbk-ink);}
@@ -287,7 +296,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
       const top = Math.min(a.top, b.top);
       const x = a.top === b.top ? (a.left + b.right) / 2 : a.left + 60;
       askButton = {
-        x: Math.max(80, Math.min(x, window.innerWidth - 80)), y: Math.max(64, top - 8), from, to, quote,
+        x: Math.max(80, Math.min(x, window.innerWidth - 80)), y: Math.max(68, top - 10), from, to, quote,
         // The box to ask in opens under the highlight, where the button was over it.
         rect: { left: a.left, top, bottom: Math.max(a.bottom, b.bottom) },
       };
@@ -329,13 +338,18 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
         <button type="button" className="nbk-qask" style={{ left: askButton.x + 'px', top: askButton.y + 'px' }}
           onMouseDown={(e) => e.preventDefault() /* keep the highlight */}
           onClick={() => setAsking({ ...askButton, text: '', busy: false, error: '' })}>
-          <Svg w={15} sw={2.2}>{Icons.question}</Svg>Ask a question
+          <span className="nbk-qmark" aria-hidden="true">?</span>Ask a question
         </button>
       )}
 
       {asking && (
-        <div ref={cardRef} className="nbk-qcard" role="dialog" aria-label="Ask a question about the highlighted words"
+        <div ref={cardRef} className="nbk-qcard nbk-qcard--ask" role="dialog" aria-label="Ask a question about the highlighted words"
           style={placeStyle(cardPlace(asking.rect))}>
+          <div className="nbk-qcard__top">
+            <span className="nbk-qcard__state" style={{ color: T.blue }}>
+              <span className="nbk-qmark" aria-hidden="true">?</span>Ask a question about this
+            </span>
+          </div>
           <div className="nbk-qcard__quote">“{asking.quote}”</div>
           <textarea autoFocus value={asking.text} placeholder="What needs answering about this?"
             aria-label="Your question" maxLength={400}
