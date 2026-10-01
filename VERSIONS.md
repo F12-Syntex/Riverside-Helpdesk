@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.52.0` | 2026-10-01 | feat | `e046f3d` | feat: show each question as a large card you can answer in place |
+| `6.51.1` | 2026-10-01 | docs | `2a4c2c5` | docs: record the blue tooltip and Notebook write-in in the versions table |
 | `6.51.0` | 2026-10-01 | feat | `13b9e05` | feat: clear answered questions and write answers into the Notebook |
 | `6.50.0` | 2026-10-01 | feat | `c959702` | feat: make the Notebook's ask-a-question tooltip blue and clearer |
 | `6.49.2` | 2026-10-01 | docs | `e70d251` | docs: record the questions page redesign in the versions table |
