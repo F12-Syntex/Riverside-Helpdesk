@@ -322,7 +322,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
 
   return (
     <>
-      <style>{LAYER_CSS + markerCss(rows, open && open.anchor)}</style>
+      <style data-nbk-q="1" dangerouslySetInnerHTML={{ __html: LAYER_CSS + markerCss(rows, open && open.anchor) }} />
 
       <Floating>
       {askButton && (
