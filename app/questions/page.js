@@ -3,428 +3,526 @@
 /* ------------------------------------------------------------------ *
  * /questions — the questions nobody has an answer for yet.
  *
- * TWO HALVES, ONE LIST. The box at the top is for a question the
- * assistant cannot answer because nothing in the practice's material
- * covers it — the thing that, before this page, was asked across the
- * back office and answered from memory or not at all. Underneath it is
- * the same list, plus every question the assistant was actually asked
- * and could not answer: those arrive on their own, off the question log,
- * so nobody has to notice them and write them down (lib/questions/gaps.mjs).
+ * ONE LIST, THREE WAYS IN. A question somebody asks here because the
+ * practice has not written the answer down; one asked about words on a
+ * Notebook page, with a link back to them; and every question the
+ * assistant was asked and could not answer, filed on its own off the
+ * question log (lib/questions/gaps.mjs). They are the same list read from
+ * different ends: each is "the practice has not written this down yet".
  *
- * WHY THE TWO BELONG TOGETHER. They are the same list read from two
- * ends. A gap somebody hits at the desk and a gap the assistant reports
- * are both "the practice has not written this down yet", and the only
- * useful thing to do with either is write the Notebook page. Splitting
- * them into two pages would have meant the half that writes itself is
- * the half nobody opens.
+ * AN ANSWER HERE IS NOT THE RECORD. The Notebook is. An answer sits under
+ * its question where the next person to ask can read it this afternoon,
+ * and the row still says to write the page.
  *
- * A THIRD WAY IN: the Notebook. Somebody reading a page highlights the
- * words they are unsure of and asks about them there; the question lands
- * here too, with the words it was asked about and a link straight back to
- * them, and an answer written in either place is the same answer.
- *
- * AN ANSWER HERE IS NOT THE RECORD. The Notebook is. So an answered
- * question still says to write the page, and the answer sits under the
- * question where the next person to ask it can read it this afternoon —
- * which is the whole of what it is for.
+ * THE LIST IS THE PAGE. Asking is a button that opens a box, not a form
+ * that is always there; each question is one quiet row, with its answer
+ * under it and its actions on hover.
  * ------------------------------------------------------------------ */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { s, Hover, Svg, Icons } from '../_components/ui';
+import { Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { gapReason } from '../../lib/questions/gaps.mjs';
 import { machineCode } from '../../lib/audit/machine';
 import { notebookHref } from '../../lib/notebook/links.mjs';
 
-const BOX = 'background:#fff;border:1px solid #dde4e7;border-radius:12px;';
-const INPUT = 'width:100%;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:16px;border:2px solid #d8dde0;border-radius:8px;background:#fff;color:#212b32;';
-const PRIMARY = 'display:inline-flex;align-items:center;gap:8px;background:#005eb8;border:1px solid #005eb8;border-radius:8px;padding:9px 18px;font:inherit;font-size:15px;font-weight:600;color:#fff;cursor:pointer;';
-const PRIMARY_HOVER = 'background:#003087;border-color:#003087;';
-const QUIET = 'display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d8e1e5;border-radius:8px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:600;color:#4c6272;cursor:pointer;';
-const QUIET_HOVER = 'border-color:#005eb8;color:#005eb8;';
-
-const FILTERS = [
+const STATUS = [
   { id: 'open', label: 'Open', match: (r) => r.status === 'open' },
   { id: 'answered', label: 'Answered', match: (r) => r.status === 'answered' },
-  { id: 'assistant', label: 'From the assistant', match: (r) => r.origin === 'assistant' },
-  { id: 'asked', label: 'Asked here', match: (r) => r.origin === 'asked' },
-  { id: 'notebook', label: 'On Notebook pages', match: (r) => r.origin === 'notebook' },
   { id: 'all', label: 'All', match: () => true },
+];
+
+const SOURCES = [
+  { id: '', label: 'Every source' },
+  { id: 'asked', label: 'Asked by staff' },
+  { id: 'notebook', label: 'On Notebook pages' },
+  { id: 'assistant', label: 'The assistant could not answer' },
 ];
 
 // Lucide "sparkles", the mark the Notebook's Format with AI button uses, so
 // the AI actions in the app read as the same kind of thing.
 const AI_ICON = (<><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></>);
+const DOTS = (<><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></>);
 
-// The shimmer shown while the model reads a paste: grey lines being scanned,
-// then settling into question-shaped rows. Stops under reduced motion.
-const EXTRACT_CSS = `
-.rq-scan{position:relative;overflow:hidden;background:#fff;border:1px solid #dde4e7;border-radius:12px;padding:16px 18px;}
-.rq-scan__line{height:8px;border-radius:4px;background:#e8edf0;margin:0 0 10px;}
-.rq-scan__row{display:flex;align-items:center;gap:10px;margin:0 0 10px;opacity:0;animation:rq-row 2.4s ease-in-out infinite;}
-.rq-scan__row i{flex:none;width:14px;height:14px;border-radius:4px;background:#005eb8;}
-.rq-scan__row b{display:block;height:9px;border-radius:4px;background:#b9d3ee;}
-.rq-scan__beam{position:absolute;left:0;right:0;top:0;height:40px;pointer-events:none;
-  background:linear-gradient(180deg,transparent,rgba(0,94,184,.12) 60%,rgba(0,94,184,.3) 96%,transparent);
-  animation:rq-beam 2.4s ease-in-out infinite;}
-@keyframes rq-beam{0%{transform:translateY(-44px);opacity:0;}10%{opacity:1;}60%{transform:translateY(120px);opacity:1;}70%,100%{transform:translateY(120px);opacity:0;}}
-@keyframes rq-row{0%,35%{opacity:0;transform:translateX(-6px);}55%,90%{opacity:1;transform:none;}100%{opacity:0;}}
-@media (prefers-reduced-motion:reduce){.rq-scan__beam,.rq-scan__row{animation:none;opacity:1;}}
+const CSS = `
+.rq{flex:1;width:100%;max-width:760px;margin:0 auto;padding:40px 20px 72px;color:#212b32;}
+.rq-head{display:flex;align-items:flex-end;gap:16px;margin:0 0 22px;}
+.rq-head__text{flex:1;min-width:0;}
+.rq-head h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.15;}
+.rq-head p{margin:5px 0 0;font-size:15px;color:#4c6272;}
+.rq-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
+
+.rq-primary{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px 0 13px;border:1px solid #004f9c;border-radius:10px;
+  background:#005eb8;color:#fff;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 1px 2px rgba(0,48,135,.25);transition:background-color .15s ease;}
+.rq-primary:hover:not(:disabled){background:#0052a3;}
+.rq-primary:disabled{opacity:.5;cursor:default;}
+.rq-primary--sm{height:32px;padding:0 13px;font-size:13.5px;border-radius:9px;}
+.rq-ghost{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:none;border-radius:9px;background:none;
+  font:inherit;font-size:13.5px;font-weight:650;color:#4c6272;cursor:pointer;transition:background-color .15s ease,color .15s ease;}
+.rq-ghost:hover:not(:disabled){background:rgba(33,43,50,.06);color:#212b32;}
+.rq-ghost:disabled{opacity:.5;cursor:default;}
+.rq-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid #dde4e7;border-radius:10px;
+  background:#fff;color:#4c6272;cursor:pointer;transition:border-color .15s ease,color .15s ease;}
+.rq-icon:hover:not(:disabled){border-color:#005eb8;color:#005eb8;}
+.rq-icon:disabled{opacity:.45;cursor:default;}
+.rq-icon--done{border-color:#007f3b;color:#007f3b;}
+.rq-link{display:inline-flex;align-items:center;gap:5px;border:none;background:none;padding:4px 2px;font:inherit;font-size:13px;font-weight:650;
+  color:#005eb8;cursor:pointer;}
+.rq-link:hover{text-decoration:underline;}
+.rq-link:disabled{opacity:.5;cursor:default;text-decoration:none;}
+.rq-primary:focus-visible,.rq-ghost:focus-visible,.rq-icon:focus-visible,.rq-link:focus-visible,.rq-tab:focus-visible,.rq-act:focus-visible{
+  outline:2px solid #005eb8;outline-offset:2px;}
+
+/* ---- asking ---- */
+.rq-compose{margin:0 0 22px;padding:14px;background:#fff;border:1px solid #dde4e7;border-radius:16px;
+  box-shadow:0 0 0 1px rgba(33,43,50,.02),0 6px 18px -8px rgba(33,43,50,.18);animation:rq-in .18s cubic-bezier(.2,.8,.3,1);}
+@keyframes rq-in{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+.rq-input,.rq-area{display:block;width:100%;box-sizing:border-box;border:1px solid #dde4e7;border-radius:10px;background:#fff;
+  font:inherit;color:#212b32;outline:none;transition:border-color .15s ease,box-shadow .15s ease;}
+.rq-input{height:44px;padding:0 13px;font-size:16px;}
+.rq-area{padding:10px 13px;font-size:15px;line-height:1.5;resize:vertical;}
+.rq-input:focus,.rq-area:focus{border-color:#005eb8;box-shadow:0 0 0 3px rgba(0,94,184,.14);}
+.rq-input + .rq-area{margin-top:8px;}
+.rq-compose__bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:10px;}
+.rq-grow{flex:1;}
+.rq-hint{font-size:12.5px;color:#768692;}
+.rq-err{margin-top:8px;font-size:13.5px;font-weight:600;color:#a51b0f;}
+.rq-found{display:flex;flex-direction:column;gap:6px;}
+.rq-found__item{display:flex;align-items:center;gap:10px;}
+.rq-found__item input[type=checkbox]{flex:none;width:17px;height:17px;margin:0;accent-color:#005eb8;cursor:pointer;}
+.rq-found__item .rq-input{height:38px;font-size:15px;}
+.rq-found__item--off .rq-input{opacity:.5;}
+.rq-found__fail{margin:2px 0 4px 27px;font-size:12.5px;color:#a51b0f;}
+.rq-scan{display:flex;flex-direction:column;gap:9px;padding:6px 2px;}
+.rq-scan i{display:block;height:9px;border-radius:5px;background:linear-gradient(90deg,#e8edf0 0%,#d3e3f3 50%,#e8edf0 100%);
+  background-size:200% 100%;animation:rq-shine 1.4s linear infinite;}
+@keyframes rq-shine{from{background-position:100% 0;}to{background-position:-100% 0;}}
+
+/* ---- the filter bar ---- */
+.rq-bar{display:flex;align-items:center;gap:10px;border-bottom:1px solid #dde4e7;}
+.rq-tabs{display:flex;gap:2px;}
+.rq-tab{position:relative;border:none;background:none;padding:9px 10px 11px;font:inherit;font-size:14px;font-weight:650;color:#768692;cursor:pointer;}
+.rq-tab:hover{color:#212b32;}
+.rq-tab--on{color:#212b32;}
+.rq-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:#005eb8;}
+.rq-tab span{margin-left:5px;font-weight:600;color:#9aa8b1;font-variant-numeric:tabular-nums;}
+.rq-select{margin-left:auto;max-width:48%;height:30px;padding:0 26px 0 10px;border:1px solid transparent;border-radius:8px;
+  font:inherit;font-size:13px;font-weight:600;color:#4c6272;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234c6272' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;}
+.rq-select:hover,.rq-select:focus{border-color:#dde4e7;background-color:#fff;outline:none;}
+
+.rq-notice{margin:10px 0 0;font-size:13.5px;color:#005eb8;}
+.rq-empty{padding:44px 12px;text-align:center;font-size:14.5px;line-height:1.55;color:#768692;}
+
+/* ---- the list ---- */
+.rq-list{list-style:none;margin:12px 0 0;padding:0 18px 0 16px;background:#fff;border:1px solid #e3e9ec;border-radius:16px;
+  box-shadow:0 1px 2px rgba(33,43,50,.04);}
+.rq-list:empty{display:none;}
+.rq-row{position:relative;display:flex;gap:12px;padding:16px 0;border-bottom:1px solid #edf1f3;}
+.rq-row:last-child{border-bottom:none;}
+.rq-dot{flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:#e0a12b;box-shadow:0 0 0 3px #fff3d6;}
+.rq-row--done .rq-dot{background:#2f9a5e;box-shadow:0 0 0 3px #e3f3ea;}
+.rq-main{flex:1;min-width:0;}
+.rq-q{font-size:16px;font-weight:650;line-height:1.4;overflow-wrap:anywhere;}
+.rq-quote{margin-top:4px;padding-left:9px;border-left:2px solid #f0c674;font-size:13.5px;line-height:1.45;color:#4c6272;overflow-wrap:anywhere;}
+.rq-detail{margin-top:4px;font-size:14px;line-height:1.5;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;}
+.rq-meta{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;margin-top:5px;font-size:12.5px;color:#768692;}
+.rq-meta > * + *::before{content:"·";margin-right:6px;color:#b6c2c9;}
+.rq-meta a{color:#005eb8;font-weight:600;text-decoration:none;}
+.rq-meta a:hover{text-decoration:underline;}
+.rq-src--bot{color:#a13a00;font-weight:600;}
+.rq-answer{margin-top:9px;padding:1px 0 1px 11px;border-left:2px solid #7cc49b;font-size:14.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;}
+.rq-answer__note{display:block;margin-top:3px;font-size:12.5px;white-space:normal;}
+.rq-edit{margin-top:9px;}
+.rq-edit .rq-compose__bar{margin-top:8px;}
+
+.rq-acts{flex:none;position:relative;display:flex;align-items:flex-start;gap:2px;opacity:0;transition:opacity .12s ease;}
+.rq-row:hover .rq-acts,.rq-row:focus-within .rq-acts,.rq-acts--held{opacity:1;}
+@media (hover:none){.rq-acts{opacity:1;}}
+.rq-act{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:30px;min-width:30px;padding:0 9px;border:none;border-radius:8px;
+  background:none;font:inherit;font-size:13px;font-weight:650;color:#4c6272;cursor:pointer;text-decoration:none;white-space:nowrap;}
+.rq-act:hover{background:rgba(33,43,50,.06);color:#212b32;}
+.rq-act--blue{color:#005eb8;}
+.rq-act--blue:hover{background:#eaf2fb;color:#003087;}
+.rq-menu{position:absolute;right:0;top:34px;z-index:20;min-width:170px;padding:5px;background:#fff;border:1px solid #e1e8ec;border-radius:12px;
+  box-shadow:0 8px 16px -4px rgba(33,43,50,.1),0 24px 48px -12px rgba(33,43,50,.2);animation:rq-in .14s ease;}
+.rq-menu .rq-act{display:flex;justify-content:flex-start;width:100%;height:34px;}
+.rq-menu .rq-act--red{color:#a51b0f;}
+.rq-menu .rq-act--red:hover{background:#fdeeec;}
+
+@media (max-width:560px){
+  .rq{padding-top:26px;}
+  .rq-head{align-items:center;}
+  .rq-head h1{font-size:25px;}
+  .rq-head p{display:none;}
+  .rq-hint{display:none;}
+  .rq-list{padding:0 14px;}
+  /* No room beside the words: the actions go under them, always shown. */
+  .rq-row{flex-wrap:wrap;row-gap:4px;}
+  .rq-main{flex-basis:calc(100% - 20px);}
+  .rq-acts{opacity:1;width:100%;padding-left:12px;}
+  .rq-menu{left:12px;right:auto;}
+}
+@media (prefers-reduced-motion:reduce){.rq-compose,.rq-menu,.rq-scan i{animation:none;}}
 `;
 
 function when(at) {
   const d = new Date(at);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-/* The small grey line under a question that says where it came from: who
-   asked, how many times, and — for a question the assistant could not
-   answer — which of the three ways it could not. */
-function Provenance({ row }) {
-  const reason = gapReason(row.reason);
-  const bits = [when(row.lastAt || row.at)];
-  if (row.askedCount > 1) bits.push('asked ' + row.askedCount + ' times');
-  if (row.origin !== 'assistant' && row.machineId) bits.push('from machine ' + machineCode(row.machineId));
-  return (
-    <div style={s('margin-top:6px;font-size:12.5px;color:#768692;')}>
-      {bits.join(' · ')}
-      {reason && <span style={s('display:block;margin-top:2px;')}>{reason.note}</span>}
-    </div>
-  );
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+
+async function send(method, body, query = '') {
+  const res = await fetch('/api/questions/open' + query, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, data };
 }
 
-/* Where a row came from, as a badge. The assistant's own are the ones
-   somebody maintaining the Notebook should read first — a question that
-   was actually put to the app and came back empty — so they are the ones
-   that carry a colour. */
-function OriginBadge({ row }) {
-  if (row.origin === 'notebook') {
-    return (
-      <span style={s('display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:#eaf2fb;color:#005eb8;')}>
-        {row.noteTitle ? 'On the page “' + row.noteTitle + '”' : 'On a Notebook page that has since been deleted'}
-      </span>
-    );
-  }
-  const fromBot = row.origin === 'assistant';
-  const reason = gapReason(row.reason);
-  const label = fromBot ? (reason ? reason.label : 'The assistant could not answer') : 'Asked by staff';
-  return (
-    <span style={s('display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;'
-      + (fromBot ? 'background:#fff3ed;color:#a13a00;' : 'background:#eef4f8;color:#4c6272;'))}>
-      {label}
-    </span>
-  );
-}
-
-/* One question, with whatever has been written under it. The answer box
-   is closed until somebody presses Answer: an open textarea on every row
-   makes a list of twenty questions unreadable. */
-function Row({ row, onAnswer, onRemove, busy }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(row.answer || '');
-  const answered = row.status === 'answered';
-  const onPage = row.origin === 'notebook';
-  // Asked again since it was answered: the answer is here but the gap is
-  // evidently still being hit, which usually means it never reached the
-  // Notebook. Worth saying, quietly, rather than showing a tick.
-  const stale = answered && row.answeredAt && new Date(row.lastAt) > new Date(row.answeredAt);
-
-  return (
-    <div style={s(BOX + 'border-radius:12px;padding:14px 16px;')}>
-      <div style={s('display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;')}>
-        <OriginBadge row={row} />
-        {answered && (
-          <span style={s('display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#007f3b;')}>
-            <Svg w={13} sw={2.6}>{Icons.check}</Svg>Answered
-          </span>
-        )}
-      </div>
-
-      <div style={s('margin-top:8px;font-size:17px;line-height:1.45;color:#212b32;font-weight:600;overflow-wrap:anywhere;')}>
-        {row.question}
-      </div>
-
-      {row.quote && (
-        <div style={s('margin-top:6px;padding-left:10px;border-left:3px solid #f0c674;font-size:14.5px;line-height:1.5;color:#4c6272;overflow-wrap:anywhere;')}>
-          “{row.quote}”
-        </div>
-      )}
-
-      {row.detail && (
-        <div style={s('margin-top:6px;font-size:15px;line-height:1.5;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;')}>
-          {row.detail}
-        </div>
-      )}
-
-      <Provenance row={row} />
-
-      {answered && row.answer && !open && (
-        <div style={s('margin-top:10px;background:#f0f7f2;border:1px solid #cce4d6;border-radius:8px;padding:10px 12px;')}>
-          <div style={s('font-size:12px;font-weight:700;color:#007f3b;letter-spacing:.02em;')}>
-            THE ANSWER{row.answeredBy ? ' · from machine ' + machineCode(row.answeredBy) : ''}
-          </div>
-          <div style={s('margin-top:4px;font-size:15.5px;line-height:1.5;color:#212b32;white-space:pre-wrap;overflow-wrap:anywhere;')}>
-            {row.answer}
-          </div>
-          {onPage && row.writtenAt && (
-            <div style={s('margin-top:6px;font-size:12.5px;color:#007f3b;')}>
-              Written into the page, so the assistant answers from it now.
-            </div>
-          )}
-          {stale && (
-            <div style={s('margin-top:6px;font-size:12.5px;color:#a13a00;')}>
-              Asked again since this was written — it may not have reached the Notebook yet.
-            </div>
-          )}
-        </div>
-      )}
-
-      {open && (
-        <div style={s('margin-top:10px;')}>
-          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4}
-            aria-label="The answer" placeholder="What is the answer? Write it as you would tell somebody at the desk."
-            style={s(INPUT + 'font-size:15.5px;resize:vertical;')} />
-          <div style={s('margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;')}>
-            <Hover tag="button" type="button" disabled={busy}
-              onClick={() => onAnswer(row, draft).then((saved) => { if (saved) setOpen(false); })}
-              base={PRIMARY + (busy ? 'opacity:.6;cursor:default;' : '')} hover={busy ? '' : PRIMARY_HOVER}>
-              Save the answer
-            </Hover>
-            <Hover tag="button" type="button" onClick={() => { setDraft(row.answer || ''); setOpen(false); }}
-              base={QUIET} hover={QUIET_HOVER}>Cancel</Hover>
-            <span style={s('font-size:12.5px;color:#768692;')}>
-              {onPage
-                ? 'Then use Format with AI on the page to write it in, so the assistant can answer from it.'
-                : 'Then write it into the Notebook, so the assistant can answer it next time.'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {!open && (
-        <div style={s('margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;')}>
-          <Hover tag="button" type="button" onClick={() => setOpen(true)} base={QUIET} hover={QUIET_HOVER}>
-            {answered ? 'Change the answer' : 'Answer this'}
-          </Hover>
-          {onPage ? (row.noteTitle && (
-            <Hover tag={Link} href={notebookHref({ id: row.noteId, title: row.noteTitle }) + '?q=' + encodeURIComponent(row.anchor || '')}
-              base={QUIET + 'text-decoration:none;'} hover={QUIET_HOVER}>
-              Go to the text
-            </Hover>
-          )) : (
-            <Hover tag={Link} href="/notebook" base={QUIET + 'text-decoration:none;'} hover={QUIET_HOVER}>
-              Write the page
-            </Hover>
-          )}
-          {answered && (
-            <Hover tag="button" type="button" disabled={busy} onClick={() => onAnswer(row, '')}
-              base={QUIET} hover={QUIET_HOVER}>
-              Not settled after all
-            </Hover>
-          )}
-          <Hover tag="button" type="button" disabled={busy} onClick={() => onRemove(row)}
-            base={QUIET + 'color:#a51b0f;'} hover="border-color:#a51b0f;color:#a51b0f;">
-            Remove
-          </Hover>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* Paste a lot, get the questions out. The model only proposes: what it found
-   comes back as a list to tick and correct, and nothing is stored until
-   "Add" — each one through the same POST as a typed question, so a question
-   already on the list is counted as asked again rather than added twice. */
-function BulkAsk({ onAdded }) {
-  const [text, setText] = useState('');
-  const [phase, setPhase] = useState('paste'); // paste | reading | review | saving
-  const [found, setFound] = useState([]);      // [{ question, detail, keep, failed }]
+/* ------------------------------------------------------------------ *
+ * Asking: one question, or a paste the AI picks the questions out of.
+ * The model only proposes - what it found is a list to tick and
+ * correct, each one added through the same POST as a typed question,
+ * so one already on the list is counted as asked again.
+ * ------------------------------------------------------------------ */
+function Composer({ onClose, onAdded }) {
+  const [mode, setMode] = useState('one');           // one | paste | reading | review | saving
+  const [question, setQuestion] = useState('');
+  const [detail, setDetail] = useState('');
+  const [withDetail, setWithDetail] = useState(false);
+  const [paste, setPaste] = useState('');
+  const [found, setFound] = useState([]);            // [{ question, detail, keep, failed }]
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  async function extract() {
-    if (!text.trim()) return;
-    setPhase('reading');
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && !busy && mode !== 'saving') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [busy, mode, onClose]);
+
+  async function askOne(e) {
+    e.preventDefault();
+    const text = question.trim();
+    if (!text || busy) return;
+    setBusy(true);
     setError('');
     try {
-      const res = await fetch('/api/questions/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'The text could not be read.'); setPhase('paste'); return; }
-      if (!data.questions || !data.questions.length) {
-        setError('No questions found in that text. Try pasting more of it, or ask one at a time.');
-        setPhase('paste');
-        return;
-      }
-      setFound(data.questions.map((q) => ({ ...q, keep: true, failed: '' })));
-      setPhase('review');
+      const { ok, data } = await send('POST', { question: text, detail: detail.trim() });
+      // Only cleared once stored: a box emptied by a failed save is a
+      // question somebody has to type twice.
+      if (!ok) { setError(data.error || 'The question could not be saved.'); return; }
+      onAdded(data.repeat ? 'Already on the list — counted as asked again.' : 'Asked. It stays open until somebody answers it.');
     } catch (err) {
-      setError('The text could not be read. ' + String(err));
-      setPhase('paste');
+      setError('The question could not be saved — nothing was stored.');
+    } finally {
+      setBusy(false);
     }
   }
 
-  const edit = (i, patch) => setFound((list) => list.map((q, j) => (j === i ? { ...q, ...patch } : q)));
-  const chosen = found.filter((q) => q.keep && q.question.trim());
+  async function findQuestions() {
+    if (!paste.trim()) return;
+    setMode('reading');
+    setError('');
+    try {
+      const res = await fetch('/api/questions/extract', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: paste }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || 'The text could not be read.'); setMode('paste'); return; }
+      if (!data.questions || !data.questions.length) {
+        setError('No questions found in that. Paste more of it, or ask one at a time.');
+        setMode('paste');
+        return;
+      }
+      setFound(data.questions.map((q) => ({ question: q.question || '', detail: q.detail || '', keep: true, failed: '' })));
+      setMode('review');
+    } catch (err) {
+      setError('The text could not be read.');
+      setMode('paste');
+    }
+  }
 
-  async function addAll() {
+  const chosen = found.filter((q) => q.keep && q.question.trim());
+  const edit = (i, patch) => setFound((list) => list.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+
+  async function addFound() {
     if (!chosen.length) return;
-    setPhase('saving');
+    setMode('saving');
     setError('');
     let added = 0;
     let repeats = 0;
     const left = [];
-    // One at a time, in order: tens of rows at most, and a failure part-way
-    // through should leave exactly the unsaved ones on screen.
+    // One at a time, in order: a failure part-way leaves exactly the unsaved ones.
     for (const q of found) {
       if (!q.keep || !q.question.trim()) continue;
       try {
-        const res = await fetch('/api/questions/open', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: q.question.trim(), detail: q.detail.trim() }),
-        });
-        const data = await res.json();
-        if (!res.ok) { left.push({ ...q, failed: data.error || 'Not saved.' }); continue; }
-        if (data.repeat) repeats += 1; else added += 1;
+        const { ok, data } = await send('POST', { question: q.question.trim(), detail: q.detail.trim() });
+        if (!ok) left.push({ ...q, failed: data.error || 'Not saved.' });
+        else if (data.repeat) repeats += 1;
+        else added += 1;
       } catch (err) {
-        left.push({ ...q, failed: 'Not saved. ' + String(err) });
+        left.push({ ...q, failed: 'Not saved.' });
       }
     }
     const parts = [];
-    if (added) parts.push(added + (added === 1 ? ' question added' : ' questions added'));
-    if (repeats) parts.push(repeats + (repeats === 1 ? ' was already on the list and is now counted as asked again' : ' were already on the list and are now counted as asked again'));
-    if (left.length) parts.push(left.length + ' could not be saved — they are still below');
-    onAdded(parts.join('; ') + '.');
+    if (added) parts.push(plural(added, 'question added', 'questions added'));
+    if (repeats) parts.push(plural(repeats, 'was already listed', 'were already listed') + ' and counted again');
     if (left.length) {
       setFound(left);
-      setPhase('review');
-    } else {
-      setFound([]);
-      setText('');
-      setPhase('paste');
+      setMode('review');
+      setError(plural(left.length, 'question', 'questions') + ' could not be saved.');
+      if (parts.length) onAdded(parts.join(', ') + '.', true);
+      return;
     }
+    onAdded(parts.join(', ') + '.');
   }
 
-  if (phase === 'reading') {
+  if (mode === 'one') {
     return (
-      <div>
-        <style>{EXTRACT_CSS}</style>
-        <div className="rq-scan" aria-hidden="true">
-          {['96%', '88%', '72%'].map((w) => <div key={w} className="rq-scan__line" style={{ width: w }} />)}
-          {['64%', '78%', '52%'].map((w, i) => (
-            <div key={w} className="rq-scan__row" style={{ animationDelay: i * 0.15 + 's' }}><i /><b style={{ width: w }} /></div>
-          ))}
-          <span className="rq-scan__beam" />
+      <form className="rq-compose" onSubmit={askOne}>
+        <input className="rq-input" autoFocus value={question} onChange={(e) => setQuestion(e.target.value)}
+          placeholder="What do you need to know?" aria-label="Your question" maxLength={400} />
+        {withDetail && (
+          <textarea className="rq-area" rows={3} value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={2000}
+            placeholder="Anything that helps — what you have tried, who might know." aria-label="Detail" />
+        )}
+        {error && <div className="rq-err">{error}</div>}
+        <div className="rq-compose__bar">
+          {!withDetail && <button type="button" className="rq-link" onClick={() => setWithDetail(true)}>Add detail</button>}
+          <button type="button" className="rq-link" onClick={() => { setMode('paste'); setError(''); }}>
+            <Svg w={14} sw={2}>{AI_ICON}</Svg>Paste lots of text
+          </button>
+          <span className="rq-grow" />
+          <span className="rq-hint">No patient information</span>
+          <button type="button" className="rq-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="rq-primary rq-primary--sm" disabled={!question.trim() || busy}>
+            {busy ? 'Asking…' : 'Ask'}
+          </button>
         </div>
-        <p style={s('margin:10px 0 0;font-size:14px;color:#4c6272;')} role="status">Reading the text and picking out the questions…</p>
+      </form>
+    );
+  }
+
+  if (mode === 'reading') {
+    return (
+      <div className="rq-compose" role="status" aria-label="Finding the questions">
+        <div className="rq-scan" aria-hidden="true">
+          {['92%', '70%', '84%', '58%'].map((w, i) => <i key={i} style={{ width: w, animationDelay: i * 0.12 + 's' }} />)}
+        </div>
+        <div className="rq-compose__bar"><span className="rq-hint" style={{ display: 'inline' }}>Finding the questions…</span></div>
       </div>
     );
   }
 
-  if (phase === 'review' || phase === 'saving') {
-    const saving = phase === 'saving';
+  if (mode === 'review' || mode === 'saving') {
+    const saving = mode === 'saving';
     return (
-      <div>
-        <p style={s('margin:0 0 12px;font-size:14.5px;color:#212b32;')}>
-          <strong>Found {found.length} {found.length === 1 ? 'question' : 'questions'}.</strong>{' '}
-          <span style={s('color:#4c6272;')}>Untick any you do not want and correct the wording, then add them.</span>
-        </p>
-        <div style={s('display:flex;flex-direction:column;gap:8px;')}>
+      <div className="rq-compose">
+        <div className="rq-found">
           {found.map((q, i) => (
-            <div key={i} style={s('display:flex;gap:10px;align-items:flex-start;border:1px solid '
-              + (q.failed ? '#f0b8b1' : q.keep ? '#cfe0ee' : '#e8edf0') + ';border-radius:10px;padding:10px 12px;background:'
-              + (q.keep ? '#f7fafd' : '#fbfcfc') + ';' + (q.keep ? '' : 'opacity:.6;'))}>
-              <input type="checkbox" checked={q.keep} disabled={saving} onChange={(e) => edit(i, { keep: e.target.checked })}
-                aria-label={'Keep: ' + q.question} style={s('flex:none;width:18px;height:18px;margin:9px 0 0;accent-color:#005eb8;cursor:pointer;')} />
-              <div style={s('flex:1;min-width:0;')}>
-                <input value={q.question} disabled={saving} onChange={(e) => edit(i, { question: e.target.value })}
-                  aria-label="Question" style={s(INPUT + 'font-size:15.5px;font-weight:600;padding:7px 10px;')} />
-                <input value={q.detail} disabled={saving} onChange={(e) => edit(i, { detail: e.target.value })}
-                  aria-label="Detail" placeholder="Detail (optional)"
-                  style={s(INPUT + 'margin-top:6px;font-size:14px;color:#4c6272;padding:6px 10px;border-width:1px;')} />
-                {q.failed && <div style={s('margin-top:5px;font-size:13px;color:#a51b0f;')}>{q.failed}</div>}
-              </div>
+            <div key={i}>
+              <label className={'rq-found__item' + (q.keep ? '' : ' rq-found__item--off')}>
+                <input type="checkbox" checked={q.keep} disabled={saving} onChange={(e) => edit(i, { keep: e.target.checked })}
+                  aria-label={'Keep: ' + q.question} />
+                <input className="rq-input" value={q.question} disabled={saving}
+                  onChange={(e) => edit(i, { question: e.target.value })} aria-label="Question" />
+              </label>
+              {q.failed && <div className="rq-found__fail">{q.failed}</div>}
             </div>
           ))}
         </div>
-        <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
-          <Hover tag="button" type="button" disabled={saving || !chosen.length} onClick={addAll}
-            base={PRIMARY + (saving || !chosen.length ? 'opacity:.55;cursor:default;' : '')}
-            hover={saving || !chosen.length ? '' : PRIMARY_HOVER}>
-            {saving ? 'Adding…' : 'Add ' + chosen.length + (chosen.length === 1 ? ' question' : ' questions')}
-          </Hover>
-          <Hover tag="button" type="button" disabled={saving} onClick={() => { setFound([]); setPhase('paste'); }}
-            base={QUIET} hover={QUIET_HOVER}>Back to the text</Hover>
+        {error && <div className="rq-err">{error}</div>}
+        <div className="rq-compose__bar">
+          <button type="button" className="rq-link" disabled={saving} onClick={() => { setFound([]); setMode('paste'); setError(''); }}>
+            Back to the text
+          </button>
+          <span className="rq-grow" />
+          <button type="button" className="rq-ghost" disabled={saving} onClick={onClose}>Cancel</button>
+          <button type="button" className="rq-primary rq-primary--sm" disabled={saving || !chosen.length} onClick={addFound}>
+            {saving ? 'Adding…' : 'Add ' + plural(chosen.length, 'question', 'questions')}
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <label htmlFor="rq-bulk" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:0 0 6px;')}>
-        Paste meeting notes, an email or a list
-      </label>
-      <textarea id="rq-bulk" value={text} onChange={(e) => setText(e.target.value)} rows={9}
-        placeholder={'Paste as much as you like. The AI finds every question in it, including the implied ones ("not sure who orders the flu jabs"), tidies the wording and drops duplicates. You check the list before anything is added.'}
-        style={s(INPUT + 'font-size:15px;line-height:1.5;resize:vertical;')} />
-      <p style={s('margin:10px 0 0;font-size:13px;color:#768692;')}>
-        No patient information. The AI is told to leave out anything that identifies a patient, but check the list before adding it.
-      </p>
-      <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
-        <Hover tag="button" type="button" disabled={!text.trim()} onClick={extract}
-          base={PRIMARY + (!text.trim() ? 'opacity:.55;cursor:default;' : '')} hover={!text.trim() ? '' : PRIMARY_HOVER}>
-          <Svg w={17} sw={1.9}>{AI_ICON}</Svg>Find the questions
-        </Hover>
-        {text.length > 0 && <span style={s('font-size:12.5px;color:#768692;')}>{text.length.toLocaleString('en-GB')} characters</span>}
-        {error && <span style={s('font-size:14px;color:#a51b0f;')}>{error}</span>}
+    <div className="rq-compose">
+      <textarea className="rq-area" autoFocus rows={7} value={paste} onChange={(e) => setPaste(e.target.value)}
+        aria-label="Text to find questions in"
+        placeholder="Paste meeting notes, an email or a list. The AI picks out every question, including the implied ones, and you check them before anything is added." />
+      {error && <div className="rq-err">{error}</div>}
+      <div className="rq-compose__bar">
+        <button type="button" className="rq-link" onClick={() => { setMode('one'); setError(''); }}>Ask one instead</button>
+        <span className="rq-grow" />
+        <span className="rq-hint">No patient information</span>
+        <button type="button" className="rq-ghost" onClick={onClose}>Cancel</button>
+        <button type="button" className="rq-primary rq-primary--sm" disabled={!paste.trim()} onClick={findQuestions}>
+          <Svg w={15} sw={1.9}>{AI_ICON}</Svg>Find questions
+        </button>
       </div>
     </div>
+  );
+}
+
+/* The words on a Notebook page a question was asked about. */
+const pageHref = (row) => (row.origin === 'notebook' && row.noteTitle
+  ? notebookHref({ id: row.noteId, title: row.noteTitle }) + '?q=' + encodeURIComponent(row.anchor || '')
+  : '');
+
+/* Where a question came from, as the first thing in its grey line. */
+function Source({ row }) {
+  if (row.origin === 'notebook') {
+    if (!row.noteTitle) return <span>On a deleted Notebook page</span>;
+    return <span>On <Link href={pageHref(row)} title="Go to the words it was asked about">{row.noteTitle}</Link></span>;
+  }
+  if (row.origin === 'assistant') {
+    const reason = gapReason(row.reason);
+    return (
+      <span className="rq-src--bot" title={reason ? reason.note : ''}>
+        {reason ? 'Assistant: ' + reason.label.toLowerCase() : 'Assistant could not answer'}
+      </span>
+    );
+  }
+  return <span>Asked by staff</span>;
+}
+
+/* One question: the words, where it came from, its answer, and - on
+   hover - what can be done with it. */
+function Row({ row, onAnswer, onRemove, busy }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(row.answer || '');
+  const [menu, setMenu] = useState(false);
+  const actsRef = useRef(null);
+  const answered = row.status === 'answered';
+  const onPage = row.origin === 'notebook';
+  // Asked again since it was answered: the answer evidently never reached
+  // the Notebook. Worth saying, quietly.
+  const stale = answered && row.answeredAt && new Date(row.lastAt) > new Date(row.answeredAt);
+  const href = pageHref(row);
+
+  useEffect(() => {
+    if (!menu) return undefined;
+    const close = (e) => { if (!actsRef.current || !actsRef.current.contains(e.target)) setMenu(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', onKey); };
+  }, [menu]);
+
+  const cancel = () => { setDraft(row.answer || ''); setEditing(false); };
+  const save = (text) => onAnswer(row, text).then((ok) => { if (ok) setEditing(false); });
+
+  return (
+    <li className={'rq-row' + (answered ? ' rq-row--done' : '')}>
+      <span className="rq-dot" title={answered ? 'Answered' : 'Open'} />
+      <div className="rq-main">
+        <div className="rq-q">{row.question}</div>
+        {row.quote && <div className="rq-quote">“{row.quote}”</div>}
+        {row.detail && <div className="rq-detail">{row.detail}</div>}
+        <div className="rq-meta">
+          <Source row={row} />
+          <span>{when(row.lastAt || row.at)}</span>
+          {row.askedCount > 1 && <span>asked {row.askedCount} times</span>}
+          {row.origin !== 'assistant' && row.machineId && <span>machine {machineCode(row.machineId)}</span>}
+        </div>
+
+        {answered && row.answer && !editing && (
+          <div className="rq-answer">
+            {row.answer}
+            {onPage && row.writtenAt && <span className="rq-answer__note" style={{ color: '#007f3b' }}>Written into the page.</span>}
+            {stale && <span className="rq-answer__note" style={{ color: '#a13a00' }}>Asked again since — it may not be in the Notebook yet.</span>}
+          </div>
+        )}
+
+        {editing && (
+          <div className="rq-edit">
+            <textarea className="rq-area" autoFocus rows={3} value={draft} onChange={(e) => setDraft(e.target.value)}
+              aria-label="The answer" placeholder="The answer, as you would tell somebody at the desk." maxLength={4000}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') cancel();
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && draft.trim()) save(draft);
+              }} />
+            <div className="rq-compose__bar">
+              <span className="rq-hint">
+                {onPage ? 'Format with AI on the page can then write it in.' : 'Then write it into the Notebook.'}
+              </span>
+              <span className="rq-grow" />
+              <button type="button" className="rq-ghost" onClick={cancel}>Cancel</button>
+              <button type="button" className="rq-primary rq-primary--sm" disabled={busy || !draft.trim()} onClick={() => save(draft)}>
+                Save
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!editing && (
+        <div className={'rq-acts' + (menu ? ' rq-acts--held' : '')} ref={actsRef}>
+          <button type="button" className="rq-act rq-act--blue" onClick={() => { setDraft(row.answer || ''); setEditing(true); }}>
+            {answered ? 'Edit' : 'Answer'}
+          </button>
+          <button type="button" className="rq-act" aria-label="More" aria-haspopup="menu" aria-expanded={menu}
+            onClick={() => setMenu((m) => !m)}>
+            <Svg w={16} sw={2.2}>{DOTS}</Svg>
+          </button>
+          {menu && (
+            <div className="rq-menu" role="menu">
+              {onPage
+                ? href && <Link role="menuitem" className="rq-act" href={href}>Go to the text</Link>
+                : <Link role="menuitem" className="rq-act" href="/notebook">Write the page</Link>}
+              {answered && (
+                <button type="button" role="menuitem" className="rq-act" disabled={busy}
+                  onClick={() => { setMenu(false); onAnswer(row, ''); }}>Reopen</button>
+              )}
+              <button type="button" role="menuitem" className="rq-act rq-act--red" disabled={busy}
+                onClick={() => { setMenu(false); onRemove(row); }}>Remove</button>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 
 export default function Page() {
   const [state, setState] = useState({ loading: true, rows: [], error: '' });
-  const [filter, setFilter] = useState('open');
-  const [question, setQuestion] = useState('');
-  const [detail, setDetail] = useState('');
+  const [status, setStatus] = useState('open');
+  const [source, setSource] = useState('');
+  const [composing, setComposing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [asking, setAsking] = useState('');
-  const [mode, setMode] = useState('one'); // one | bulk
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(() => {
-    // The whole list, filtered in the browser: it is a list of gaps in one
-    // practice's notes, which is tens of rows, and a filter that redraws
-    // instantly is worth more here than a query per pill.
+    // The whole list, filtered in the browser: tens of rows, and a filter
+    // that redraws instantly is worth more than a query per tab.
     fetch('/api/questions/open?limit=200')
       .then((r) => r.json())
       .then((d) => setState({ loading: false, rows: d.rows || [], error: d.error || '' }))
       .catch((e) => setState({ loading: false, rows: [], error: String(e) }));
   }, []);
-
   useEffect(() => { load(); }, [load]);
 
-  const counts = useMemo(() => {
-    const out = {};
-    for (const f of FILTERS) out[f.id] = state.rows.filter(f.match).length;
-    return out;
-  }, [state.rows]);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(''), 4500);
+    return () => clearTimeout(t);
+  }, [notice]);
 
-  const rows = useMemo(() => {
-    const active = FILTERS.find((f) => f.id === filter) || FILTERS[0];
-    return state.rows.filter(active.match);
-  }, [state.rows, filter]);
+  const fromSource = useMemo(() => state.rows.filter((r) => !source || r.origin === source), [state.rows, source]);
+  const counts = useMemo(() => Object.fromEntries(STATUS.map((f) => [f.id, fromSource.filter(f.match).length])), [fromSource]);
+  const rows = useMemo(() => fromSource.filter((STATUS.find((f) => f.id === status) || STATUS[0]).match), [fromSource, status]);
 
-  // Export: the questions under the current filter, as a plain numbered list
-  // ("1. …" one per line) ready to paste into an email or a meeting agenda.
-  const [copied, setCopied] = useState('');
+  // Export: the questions shown, as a numbered list ready for an email or an agenda.
   async function copyList() {
     const text = rows.map((r, i) => (i + 1) + '. ' + String(r.question || '').replace(/\s+/g, ' ').trim()).join('\n');
     try {
@@ -439,57 +537,22 @@ export default function Page() {
       area.select();
       const ok = document.execCommand('copy');
       document.body.removeChild(area);
-      if (!ok) { setCopied('Could not copy — your browser blocked it'); setTimeout(() => setCopied(''), 3500); return; }
+      if (!ok) { setNotice('Could not copy — the browser blocked it.'); return; }
     }
-    setCopied('Copied ' + rows.length + (rows.length === 1 ? ' question' : ' questions'));
-    setTimeout(() => setCopied(''), 2500);
-  }
-
-  async function ask(e) {
-    e.preventDefault();
-    const text = question.trim();
-    if (!text || busy) return;
-    setBusy(true);
-    setAsking('');
-    try {
-      const res = await fetch('/api/questions/open', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text, detail: detail.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setAsking(data.error || 'The question could not be saved.'); return; }
-      // Only cleared once it is actually stored: a box emptied by a failed
-      // save is a question somebody has to type twice.
-      setQuestion('');
-      setDetail('');
-      setNotice(data.repeat
-        ? 'Somebody has already asked that — it is now recorded as asked again.'
-        : 'Asked. It is on the list below until somebody answers it.');
-      setFilter('open');
-      load();
-    } catch (err) {
-      setAsking('The question could not be saved — nothing was stored. ' + String(err));
-    } finally {
-      setBusy(false);
-    }
+    setCopied(true);
+    setNotice('Copied ' + plural(rows.length, 'question', 'questions') + ' as a numbered list.');
+    setTimeout(() => setCopied(false), 2000);
   }
 
   async function answer(row, text) {
     setBusy(true);
-    setNotice('');
     try {
-      const res = await fetch('/api/questions/open', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: row.id, answer: text }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setNotice(data.error || 'The answer could not be saved.'); return false; }
+      const { ok, data } = await send('PATCH', { id: row.id, answer: text });
+      if (!ok) { setNotice(data.error || 'The answer could not be saved.'); return false; }
       load();
       return true;
     } catch (err) {
-      setNotice('The answer could not be saved. ' + String(err));
+      setNotice('The answer could not be saved.');
       return false;
     } finally {
       setBusy(false);
@@ -497,123 +560,87 @@ export default function Page() {
   }
 
   async function remove(row) {
-    if (typeof window !== 'undefined'
-      && !window.confirm('Remove this question from the list? Answering it is what closes it — this deletes it.')) return;
+    if (!window.confirm('Remove this question? Answering is what closes a question — this deletes it.')) return;
     setBusy(true);
     try {
-      const res = await fetch('/api/questions/open?id=' + row.id, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) { setNotice(data.error || 'The question could not be removed.'); return; }
+      const { ok, data } = await send('DELETE', null, '?id=' + row.id);
+      if (!ok) { setNotice(data.error || 'The question could not be removed.'); return; }
       load();
     } catch (err) {
-      setNotice('The question could not be removed. ' + String(err));
+      setNotice('The question could not be removed.');
     } finally {
       setBusy(false);
     }
   }
 
+  const closeComposer = useCallback(() => setComposing(false), []);
+  const sourceLabel = (SOURCES.find((x) => x.id === source) || SOURCES[0]).label;
+
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={{ minHeight: '100vh', background: '#f0f4f5', display: 'flex', flexDirection: 'column' }}>
+      <style data-rq="1" dangerouslySetInnerHTML={{ __html: CSS }} />
       <AppHeader subtitle="Questions" />
 
-      <main style={s('flex:1;width:100%;max-width:900px;margin:0 auto;padding:36px 24px 64px;')}>
-        <h1 style={s('font-size:32px;margin:0 0 6px;letter-spacing:-0.02em;')}>Questions</h1>
-        <p style={s('font-size:17px;color:#4c6272;margin:0 0 24px;max-width:70ch;')}>
-          For the questions the assistant cannot answer, because the practice has not written the answer down
-          anywhere yet. Ask one here, and every question the assistant was asked and could not answer joins the
-          same list on its own.
-        </p>
+      <main className="rq">
+        <div className="rq-head">
+          <div className="rq-head__text">
+            <h1>Questions</h1>
+            <p>What the practice has not written down yet.</p>
+          </div>
+          <div className="rq-head__actions">
+            <button type="button" className={'rq-icon' + (copied ? ' rq-icon--done' : '')} disabled={!rows.length} onClick={copyList}
+              aria-label="Copy these questions as a list" title="Copy these questions as a numbered list">
+              <Svg w={17} sw={2}>{copied ? Icons.check : Icons.copy}</Svg>
+            </button>
+            {!composing && (
+              <button type="button" className="rq-primary" onClick={() => setComposing(true)}>
+                <Svg w={17} sw={2.4}>{Icons.plus}</Svg>Ask
+              </button>
+            )}
+          </div>
+        </div>
 
-        <div style={s(BOX + 'padding:16px;margin:0 0 24px;')}>
-          <div role="tablist" aria-label="How to add questions"
-            style={s('display:inline-flex;gap:2px;padding:3px;margin:0 0 14px;background:#f0f4f5;border:1px solid #e3eaed;border-radius:10px;')}>
-            {[
-              { id: 'one', label: 'Ask one' },
-              { id: 'bulk', label: 'Paste lots of text', ai: true },
-            ].map((t) => (
-              <Hover key={t.id} tag="button" type="button" role="tab" aria-selected={mode === t.id} onClick={() => setMode(t.id)}
-                base={'display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:6px 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;'
-                  + (mode === t.id ? 'background:#fff;color:#005eb8;box-shadow:0 1px 2px rgba(33,43,50,.12);' : 'background:none;color:#4c6272;')}
-                hover={mode === t.id ? '' : 'color:#005eb8;'}>
-                {t.ai && <Svg w={15} sw={1.9}>{AI_ICON}</Svg>}{t.label}
-              </Hover>
+        {composing && (
+          <Composer onClose={closeComposer}
+            onAdded={(msg, keepOpen) => {
+              setNotice(msg);
+              setStatus('open');
+              if (!keepOpen) setComposing(false);
+              load();
+            }} />
+        )}
+
+        <div className="rq-bar">
+          <div className="rq-tabs" role="tablist" aria-label="Which questions">
+            {STATUS.map((f) => (
+              <button key={f.id} type="button" role="tab" aria-selected={status === f.id}
+                className={'rq-tab' + (status === f.id ? ' rq-tab--on' : '')} onClick={() => setStatus(f.id)}>
+                {f.label}<span>{counts[f.id] || 0}</span>
+              </button>
             ))}
           </div>
-
-          {mode === 'bulk' && (
-            <BulkAsk onAdded={(msg) => { setNotice(msg); setFilter('open'); load(); }} />
-          )}
-
-          {mode === 'one' && (
-          <form onSubmit={ask}>
-            <label htmlFor="rq-question" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:0 0 6px;')}>
-              Ask a question
-            </label>
-            <input id="rq-question" value={question} onChange={(e) => setQuestion(e.target.value)}
-              placeholder="e.g. Who covers the phones when both receptionists are on lunch?"
-              style={s(INPUT)} />
-            <label htmlFor="rq-detail" style={s('display:block;font-size:14px;font-weight:700;color:#212b32;margin:14px 0 6px;')}>
-              Anything else worth knowing <span style={s('font-weight:500;color:#768692;')}>— optional</span>
-            </label>
-            <textarea id="rq-detail" value={detail} onChange={(e) => setDetail(e.target.value)} rows={3}
-              placeholder="What you have already tried, who might know, why it came up."
-              style={s(INPUT + 'font-size:15.5px;resize:vertical;')} />
-            <p style={s('margin:10px 0 0;font-size:13px;color:#768692;')}>
-              No patient information. This is a question about how the practice works, and it is stored as it is typed.
-            </p>
-            <div style={s('margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;')}>
-              <Hover tag="button" type="submit" disabled={busy || !question.trim()}
-                base={PRIMARY + (busy || !question.trim() ? 'opacity:.55;cursor:default;' : '')}
-                hover={busy || !question.trim() ? '' : PRIMARY_HOVER}>
-                Add the question
-              </Hover>
-              {asking && <span style={s('font-size:14px;color:#a51b0f;')}>{asking}</span>}
-            </div>
-          </form>
-          )}
+          <select className="rq-select" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Where the questions came from">
+            {SOURCES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+          </select>
         </div>
 
-        {notice && (
-          <p style={s('margin:0 0 18px;font-size:14.5px;color:#005eb8;background:#eef4f8;border:1px solid #cfe0ee;border-radius:8px;padding:9px 12px;')}>
-            {notice}
-          </p>
-        )}
+        {notice && <p className="rq-notice" role="status">{notice}</p>}
 
-        <div style={s('display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px;')}>
-          {FILTERS.map((f) => (
-            <Hover key={f.id} tag="button" type="button" onClick={() => setFilter(f.id)}
-              base={'border-radius:999px;padding:7px 15px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;border:1px solid '
-                + (filter === f.id ? '#005eb8;background:#005eb8;color:#fff;' : '#d8e1e5;background:#fff;color:#4c6272;')}
-              hover={filter === f.id ? '' : 'border-color:#005eb8;color:#005eb8;'}>
-              {f.label}
-              <span style={s('margin-left:7px;opacity:.75;font-weight:500;')}>{counts[f.id] || 0}</span>
-            </Hover>
-          ))}
-          <span style={s('flex:1;')} />
-          <Hover tag="button" type="button" disabled={!rows.length} onClick={copyList}
-            title="Copy the questions shown as a numbered list: 1. question, 2. question…"
-            base={QUIET + 'padding:7px 14px;' + (rows.length ? '' : 'opacity:.5;cursor:default;')
-              + (copied.startsWith('Copied') ? 'border-color:#007f3b;color:#007f3b;' : '')}
-            hover={rows.length ? QUIET_HOVER : ''}>
-            <Svg w={14} sw={2}>{copied.startsWith('Copied') ? Icons.check : Icons.copy}</Svg>
-            {copied || 'Export ' + rows.length + (rows.length === 1 ? ' question' : ' questions')}
-          </Hover>
-        </div>
-
-        {state.loading && <p style={s('color:#4c6272;')}>Loading…</p>}
-        {state.error && <p style={s('color:#a51b0f;')}>{state.error}</p>}
+        {state.loading && <div className="rq-empty">Loading…</div>}
+        {state.error && <div className="rq-empty" style={{ color: '#a51b0f' }}>{state.error}</div>}
         {!state.loading && !state.error && !rows.length && (
-          <p style={s('color:#4c6272;')}>
-            Nothing here. Questions appear as soon as somebody asks one above, or as soon as the assistant is
-            asked something the practice’s own material does not cover.
-          </p>
+          <div className="rq-empty">
+            {status === 'open'
+              ? (source ? 'Nothing open from ' + sourceLabel.toLowerCase() + '.' : 'Nothing open. Everything asked so far has an answer.')
+              : 'Nothing here yet.'}
+          </div>
         )}
 
-        <div style={s('display:flex;flex-direction:column;gap:12px;')}>
+        <ul className="rq-list">
           {rows.map((row) => (
-            <Row key={row.id} row={row} onAnswer={answer} onRemove={remove} busy={busy} />
+            <Row key={row.id + ':' + row.status + ':' + (row.answer || '').length} row={row} onAnswer={answer} onRemove={remove} busy={busy} />
           ))}
-        </div>
+        </ul>
       </main>
     </div>
   );
