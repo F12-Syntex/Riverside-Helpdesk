@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.49.1` | 2026-10-01 | refactor | `32fdc4f` | refactor: inject the Notebook question styles as raw CSS |
+| `6.49.0` | 2026-10-01 | feat | `d09a439` | feat: redesign the questions page to be quiet and compact |
+| `6.48.1` | 2026-10-01 | docs | `16c0a2f` | docs: record Notebook questions in the versions table |
 | `6.48.0` | 2026-10-01 | feat | `754e3b4` | feat: ask questions about highlighted words in the Notebook |
 | `6.47.1` | 2026-10-01 | docs | `be70687` | docs: record the faint busy swirl in the versions table |
 | `6.47.0` | 2026-10-01 | feat | `4d05e85` | feat: swap the drifting lines for a faint swirl of colour while busy |
