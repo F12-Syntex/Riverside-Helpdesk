@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { themeById, readTheme, hexToRgb } from './theme';
+import ThinkingPaths from './ThinkingPaths';
 
 /* ------------------------------------------------------------------ *
  * ShaderBackground — the light behind every page.
@@ -13,10 +14,13 @@ import { themeById, readTheme, hexToRgb } from './theme';
  * faint grain dithers the gradients so they never band.
  *
  * IT SAYS WHEN THE ASSISTANT IS WORKING. While an answer is being worked
- * out (<html data-busy>, set by WorkingState) the balls quicken, gather a
- * little towards the middle of the page and brighten, and settle back
- * when the answer lands. The page itself is the progress, not only the
- * card in it. The change is eased, never switched.
+ * out (<html data-busy>, set by WorkingState) the balls gather a little
+ * towards the middle of the page and brighten, and settle back when the
+ * answer lands. They barely quicken: a sky that races while you wait
+ * makes the wait feel longer. Thin lines drift in over the light at the
+ * same time (ThinkingPaths) and drift out with the answer. The page
+ * itself is the progress, not only the card in it. The change is eased,
+ * never switched.
  *
  * WHAT IT DOES WHEN IT CANNOT
  * ---------------------------
@@ -208,7 +212,7 @@ export default function ShaderBackground() {
       prev = now;
       const target = document.documentElement.dataset.busy ? 1 : 0;
       energy += (target - energy) * Math.min(1, dt * 1.6);
-      phase += dt * (0.09 + 0.22 * energy);
+      phase += dt * (0.09 + 0.05 * energy);
       size();
       gl.uniform1f(u.uTime, phase);
       gl.uniform1f(u.uEnergy, energy);
@@ -284,6 +288,7 @@ export default function ShaderBackground() {
   return (
     <div aria-hidden="true" className="riva-sky">
       <canvas ref={ref} className="riva-sky-canvas" />
+      <ThinkingPaths />
     </div>
   );
 }
