@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { themeById, readTheme, hexToRgb } from './theme';
-import ThinkingPaths from './ThinkingPaths';
+import ThinkingGradient from './ThinkingGradient';
 
 /* ------------------------------------------------------------------ *
  * ShaderBackground — the light behind every page.
@@ -17,8 +17,9 @@ import ThinkingPaths from './ThinkingPaths';
  * out (<html data-busy>, set by WorkingState) the balls gather a little
  * towards the middle of the page and brighten, and settle back when the
  * answer lands. They barely quicken: a sky that races while you wait
- * makes the wait feel longer. Thin lines drift in over the light at the
- * same time (ThinkingPaths) and drift out with the answer. The page
+ * makes the wait feel longer. A faint swirl of the theme's colours
+ * turns over the light at the same time (ThinkingGradient) and fades
+ * out with the answer. The page
  * itself is the progress, not only the card in it. The change is eased,
  * never switched.
  *
@@ -288,7 +289,7 @@ export default function ShaderBackground() {
   return (
     <div aria-hidden="true" className="riva-sky">
       <canvas ref={ref} className="riva-sky-canvas" />
-      <ThinkingPaths />
+      <ThinkingGradient />
     </div>
   );
 }
