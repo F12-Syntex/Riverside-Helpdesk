@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.46.0` | 2026-10-01 | feat | `3895477` | feat: drift thin lines across the page while an answer is worked out |
+| `6.45.3` | 2026-10-01 | docs | `54fc27e` | docs: record the quieter add-contact link in the versions table |
 | `6.45.2` | 2026-10-01 | style | `3bc3bec` | style: move adding a contact out of the way on /lookup |
 | `6.45.1` | 2026-10-01 | docs | `bfbf76f` | docs: record the contacts page and dash fix in the versions table |
 | `6.45.0` | 2026-10-01 | feat | `cd91a9c` | feat: list, add and edit every practice contact on /lookup |
