@@ -68,19 +68,13 @@ const LK_CSS = `
 .lk-iconbtn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
 .lk-count{flex:none;margin-right:8px;font-size:12px;font-weight:600;color:#9aa6ae;font-variant-numeric:tabular-nums;}
 
-/* ---- the card's own bar: what is listed, and the way to add to it ---- */
-.lk-bar{flex:none;display:flex;align-items:center;gap:10px;padding:12px 14px 10px 20px;border-bottom:1px solid #eef2f4;}
-.lk-bar__title{flex:1;min-width:0;font-size:13px;font-weight:650;color:var(--rv-ink-2);}
-.lk-bar__title b{color:var(--rv-ink);font-variant-numeric:tabular-nums;}
-
 /* ---- the list ---- */
 .lk-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 8px;
   scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
 .lk-group{display:flex;align-items:center;gap:8px;padding:12px 12px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
 .lk-group__n{font-variant-numeric:tabular-nums;font-weight:600;color:#b5bfc6;}
 .lk-tag{padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;background:#fdf6e7;color:#8a5a08;}
-.lk-tag--added{background:#e8f4ec;color:#1e6b3a;}
-.lk-tag--edited{background:#eef4fa;color:#245e93;}
+.lk-tag--added{background:#f1f5f9;color:#7a8891;font-weight:650;}
 .lk-list{position:relative;}
 .lk-row{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;scroll-margin:8px;cursor:default;}
 .lk-row.is-sel{background:#f1f5f9;}
@@ -148,6 +142,12 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 /* ---- the foot ---- */
 .lk-foot{flex:none;display:flex;align-items:center;gap:14px;padding:10px 20px;border-top:1px solid #eef2f4;font-size:12px;font-weight:550;color:#9aa6ae;}
 .lk-foot span{display:inline-flex;align-items:center;gap:5px;}
+.lk-foot__keys{flex:1;min-width:0;gap:14px !important;}
+.lk-foot__add{flex:none;display:inline-flex;align-items:center;gap:6px;margin-right:-8px;padding:5px 10px;border:none;border-radius:8px;background:none;
+  font:inherit;font-size:12.5px;font-weight:650;color:#7a8891;cursor:pointer;transition:background-color .15s ease,color .15s ease;}
+.lk-foot__add:hover{background:#f1f5f9;color:var(--rv-accent);}
+.lk-foot__add:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
+.lk-foot__note{flex:none;font-size:12px;color:#9aa6ae;}
 
 /* ---- adding or changing a contact ---- */
 .lk-scrim{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px;
@@ -185,7 +185,8 @@ textarea.lk-text{height:auto;min-height:64px;padding:10px 12px;resize:vertical;l
   .lk-h1{font-size:30px;margin-top:4px;}
   .lk-box{height:60px;padding-left:16px;}
   .lk-input{font-size:16px;}
-  .lk-count,.lk-foot{display:none;}
+  .lk-count,.lk-foot__keys{display:none !important;}
+  .lk-foot{justify-content:flex-end;padding:8px 14px;}
   .lk-row{flex-wrap:wrap;gap:8px;padding:10px;}
   .lk-row__text{flex:1 1 100%;}
   .lk-row__name{white-space:normal;}
@@ -315,8 +316,8 @@ function Row({ entry, query, selected, flash, rowRef, onEdit, onSave }) {
       <span className="lk-row__text">
         <span className="lk-row__label">
           <span className="lk-row__name"><Highlighted label={entry.label} query={query} /></span>
-          {entry.origin === 'added' ? <span className="lk-tag lk-tag--added">Added here</span> : null}
-          {entry.edited ? <span className="lk-tag lk-tag--edited">Edited</span> : null}
+          {/* Only in a search: with nothing typed, "Added here" is the group. */}
+          {query && entry.origin === 'added' ? <span className="lk-tag lk-tag--added">Added here</span> : null}
         </span>
         {sub ? <span className="lk-row__sub">{sub}</span> : null}
       </span>
@@ -697,20 +698,6 @@ export default function Page() {
           initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE }}>
 
-          <div className="lk-bar">
-            <span className="lk-bar__title">
-              {trimmed
-                ? <>The practice’s contacts · <b>{mine.length}</b> {mine.length === 1 ? 'match' : 'matches'}</>
-                : <>The practice’s contacts · <b>{book.entries.length}</b></>}
-              {book.loaded && !book.editable ? <> <span className="lk-tag">Read-only right now</span></> : null}
-            </span>
-            <button type="button" className="lk-btn lk-btn--primary lk-btn--sm" disabled={!book.editable}
-              onClick={() => openEditor({ ...blankDraft(), label: trimmed && !mine.length ? trimmed : '' })}
-              title={book.editable ? 'Add a contact' : 'Contacts cannot be saved while the database is unavailable'}>
-              <Svg w={14} sw={2.6}>{Icons.plus}</Svg>Add contact
-            </button>
-          </div>
-
           <div className="lk-body">
             {!book.loaded ? <Skeleton /> : null}
 
@@ -827,10 +814,22 @@ export default function Page() {
             ) : null}
           </div>
 
-          <div className="lk-foot" aria-hidden="true">
-            <span><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
-            <span><Kbd>Enter</Kbd> copy</span>
-            <span><Kbd>Esc</Kbd> clear</span>
+          {/* Adding is here, at the foot, out of the way of finding — which is
+              what the page is for. A search that finds nothing offers it too. */}
+          <div className="lk-foot">
+            <span className="lk-foot__keys" aria-hidden="true">
+              <span><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
+              <span><Kbd>Enter</Kbd> copy</span>
+              <span><Kbd>Esc</Kbd> clear</span>
+            </span>
+            {book.loaded ? (
+              book.editable ? (
+                <button type="button" className="lk-foot__add"
+                  onClick={() => openEditor({ ...blankDraft(), label: trimmed && !mine.length ? trimmed : '' })}>
+                  <Svg w={13} sw={2.6}>{Icons.plus}</Svg>Add a contact
+                </button>
+              ) : <span className="lk-foot__note">Contacts are read-only right now</span>
+            ) : null}
           </div>
         </motion.div>
       </main>
