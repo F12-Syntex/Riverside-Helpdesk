@@ -101,7 +101,11 @@ const CSS = `
 .rq-ctx__head a:hover{text-decoration:underline;}
 .rq-ctx__when{margin-left:auto;font-weight:500;color:#768692;}
 .rq-ctx__text{margin-top:10px;font-size:16px;line-height:1.6;color:#4c6272;overflow-wrap:anywhere;}
-.rq-ctx__text mark{background:#fff1b8;color:#212b32;border-radius:3px;padding:1px 3px;box-shadow:inset 0 -2px 0 #f0b429;}
+.rq-passage__section{display:block;margin-bottom:4px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#768692;}
+.rq-passage__main,.rq-passage__side{margin:0;}
+.rq-passage__main + .rq-passage__side,.rq-passage__side + .rq-passage__main{margin-top:8px;}
+.rq-passage__side{color:#768692;}
+.rq-ctx__text mark,.rq-quote--ctx mark{background:#fff1b8;color:#212b32;border-radius:3px;padding:1px 3px;box-shadow:inset 0 -2px 0 #f0b429;}
 .rq-ctx__label{display:block;margin:12px 0 4px;font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#768692;}
 .rq-fbody{padding:22px 24px 22px;}
 .rq-fbody__label{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#768692;}
@@ -205,6 +209,7 @@ const CSS = `
 .rq-status--done{background:#e6f4ec;color:#00612f;}
 .rq-src--bot{color:#a13a00;font-weight:650;}
 .rq-quote{margin-top:6px;padding-left:10px;border-left:3px solid #f0c674;font-size:14px;line-height:1.45;color:#4c6272;overflow-wrap:anywhere;}
+.rq-quote--ctx{margin-top:10px;padding:10px 14px;border-left-width:3px;border-radius:0 8px 8px 0;background:#f6f9fb;font-size:14.5px;line-height:1.55;}
 .rq-detail{margin-top:6px;font-size:14.5px;line-height:1.5;color:#4c6272;white-space:pre-wrap;overflow-wrap:anywhere;}
 .rq-reply{margin-top:10px;padding:2px 0 2px 12px;border-left:3px solid #6fbf8f;font-size:15.5px;line-height:1.5;color:#212b32;white-space:pre-wrap;overflow-wrap:anywhere;}
 .rq-reply__note{display:block;margin-top:3px;font-size:12.5px;white-space:normal;}
@@ -607,7 +612,9 @@ function Row({ row, onAnswer, onRemove, busy }) {
         )}
       </div>
 
-      {row.quote && <div className="rq-quote">“{row.quote}”</div>}
+      {row.context
+        ? <div className="rq-quote rq-quote--ctx"><Passage ctx={row.context} /></div>
+        : row.quote && <div className="rq-quote">“{row.quote}”</div>}
       <Points points={row.points} />
       {row.detail && <div className="rq-detail">{row.detail}</div>}
 
@@ -824,6 +831,19 @@ function Points({ points, label = false }) {
   );
 }
 
+/* The asked-about words marked in their paragraph, with the paragraphs
+   either side of it faded, so the preview reads as the page does. */
+function Passage({ ctx, section = true }) {
+  return (
+    <>
+      {section && ctx.section && <span className="rq-passage__section">{ctx.section}</span>}
+      {ctx.prev && <p className="rq-passage__side">{ctx.prev}</p>}
+      <p className="rq-passage__main">{ctx.before}<mark>{ctx.quote}</mark>{ctx.after}</p>
+      {ctx.next && <p className="rq-passage__side">{ctx.next}</p>}
+    </>
+  );
+}
+
 /* What a question is about, so it can be answered without going to look:
    the Notebook paragraph with the asked-about words marked, how often the
    assistant was asked it, or the asker's own note. */
@@ -840,7 +860,7 @@ function Context({ row }) {
           <span className="rq-ctx__when">{when(row.at)}</span>
         </div>
         {ctx ? (
-          <div className="rq-ctx__text">{ctx.before}<mark>{ctx.quote}</mark>{ctx.after}</div>
+          <div className="rq-ctx__text"><Passage ctx={ctx} section={false} /></div>
         ) : row.quote ? (
           <div className="rq-ctx__text"><mark>{row.quote}</mark> <em style={{ fontSize: 13.5 }}>— no longer on the page</em></div>
         ) : null}

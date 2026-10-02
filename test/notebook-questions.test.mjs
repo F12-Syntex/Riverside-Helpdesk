@@ -70,16 +70,21 @@ test('stripping can be limited to some anchors, leaving the rest marked', () => 
 
 test('the context is the section heading and the sentence round the words', () => {
   const ctx = questionContext(PAGE, 'k3v9x2m7qa');
-  assert.deepEqual(ctx, { section: 'Home visits', before: 'Requests before 10am go to the ', quote: 'duty doctor', after: ' by task.' });
+  assert.deepEqual(ctx, {
+    section: 'Home visits', prev: '', before: 'Requests before 10am go to the ', quote: 'duty doctor', after: ' by task.',
+    next: 'Ring 999 for chest pain and never book it.',
+  });
   const red = questionContext(PAGE, 'ab12cd34ef');
   assert.equal(red.before, 'Ring ');
   assert.equal(red.quote, '999 for chest pain');
   assert.equal(red.after, ' and never book it.');
+  assert.equal(red.prev, 'Requests before 10am go to the duty doctor by task.');
+  assert.equal(red.next, 'Same question, second paragraph with green after.');
   assert.equal(questionContext(PAGE, 'zzzzzzzzzz'), null);
   const long = 'x '.repeat(400) + '<span data-q="k3v9x2m7qa">here</span> ' + 'y '.repeat(400);
   const cut = questionContext(long, 'k3v9x2m7qa', 50);
   assert.ok(cut.before.startsWith('…') && cut.before.length <= 52);
   assert.ok(cut.after.endsWith('…') && cut.after.length <= 52);
   const item = questionContext('## Phones\n\n- Call **<span data-q="k3v9x2m7qa">0207 123</span>** first\n- Then wait', 'k3v9x2m7qa');
-  assert.deepEqual(item, { section: 'Phones', before: 'Call ', quote: '0207 123', after: ' first Then wait' });
+  assert.deepEqual(item, { section: 'Phones', prev: '', before: 'Call ', quote: '0207 123', after: ' first Then wait', next: '' });
 });
