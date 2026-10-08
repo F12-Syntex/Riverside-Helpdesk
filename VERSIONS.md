@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.57.0` | 2026-10-08 | feat | `8bfa831` | feat: pin a model to specific OpenRouter providers with @provider |
+| `6.56.1` | 2026-10-02 | docs | `34f040b` | docs: record the fuller question preview in the versions table |
 | `6.56.0` | 2026-10-02 | feat | `ea23faa` | feat: show a fuller passage round Notebook questions on /questions |
 | `6.55.1` | 2026-10-01 | docs | `1a55c2e` | docs: record the question template in the versions table |
 | `6.55.0` | 2026-10-01 | feat | `a936593` | feat: questions in a title / context / question template, with AI tidy-up |
