@@ -36,7 +36,6 @@
 import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText, zodSchema } from 'ai';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
   CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
   commandPrompt, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
@@ -77,7 +76,7 @@ import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { contactEntries } from '@/lib/contacts-store';
 import { scanNotes, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
-import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
+import { createRouter } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
 import { recordQuestion } from '@/lib/questions/log';
@@ -344,7 +343,7 @@ export async function POST(request) {
   // `command` is resolved above the redaction now, because it is what decides
   // whether the redaction runs at all.
 
-  const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
+  const openrouter = createRouter(apiKey);
   const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const startedAt = Date.now();
   const machineId = machineFromCookie(request);

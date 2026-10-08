@@ -10,8 +10,7 @@
 //
 // See lib/notebook/defrag.js for what each step refuses and why.
 import { NextResponse } from 'next/server';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
+import { createRouter } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { proposeDefrag, revalidateProposal, applyProposal, rejectProposal, loadProposal } from '@/lib/notebook/defrag.js';
 
@@ -49,7 +48,7 @@ export async function POST(request) {
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY is not set.' }, { status: 500 });
-    const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
+    const openrouter = createRouter(apiKey);
     const roles = await getModelRoles();
 
     if (body.proposalId && typeof body.body === 'string') {

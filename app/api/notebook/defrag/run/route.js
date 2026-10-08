@@ -20,8 +20,7 @@
 // goes through the single-page path, so nothing here can apply a rewrite the
 // code checks and the meaning check have not both passed.
 import { NextResponse } from 'next/server';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
+import { createRouter } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { runState, startRun, stepRun, cancelRun, decideContradiction, applyRunItem, rejectRunItem, applyAllClean } from '@/lib/notebook/run.js';
 
@@ -68,7 +67,7 @@ export async function POST(request) {
     if (body.runId && body.step) {
       const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY is not set.' }, { status: 500 });
-      const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
+      const openrouter = createRouter(apiKey);
       const roles = await getModelRoles();
       return reply(await stepRun({ runId: parseInt(body.runId, 10), openrouter, roles, turnId }));
     }

@@ -25,11 +25,10 @@
 // at a desk with a patient standing at it.
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { PATIENT_DATA_SCHEMA, blocksSend, kindsOf, patientDataMessage, patientDataPrompt } from '@/lib/safety/patient-data.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { contactEntries } from '@/lib/contacts-store';
-import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
+import { createRouter } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
 
@@ -93,7 +92,7 @@ export async function POST(request) {
   // message goes. Neither is worth a round trip to say so.
   if (!text || !apiKey) return NextResponse.json(verdict());
 
-  const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
+  const openrouter = createRouter(apiKey);
 
   let model = '';
   try {

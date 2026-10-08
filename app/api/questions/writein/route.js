@@ -8,8 +8,7 @@
 //
 // See lib/questions/writein.js (and ./writein.mjs for the prompts and checks).
 import { NextResponse } from 'next/server';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { AI_SDK_EXTRA_BODY } from '@/lib/ai/openrouter.mjs';
+import { createRouter } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { applyWriteIn, planWriteIn } from '@/lib/questions/writein';
 
@@ -32,7 +31,7 @@ export async function POST(request) {
     if (body.action !== 'plan') return NextResponse.json({ error: 'Send { action: "plan" } or { action: "apply", pages }.' }, { status: 400, headers: noStore });
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500, headers: noStore });
-    const openrouter = createOpenRouter({ apiKey, extraBody: AI_SDK_EXTRA_BODY });
+    const openrouter = createRouter(apiKey);
     const roles = await getModelRoles();
     return NextResponse.json(await planWriteIn({ apiKey, openrouter, roles, turnId }), { headers: noStore });
   } catch (e) {

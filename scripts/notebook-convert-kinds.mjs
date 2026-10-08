@@ -42,6 +42,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
 import { noteKind, normaliseFields, noteIssues, statusFor } from '../lib/notebook/kinds.mjs';
+import { chatRequest } from '../lib/ai/openrouter.mjs';
 
 const root = process.argv[2] || '.';
 const APPLY = process.argv.includes('--apply');
@@ -111,11 +112,11 @@ async function extract(kind, note) {
   ].join('\n');
   const [setting] = await sql`SELECT value FROM app_settings WHERE key = 'ai_model'`;
   const model = (setting && setting.value) || 'google/gemini-3.7-flash';
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + process.env.OPENROUTER_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, temperature: 0, response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }] }),
-  });
+  // Through the shared builder, so a provider pin on the stored model is sent
+  // as routing rather than as part of the model name.
+  const res = await fetch(...chatRequest(process.env.OPENROUTER_API_KEY, {
+    model, temperature: 0, response_format: { type: 'json_object' }, messages: [{ role: 'user', content: prompt }],
+  }));
   if (!res.ok) throw new Error('OpenRouter ' + res.status + ': ' + (await res.text()).slice(0, 200));
   const text = (await res.json()).choices?.[0]?.message?.content || '{}';
   return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));

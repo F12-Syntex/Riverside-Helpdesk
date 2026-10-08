@@ -7,7 +7,9 @@
  * it and it fuzzy-searches every model OpenRouter serves ("son 4" reaches
  * Claude Sonnet 4.6, "perp" reaches the Perplexity models), or type a full id
  * and use it as typed — including a routing variant like ":nitro", which is
- * part of the id rather than a setting of its own.
+ * part of the id rather than a setting of its own, and a provider pin like
+ * "@google-vertex/europe", which serves the model from that provider and no
+ * other (see lib/model-id.mjs).
  *
  * Blank inherits: only the top row has to be set. The one exception is
  * Images, which falls back to a vision model of its own rather than to the
@@ -18,7 +20,7 @@ import React from 'react';
 import { s, Hover, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
-import { isModelSlug } from '@/lib/model-id.mjs';
+import { isModelSlug, splitProviders } from '@/lib/model-id.mjs';
 import { NO_LOG_COOKIE, NO_LOG_STORE_KEY } from '@/lib/questions/opt-out.mjs';
 import { estimateQueryCost, summariseModelCosts, formatCost } from '@/lib/ai/usage-cost.mjs';
 
@@ -103,7 +105,10 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
       {open && options.length > 0 && (
         <div role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #d8dde0;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:4px;')}>
           {options.map((id, i) => {
-            const model = models.find((m) => m.id === id);
+            // A pinned id is still that model — find it by the plain id, and
+            // say where it will be served from.
+            const { model: plain, providers } = splitProviders(id);
+            const model = models.find((m) => m.id === plain) || models.find((m) => m.id === plain.split(':')[0]);
             return (
               <Hover key={id} tag="button" type="button" role="option" aria-selected={i === cursor}
                 onMouseDown={(e) => e.preventDefault()} onClick={() => take(id)}
@@ -112,7 +117,7 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
                 <span style={s('display:block;font-size:14.5px;color:#212b32;overflow-wrap:anywhere;')}>{id}</span>
                 {model && model.name ? (
                   <span style={s('display:block;font-size:12.5px;color:#4c6272;overflow-wrap:anywhere;')}>
-                    {model.name}{model.vision ? '' : ' · text only'}
+                    {model.name}{model.vision ? '' : ' · text only'}{providers.length ? ' · only via ' + providers.join(', ') : ''}
                   </span>
                 ) : null}
               </Hover>
@@ -243,7 +248,10 @@ export default function SettingsPage() {
     // server, so an empty box is captioned with what it actually resolves to.
     images: roleValue('images') || (setting ? setting.defaultImagesModel : ''),
   };
-  const priceOf = (id) => models.find((m) => m.id === id) || models.find((m) => m.id === String(id).split(':')[0]) || null;
+  const priceOf = (id) => {
+    const plain = String(id).split('@')[0];
+    return models.find((m) => m.id === plain) || models.find((m) => m.id === plain.split(':')[0]) || null;
+  };
   const prices = React.useMemo(() => Object.fromEntries(models.map((m) => [m.id, m])), [models]);
 
   // The estimate. Measured tokens per question from ai_usage, priced at whatever
@@ -295,7 +303,9 @@ export default function SettingsPage() {
       <main style={s('flex:1;width:100%;max-width:680px;margin:0 auto;padding:32px 24px 56px;')}>
         <h1 style={s('font-size:26px;margin:0 0 4px;letter-spacing:-0.02em;')}>Models</h1>
         <p style={s('font-size:15px;color:#4c6272;margin:0 0 20px;')}>
-          Type to search, or paste an id. Blank inherits the model above.
+          Type to search, or paste an id. Blank inherits the model above. Add
+          {' '}<code>@provider</code> to pin where a model runs — e.g.{' '}
+          <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
         </p>
 
         <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:4px 20px 20px;')}>
@@ -468,7 +478,7 @@ export default function SettingsPage() {
           )}
           {!valid && routingValid && (
             <p style={s('margin:12px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
-              An id looks like vendor/model, with an optional :variant.
+              An id looks like vendor/model, with an optional :variant and @provider (several separated by commas).
             </p>
           )}
           {error && (

@@ -24,10 +24,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { generateObject } from 'ai';
 import { SELECTION_SCHEMA, selectionPrompt } from '../lib/templates/route.mjs';
-import { AI_SDK_EXTRA_BODY } from '../lib/ai/openrouter.mjs';
+import { createRouter } from '../lib/ai/openrouter.mjs';
 
 const root = process.argv[2] || '.';
 for (const line of fs.readFileSync(path.join(root, '.env.local'), 'utf8').split(/\r?\n/)) {
@@ -102,7 +101,7 @@ const notebook = notes
 console.log(`Notebook: ${notes.length} rows, ${notebook.length} chars (~${Math.round(notebook.length / 4)} tokens)\n`);
 console.log('model'.padEnd(42), 'score', '  median', ' note');
 
-const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, extraBody: AI_SDK_EXTRA_BODY });
+const openrouter = createRouter(process.env.OPENROUTER_API_KEY);
 const models = process.argv.slice(3).length ? process.argv.slice(3) : SHORTLIST;
 
 const results = [];
