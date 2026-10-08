@@ -94,6 +94,15 @@ export const maxDuration = 120;
 const READ_MAX_TOKENS = 2000;
 const PROSE_MAX_TOKENS = 1500;
 
+// THE TURN STOPS ITSELF BEFORE THE PLATFORM DOES. At maxDuration the function
+// is killed mid-call: the reader is left watching a status line that never
+// changes, the turn is never logged, and the only trace is "Task timed out
+// after 120 seconds". Every model call on the turn shares this one deadline,
+// so a call still running at it is abandoned, and the turn ends the ordinary
+// way — an error the reader can see and a failed row on /stats — with time to
+// spare for both.
+const TURN_BUDGET_MS = 105_000;
+
 // Numbers the answer is allowed to keep: the practice directory, plus anything
 // already present in the reader's own message, history or attached document (an
 // email being reformatted carries the numbers it arrived with). Every other
@@ -316,19 +325,24 @@ export async function POST(request) {
   // thirty medications is under two thousand. So the cap is that, and a call
   // costs what it uses rather than what the model could have written.
   const readValues = async ({ model: id, schema, text, role, phase }) => {
+    const began = Date.now();
     try {
-      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, ...withImages(text) });
+      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, abortSignal: deadline, ...withImages(text) });
       recordUsage({ turnId, role, phase, model: id, usage: out.usage });
+      tookTime(phase, id, began);
       return out.object;
     } catch (first) {
-      console.warn(`[agent] structured ${phase} failed on ${id}, retrying as text:`, String(first).slice(0, 200));
+      if (deadline.aborted) throw first;
+      console.warn(`[agent] structured ${phase} failed on ${id} after ${seconds(began)}, retrying as text:`, String(first).slice(0, 200));
       const loose = await generateText({
         model: openrouter(id),
         temperature: 0,
         maxOutputTokens: READ_MAX_TOKENS,
+        abortSignal: deadline,
         ...withImages(text + '\n\nReply with ONE JSON object and nothing else — no prose, no code fence — matching this JSON Schema:\n' + JSON.stringify(zodSchema(schema).jsonSchema)),
       });
       recordUsage({ turnId, role, phase: phase + 'Text', model: id, usage: loose.usage });
+      tookTime(phase + 'Text', id, began);
       const raw = String(loose.text || '');
       const a = raw.indexOf('{');
       const b = raw.lastIndexOf('}');
@@ -346,6 +360,12 @@ export async function POST(request) {
   const openrouter = createRouter(apiKey);
   const turnId = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const startedAt = Date.now();
+  const deadline = AbortSignal.timeout(TURN_BUDGET_MS);
+  // One line per model phase, so a slow turn in the runtime logs says which
+  // step it was slow in. lib/ai/openrouter.mjs logs each HTTP attempt beneath
+  // these, which is where a retry shows.
+  const seconds = (since) => ((Date.now() - since) / 1000).toFixed(1) + 's';
+  const tookTime = (phase, id, since) => console.info(`[agent] ${turnId} ${phase} on ${id} took ${seconds(since)} (turn at ${seconds(startedAt)})`);
   const machineId = machineFromCookie(request);
   // This machine's own answer to "record what I ask here?". Set at /settings,
   // held in a cookie on the computer it was set at, and read once per turn.
@@ -365,6 +385,9 @@ export async function POST(request) {
       // its own errors — and on Vercel it is handed to waitUntil so the row is
       // still written after the response has been closed.
       const logTurn = (turn) => {
+        // The whole turn's time, in the runtime logs whether or not this desk
+        // records its questions — it carries no words of the question.
+        console.info(`[agent] ${turnId} ${turn.outcome}${turn.template ? ' ' + turn.template : ''} in ${seconds(startedAt)}`);
         // Switched off at this desk: no row, and nothing else about the turn
         // changes. The caller still awaits something, so every path that ends a
         // turn reads the same whether the log is on or off.
@@ -638,6 +661,7 @@ export async function POST(request) {
                   model: openrouter(roles.reasoning.model),
                   schema: PRACTICE_ANSWER_SCHEMA,
                   temperature: 0.2,
+                  abortSignal: deadline,
                   prompt: practiceAnswerPrompt({ question, extracts }),
                 });
                 recordUsage({ turnId, role: 'reasoning', phase: 'practice', model: roles.reasoning.model, usage: written.usage });
@@ -1259,8 +1283,10 @@ export async function POST(request) {
           : question;
 
         const proseModel = seeing ? imageModel : model;
+        const proseBegan = Date.now();
         const generated = await generateText({
           model: openrouter(proseModel),
+          abortSignal: deadline,
           // The whole Notebook, the same text the picker read — see systemFor.
           system: proseSystemPrompt(notebookText),
           // Capped for the same reason as readValues: an uncapped call reserves
@@ -1276,6 +1302,7 @@ export async function POST(request) {
           temperature: 0.2,
         });
         recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: generated.usage });
+        tookTime('answer', proseModel, proseBegan);
 
         const markdown = String(generated.text || '').trim();
         if (!markdown) {
@@ -1347,9 +1374,16 @@ export async function POST(request) {
         controller.close();
         await written;
       } catch (e) {
-        console.error('[agent] turn failed:', e);
-        send({ type: 'error', error: 'The assistant could not complete this answer.', detail: String(e).slice(0, 300) });
-        const written = logTurn({ outcome: 'failed', error: String(e).slice(0, 300) });
+        const timedOut = deadline.aborted;
+        console.error(`[agent] ${turnId} turn failed after ${seconds(startedAt)}:`, e);
+        send({
+          type: 'error',
+          error: timedOut
+            ? 'The model took too long to answer, so this was stopped. Try again, or choose a faster model at /settings.'
+            : 'The assistant could not complete this answer.',
+          detail: String(e).slice(0, 300),
+        });
+        const written = logTurn({ outcome: 'failed', error: (timedOut ? `timed out after ${seconds(startedAt)}: ` : '') + String(e).slice(0, 300) });
         controller.close();
         await written;
       }
