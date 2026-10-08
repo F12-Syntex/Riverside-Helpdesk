@@ -82,11 +82,13 @@ test('the AI SDK path sends the same thing', async () => {
     assert.deepEqual(sent.provider.only, ['google-vertex/europe']);
     assert.equal(sent.provider.allow_fallbacks, false);
     assert.equal(sent.provider.data_collection, 'deny');
-    assert.equal(sent.reasoning.effort, 'minimal');
+    // A Claude model: no reasoning field — see the next test file.
+    assert.equal('reasoning' in sent, false);
 
     await generateText({ model: openrouter('openai/gpt-oss-120b'), prompt: 'hi', maxRetries: 0 }).catch(() => {});
     assert.equal(sent.model, 'openai/gpt-oss-120b');
     assert.deepEqual(sent.provider, NO_RETENTION);
+    assert.equal(sent.reasoning.effort, 'minimal');
   } finally {
     globalThis.fetch = realFetch;
   }
