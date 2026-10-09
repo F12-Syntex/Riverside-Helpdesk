@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.59.2` | 2026-10-09 | fix | `0ae67bd` | fix: read REWORK_ACTIVE from the environment |
+| `6.59.1` | 2026-10-09 | docs | `4d47c7c` | docs: record the full-page rework notice in versions |
 | `6.59.0` | 2026-10-09 | feat | `cdcfea8` | feat: replace the Q&A with a full-page rework notice |
 | `6.58.3` | 2026-10-09 | docs | `eb63058` | docs: record the example env file restore in versions |
 | `6.58.2` | 2026-10-09 | chore | `4829434` | chore: restore .env.local.example removed by mistake |
