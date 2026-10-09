@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.60.0` | 2026-10-09 | feat | `f4d6e2f` | feat: steer the picker toward finding the answer in the Notebook |
+| `6.59.4` | 2026-10-09 | fix | `5bdffc2` | fix: stop Claude's picker timing out on a rejected schema |
+| `6.59.3` | 2026-10-09 | docs | `a8b8a3f` | docs: record the REWORK_ACTIVE env fix in versions |
 | `6.59.2` | 2026-10-09 | fix | `0ae67bd` | fix: read REWORK_ACTIVE from the environment |
 | `6.59.1` | 2026-10-09 | docs | `4d47c7c` | docs: record the full-page rework notice in versions |
 | `6.59.0` | 2026-10-09 | feat | `cdcfea8` | feat: replace the Q&A with a full-page rework notice |
