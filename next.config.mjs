@@ -2,6 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // The rework notice (app/_components/ReworkPage.jsx) is a client component,
+  // which never sees a plain env var. Listing it here inlines it at build time,
+  // so REWORK_ACTIVE in .env.local (or on Vercel) is what decides it.
+  env: {
+    REWORK_ACTIVE: process.env.REWORK_ACTIVE ?? '',
+  },
+
   // The deep index is served at /index, but its files live in app/site-index.
   //
   // "index" is a reserved route name to the App Router: it normalises /index

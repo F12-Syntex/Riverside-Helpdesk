@@ -11,15 +11,18 @@
  * project has none, so it is carried over as inline styles, in the
  * practice's blue, with a small canvas for the sparkles.
  *
- * To bring the Q&A back: set REWORK_ACTIVE to false (QaApp.jsx reads
- * it), or delete this file and the two lines that use it.
+ * To bring the Q&A back: set REWORK_ACTIVE=false in the environment
+ * (.env.local, or on Vercel) and restart / redeploy — next.config.mjs
+ * inlines it at build time. Unset, the notice stays up. Or delete this
+ * file and the two lines in QaApp.jsx that use it.
  * ------------------------------------------------------------------ */
 
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { s, Hover, Svg, Icons } from './ui';
 
-export const REWORK_ACTIVE = true;
+export const REWORK_ACTIVE =
+  String(process.env.REWORK_ACTIVE).trim().toLowerCase() !== 'false';
 
 const HEADLINE = 'The answers are being rebuilt';
 const SERIF = "'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif";
