@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.58.0` | 2026-10-09 | feat | `a841c17` | feat: show a temporary notice on the Q&A pointing staff to the notes |
+| `6.57.4` | 2026-10-08 | docs | `b880afd` | docs: record the Claude reasoning and turn deadline fixes in versions |
 | `6.57.3` | 2026-10-08 | fix | `20b7876` | fix: end a stuck chat turn before the platform kills it, and log timings |
 | `6.57.2` | 2026-10-08 | perf | `2371090` | perf: stop switching extended thinking on for Claude models |
 | `6.57.1` | 2026-10-08 | docs | `b0f843e` | docs: record provider pinning in the versions table |
