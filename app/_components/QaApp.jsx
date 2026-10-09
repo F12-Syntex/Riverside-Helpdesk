@@ -24,6 +24,7 @@ import ModeSwitch from './ModeSwitch';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
+import ReworkNotice from './ReworkNotice';
 import ContactsSheet from './ContactsSheet';
 import { plainText } from './chat/Rich';
 import { mdPlain } from './chat/Md';
@@ -1966,6 +1967,8 @@ class RiversidePracticeQA extends React.Component {
             refused is the only thing on this page that has to be dealt with
             before anything else can happen. */}
         <PatientDataModal v={v} />
+        {/* Temporary: the Q&A is being reworked. Delete with ReworkNotice.jsx. */}
+        <ReworkNotice />
       </div>
     );
   }
