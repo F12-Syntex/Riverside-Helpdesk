@@ -24,7 +24,7 @@ import ModeSwitch from './ModeSwitch';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
-import ReworkNotice from './ReworkNotice';
+import ReworkPage, { REWORK_ACTIVE } from './ReworkPage';
 import ContactsSheet from './ContactsSheet';
 import { plainText } from './chat/Rich';
 import { mdPlain } from './chat/Md';
@@ -1799,6 +1799,21 @@ class RiversidePracticeQA extends React.Component {
 
   render() {
     const v = this.renderVals();
+    // Temporary: the Q&A is being reworked, so this page is a notice in its
+    // place (ReworkPage.jsx). The header stays so the rest of the app is
+    // still reachable.
+    if (REWORK_ACTIVE) {
+      return (
+        <div className="riva-app-shell"
+          style={s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;background:#f0f4f5;')}>
+          <div style={s('position:relative;z-index:3;flex:none;')}>
+            <AppHeader v={v} onContacts={v.onOpenContacts} />
+          </div>
+          <ReworkPage />
+          {v.contactsOpen && <ContactsSheet onClose={v.onCloseContacts} />}
+        </div>
+      );
+    }
     return (
       // A document is attached by dropping it anywhere on this page. There is
       // no attach button: the dock is one field, and a control beside it would
@@ -1967,8 +1982,6 @@ class RiversidePracticeQA extends React.Component {
             refused is the only thing on this page that has to be dealt with
             before anything else can happen. */}
         <PatientDataModal v={v} />
-        {/* Temporary: the Q&A is being reworked. Delete with ReworkNotice.jsx. */}
-        <ReworkNotice />
       </div>
     );
   }
