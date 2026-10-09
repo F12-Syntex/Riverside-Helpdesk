@@ -76,7 +76,7 @@ import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { contactEntries } from '@/lib/contacts-store';
 import { scanNotes, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
-import { createRouter } from '@/lib/ai/openrouter.mjs';
+import { createRouter, reasoningFor } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
 import { recordQuestion } from '@/lib/questions/log';
@@ -92,6 +92,9 @@ export const maxDuration = 120;
 // back for a card are small; a prose answer a receptionist reads is shorter
 // than this.
 const READ_MAX_TOKENS = 2000;
+// The most one structured-output attempt may take before the text path is
+// tried instead — see readValues.
+const STRUCTURED_BUDGET_MS = 20_000;
 const PROSE_MAX_TOKENS = 1500;
 
 // THE TURN STOPS ITSELF BEFORE THE PLATFORM DOES. At maxDuration the function
@@ -324,10 +327,21 @@ export async function POST(request) {
   // 1104." The values being read back are a few hundred tokens; a screen of
   // thirty medications is under two thousand. So the cap is that, and a call
   // costs what it uses rather than what the model could have written.
+  //
+  // CLAUDE GOES STRAIGHT TO THE TEXT PATH. Anthropic's structured output
+  // rejects the picker's schema — "Schema is too complex" — and on Vertex it
+  // took up to 100 seconds to say so, which spent the whole turn budget and
+  // left the fallback aborted before it started. The same prompt as plain
+  // JSON comes back in about two seconds.
+  //
+  // And no structured attempt may take more than STRUCTURED_BUDGET_MS, so a
+  // provider that stalls on a schema still leaves the fallback time to run.
   const readValues = async ({ model: id, schema, text, role, phase }) => {
     const began = Date.now();
     try {
-      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, abortSignal: deadline, ...withImages(text) });
+      if (!reasoningFor(id)) throw new Error('structured output skipped for Claude');
+      const abortSignal = AbortSignal.any([deadline, AbortSignal.timeout(STRUCTURED_BUDGET_MS)]);
+      const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, abortSignal, ...withImages(text) });
       recordUsage({ turnId, role, phase, model: id, usage: out.usage });
       tookTime(phase, id, began);
       return out.object;
