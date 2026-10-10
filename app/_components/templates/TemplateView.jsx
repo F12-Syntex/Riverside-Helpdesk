@@ -24,6 +24,17 @@
 //
 // NHS blue for the thing to act on, amber for a caveat, red for a rule that
 // causes harm if missed. The shapes live in globals.css (.riva-tv-*).
+//
+// BARE. `bare` draws the same blocks flat, for a host that is itself the
+// surface — the Referrals page's detail panel, where a card inside the panel
+// was a box in a box in a box. No card, no header and no "From" footer (the
+// host draws its own title and its link to the page), and no box around any
+// block: panels become sections under their small label, notes a line with
+// an icon, and the kind cards (ErsForm, EmailForm) lose their coloured bar and
+// frame. Only the form controls the e-RS screen is drawn with keep their
+// outline — they are the picture the reader matches against. The flattening
+// is CSS under .riva-tv-bare, plus a `bare` prop for the blocks drawn with
+// inline styles. Off by default: the Q&A and everything else is unchanged.
 import React, { useState } from 'react';
 import { s, Svg, Icons } from '../ui';
 import Rich from '../chat/Rich';
@@ -100,7 +111,7 @@ function Note({ tone, text }) {
 
 // The procedure a reader usually does not need. Shut by default: putting those
 // steps in front of a receptionist sends them to redo work that already exists.
-function ExpandRow({ label, hint, blocks }) {
+function ExpandRow({ label, hint, blocks, bare = false }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={'riva-tv-more-item' + (open ? ' is-open' : '')}>
@@ -111,41 +122,45 @@ function ExpandRow({ label, hint, blocks }) {
       {open && (
         <div className="riva-tv-more-body">
           {hint && <div className="riva-tv-more-hint">{hint}</div>}
-          <Blocks blocks={blocks} />
+          <Blocks blocks={blocks} bare={bare} />
         </div>
       )}
     </div>
   );
 }
 
-function ExpandGroup({ items }) {
+function ExpandGroup({ items, bare = false }) {
   return (
     <div className="riva-tv-more">
-      {items.map((b, i) => <ExpandRow key={i} label={b.label} hint={b.hint} blocks={b.blocks} />)}
+      {items.map((b, i) => <ExpandRow key={i} label={b.label} hint={b.hint} blocks={b.blocks} bare={bare} />)}
     </div>
   );
 }
 
 // Wording to be pasted somewhere else, so it carries its own Copy.
-function Message({ label, text }) {
+function Message({ label, text, bare = false }) {
   return (
     <div>
       <div style={s('display:flex;align-items:center;gap:12px;margin-bottom:6px;')}>
         <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#4c6272;')}>{label}</div>
         <CopyButton value={text} />
       </div>
-      <div style={s('padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-radius:8px;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
+      <div style={s(bare
+        ? 'padding:2px 0 2px 14px;border-left:3px solid var(--rv-accent-line);font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;'
+        : 'padding:13px 16px;background:#fff;border:1px solid #dde4e7;border-radius:8px;font-size:16px;line-height:1.6;white-space:pre-wrap;color:#212b32;')}>{text}</div>
     </div>
   );
 }
 
 // The label is only rendered when a card carries several contacts and they
 // need telling apart.
-function Contacts({ items }) {
+function Contacts({ items, bare = false }) {
   return (
-    <div style={s('display:flex;flex-direction:column;gap:10px;')}>
+    <div style={s('display:flex;flex-direction:column;gap:' + (bare ? '0' : '10px') + ';')}>
       {items.map((c, i) => (
-        <div key={i} style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;padding:12px 16px;')}>
+        <div key={i} style={s(bare
+          ? 'padding:10px 0;' + (i ? 'border-top:1px solid #edf1f3;' : '')
+          : 'border:1px solid #d8e1e5;border-radius:12px;background:#fff;padding:12px 16px;')}>
           {c.label && <div style={s('font-size:15px;font-weight:700;color:#212b32;margin-bottom:5px;')}>{c.label}</div>}
           {c.tel && <div style={s('font-size:26px;font-weight:700;letter-spacing:-0.01em;color:#005eb8;')}>{c.tel}</div>}
           {c.email && <div style={s('margin-top:3px;font-size:14.5px;font-weight:600;color:#212b32;overflow-wrap:anywhere;')}>{c.email}</div>}
@@ -182,21 +197,23 @@ function group(blocks) {
   return out;
 }
 
-export function Blocks({ blocks, leadFirst = false }) {
+// `bare` (see the head of this file) is passed down to every block drawn with
+// inline styles; the rest are flattened by .riva-tv-bare in globals.css.
+export function Blocks({ blocks, leadFirst = false, bare = false }) {
   const grouped = group(blocks);
   const lead = leadFirst ? grouped.findIndex((b) => b.type === 'fields') : -1;
   return (
     <>
       {grouped.map((b, i) => {
         if (b.type === 'fields') return <Fields key={i} title={b.title} items={b.items} footnote={b.footnote} lead={i === lead} />;
-        if (b.type === 'ers') return <ErsForm key={i} block={b} />;
+        if (b.type === 'ers') return <ErsForm key={i} block={b} bare={bare} />;
         if (b.type === 'profMessage') return <ProfMessage key={i} block={b} />;
-        if (b.type === 'emailForm') return <EmailForm key={i} block={b} />;
+        if (b.type === 'emailForm') return <EmailForm key={i} block={b} bare={bare} />;
         if (b.type === 'pathology') return <PathologyForm key={i} block={b} />;
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
-        if (b.type === 'expandGroup') return <ExpandGroup key={i} items={b.items} />;
-        if (b.type === 'contacts') return <Contacts key={i} items={b.items} />;
-        if (b.type === 'message') return <Message key={i} label={b.label} text={b.text} />;
+        if (b.type === 'expandGroup') return <ExpandGroup key={i} items={b.items} bare={bare} />;
+        if (b.type === 'contacts') return <Contacts key={i} items={b.items} bare={bare} />;
+        if (b.type === 'message') return <Message key={i} label={b.label} text={b.text} bare={bare} />;
         if (b.type === 'steps') {
           return (
             <ol key={i} className="riva-tv-steps">
@@ -226,7 +243,7 @@ export function Blocks({ blocks, leadFirst = false }) {
         }
         if (b.type === 'table') {
           return (
-            <div key={i} style={s('overflow-x:auto;border:1px solid #e1e8ec;border-radius:14px;background:#fff;')}>
+            <div key={i} style={s(bare ? 'overflow-x:auto;' : 'overflow-x:auto;border:1px solid #e1e8ec;border-radius:14px;background:#fff;')}>
               <table style={s('width:100%;border-collapse:collapse;font-size:14.5px;')}>
                 <thead>
                   <tr>{b.head.map((h, n) => <th key={n} style={s('text-align:left;padding:9px 14px;background:#f5f8fa;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#4c6272;')}>{h}</th>)}</tr>
@@ -252,7 +269,7 @@ export function Blocks({ blocks, leadFirst = false }) {
               <div style={s('display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;')}>
                 {b.items.map((img, n) => (
                   <a key={n} href={img.url} target="_blank" rel="noreferrer"
-                    style={s('display:inline-flex;max-width:100%;border:1px solid #d8e1e5;border-radius:10px;overflow:hidden;background:#fff;')}>
+                    style={s('display:inline-flex;max-width:100%;' + (bare ? 'border-radius:6px;' : 'border:1px solid #d8e1e5;border-radius:10px;') + 'overflow:hidden;background:#fff;')}>
                     <img src={img.url} alt={img.alt || 'Picture from the practice’s own page'} loading="lazy"
                       style={s('display:block;max-width:100%;width:auto;height:auto;max-height:420px;background:#fff;')} />
                   </a>
@@ -263,7 +280,7 @@ export function Blocks({ blocks, leadFirst = false }) {
         }
         if (b.type === 'ask') {
           return (
-            <div key={i} className="riva-tv-panel" style={s('padding:14px 16px;')}>
+            <div key={i} className="riva-tv-panel" style={s(bare ? 'padding:0;' : 'padding:14px 16px;')}>
               <div style={s('font-size:16px;font-weight:600;color:#212b32;margin-bottom:10px;')}>{b.question}</div>
               <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
                 {b.options.map((o, n) => (
@@ -279,7 +296,27 @@ export function Blocks({ blocks, leadFirst = false }) {
   );
 }
 
-export default function TemplateView({ answer }) {
+export default function TemplateView({ answer, bare = false }) {
+  if (bare) {
+    // The host is the surface and draws the title and the way to the page;
+    // this is only what is inside. A warning and a flag still show, flat.
+    return (
+      <div className="riva-tv-bare">
+        {answer.warn && (
+          <div className="riva-tv-warn" role="alert">
+            <Svg w={16} sw={2.4} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
+            <span>{answer.warn}</span>
+          </div>
+        )}
+        {answer.flag && (
+          <div className="riva-tv-flag">
+            <Svg w={13} sw={2.4}>{Icons.alertCircle}</Svg>Flagged for the practice
+          </div>
+        )}
+        <Blocks blocks={answer.blocks} leadFirst bare />
+      </div>
+    );
+  }
   return (
     <div className={'riva-tv' + (answer.warn ? ' is-warn' : '')}>
       <header className="riva-tv-head">

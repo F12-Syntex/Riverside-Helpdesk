@@ -107,7 +107,11 @@ function Condition({ text }) {
 // served without is outlined in red with its reason under it. `head` is the
 // strip above the screen for what the note needs and e-RS does not — what
 // staff call this service, and the letter template.
-export default function ErsForm({ block, below = null, edit = null, head = null }) {
+//
+// `bare` (TemplateView's flat option) draws the same screen without its frame:
+// no outer box, no blue bar — its words become the section's small label — and
+// no grey ground. The boxes and radios stay as they are: they are the screen.
+export default function ErsForm({ block, below = null, edit = null, head = null, bare = false }) {
   const b = block || {};
   const options = (b.clinicTypeOptions || []).filter(Boolean);
   const priority = priorityOf(b.priority);
@@ -128,13 +132,19 @@ export default function ErsForm({ block, below = null, edit = null, head = null 
   ) : <Select value={b[key]} missing={fallback} />);
 
   return (
-    <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
-      <div style={s('padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
-        Set on e-RS
-      </div>
+    <div style={s(bare ? '' : 'border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
+      {bare ? (
+        <div style={s('margin:0 0 10px;font-size:11.5px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;color:#005eb8;')}>
+          Set on e-RS
+        </div>
+      ) : (
+        <div style={s('padding:8px 16px;background:#005eb8;color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>
+          Set on e-RS
+        </div>
+      )}
       {head}
-      <div style={s('padding:16px 18px 18px;background:#f0f4f5;')}>
-        <div style={s('font-size:20px;font-weight:700;color:' + INK + ';margin:0 0 14px;')}>Search for a service</div>
+      <div style={s(bare ? '' : 'padding:16px 18px 18px;background:#f0f4f5;')}>
+        <div style={s('font-size:' + (bare ? '18px' : '20px') + ';font-weight:700;color:' + INK + ';margin:0 0 14px;')}>Search for a service</div>
 
         <Step>Step 1: Confirm request details</Step>
         <div style={s('margin:0 0 14px;')}>

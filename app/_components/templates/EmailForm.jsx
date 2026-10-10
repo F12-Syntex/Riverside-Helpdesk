@@ -22,16 +22,18 @@ const INK = '#212b32';
 const QUIET = '#768692';
 const LINE = '#e3e8eb';
 
-function Row({ label, children, first = false }) {
+function Row({ label, children, first = false, bare = false }) {
   return (
-    <div style={s('padding:12px 16px;' + (first ? '' : 'border-top:1px solid ' + LINE + ';'))}>
+    <div style={s((bare ? 'padding:12px 0;' : 'padding:12px 16px;') + (first ? '' : 'border-top:1px solid ' + LINE + ';'))}>
       <span style={s('display:block;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:' + QUIET + ';margin-bottom:5px;')}>{label}</span>
       {children}
     </div>
   );
 }
 
-export default function EmailForm({ block, edit = null, head = null }) {
+// `bare` (TemplateView's flat option): no frame and no teal bar — its words
+// become the section's small label — and the sentence as plain text.
+export default function EmailForm({ block, edit = null, head = null, bare = false }) {
   const b = block || {};
   const bad = (key) => (edit ? (edit.issues || []).find((i) => i.field === key) : null);
   const form = String(b.form || '').trim();
@@ -39,19 +41,28 @@ export default function EmailForm({ block, edit = null, head = null }) {
   const notes = String(b.notes || '').trim();
 
   return (
-    <div style={s('border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
-      <div style={s('display:flex;align-items:center;gap:10px;padding:9px 16px;background:#00786f;color:#fff;')}>
-        <Svg w={15} stroke="#fff" sw={2.2}>{Icons.paperclip}</Svg>
-        <span style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>Email the referral</span>
-      </div>
+    <div style={s(bare ? '' : 'border:1px solid #d8e1e5;border-radius:12px;background:#fff;overflow:hidden;')}>
+      {bare ? (
+        <div style={s('display:flex;align-items:center;gap:7px;margin:0 0 8px;color:#00786f;')}>
+          <Svg w={14} stroke="#00786f" sw={2.2}>{Icons.paperclip}</Svg>
+          <span style={s('font-size:11.5px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;')}>Email the referral</span>
+        </div>
+      ) : (
+        <div style={s('display:flex;align-items:center;gap:10px;padding:9px 16px;background:#00786f;color:#fff;')}>
+          <Svg w={15} stroke="#fff" sw={2.2}>{Icons.paperclip}</Svg>
+          <span style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;')}>Email the referral</span>
+        </div>
+      )}
       {head}
 
-      <div style={s('padding:13px 16px;font-size:15px;line-height:1.55;color:' + INK + ';background:#f7f9fa;border-bottom:1px solid ' + LINE + ';')}>
+      <div style={s(bare
+        ? 'padding:0 0 4px;font-size:15.5px;line-height:1.55;color:' + INK + ';'
+        : 'padding:13px 16px;font-size:15px;line-height:1.55;color:' + INK + ';background:#f7f9fa;border-bottom:1px solid ' + LINE + ';')}>
         This referral is sent by email, using the form the doctor has created.
         Attach the form and send it.
       </div>
 
-      <Row label="Form" first>
+      <Row label="Form" first bare={bare}>
         {edit ? (
           <>
             <EditBox value={b.form} onChange={(v) => edit.set('form', v)} placeholder="RP Echo"
@@ -64,7 +75,7 @@ export default function EmailForm({ block, edit = null, head = null }) {
       </Row>
 
       {(edit || to) && (
-        <Row label="Email">
+        <Row label="Email" bare={bare}>
           {edit ? (
             <>
               <EditBox value={b.to} onChange={(v) => edit.set('to', v)} placeholder="team@example.nhs.uk"
@@ -81,7 +92,7 @@ export default function EmailForm({ block, edit = null, head = null }) {
       )}
 
       {(edit || notes) && (
-        <Row label="Additional notes">
+        <Row label="Additional notes" bare={bare}>
           {edit ? (
             <>
               <EditBox value={b.notes} onChange={(v) => edit.set('notes', v)} lines={3} big={false}

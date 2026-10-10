@@ -1626,3 +1626,31 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 @media (prefers-reduced-motion: reduce) {
   .riva-tv-panel, .riva-tv-note, .riva-tv-more-body { animation: none; }
 }
+
+/* ---- the same blocks, flat (TemplateView bare) --------------------
+   For a host that is itself the surface (the Referrals page's detail
+   panel). No card and no box round any block: each block is a section,
+   apart from the next by space and a hairline, under its own small label.
+   Only the e-RS screen's boxes and radios keep their outline. */
+.riva-tv-bare { display: flex; flex-direction: column; }
+.riva-tv-bare > * + * { margin-top: 20px; padding-top: 20px; border-top: 1px solid #edf1f3; }
+.riva-tv-bare > .riva-tv-warn + *, .riva-tv-bare > .riva-tv-flag + * { border-top: none; padding-top: 0; }
+.riva-tv-bare .riva-tv-panel,
+.riva-tv-bare .riva-tv-panel.is-lead { border: none; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.riva-tv-bare .riva-tv-panel-head { padding: 0 0 4px; }
+.riva-tv-bare .riva-tv-panel-dot { display: none; }
+.riva-tv-bare .riva-tv-row { padding: 9px 0; }
+.riva-tv-bare .riva-tv-foot { padding: 10px 0 0; background: none; border-top: none; }
+.riva-tv-bare .riva-tv-note { padding: 0; border: none; border-radius: 0; background: none; }
+.riva-tv-bare .riva-tv-note.is-critical { border: none; background: none; }
+.riva-tv-bare .riva-tv-more { border: none; border-radius: 0; background: none; overflow: visible; }
+.riva-tv-bare .riva-tv-more-btn { padding: 10px 0; }
+.riva-tv-bare .riva-tv-more-body { padding: 2px 0 14px 34px; }
+.riva-tv-bare .riva-tv-warn { margin: 0; padding: 0; border: none; border-radius: 0; background: none; }
+.riva-tv-bare .riva-tv-flag { margin: 0; padding: 0; border: none; background: none; }
+.riva-tv-bare .riva-md { font-size: 16px; }
+.riva-tv-bare .riva-md .riva-md-tablewrap { border: none; border-radius: 0; }
+.riva-tv-bare .riva-md blockquote { background: none; border-radius: 0; padding: 2px 0 2px 14px; border-left: 3px solid var(--rv-accent-line); }
+@media (max-width: 600px) {
+  .riva-tv-bare .riva-tv-more-body { padding-left: 16px; }
+}

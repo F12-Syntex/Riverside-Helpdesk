@@ -2,13 +2,16 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { s, Svg, Icons } from './ui';
 import AppHeader from './AppHeader';
 import TemplateView from './templates/TemplateView';
 import { highlightRanges } from '../../lib/lookup/fuzzy';
 import { noteKind } from '../../lib/notebook/kinds.mjs';
 import { filterReferrals } from '../../lib/search/referrals.mjs';
+import {
+  findReferral, historyStep, keyAction, readReferralUrl, referralUrl, startHighlight,
+} from '../../lib/search/referrals-view.mjs';
 
 /* ------------------------------------------------------------------ *
  * Referrals — the front door.
@@ -20,16 +23,29 @@ import { filterReferrals } from '../../lib/search/referrals.mjs';
  * the server (/api/referrals, lib/search/referrals.mjs), and by name in
  * the browser on every keystroke until the server's answer lands.
  *
- * THE SHAPE IS CONTACT NUMBERS' (app/lookup/page.js): the same 820px
- * column, the heading centred above, the box drawn like the composer,
- * one card of rows that never changes size, the keyboard hints at its
- * foot. A row here also OPENS: the best match is open as soon as there
- * is one, and the card inside it is the Q&A's own card for that page
- * (TemplateView, built on the server exactly as an answer is) — so a
- * referral looks the same wherever it is found.
+ * THE SHAPE IS CONTACT NUMBERS' (app/lookup/page.js): one centred
+ * column, the heading above, the box drawn like the composer, one card of
+ * rows, the keyboard hints at its foot.
  *
- * With nothing typed: the referrals most asked for over the last 30
- * days, then all of them A–Z.
+ * THE LIST OPENS NOTHING BY ITSELF. The top match used to open as soon as
+ * there was one, and when it was not the one wanted it was in the way. A
+ * referral opens when it is clicked, or Enter is pressed on the row the
+ * arrow keys are on — and then in a DRAWER over the right of the page:
+ *
+ *   - wide (≥ 1000px), a panel down the right side, below the app bar,
+ *     with the list moved over to stay whole and usable beside it — click
+ *     another row and the drawer shows that one instead;
+ *   - narrow, a full-screen sheet with "← All results".
+ *
+ * × or Esc closes it and puts focus back on the row that opened it.
+ *
+ * ONE SURFACE. The drawer is the card; what is in it is the Q&A's own
+ * card for the page (TemplateView, built on the server exactly as an
+ * answer is) drawn flat — `bare` — so there is no card in the card.
+ *
+ * THE URL SAYS WHAT IS OPEN: /?q=skin&r=1964. Opening is a history entry,
+ * so Back closes it; typing replaces the entry. The rules are
+ * lib/search/referrals-view.mjs.
  * ------------------------------------------------------------------ */
 
 const EASE = [0.2, 0.8, 0.3, 1];
@@ -63,36 +79,70 @@ const RF_CSS = `
 .rf-iconbtn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
 .rf-count{flex:none;margin-right:8px;font-size:12px;font-weight:600;color:#9aa6ae;font-variant-numeric:tabular-nums;}
 
-.rf-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 8px;
+.rf-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 0 6px;
   scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
-.rf-group{display:flex;align-items:center;gap:8px;padding:12px 12px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
+.rf-group{display:flex;align-items:center;gap:8px;padding:14px 20px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
 .rf-group__n{font-variant-numeric:tabular-nums;font-weight:600;color:#b5bfc6;}
 .rf-group__live{display:inline-flex;align-items:center;gap:5px;margin-left:auto;font-weight:600;color:#b5bfc6;}
 .rf-group__live .rf-spin{animation:rf-spin 1s linear infinite;display:flex;}
 @keyframes rf-spin{to{transform:rotate(360deg);}}
 
-/* ---- a referral: the row, and the card it opens to ---- */
-.rf-item{border-radius:14px;scroll-margin:8px;}
-.rf-item.is-open{margin:4px 0 8px;background:#f8fafb;box-shadow:inset 0 0 0 1px #e3e9ed;}
-.rf-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:none;border-radius:14px;
-  background:none;font:inherit;text-align:left;color:inherit;cursor:pointer;}
+/* ---- a referral in the list: one row, a hairline between rows ---- */
+.rf-rows > .rf-row + .rf-row{border-top:1px solid #eef2f4;}
+.rf-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:11px 20px;border:none;
+  background:none;font:inherit;text-align:left;color:inherit;cursor:pointer;scroll-margin:8px;transition:background-color .12s ease;}
 .rf-row:hover{background:#f6f8fa;}
-.rf-item.is-sel > .rf-row{background:#f1f5f9;}
-.rf-item.is-open > .rf-row,.rf-item.is-open > .rf-row:hover{background:none;}
+.rf-row.is-sel{background:#f1f5f9;}
+.rf-row.is-chosen{background:var(--rv-accent-dim);box-shadow:inset 3px 0 0 var(--rv-accent);}
 .rf-row:focus-visible{outline:2px solid var(--rv-accent);outline-offset:-2px;}
 .rf-row__text{flex:1;min-width:0;}
 .rf-row__name{display:block;font-size:15px;font-weight:600;color:var(--rv-ink);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.rf-item.is-open .rf-row__name{white-space:normal;}
+.rf-row.is-chosen .rf-row__name{color:var(--rv-accent);}
 .rf-row__sub{display:block;margin-top:1px;font-size:12.5px;color:#8a979f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rf-row__tags{flex:none;display:flex;align-items:center;gap:6px;}
-.rf-chev{flex:none;display:flex;color:#9aa6ae;transition:transform .2s ease;}
-.rf-item.is-open .rf-chev{transform:rotate(180deg);}
+.rf-chev{flex:none;display:flex;color:#b5bfc6;}
+.rf-row.is-chosen .rf-chev{color:var(--rv-accent);}
 .rf-tag{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;}
 .rf-tag--2ww{background:#fdecea;color:#b42318;box-shadow:inset 0 0 0 1px #f4b8b1;}
 .rf-tag--urgent{background:#fdf6e7;color:#8a5a08;box-shadow:inset 0 0 0 1px #ecd9ad;}
 .rf-mark{background:rgba(0,94,184,.1);color:var(--rv-accent);border-radius:3px;}
-.rf-open{padding:2px 12px 14px;}
-.rf-open__foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;}
+
+/* ---- the chosen referral: a drawer, flat inside ----
+   Wide: down the right of the page, under the app bar, with the list still
+   there beside it — no shade over the page, nothing blocked. Narrow: the
+   whole screen, over the app bar too. */
+.rf-drawer{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#fff;outline:none;}
+.rf-drawer__head{flex:none;padding:14px 18px 14px;border-bottom:1px solid #edf1f3;}
+.rf-drawer__top{display:flex;align-items:flex-start;gap:10px;}
+.rf-drawer__scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px 18px 32px;
+  scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
+.rf-back{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px -6px;padding:6px 10px 6px 6px;border-radius:8px;
+  font-size:14px;font-weight:650;color:var(--rv-accent);text-decoration:none;transition:background-color .15s ease;}
+.rf-back:hover{background:#f1f5f9;}
+.rf-back:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
+.rf-doc__title{flex:1;min-width:0;margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.25;color:var(--rv-ink);outline:none;overflow-wrap:anywhere;}
+.rf-doc__where{margin-top:3px;font-size:13px;color:#8a979f;}
+.rf-doc__meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;}
+.rf-doc__meta:empty{display:none;}
+.rf-doc__link{display:inline-flex;align-items:center;gap:6px;margin-left:auto;margin-right:-8px;padding:5px 8px;border-radius:8px;
+  font-size:13.5px;font-weight:650;color:var(--rv-accent);text-decoration:none;transition:background-color .15s ease;}
+.rf-doc__link:hover{background:#f1f5f9;}
+.rf-doc__link:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
+.rf-doc__none{margin:0;font-size:15px;color:var(--rv-ink-2);}
+.rf-close{margin:-4px -8px 0 0;}
+
+@media (min-width:1000px){
+  /* Open, the column re-centres in what the drawer leaves, so no row's tags,
+     nor the box's ×, sit under it. The drawer is placed against the padding
+     box, so it stays flush with the edge. */
+  .rf-stage{position:relative;transition:padding-right .24s cubic-bezier(.2,.8,.3,1);}
+  .rf-stage.is-open{padding-right:min(560px,45vw);}
+  .rf-drawer{position:absolute;inset:0 0 0 auto;z-index:20;width:min(560px,45vw);
+    border-left:1px solid #dde4e7;box-shadow:-18px 0 40px -24px rgba(33,43,50,.28);}
+  .rf-drawer__head{padding:20px 26px 16px;}
+  .rf-drawer__scroll{padding:22px 26px 36px;}
+  .rf-back{display:none;}
+}
 
 /* ---- skeleton, states, buttons: as Contact numbers ---- */
 .rf-skel{display:block;height:10px;border-radius:999px;background:linear-gradient(90deg,#eef2f4 0%,#f6f8f9 40%,#eef2f4 80%);
@@ -106,11 +156,8 @@ const RF_CSS = `
   font-weight:650;cursor:pointer;text-decoration:none;transition:background-color .15s ease,box-shadow .15s ease,transform .12s ease;}
 .rf-btn:active{transform:scale(.98);}
 .rf-btn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
-.rf-btn--sm{height:32px;padding:0 13px;font-size:13px;gap:6px;}
 .rf-btn--primary{background:var(--rv-accent);color:#fff;box-shadow:0 1px 2px rgba(0,48,135,.25),inset 0 1px 0 rgba(255,255,255,.16);}
 .rf-btn--primary:hover{background:#0068c9;}
-.rf-btn--ghost{background:#fff;color:var(--rv-ink);box-shadow:inset 0 0 0 1px #dde4e7;}
-.rf-btn--ghost:hover{background:#f1f5f9;}
 
 /* ---- the foot ---- */
 .rf-foot{flex:none;display:flex;align-items:center;gap:14px;padding:10px 20px;border-top:1px solid #eef2f4;font-size:12px;font-weight:550;color:#9aa6ae;}
@@ -129,13 +176,14 @@ const RF_CSS = `
   .rf-input{font-size:16px;}
   .rf-count,.rf-foot__keys{display:none !important;}
   .rf-foot{justify-content:flex-end;padding:8px 14px;}
-  .rf-row{flex-wrap:wrap;gap:6px 8px;padding:10px;}
+  .rf-row{flex-wrap:wrap;gap:6px 8px;padding:11px 14px;}
   .rf-row__text{flex:1 1 70%;}
   .rf-row__name{white-space:normal;}
-  .rf-open{padding:2px 6px 10px;}
+  .rf-group{padding-left:14px;padding-right:14px;}
+  .rf-doc__title{font-size:21px;}
 }
 @media (prefers-reduced-motion:reduce){
-  .rf-skel,.rf-chev,.rf-group__live .rf-spin{transition:none !important;animation:none !important;}
+  .rf-skel,.rf-row,.rf-stage,.rf-group__live .rf-spin{transition:none !important;animation:none !important;}
 }
 `;
 
@@ -187,33 +235,84 @@ function PriorityTag({ tag }) {
   return <span className={'rf-tag ' + (tag === '2WW' ? 'rf-tag--2ww' : 'rf-tag--urgent')}>{tag}</span>;
 }
 
-// One referral. The row says what it is and how it goes; open, it is the
-// Q&A's card for the page and the way to the page itself.
-function Referral({ row, query, open, selected, onToggle, itemRef }) {
+// One referral in the list: what it is, where it sits, how it goes. A row
+// only ever opens when it is clicked (or Enter is pressed on it).
+function Row({ row, query, selected, chosen, onOpen, btnRef }) {
   return (
-    <div ref={itemRef} className={'rf-item' + (open ? ' is-open' : '') + (selected ? ' is-sel' : '')}>
-      <button type="button" className="rf-row" onClick={onToggle} aria-expanded={open ? 'true' : 'false'}>
-        <span className="rf-row__text">
-          <span className="rf-row__name"><Highlighted label={row.title} query={query} /></span>
-          {row.where ? <span className="rf-row__sub">{row.where}</span> : null}
-        </span>
-        <span className="rf-row__tags">
-          <PriorityTag tag={row.tag} />
-          <RouteChip route={row.route} />
-        </span>
-        <span className="rf-chev" aria-hidden="true"><Svg w={16} sw={2.2}>{Icons.chevronDown}</Svg></span>
-      </button>
-      {open ? (
-        <div className="rf-open">
-          {row.card ? <TemplateView answer={row.card} /> : null}
-          <div className="rf-open__foot">
-            <Link href={row.href} className="rf-btn rf-btn--ghost rf-btn--sm">
-              <Svg w={14} sw={2.2}>{Icons.edit}</Svg>Open in Practice notes
-            </Link>
-          </div>
-        </div>
-      ) : null}
+    <button ref={btnRef} type="button" onClick={onOpen} data-rf-id={row.id}
+      className={'rf-row' + (selected ? ' is-sel' : '') + (chosen ? ' is-chosen' : '')}
+      aria-current={chosen ? 'true' : undefined} aria-haspopup="dialog">
+      <span className="rf-row__text">
+        <span className="rf-row__name"><Highlighted label={row.title} query={query} /></span>
+        {row.where ? <span className="rf-row__sub">{row.where}</span> : null}
+      </span>
+      <span className="rf-row__tags">
+        <PriorityTag tag={row.tag} />
+        <RouteChip route={row.route} />
+      </span>
+      <span className="rf-chev" aria-hidden="true"><Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg></span>
+    </button>
+  );
+}
+
+function DrawerSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <span className="rf-skel" style={s('height:10px;width:80%;')} />
+      <span className="rf-skel" style={s('margin-top:12px;height:10px;width:70%;')} />
+      <span className="rf-skel" style={s('margin-top:12px;height:10px;width:75%;')} />
     </div>
+  );
+}
+
+// The chosen referral. The drawer is the only surface: its header is the
+// title, the route and the way to the page; under it, the Q&A's card for
+// the page drawn flat (TemplateView bare).
+function Drawer({ row, loading, reduce, headingRef, scrollRef, backHref, onClose }) {
+  const closeLink = (e) => { e.preventDefault(); onClose('click'); };
+  return (
+    <motion.aside className="rf-drawer" role="dialog" aria-modal="false" aria-labelledby="rf-drawer-title"
+      initial={reduce ? false : { opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }}
+      exit={reduce ? { opacity: 0 } : { opacity: 0, x: 28 }} transition={{ duration: 0.24, ease: EASE }}>
+      <header className="rf-drawer__head">
+        {/* Narrow only: the sheet covers the list, so say how to get back to it. */}
+        <a href={backHref} className="rf-back" onClick={closeLink}>
+          <Svg w={16} sw={2.2}>{Icons.arrowLeft}</Svg>All results
+        </a>
+        <div className="rf-drawer__top">
+          <h2 id="rf-drawer-title" ref={headingRef} tabIndex={-1} className="rf-doc__title">
+            {row ? row.title : loading ? 'Loading…' : 'Not found'}
+          </h2>
+          <button type="button" className="rf-iconbtn rf-close" onClick={() => onClose('click')} aria-label="Close">
+            <Svg w={18} sw={2.4}>{Icons.close}</Svg>
+          </button>
+        </div>
+        {row ? (
+          <>
+            {row.where ? <div className="rf-doc__where">{row.where}</div> : null}
+            <div className="rf-doc__meta">
+              <PriorityTag tag={row.tag} />
+              <RouteChip route={row.route} />
+              {/* A new tab, as the chat's page links are: the list stays where it was. */}
+              <a href={row.href} target="_blank" rel="noopener" className="rf-doc__link">
+                Open in Practice notes<Svg w={13} sw={2.2}>{Icons.external}</Svg>
+              </a>
+            </div>
+          </>
+        ) : null}
+      </header>
+      <div className="rf-drawer__scroll" ref={scrollRef}>
+        {row ? (
+          row.card
+            ? <TemplateView key={row.id} answer={row.card} bare />
+            : <p className="rf-doc__none">This page has nothing to show here. Open it in Practice notes to read it.</p>
+        ) : loading ? <DrawerSkeleton /> : (
+          <State icon={SEARCH_X} title="That referral is no longer in the Notebook’s Referrals section.">
+            <a href={backHref} className="rf-btn rf-btn--primary" onClick={closeLink}>All referrals</a>
+          </State>
+        )}
+      </div>
+    </motion.aside>
   );
 }
 
@@ -237,11 +336,25 @@ export default function ReferralsPage() {
   // The server's ranking for one query. `for` is the query it answers, so a
   // slow reply to an old query is never shown against a new one.
   const [server, setServer] = React.useState({ for: '', rows: null, loading: false });
+  // The referral that is open (a row id, "note:1964"), or null.
   const [openId, setOpenId] = React.useState(null);
+  // The row the arrow keys are on. Moving it never opens anything.
   const [selIdx, setSelIdx] = React.useState(-1);
-  const picked = React.useRef(false);
+  // The URL is read once, after the first render (the server has no URL to
+  // render from), and only then written.
+  const [hydrated, setHydrated] = React.useState(false);
+  const [urlTick, setUrlTick] = React.useState(0);
+
   const inputRef = React.useRef(null);
+  const headingRef = React.useRef(null);
+  const scrollRef = React.useRef(null);
   const itemRefs = React.useRef(new Map());
+  // What the address bar says now ({ q, id }), and whether the open
+  // referral's history entry was pushed by this page (so closing it is Back).
+  const urlRef = React.useRef({ q: '', id: null });
+  const openedHere = React.useRef(false);
+  // The row (its list key) that opened the drawer: focus goes back to it.
+  const opener = React.useRef('');
 
   const trimmed = query.trim();
 
@@ -256,6 +369,42 @@ export default function ReferralsPage() {
       .catch(() => { if (live) setBook((b) => ({ ...b, loaded: true, failed: true })); });
     return () => { live = false; };
   }, []);
+
+  // The URL in: on arrival (a link to a referral opens it), and on Back and
+  // Forward — which move only the open referral. The search box keeps what
+  // is in it: typing never made history entries, so an older entry's q is
+  // not something the reader went back to.
+  React.useEffect(() => {
+    const now = readReferralUrl(window.location.search);
+    urlRef.current = { q: now.q.trim(), id: now.id };
+    if (now.q) setQuery(now.q);
+    if (now.id) setOpenId(now.id);
+    setHydrated(true);
+    const onPop = () => {
+      const at = readReferralUrl(window.location.search);
+      openedHere.current = false;
+      urlRef.current = { q: at.q.trim(), id: at.id };
+      setOpenId(at.id);
+      setUrlTick((n) => n + 1);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // The URL out: push for opening a referral, replace for everything else.
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const next = { q: trimmed, id: openId };
+    const step = historyStep(urlRef.current, next);
+    urlRef.current = next;
+    if (!step) return;
+    if (step.method === 'push') {
+      openedHere.current = true;
+      window.history.pushState(null, '', step.url);
+    } else {
+      window.history.replaceState(null, '', step.url);
+    }
+  }, [hydrated, trimmed, openId, urlTick]);
 
   // The server's search, a moment after typing stops.
   React.useEffect(() => {
@@ -279,6 +428,7 @@ export default function ReferralsPage() {
     const byId = new Map(book.rows.map((r) => [r.id, r]));
     return book.popular.map((id) => byId.get(id)).filter(Boolean);
   }, [book]);
+  const chosen = findReferral(openId, book.rows, server.rows, instant);
 
   // What the arrow keys move through, in the order it is drawn.
   const flat = React.useMemo(() => (trimmed
@@ -286,34 +436,83 @@ export default function ReferralsPage() {
     : popular.map((row) => ({ key: 'p:' + row.id, row })).concat(book.rows.map((row) => ({ key: 'a:' + row.id, row })))),
   [trimmed, results, popular, book.rows]);
 
-  // A new query: the reader has not chosen anything in it yet.
-  React.useEffect(() => { picked.current = false; setSelIdx(trimmed ? 0 : -1); }, [trimmed]);
-  // The best match is open — until the reader opens something else. The
-  // instant matches open theirs; the server's ranking, when it lands,
-  // replaces them and opens its own.
-  const topId = trimmed && results.length ? results[0].id : null;
-  React.useEffect(() => { if (!picked.current) setOpenId(topId); }, [topId, trimmed]);
+  // A new search: the highlight starts on its top row, so Enter opens the
+  // best match — but only when Enter is pressed.
+  React.useEffect(() => { setSelIdx(startHighlight(trimmed)); }, [trimmed]);
 
-  const toggle = (id, idx) => {
-    picked.current = true;
+  const openRow = (idx) => {
+    const entry = flat[idx];
+    if (!entry) return;
     setSelIdx(idx);
-    setOpenId((cur) => (cur === id ? null : id));
+    opener.current = entry.key;
+    setOpenId(entry.row.id);
   };
 
+  const close = React.useCallback(() => {
+    if (openedHere.current) {
+      // The entry under this one is the list this page pushed it from: go
+      // back to it, so Back afterwards leaves the page rather than repeating.
+      openedHere.current = false;
+      window.history.back();
+    } else {
+      setOpenId(null);
+    }
+  }, []);
+
+  // Opened, or switched: the drawer starts at the top, with focus on its
+  // heading, so a screen reader hears which referral it is.
+  React.useEffect(() => {
+    if (!openId) return;
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    if (headingRef.current) headingRef.current.focus({ preventScroll: true });
+  }, [openId, chosen?.id]);
+
+  // Closed, however it was closed (×, Esc, Back): focus goes back to the
+  // row that opened it, or to the box when that row is no longer listed.
+  const wasOpen = React.useRef(false);
+  React.useEffect(() => {
+    if (openId) { wasOpen.current = true; return; }
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
+    const el = itemRefs.current.get(opener.current) || inputRef.current;
+    if (el) el.focus({ preventScroll: false });
+  }, [openId]);
+
+  // Esc closes the drawer from anywhere on the page. The box and the rows
+  // handle their own keys first.
+  React.useEffect(() => {
+    if (!openId) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openId, close]);
+
+  // The keys, in the box or on a row. In the box the highlight moves and
+  // focus stays; on a row, focus moves with the highlight. Enter on a row
+  // is the row's own click.
   const onKeyDown = (e) => {
-    if (e.key === 'Escape') { setQuery(''); return; }
-    if (!flat.length) return;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const next = e.key === 'ArrowDown'
-        ? Math.min((selIdx < 0 ? -1 : selIdx) + 1, flat.length - 1)
-        : Math.max(selIdx - 1, 0);
-      setSelIdx(next);
-      const el = itemRefs.current.get(flat[next].key);
-      if (el) el.scrollIntoView({ block: 'nearest' });
-    } else if (e.key === 'Enter' && selIdx >= 0 && selIdx < flat.length) {
-      e.preventDefault();
-      toggle(flat[selIdx].row.id, selIdx);
+    const onRow = e.target !== inputRef.current;
+    if (onRow && e.key === 'Enter') return;
+    const act = keyAction({ key: e.key, idx: selIdx, count: flat.length, open: !!openId, hasQuery: !!query && !onRow });
+    if (!act) return;
+    e.preventDefault();
+    if (act.type === 'move') {
+      setSelIdx(act.idx);
+      const el = itemRefs.current.get(flat[act.idx].key);
+      if (el) {
+        if (onRow) el.focus({ preventScroll: true });
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    } else if (act.type === 'open') {
+      openRow(act.idx);
+    } else if (act.type === 'close') {
+      close();
+    } else if (act.type === 'clear') {
+      setQuery('');
     }
   };
 
@@ -322,12 +521,9 @@ export default function ReferralsPage() {
   const selKey = selIdx >= 0 && flat[selIdx] ? flat[selIdx].key : '';
   const item = (prefix, startIdx) => (row, i) => {
     const key = prefix + row.id;
-    // With nothing typed a referral is listed twice (most asked, and A–Z);
-    // it opens in the place it was clicked.
-    const open = trimmed ? openId === row.id : openId === key;
     return (
-      <Referral key={key} row={row} query={trimmed} open={open} selected={selKey === key} itemRef={refFor(key)}
-        onToggle={() => (trimmed ? toggle(row.id, startIdx + i) : toggle(key, startIdx + i))} />
+      <Row key={key} row={row} query={trimmed} selected={selKey === key} chosen={openId === row.id} btnRef={refFor(key)}
+        onOpen={() => openRow(startIdx + i)} />
     );
   };
   const nothing = !!trimmed && answered && !results.length;
@@ -337,94 +533,103 @@ export default function ReferralsPage() {
       <style data-rf="1" dangerouslySetInnerHTML={{ __html: RF_CSS }} />
       <AppHeader subtitle="Referrals" />
 
-      <main className="rf">
-        <h1 className="rf-h1 riva-hero-h1">Find a <span style={{ color: 'var(--rv-accent)' }}>referral</span></h1>
+      <div className={'rf-stage' + (openId ? ' is-open' : '')} style={s('flex:1;min-height:0;display:flex;flex-direction:column;')}>
+        <main className="rf">
+          <h1 className="rf-h1 riva-hero-h1">Find a <span style={{ color: 'var(--rv-accent)' }}>referral</span></h1>
 
-        <div className="rf-box">
-          <span className="rf-box__ico" aria-hidden="true"><Svg w={20} sw={2.2}>{Icons.search}</Svg></span>
-          <input
-            ref={inputRef}
-            autoFocus
-            className="rf-input"
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="What is it for? “skin”, “nurse to visit at home”…"
-            aria-label="Search the practice’s referrals"
-          />
-          {query ? (
-            <button type="button" className="rf-iconbtn" onClick={clear} aria-label="Clear search">
-              <Svg w={16} sw={2.4}>{Icons.close}</Svg>
-            </button>
-          ) : book.rows.length ? <span className="rf-count">{book.rows.length} referrals</span> : null}
-        </div>
-
-        <motion.div className="rf-card"
-          initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: EASE }}>
-          <div className="rf-body">
-            {!book.loaded ? <Skeleton /> : null}
-
-            {book.loaded && book.failed && !trimmed ? (
-              <State icon={Icons.alertCircle} title="The referrals could not be loaded. Try again in a moment, or ask the question instead.">
-                <Link href="/ask" className="rf-btn rf-btn--primary"><Svg w={15} sw={2.2}>{Icons.chat}</Svg>Ask a question</Link>
-              </State>
-            ) : null}
-
-            {/* Nothing typed: what is asked for most, then everything A–Z. */}
-            {book.loaded && !trimmed && popular.length ? (
-              <section aria-label="Most asked for">
-                <div className="rf-group">Most asked for · last 30 days</div>
-                <div>{popular.map(item('p:', 0))}</div>
-              </section>
-            ) : null}
-            {book.loaded && !trimmed && book.rows.length ? (
-              <section aria-label="All referrals">
-                <div className="rf-group">All referrals, A–Z <span className="rf-group__n">{book.rows.length}</span></div>
-                <div>{book.rows.map(item('a:', popular.length))}</div>
-              </section>
-            ) : null}
-
-            {/* Typed: the matches, best first. */}
-            {trimmed && (results.length || searching) ? (
-              <section aria-label="Matches">
-                <div className="rf-group">
-                  {answered ? 'Best matches' : 'Matching names'}
-                  {searching ? (
-                    <span className="rf-group__live" role="status">
-                      <span className="rf-spin"><Svg w={12} sw={2.4}>{Icons.spinner}</Svg></span>Searching by meaning
-                    </span>
-                  ) : null}
-                </div>
-                {results.map(item('r:', 0))}
-                {!results.length ? <Skeleton rows={3} /> : null}
-              </section>
-            ) : null}
-
-            {nothing ? (
-              <State icon={SEARCH_X} title={'No referral in the Notebook matches “' + trimmed + '”'}>
-                <Link href={askHref(trimmed)} className="rf-btn rf-btn--primary">
-                  <Svg w={15} sw={2.2}>{Icons.chat}</Svg>Ask a question instead
-                </Link>
-              </State>
-            ) : null}
+          <div className="rf-box">
+            <span className="rf-box__ico" aria-hidden="true"><Svg w={20} sw={2.2}>{Icons.search}</Svg></span>
+            <input
+              ref={inputRef}
+              autoFocus
+              className="rf-input"
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="What is it for? “skin”, “nurse to visit at home”…"
+              aria-label="Search the practice’s referrals"
+            />
+            {query ? (
+              <button type="button" className="rf-iconbtn" onClick={clear} aria-label="Clear search">
+                <Svg w={16} sw={2.4}>{Icons.close}</Svg>
+              </button>
+            ) : book.rows.length ? <span className="rf-count">{book.rows.length} referrals</span> : null}
           </div>
 
-          <div className="rf-foot">
-            <span className="rf-foot__keys" aria-hidden="true">
-              <span><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
-              <span><Kbd>Enter</Kbd> open</span>
-              <span><Kbd>Esc</Kbd> clear</span>
-            </span>
-            {/* Not a referral, or not this one: the Q&A, with what was typed. */}
-            <Link href={askHref(trimmed)} className="rf-foot__ask">
-              Not what you need? <strong>Ask a question</strong>
-              <Svg w={13} sw={2.4}>{Icons.arrow}</Svg>
-            </Link>
-          </div>
-        </motion.div>
-      </main>
+          <motion.div className="rf-card"
+            initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE }}>
+            <div className="rf-body" onKeyDown={(e) => { if (e.target !== inputRef.current) onKeyDown(e); }}>
+              {!book.loaded ? <Skeleton /> : null}
+
+              {book.loaded && book.failed && !trimmed ? (
+                <State icon={Icons.alertCircle} title="The referrals could not be loaded. Try again in a moment, or ask the question instead.">
+                  <Link href="/ask" className="rf-btn rf-btn--primary"><Svg w={15} sw={2.2}>{Icons.chat}</Svg>Ask a question</Link>
+                </State>
+              ) : null}
+
+              {/* Nothing typed: what is asked for most, then everything A–Z. */}
+              {book.loaded && !trimmed && popular.length ? (
+                <section aria-label="Most asked for">
+                  <div className="rf-group">Most asked for · last 30 days</div>
+                  <div className="rf-rows">{popular.map(item('p:', 0))}</div>
+                </section>
+              ) : null}
+              {book.loaded && !trimmed && book.rows.length ? (
+                <section aria-label="All referrals">
+                  <div className="rf-group">All referrals, A–Z <span className="rf-group__n">{book.rows.length}</span></div>
+                  <div className="rf-rows">{book.rows.map(item('a:', popular.length))}</div>
+                </section>
+              ) : null}
+
+              {/* Typed: the matches, best first. None of them is open until it is chosen. */}
+              {trimmed && (results.length || searching) ? (
+                <section aria-label="Matches">
+                  <div className="rf-group">
+                    {answered ? 'Best matches' : 'Matching names'}
+                    {searching ? (
+                      <span className="rf-group__live" role="status">
+                        <span className="rf-spin"><Svg w={12} sw={2.4}>{Icons.spinner}</Svg></span>Searching by meaning
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="rf-rows">{results.map(item('r:', 0))}</div>
+                  {!results.length ? <Skeleton rows={3} /> : null}
+                </section>
+              ) : null}
+
+              {nothing ? (
+                <State icon={SEARCH_X} title={'No referral in the Notebook matches “' + trimmed + '”'}>
+                  <Link href={askHref(trimmed)} className="rf-btn rf-btn--primary">
+                    <Svg w={15} sw={2.2}>{Icons.chat}</Svg>Ask a question instead
+                  </Link>
+                </State>
+              ) : null}
+            </div>
+
+            <div className="rf-foot">
+              <span className="rf-foot__keys" aria-hidden="true">
+                <span><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
+                <span><Kbd>Enter</Kbd> open</span>
+                <span><Kbd>Esc</Kbd> back / clear</span>
+              </span>
+              {/* Not a referral, or not this one: the Q&A, with what was typed. */}
+              <Link href={askHref(trimmed)} className="rf-foot__ask">
+                Not what you need? <strong>Ask a question</strong>
+                <Svg w={13} sw={2.4}>{Icons.arrow}</Svg>
+              </Link>
+            </div>
+          </motion.div>
+        </main>
+
+        <AnimatePresence>
+          {openId ? (
+            <Drawer key="drawer" row={chosen} loading={!book.loaded} reduce={reduce}
+              headingRef={headingRef} scrollRef={scrollRef} backHref={referralUrl({ q: trimmed })} onClose={close} />
+          ) : null}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
