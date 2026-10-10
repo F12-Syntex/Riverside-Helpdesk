@@ -36,3 +36,6 @@ scripts/notebook-backup.json
 # What IS committed is evals/routing/pages.md — the labelled cases, chosen
 # deliberately.
 /evals/routing/questions*.txt
+
+# Brainstorm mockups (local only)
+.superpowers/
