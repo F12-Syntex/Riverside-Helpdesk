@@ -13,7 +13,8 @@ import AppHeader from '../_components/AppHeader';
  * ------------------------------------------------------------------ */
 
 const TOOLS = [
-  { href: '/', title: 'Ask a practice question', blurb: 'Answered only from the practice’s own documents, with a quote behind every claim.' },
+  { href: '/', title: 'Find a referral', blurb: 'Every referral the practice has written down, searched in plain words, opening to the card to fill in.' },
+  { href: '/ask', title: 'Ask a practice question', blurb: 'Answered only from the practice’s own documents, with a quote behind every claim.' },
   { href: '/lookup', title: 'Find a phone number', blurb: 'Every service on the CQC register, by name, town, postcode or acronym.' },
   // The practice's own directory is not here: it is the Contacts pill in the
   // bar, on every page, and opens over the page rather than replacing it.

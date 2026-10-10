@@ -59,8 +59,11 @@ test('a path is matched whatever is hung off the end of it', () => {
   assert.equal(normalisePath('/lookup/?q=dentist'), '/lookup');
   assert.equal(normalisePath('/lookup/'), '/lookup');
   assert.equal(normalisePath('/'), '/');
-  // The Q&A answers at "/" now; /helpbot is kept as its old address.
-  assert.equal(routeTitle('/'), 'Practice Q&A');
+  // "/" is the Referrals page; the Q&A answers at /ask, and /helpbot is kept
+  // as its old address.
+  assert.equal(routeTitle('/'), 'Referrals');
+  assert.equal(routeTitle('/ask'), 'Practice Q&A');
+  assert.equal(routeTitle('/ask?q=skin'), 'Practice Q&A');
   assert.equal(routeTitle('/helpbot'), 'Practice Q&A (old address)');
   assert.equal(routeTitle('/api/agent'), 'Assistant (agent)');
 });
@@ -82,6 +85,7 @@ test('an API endpoint says which part of the app it belongs to', () => {
   assert.equal(routeTool('/api/cqc'), 'Instant lookup');
   assert.equal(routeTool('/api/rota'), 'Staff rota generator');
   assert.equal(routeTool('/lookup'), 'Instant lookup');
+  assert.equal(routeTool('/api/referrals'), 'Referrals');
 });
 
 test('every registered route is unique, described, and grouped', () => {
@@ -101,7 +105,7 @@ test('the audit log is registered but stays off the landing page', () => {
   assert.ok(stats, '/stats should be in the registry so the log can name it');
   assert.equal(stats.hidden, true);
   assert.notEqual(stats.landing, true);
-  // The everyday tools: the Q&A, which is now the front door itself, and the
-  // lookup. /helpbot is the Q&A's old address and is not counted again.
-  assert.deepEqual(PAGES.filter((p) => p.landing).map((p) => p.path), ['/', '/lookup']);
+  // The everyday tools: Referrals, which is the front door itself, the Q&A
+  // and the lookup. /helpbot is the Q&A's old address and is not counted again.
+  assert.deepEqual(PAGES.filter((p) => p.landing).map((p) => p.path), ['/', '/ask', '/lookup']);
 });

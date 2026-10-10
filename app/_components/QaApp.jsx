@@ -228,11 +228,25 @@ class RiversidePracticeQA extends React.Component {
     // through the ordinary path, so a link is a way in rather than a page
     // about the assistant. The parameter is dropped from the URL afterwards,
     // so a refresh does not ask it again.
+    //
+    // ?q= is the other way in, and the gentler one: the box is filled and
+    // nothing is sent. It is what the Referrals page's "Ask a question" link
+    // carries — the words typed there, which were a search for a referral,
+    // not yet a question. The reader reads them, adds to them, and presses
+    // Enter themselves.
     try {
-      const ask = new URLSearchParams(window.location.search).get('ask');
+      const params = new URLSearchParams(window.location.search);
+      const ask = params.get('ask');
+      const prefill = params.get('q');
       if (ask && ask.trim()) {
         window.history.replaceState({}, '', window.location.pathname);
         setTimeout(() => this.ask(ask.trim()), 0);
+      } else if (prefill && prefill.trim()) {
+        window.history.replaceState({}, '', window.location.pathname);
+        this.setState({ input: prefill.trim().slice(0, 2000) }, () => {
+          const field = this.inputRef && this.inputRef.current;
+          if (field) { field.focus(); field.setSelectionRange(field.value.length, field.value.length); }
+        });
       }
     } catch (e) {}
     // A reload starts a fresh page: questions are not carried over, and any

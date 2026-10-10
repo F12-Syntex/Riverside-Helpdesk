@@ -118,7 +118,7 @@ const LAYERS = [
   },
   {
     name: 'App Router', sub: 'Next.js 14.2 · 20 pages', c: P.blue,
-    items: ['/', '/lookup', '/tools', '/questions', '/signpost', '/reason', '/coding', '/notebook', '/medications', '/rota', '/templates', '/stats', '/settings', '/knowledge', '/dpia', '/diagram', '/stack', '/site-index', '/helpbot', 'middleware gate'],
+    items: ['/', '/ask', '/lookup', '/tools', '/questions', '/signpost', '/reason', '/coding', '/notebook', '/medications', '/rota', '/templates', '/stats', '/settings', '/knowledge', '/dpia', '/diagram', '/stack', '/site-index', '/helpbot', 'middleware gate'],
   },
   {
     name: 'Route handlers', sub: '39 endpoints', c: P.bright,

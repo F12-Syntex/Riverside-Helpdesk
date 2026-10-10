@@ -96,7 +96,8 @@ const colX = (i) => COL_X0 + COL_STEP * i;
 // documentation and administration. A page that is not on the index is still
 // served, so it is still drawn.
 const FEATURES = [
-  { p: '/', name: 'Practice Q&A', routes: ['/api/agent', '+ select · render', '/api/kb'], deps: ['A', 'D'], hero: true },
+  { p: '/', name: 'Referrals', routes: ['/api/referrals', '+ search · render'], deps: ['A', 'D'], hero: true },
+  { p: '/ask', name: 'Practice Q&A', routes: ['/api/agent', '+ select · render', '/api/kb'], deps: ['A', 'D'] },
   { p: '/lookup', name: 'Instant lookup', routes: ['/api/directory', '/api/cqc', '/api/lookup-web'], deps: ['D', 'A'] },
   { p: '/questions', name: 'Questions', routes: ['/api/questions/open', '+ filed by the log'], deps: ['D'] },
   { p: '/tools', name: 'Tools index', routes: ['the index list'], deps: [] },

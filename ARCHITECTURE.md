@@ -608,6 +608,42 @@ reported as not recorded; nothing is inferred from SNOMED or the national e-RS
 list. (The SNOMED-to-e-RS suggestion lookup that used to stand behind the
 Notebook was removed with the router; its tables remain, unused — §7.1.)
 
+### The Referrals page (`/`)
+
+The front door is a search of the referrals the practice has written down,
+not a question box: half of what was typed into the Q&A was a referral. The
+Q&A moved to `/ask` (`/helpbot` still serves it); `/ask?q=…` fills its box
+without sending, which is how the page's "Ask a question" link carries over
+what was typed.
+
+- **What is listed.** Every served page under the Notebook's root section
+  **Referrals** (`fullNotebookContext()`, so an edit shows at the next request),
+  minus *hubs*: an untyped page that names five or more of the section's live
+  cards by title or service is an index, not a referral ("Pathway index",
+  "All specialities and clinic types"). "Cancer referrals (2WW)" names one and
+  stays — it is the procedure for every 2WW referral with no card of its own.
+  The rule and its measurements are in `lib/search/referrals.mjs`.
+- **How a search ranks** (`GET /api/referrals?q=`, `lib/search/referrals-search.mjs`).
+  The words that only say "a referral" ("referral", "ref", their typos) are
+  dropped. The query is embedded through the Q&A's own `queryVector` (same
+  cache, same 2.5 s budget). Each page then scores the better of two cosines —
+  its best passage in `knowledge_passages`, and its *name text* (title plus the
+  card's fields and aliases, embedded once per server instance and cached by
+  text) — plus a small share of its Postgres full-text rank and a small bonus
+  for a live e-RS or email card. With no vector the full-text rank orders the
+  list alone. Nothing new is stored: the name vectors live in memory, and the
+  name texts sent to the embedding provider are the card fields the index
+  already sends (§10, provider routing).
+- **What a row opens to.** The Q&A's own card for that page, built on the server
+  exactly as an answer is: `notebookPageAnswer` with `withKindCard` drawing the
+  e-RS or email screen from the saved fields. No model is anywhere in the page.
+- **The empty box.** The referrals most often cited by answered turns in
+  `question_log.source` over the last 30 days, then every referral A–Z. Only
+  page titles are read from the log, never the questions.
+- **As you type**, the browser filters the list by name (the Contact numbers
+  matcher, `lib/lookup/fuzzy.js`) and replaces it with the server's ranking
+  when that arrives; a failed search leaves the name matches showing.
+
 ---
 
 ## 9. The other data flows

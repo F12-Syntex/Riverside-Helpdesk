@@ -48,11 +48,13 @@ export const ShellPresence = React.createContext(false);
  * ASK is the front desk with a patient waiting. WORK is the half hour
  * afterwards. REFERENCE is what somebody looks up rather than uses.
  * Reception spends its whole day in the first group, which is why it is
- * first in the row and why the Q&A is its first entry.
+ * first in the row. Referrals is its first entry and the front door:
+ * half of what was typed into the Q&A was a referral, and the Q&A is
+ * the next entry along for everything else.
  *
  * WHAT THE ROW SHOWS, AND WHERE THE REST IS
  * -----------------------------------------
- * The row is the three tools reception reaches for on an ordinary day.
+ * The row is the four tools reception reaches for on an ordinary day.
  * Everything else — Questions, Answer feedback, Settings, the build — is
  * in the menu at the right, and the whole list is one ⌘K away in the
  * palette. On a narrow screen the row stays, as icons.
@@ -66,7 +68,8 @@ const GROUPS = [
   {
     label: 'Ask',
     items: [
-      { href: '/', label: 'Ask a question', icon: Icons.chat },
+      { href: '/', label: 'Referrals', icon: Icons.sitemap },
+      { href: '/ask', label: 'Ask a question', icon: Icons.chat },
       { href: '/lookup', label: 'Contact numbers', icon: Icons.phone },
       // The other half of asking: the questions the assistant CANNOT answer,
       // because nothing in the practice's material covers them. It stays in
@@ -153,7 +156,7 @@ function matchHref(rawPath) {
   // A page neither list names — /stats, reached by typing its address.
   // The bar still has to say where the reader is: naming it from its own
   // path is honest about that, where falling through to the first entry
-  // would tell them they are on the Q&A.
+  // would tell them they are on Referrals.
   const seg = pathname.split('/').filter(Boolean)[0];
   if (!seg) return null;
   return { href: '/' + seg, group: 'Riverside', label: seg.charAt(0).toUpperCase() + seg.slice(1) };
