@@ -35,7 +35,9 @@ import {
  *   - wide (≥ 1000px), a panel down the right side, below the app bar,
  *     with the list moved over to stay whole and usable beside it — click
  *     another row and the drawer shows that one instead;
- *   - narrow, a full-screen sheet with "← All results".
+ *   - narrow, floating over the dimmed list, with "← All results".
+ *
+ * Either way it floats as the app bar does — a gutter in, rounded.
  *
  * × or Esc closes it and puts focus back on the row that opened it.
  *
@@ -107,11 +109,15 @@ const RF_CSS = `
 .rf-tag--urgent{background:#fdf6e7;color:#8a5a08;box-shadow:inset 0 0 0 1px #ecd9ad;}
 .rf-mark{background:rgba(0,94,184,.1);color:var(--rv-accent);border-radius:3px;}
 
-/* ---- the chosen referral: a drawer, flat inside ----
+/* ---- the chosen referral: a floating panel, flat inside ----
+   It floats as the app bar and the page's cards do: one gutter in from every
+   edge, rounded, lifted by the modals' shadow (Contact numbers' .lk-form).
    Wide: down the right of the page, under the app bar, with the list still
-   there beside it — no shade over the page, nothing blocked. Narrow: the
-   whole screen, over the app bar too. */
-.rf-drawer{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#fff;outline:none;}
+   there beside it — no shade over the page, nothing blocked. Narrow: over
+   everything, the list dimmed behind it; a tap on the shade closes it. */
+.rf-drawer{position:fixed;inset:var(--rv-gutter);z-index:60;display:flex;flex-direction:column;overflow:hidden;background:#fff;outline:none;
+  border-radius:22px;box-shadow:0 30px 80px -20px rgba(33,43,50,.45),0 0 0 1px rgba(33,43,50,.06);}
+.rf-scrim{position:fixed;inset:0;z-index:59;background:rgba(33,43,50,.32);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
 .rf-drawer__head{flex:none;padding:14px 18px 14px;border-bottom:1px solid #edf1f3;}
 .rf-drawer__top{display:flex;align-items:flex-start;gap:10px;}
 .rf-drawer__scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px 18px 32px;
@@ -136,9 +142,10 @@ const RF_CSS = `
      nor the box's ×, sit under it. The drawer is placed against the padding
      box, so it stays flush with the edge. */
   .rf-stage{position:relative;transition:padding-right .24s cubic-bezier(.2,.8,.3,1);}
-  .rf-stage.is-open{padding-right:min(560px,45vw);}
-  .rf-drawer{position:absolute;inset:0 0 0 auto;z-index:20;width:min(560px,45vw);
-    border-left:1px solid #dde4e7;box-shadow:-18px 0 40px -24px rgba(33,43,50,.28);}
+  .rf-stage.is-open{padding-right:calc(min(560px,45vw) + var(--rv-gutter));}
+  .rf-drawer{position:absolute;inset:var(--rv-gutter) var(--rv-gutter) var(--rv-gutter) auto;z-index:20;width:min(560px,45vw);
+    box-shadow:0 0 0 1px rgba(33,43,50,.06),0 2px 6px rgba(33,43,50,.05),0 24px 60px -22px rgba(33,43,50,.32);}
+  .rf-scrim{display:none;}
   .rf-drawer__head{padding:20px 26px 16px;}
   .rf-drawer__scroll{padding:22px 26px 36px;}
   .rf-back{display:none;}
@@ -624,6 +631,10 @@ export default function ReferralsPage() {
         </main>
 
         <AnimatePresence>
+          {openId ? (
+            <motion.div key="scrim" className="rf-scrim" aria-hidden="true" onClick={close}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
+          ) : null}
           {openId ? (
             <Drawer key="drawer" row={chosen} loading={!book.loaded} reduce={reduce}
               headingRef={headingRef} scrollRef={scrollRef} backHref={referralUrl({ q: trimmed })} onClose={close} />
