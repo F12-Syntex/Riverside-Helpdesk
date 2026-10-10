@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.64.0` | 2026-10-11 | feat | `ab4d12f` | feat: make a natural-language referrals search the front page |
+| `6.63.0` | 2026-10-11 | feat | `1a85e3d` | feat: check every notebook answer with Jev and say when it doesn't know |
+| `6.62.8` | 2026-10-10 | docs | `ecf7422` | docs: plan the referrals front page and the Jev answer check |
+| `6.62.7` | 2026-10-10 | docs | `0ec000e` | docs: record the search rebuild in versions |
 | `6.62.6` | 2026-10-10 | chore | `35fac9a` | chore: add a whole-Notebook baseline mode to the picker bench |
 | `6.62.5` | 2026-10-10 | chore | `b083dcb` | chore: send provider-pinned models through the app's router in the bench |
 | `6.62.4` | 2026-10-10 | fix | `72cc1b5` | fix: harden the search against hangs, image turns and stale pages |
