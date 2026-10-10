@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.67.5` | 2026-10-11 | fix | `8ed7ef3` | fix: line the referral drawer's foot up with the list card's |
+| `6.67.4` | 2026-10-11 | fix | `61285ce` | fix: close the open referral when the search changes |
+| `6.67.3` | 2026-10-11 | docs | `fcf6dfc` | docs: record the floating referral drawer in versions |
 | `6.67.2` | 2026-10-11 | fix | `9dc38eb` | fix: float the referral drawer like the app's other panels |
 | `6.67.1` | 2026-10-11 | docs | `bacfb7a` | docs: record the referrals drawer in versions |
 | `6.67.0` | 2026-10-11 | feat | `a1e33af` | feat: open referrals in a side drawer, flat, only when chosen |
