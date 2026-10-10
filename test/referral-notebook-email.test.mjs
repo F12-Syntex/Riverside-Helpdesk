@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { findEmailedReferral, referralAnswer } from '../lib/templates/referrals.mjs';
-import { renderSelection } from '../lib/templates/route.mjs';
 
 // The practice's own page, in the shape the Notebook actually holds it.
 //
@@ -133,22 +132,3 @@ test('an empty name cannot match anything', () => {
 
 /* ------------------------------------------------------ through the router */
 
-test('the router passes the name and the Notebook through', () => {
-  const card = renderSelection(
-    { template: 'referral', referralService: 'none', referralName: 'dietitian' },
-    'how do I do a dietitian referral',
-    PAGES,
-  );
-  assert.match(card.title, /Dietitian referral/);
-  assert.match(card.subtitle, /Sent by email/);
-});
-
-test('the router still answers when the model leaves the name empty', () => {
-  // It falls back to stripping the question, which is worse but not nothing.
-  const card = renderSelection(
-    { template: 'referral', referralService: 'none', referralName: '' },
-    'how do I do a dietitian referral',
-    PAGES,
-  );
-  assert.match(card.subtitle, /Sent by email/);
-});

@@ -8,7 +8,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildFullNotebookSources } from '../lib/knowledge-context.mjs';
-import { renderSelection, typedNotebookPage, withKindCard } from '../lib/templates/route.mjs';
+import { withKindCard } from '../lib/templates/route.mjs';
+import { notebookPageAnswer } from '../lib/templates/notebook.mjs';
+import { noteKind } from '../lib/notebook/kinds.mjs';
 
 const ERS = {
   service: 'Dermatology',
@@ -25,29 +27,14 @@ const ROWS = [
   { id: 5, parentId: 4, title: 'Opening times', body: 'The practice opens at 8am.', kind: 'note', status: 'live' },
 ];
 const PAGES = buildFullNotebookSources(ROWS, []);
-const pick = (title) => ({ template: 'notebook', pages: [title] });
-
-test('a live typed page is drawn, and nothing else is', () => {
-  assert.ok(typedNotebookPage(pick('Dermatology'), PAGES), 'a live e-RS page was not recognised');
-  // Every other template renders in a shape of its own, decided in code.
-  for (const template of ['referral', 'bloodForm', 'triage', 'fcp', 'registration', 'none']) {
-    assert.equal(typedNotebookPage({ template, pages: ['Dermatology'] }, PAGES), null, template);
-  }
-  // A plain page is the page as it is written.
-  assert.equal(typedNotebookPage(pick('Opening times'), PAGES), null);
-  // A draft is not drawn: half a card drawn like a whole one misleads.
-  assert.equal(typedNotebookPage(pick('Dietitian'), PAGES), null);
-  // Two pages are two answers, and one screen cannot be both.
-  assert.equal(typedNotebookPage({ template: 'notebook', pages: ['Dermatology', 'Opening times'] }, PAGES), null);
-  // A page the Notebook does not hold cannot be typed into existence.
-  assert.equal(typedNotebookPage(pick('Invented page'), PAGES), null);
-});
+const page = (title) => PAGES.find((p) => p.docTitle.endsWith('/ ' + title));
+const typed = (title) => ({ page: page(title), kind: noteKind(page(title).noteKind) });
+const plainCard = (title) => notebookPageAnswer({ pages: [page(title).docTitle], all: PAGES });
 
 test('the screen is drawn first, from the saved fields, above the page', () => {
-  const selection = pick('Dermatology');
-  const plain = renderSelection(selection, 'how do I refer for a mole', PAGES, {});
+  const plain = plainCard('Dermatology');
   assert.ok(plain, 'the page did not render');
-  const drawn = withKindCard(plain, typedNotebookPage(selection, PAGES));
+  const drawn = withKindCard(plain, typed('Dermatology'));
   assert.equal(drawn.blocks[0].type, 'ers');
   assert.equal(drawn.blocks[0].specialty, 'Dermatology');
   assert.equal(drawn.blocks[0].clinicType, 'Not Otherwise Specified');
@@ -56,15 +43,10 @@ test('the screen is drawn first, from the saved fields, above the page', () => {
 });
 
 test('nothing to draw leaves the card unchanged', () => {
-  const plain = renderSelection(pick('Opening times'), 'when do you open', PAGES, {});
+  const plain = plainCard('Opening times');
   assert.equal(withKindCard(plain, null), plain);
-  assert.equal(withKindCard(null, typedNotebookPage(pick('Dermatology'), PAGES)), null);
+  assert.equal(withKindCard(null, typed('Dermatology')), null);
+  // A plain page has no screen to draw.
+  assert.equal(withKindCard(plain, typed('Opening times')), plain);
 });
 
-test('a title copied with its list or heading marker still finds the typed page', () => {
-  // The titles-only list writes "- Notebook: …" and a page shown in full is
-  // under "### Notebook: …"; the picker sometimes copies the marker too.
-  for (const title of ['- Notebook: Referrals / Dermatology', '### Notebook: Referrals / Dermatology', '- Dermatology']) {
-    assert.ok(typedNotebookPage(pick(title), PAGES), title);
-  }
-});

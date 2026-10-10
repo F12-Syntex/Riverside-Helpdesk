@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { bandFindings, safetyScan } from '../lib/safety/scan.mjs';
 import { looksMultiIntent } from '../lib/safety/requests.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '../lib/templates/safety.mjs';
-import { renderSelection } from '../lib/templates/route.mjs';
 import { fcpAnswer, localFeatures, mskFeatures } from '../lib/templates/fcp.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
 import { RED_FLAGS } from '../lib/safety/redflags.mjs';
@@ -173,15 +172,6 @@ test('a short single question is not decomposed and gets no panel', () => {
   assert.equal(s.complaint, '', 'nothing to narrow to, so nothing is narrowed');
   assert.equal(unresolvedPanel(s), null);
   assert.deepEqual(bandFindings(s, { cardScans: false }), { acuity: [], confidentiality: [] });
-});
-
-test('a card with no complaint span is byte-identical to the card built before any of this', () => {
-  const question = 'pt has a sore throat since Friday, no fever';
-  const selection = { template: 'triage', condition: 'sore throat' };
-  assert.deepEqual(
-    renderSelection(selection, question, []),
-    triagePatientAnswer({ condition: 'sore throat', text: question }),
-  );
 });
 
 /* ------------------------ 7. the rules that were already right */

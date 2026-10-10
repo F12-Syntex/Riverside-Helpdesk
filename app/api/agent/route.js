@@ -1,40 +1,30 @@
-// The agent endpoint: pick a template, fill it, render it.
+// The agent endpoint: one question, one answer.
 //
-// Every message takes the same path. The model reads it, chooses the template
-// that fits and fills that template's variables — it does not write the answer.
-// The answer is the template, rendered in code from the values it returned.
+// THREE PATHS, decided before any model runs:
 //
-// That split is the whole point. Understanding a message is what a model is
-// good at, so it does that; the shape of what comes out is what a model is
-// unreliable at, so code does that. "How do I refer for an ECG" and "ecg
-// referral, how to do this?" reach the same card, because the wording was never
-// what decided it.
+//   A CONTACT DETAIL the practice directory holds is answered from it,
+//   verbatim, with no model at all (lib/templates/directory.mjs).
 //
-// Determinism where it earns its keep:
-//   - the referral service is an enum of what the practice records, so a
-//     pathway can be chosen or declined but never invented;
-//   - a filing title is assembled from its parts by codingTitle, so its format
-//     cannot drift however the model words things;
-//   - every card is laid out from the same blocks (lib/templates).
+//   A SLASH COMMAND (/accurx, /coding, /practice, /form, /template,
+//   /consultation, /medication — lib/commands.mjs) names its card outright.
+//   The model fills that one card's values and code renders it, so the shape
+//   of the answer cannot drift however the model words things.
 //
-// When no template fits, the turn falls through to plain prose on the fast
-// model. That answer IS written by the model, has nothing behind it, and says
-// so on the card.
+//   EVERY OTHER QUESTION is answered from the WHOLE NOTEBOOK. The writer is
+//   shown every page, in full, and writes a short answer from them alone,
+//   citing each page it used by its heading; code turns each citation into a
+//   link to the page and refuses any it cannot find
+//   (lib/questions/references.mjs). The Notebook is the first, byte-stable
+//   part of the prompt and is marked cacheable, so after the first turn the
+//   provider reads it from its cache. There is no search, no page picker and
+//   no card on this path: the Referrals page (`/`) is where the cards live.
 //
-// THE NOTEBOOK IS A TEMPLATE TOO. The model is shown a shortlist of pages —
-// the likeliest few in full, every other page by title (lib/search) — and
-// returns a title; the page is then rendered from the database exactly as the
-// practice wrote it. So even the open-ended questions come back as a
-// variable filled in, not as prose the model composed: same answer every time,
-// about ten output tokens, and no way for a procedure to be paraphrased on its
-// way to somebody following it.
-//
-// EVERY NOTEBOOK ANSWER IS CHECKED BEFORE IT GOES OUT. A page card, a referral
-// card or a written answer is put to a decision model (the `check` role) with
-// the question and the pages it came from: does it answer what was asked? A low
-// score withdraws it for an honest "I don't know" and files the question; a
-// middling one adds a line asking the reader to check it against the page; a
-// check that fails or is slow changes nothing (lib/questions/answer-check.mjs).
+// EVERY Q&A ANSWER IS CHECKED BEFORE IT GOES OUT. It is put to a decision
+// model (the `check` role) with the question and the pages it cites: does it
+// answer what was asked? A low score withdraws it for an honest "I don't know"
+// and files the question; a middling one adds a line asking the reader to check
+// it against the page; a check that fails or is slow changes nothing
+// (lib/questions/answer-check.mjs).
 //
 // EVERY TURN IS WRITTEN DOWN. As the answer goes out, the question, the answer
 // as text, the template that built it and the model that ran are recorded in
@@ -45,9 +35,8 @@ import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText, zodSchema } from 'ai';
 import {
-  CLINICAL_TEMPLATES, COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS, MULTI_SELECTION_SCHEMA, SELECTION_SCHEMA,
-  commandPrompt, notebookFullText, proseSystemPrompt, renderCommand, renderSelection, selectionClarify, selectionPrompt,
-  typedNotebookPage, withKindCard,
+  COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS,
+  commandPrompt, notebookFullText, proseSystemMessage, renderCommand,
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
@@ -57,13 +46,8 @@ import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
 import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
-import { groundedIn } from '@/lib/questions/grounding.mjs';
 import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
-import { referralCardFromRead } from '@/lib/templates/referrals.mjs';
-import {
-  REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralReadPrompt,
-} from '@/lib/agent/referral-read.mjs';
 import {
   PRACTICE_ANSWER_SCHEMA, groundPracticeAnswer, practiceAnswerPrompt, practiceSources,
 } from '@/lib/agent/practice-answer.mjs';
@@ -77,26 +61,25 @@ import {
   templatesOf,
 } from '@/lib/agent/contract-intent.mjs';
 import { searchPassages } from '@/lib/search/search.mjs';
-import { notebookShortlist } from '@/lib/search/notebook.mjs';
-import { shortlistText } from '@/lib/search/shortlist.mjs';
 import { scheduleNoteEmbedding } from '@/lib/search/index-notes.mjs';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { contactEntries } from '@/lib/contacts-store';
-import { scanShortlist, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
+import { notebookProgress } from '@/lib/agent/notebook-progress.mjs';
 import { createRouter, reasoningFor } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
+import { usageCounts } from '@/lib/ai/usage-counts.mjs';
 import { recordQuestion } from '@/lib/questions/log';
 import { loggingOffIn } from '@/lib/questions/opt-out.mjs';
 import { answerToText } from '@/lib/questions/flatten.mjs';
 import { decide, decisionUsage } from '@/lib/ai/decisions.mjs';
 import {
-  checkProvenance, closestPages, pagesForSources, pagesNamedIn, runAnswerCheck, shouldCheck, unknownAnswer,
-  withConfirmLine, withConfirmNote,
+  checkProvenance, closestPages, runAnswerCheck, shouldCheck, unknownAnswer, withConfirmLine,
 } from '@/lib/questions/answer-check.mjs';
+import { citedPages, resolveReferences, saysDontKnow, sourcesLine } from '@/lib/questions/references.mjs';
 import { noteUnansweredQuestion } from '@/lib/questions/open';
 import { isCollectableQuestion } from '@/lib/questions/gaps.mjs';
 import { previousUserMessage } from '@/lib/search/query.mjs';
@@ -113,7 +96,11 @@ const READ_MAX_TOKENS = 2000;
 // The most one structured-output attempt may take before the text path is
 // tried instead — see readValues.
 const STRUCTURED_BUDGET_MS = 20_000;
-const PROSE_MAX_TOKENS = 1500;
+// The Q&A answer is told to stay near 150 words; the cap is well above that
+// because the output count includes any thinking the model does first
+// (Claude Haiku 5.5 was measured spending ~470 tokens of it), and an answer cut
+// off mid-sentence is worse than a long one.
+const PROSE_MAX_TOKENS = 3000;
 
 // THE TURN STOPS ITSELF BEFORE THE PLATFORM DOES. At maxDuration the function
 // is killed mid-call: the reader is left watching a status line that never
@@ -314,7 +301,7 @@ export async function POST(request) {
     ? body.images.filter((u) => typeof u === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(u)).slice(0, 4)
     : [];
   // A MESSAGE WITH A PICTURE ON IT RUNS ON THE IMAGES ROLE, whichever path it
-  // takes below — a command, the template picker, or prose. The model chosen
+  // takes below — a command, or the Q&A answer. The model chosen
   // for reading and writing may not see pictures at all, and the one chosen
   // for pictures is chosen for that alone (lib/settings.js). `seeing` is read
   // wherever a model is named, so the choice is made once and cannot drift
@@ -347,7 +334,7 @@ export async function POST(request) {
   // costs what it uses rather than what the model could have written.
   //
   // CLAUDE GOES STRAIGHT TO THE TEXT PATH. Anthropic's structured output
-  // rejects the picker's schema — "Schema is too complex" — and on Vertex it
+  // rejected the old page picker's schema — "Schema is too complex" — and on Vertex it
   // took up to 100 seconds to say so, which spent the whole turn budget and
   // left the fallback aborted before it started. The same prompt as plain
   // JSON comes back in about two seconds.
@@ -424,14 +411,14 @@ export async function POST(request) {
       // not cover this. Never allowed to fail a turn — recordQuestion swallows
       // its own errors — and on Vercel it is handed to waitUntil so the row is
       // still written after the response has been closed.
-      // What the Notebook shortlist was on this turn, once there is one: how
-      // many pages went in whole, and whether search narrowed it at all. Kept
-      // with the turn's provenance, so a wrong answer on /stats can be told
-      // apart as "the page was never shortlisted" or "it was, and was missed".
-      let shortlistLog = null;
+      // What a Q&A turn read and cited, once it has: how many Notebook pages
+      // the writer was shown, the ids of the pages its answer cited, and any
+      // heading it cited that named no page. Kept with the turn's provenance,
+      // so a wrong answer on /stats can be traced to the pages it stood on.
+      let referencesLog = null;
       // What the answer check made of the answer, once it has run: the score,
       // the model and how long it took — or why it did not run. Kept with the
-      // provenance for the same reason as the shortlist: a withdrawn answer, or
+      // provenance for the same reason as the references: a withdrawn answer, or
       // one that went out with a "check this" line, has to be explainable on
       // /stats, and the scores against staff verdicts are what the thresholds
       // get tuned on.
@@ -457,10 +444,10 @@ export async function POST(request) {
           images: images.length,
           attachments: attachments.length,
           ...turn,
-          provenance: (shortlistLog || checkLog)
+          provenance: (referencesLog || checkLog)
             ? {
               ...(turn.provenance || {}),
-              ...(shortlistLog ? { shortlist: shortlistLog } : {}),
+              ...(referencesLog ? { references: referencesLog } : {}),
               ...(checkLog ? { check: checkLog } : {}),
             }
             : turn.provenance,
@@ -508,17 +495,20 @@ export async function POST(request) {
 
       // THE NOTEBOOK, FETCHED AT MOST ONCE A TURN.
       //
-      // Every page, as live in the notes table — read only by the picker path
+      // Every page, as live in the notes table — read only by the Q&A path
       // below (commands never open it). fullNotebookContext keeps the pages in
       // server memory and re-reads them only when a one-row version check says
-      // the Notebook changed, so this is usually one small query. The model is
-      // never shown all of it: it sees the turn's shortlist. The full set stays
-      // here in code because the deterministic resolvers need every page — a
-      // title the picker names off the titles-only list, the referral card's
-      // own pathway lookup, a typed page's screen, the number allow-list.
+      // the Notebook changed, so this is usually one small query. The writer
+      // is shown all of it; code also needs every page, to resolve the pages
+      // the answer cites and to build the number allow-list.
       //
-      // A Notebook that cannot be read leaves the templates working rather than
+      // A Notebook that cannot be read is answered without it rather than
       // failing the turn — the same best-effort it always had.
+      //
+      // DECLARED ABOVE EVERY PATH THAT READS IT. This endpoint has thrown
+      // ReferenceError twice from a `const` read before the line declaring it
+      // ran (see `reading` below); anything a later branch needs is declared
+      // up here or in the branch that uses it, never after it.
       let notebookRead = null;
       const notebook = async () => {
         if (notebookRead) return notebookRead;
@@ -541,16 +531,7 @@ export async function POST(request) {
         .join('\n\n---\n\n');
 
       try {
-        // ONE PIPELINE. The model reads the message, picks the template that
-        // fits and fills that template's variables — it never writes the
-        // answer. What comes back is rendered in code, so "how do I refer for
-        // an ECG" and "ecg referral, how to do this?" produce the same card,
-        // and the enum of recorded services means a pathway can be chosen or
-        // declined but never invented.
-        //
-        // Only when no template fits does the turn fall through to prose.
-        //
-        // A COMMAND SKIPS THE CHOOSING. /accurx and /coding have already said
+        // A COMMAND NAMES ITS CARD. /accurx and /coding have already said
         // what the message is, so the model is asked for that one template's
         // values and nothing else: no Notebook to read, a schema with
         // one field in it, and no way for the turn to end up somewhere else.
@@ -568,13 +549,13 @@ export async function POST(request) {
             // A picture is read before anything is filled in, and the line
             // says so: the wait on a screenshot is the model looking at it.
             : seeing ? (images.length === 1 ? 'Reading the picture' : 'Reading the pictures')
-              : command ? 'Filling in the card' : 'Working out what this is';
+              : command ? 'Filling in the card' : 'Reading the Notebook';
         send({ type: 'status', text: said });
         send({
           type: 'tool-start',
           id: 'select',
-          tool: searching ? 'search_documents' : lookingUp ? 'look_up_list' : 'pick_template',
-          label: searching || lookingUp ? said : (command ? 'Told which answer to give' : 'Choosing the answer'),
+          tool: searching ? 'search_documents' : lookingUp ? 'look_up_list' : command ? 'pick_template' : 'read_notebook',
+          label: searching || lookingUp ? said : (command ? 'Told which answer to give' : 'Reading the Notebook'),
           detail: question.slice(0, 120),
         });
 
@@ -604,7 +585,7 @@ export async function POST(request) {
           send({
             type: 'tool-result',
             id: 'select',
-            tool: 'pick_template',
+            tool: 'read_notebook',
             summary: 'Found in the practice directory',
             items: [],
           });
@@ -1065,69 +1046,49 @@ export async function POST(request) {
           return;
         }
 
-        // ONE EXTRA FIELD, ON THE SAME CALL, AND ONLY WHEN IT IS WORTH IT.
+        // THE WHOLE NOTEBOOK, AND ONE ANSWER CITING IT.
         //
-        // The schema returns exactly one template, so a message asking for five
-        // things came back as one card and the other four were never mentioned
-        // again. That is structural: no amount of model quality produces five
-        // answers from a contract with one slot in it. So the model is also
-        // asked where each separate ask starts and ends — extraction, which it
-        // does reliably — and code decides everything after that.
+        // Every question that is not a command and not a contact number is
+        // answered the same way: the writer is shown every page of the
+        // Notebook, in full, and writes a short answer from them alone, citing
+        // each page it used by its heading. There is no search, no shortlist,
+        // no picker and no card on this path any more — the Referrals page
+        // (`/`) is the card-shaped front door now, and what reached the Q&A
+        // through a picker was a coin toss between a page shown verbatim and
+        // a card built for a different question.
         //
-        // "How do I refer for an ECG" is one ask. It is asked with exactly the
-        // schema and exactly the prompt it was asked with before any of this
-        // existed, and costs exactly what it used to. Decided before the
-        // Notebook is searched, because a message asking several things gets a
-        // longer shortlist — room for a page per request.
-        const decompose = looksMultiIntent(question);
+        // THE NOTEBOOK IS CACHED, NOT RE-SENT. It is ~43k tokens and the same
+        // on every turn until a page is edited, so it is the first, byte-stable
+        // part of the system prompt and is marked cacheable
+        // (proseSystemMessage, lib/templates/route.mjs): after the first turn
+        // the provider reads it from its cache, and ai_usage records how much
+        // it read (`cached_input_tokens`).
+        //
+        // THE CITATIONS ARE RESOLVED BY CODE. The model writes
+        // `[[Notebook: Section / Page]]`; resolveReferences
+        // (lib/questions/references.mjs) turns each one that names a real page
+        // into a link to it, leaves any other as plain words, and ends the
+        // answer with the list of pages it linked. The model never writes a
+        // link, so it cannot write a wrong one.
+        //
+        // A Notebook that cannot be read is not a turn that cannot answer: the
+        // writer is given the rules that admit it has no practice material.
+        const notebookPages = await notebook();
+        const notebookText = notebookPages.length ? notebookFullText(notebookPages) : '';
+        referencesLog = { pages: notebookPages.length };
+        // The working card: the Notebook, every page of it read. The shape
+        // the card already draws for a whole-Notebook read —
+        // lib/agent/notebook-progress.mjs.
+        if (notebookPages.length) send(notebookProgress(notebookPages));
 
-        // THE NOTEBOOK GOES IN AS A SHORTLIST.
-        //
-        // The model's job is to name the page, not to write the answer again —
-        // the page itself is rendered from the database, exactly as the
-        // practice wrote it, so nothing can garble a procedure. It reads page
-        // BODIES, not just titles: titles alone cannot tell two similarly
-        // titled pages apart or show a value written inside a page. But not
-        // every body: the whole Notebook was ~43k tokens on every call, most of
-        // the cost of a turn and most of the wait. So search (lib/search) picks
-        // the pages likeliest to answer — 12, or 20 for a message asking
-        // several things, plus anything edited in the last hour — and those go
-        // in whole; every other page goes in by title only, so the model can
-        // still name a page search missed, and that page is rendered whole
-        // from `notebookPages` like any other.
-        //
-        // Search failing, taking too long, or having nothing to search with
-        // is the whole Notebook — never nothing (lib/search/notebook.mjs). So
-        // is a turn with pictures: what it is about is in the picture, which
-        // search cannot read.
-        //
-        // The search starts beside the Notebook read rather than after it: it
-        // needs the pages only to roll its hits up, so the embedding call and
-        // the database read overlap.
-        //
-        // Best-effort: a Notebook that cannot be read leaves the templates
-        // working rather than failing the turn. The prompt says so, and the
-        // model falls back to the shapes it can still fill.
-        const shortlistBegan = Date.now();
-        const notebookLoading = notebook();
-        const shortlisting = notebookShortlist({ question, history, attached, pages: notebookLoading, multi: decompose, seeing });
-        const notebookPages = await notebookLoading;
-        const shortlist = await shortlisting;
-        // The same text goes to the picker, the referral read and the prose
-        // writer, so all three are reading the same pages.
-        const notebookText = notebookPages.length ? shortlistText(shortlist, notebookPages) : '';
-        shortlistLog = { size: shortlist.pages.length, full: shortlist.full, reason: shortlist.reason || '' };
-        console.info(`[agent] ${turnId} shortlist ${shortlist.full ? 'whole Notebook' + (shortlist.reason ? ' (' + shortlist.reason + ')' : '') : shortlist.pages.length + ' of ' + notebookPages.length + ' pages'} in ${seconds(shortlistBegan)}`);
-        // The working card: the shortlist, lit on a grid of every page.
-        // Display only — nothing below reads it. See lib/agent/note-scan.mjs.
-        const noteScan = notebookPages.length ? scanShortlist(shortlist, notebookPages, { question }) : null;
-        if (noteScan) send(scanEvent(noteScan));
-        // The page(s) the turn settled on, for the card to mark on that scan.
-        let chosenTitles = [];
+        // The bands. The whole message, scanned once above; no card on this
+        // path runs the triage net over its own text, so every finding is
+        // the band's to say.
+        const safety = safetyOutput(scan, { cardScans: false });
 
         // THE ANSWER CHECK — see lib/questions/answer-check.mjs. One decision
         // call on the `check` role, in front of an answer that is already
-        // built. Never throws: a check that fails, or does not answer within
+        // written. Never throws: a check that fails, or does not answer within
         // three seconds, comes back as 'pass' and the answer goes out as it was.
         const checkAnswer = async ({ answer: shown, pages }) => {
           send({ type: 'status', text: 'Checking the answer' });
@@ -1149,18 +1110,18 @@ export async function POST(request) {
           return result;
         };
 
-        // A WITHDRAWN ANSWER. The check said it does not answer the question, so
-        // the reader is told the Notebook does not cover it — with the closest
-        // pages search found — and the question is filed on /questions as one
-        // the notes cannot answer. Filed here rather than by the question log
-        // (lib/questions/log.js files prose with no source line, and "failed"
-        // and "not recorded" turns), because only this path knows why; and only
-        // when this desk records its questions at all, the same promise the log
-        // keeps (lib/questions/opt-out.mjs). What was withdrawn is kept in the
-        // provenance, so the thresholds can be judged against what they took
-        // away.
-        const withdraw = async ({ was, fallback = [], prefer = [], alerts = [], panel = null }) => {
-          const closest = closestPages({ shortlist, fallback, prefer });
+        // A WITHDRAWN ANSWER. The check said it does not answer the question,
+        // so the reader is told the Notebook does not cover it — with the pages
+        // the withdrawn answer cited, as links — and the question is filed on
+        // /questions as one the notes cannot answer. Filed here rather than by
+        // the question log (lib/questions/log.js files prose with no source
+        // line, and "failed" turns), because only this path knows why; and
+        // only when this desk records its questions at all, the same promise
+        // the log keeps (lib/questions/opt-out.mjs). What was withdrawn is kept
+        // in the provenance, so the thresholds can be judged against what they
+        // took away.
+        const withdraw = async ({ was, prefer = [], alerts = [], panel = null }) => {
+          const closest = closestPages({ prefer });
           const filing = logging && isCollectableQuestion(question);
           const card = unknownAnswer({ closest, filed: filing });
           checkLog = {
@@ -1175,8 +1136,7 @@ export async function POST(request) {
           send({ type: 'answer', payload: payload({ template: card, alerts, panel }) });
           const writtenUnknown = logTurn({
             outcome: 'template',
-            // Its own line on /stats: told apart from a page the picker never
-            // found, and from a referral the practice has not recorded.
+            // Its own line on /stats: an answer the check withdrew.
             template: 'unknown:check',
             source: '',
             answer: shownText(alerts, card),
@@ -1189,233 +1149,22 @@ export async function POST(request) {
           await Promise.all([writtenUnknown, filed]);
         };
 
-        let templateAnswer = null;
-        let clarify = null;
-        let picked = 'none';
-
-        // THE PAGE'S OWN SCREEN, when it is a typed page.
-        //
-        // A Notebook page normally answers as itself — the page, as they
-        // wrote it. A page the practice has given a type (the notebook
-        // sidebar, right-click → Type) carries the values on that screen as
-        // saved fields, so the screen is drawn above the page straight from
-        // them: no model reads the page for it, and a draft is not drawn.
-        const applyKindCard = (selection) => {
-          const typed = templateAnswer ? typedNotebookPage(selection, notebookPages) : null;
-          if (typed) templateAnswer = withKindCard(templateAnswer, typed);
-        };
-
-        // THE REFERRAL PAIRING, READ BY THE MODEL RATHER THAN PARSED.
-        //
-        // A referral card lives or dies on three values — is this sent on
-        // e-RS or by email, what goes in Speciality, what goes in Clinic
-        // type — and they are written on the practice's own pathway pages.
-        // Getting them out of those pages was a parser: three recognised
-        // page shapes and a word-overlap score, right about the pages it was
-        // written against and blind to every other way of writing the same
-        // thing down. Its two failure modes both reach the reader as a
-        // confident card: a page it cannot read is reported as a referral
-        // the practice has no process for, and a near miss on the score is
-        // the wrong pairing drawn exactly like a right one.
-        //
-        // So the model reads the page. It is NOT writing the answer: the
-        // card is the same card built from the same blocks, and every value
-        // it returns is checked against the page it named, character for
-        // character, before any of it is drawn
-        // (lib/agent/referral-read.mjs). What the check deletes becomes a
-        // GAP the card names, because an open box with "the page does not
-        // record this" against it is something a receptionist can act on.
-        //
-        // The parser still runs first and its card is what stands if this
-        // read fails, comes back empty or names a page the Notebook does not
-        // have. One extra call, on referral turns only.
-        //
-        // IT READS THE SAME SHORTLIST THE PICKER READS, and when the message
-        // says "refer" it is STARTED BESIDE THE PICKER rather than after it.
-        // It used to be a second full-Notebook call queued behind the first,
-        // which roughly doubled the wait on the commonest card there is. The
-        // picker's choice still decides whether its result is used at all; a
-        // read nobody asked for is thrown away. What it names is grounded
-        // against the pages it was shown whole — a page it saw only by title
-        // has no values it could have read — so a short read can only miss,
-        // never invent.
-        const readReferral = (name) => readValues({
-          model: seeing ? imageModel : model,
-          schema: REFERRAL_READ_SCHEMA,
-          text: referralReadPrompt({
-            name,
-            question,
-            notebook: notebookText,
-          }),
-          role: seeing ? 'images' : 'fast',
-          phase: 'referralRead',
-        });
-        const earlyReferral = (!seeing && !decompose && notebookPages.length && looksLikeReferral(question))
-          ? readReferral('').catch((e) => {
-            console.warn('[agent] early referral read failed:', String(e).slice(0, 160));
-            return null;
-          })
-          : null;
-        const applyReferralRead = async (selection) => {
-          if (!selection || selection.template !== 'referral') return;
-          if (!notebookPages.length) return;
-          try {
-            // The early read when there was one and it came back; otherwise
-            // the read now, told what the picker says is being referred.
-            const read = (earlyReferral && await earlyReferral)
-              || await readReferral(selection.referralName || '');
-            const shown = shortlist.full ? null : new Set(shortlist.pages.map((p) => p.docId));
-            const grounded = groundReferralRead({ read, pages: notebookPages, shown });
-            const card = grounded && referralCardFromRead(grounded);
-            if (card) templateAnswer = card;
-          } catch (e) {
-            console.warn('[agent] referral read failed:', String(e).slice(0, 160));
-          }
-        };
-
-        // The picker. (`if … try` is deliberate: the block is the picker as
-        // it was, brace for brace — nothing above it answers or asks.)
-        if (!templateAnswer && !clarify) try {
-          // With a picture attached the picker runs on the images role and is
-          // shown the picture, so a screenshot of a letter can be recognised
-          // as a document to file rather than read as an empty message.
-          const selectModel = seeing ? imageModel : model;
-          const selection = {
-            object: await readValues({
-              model: selectModel,
-              schema: decompose ? MULTI_SELECTION_SCHEMA : SELECTION_SCHEMA,
-              text: selectionPrompt({ question, attached, notebook: notebookText, decompose, images: images.length }),
-              role: seeing ? 'images' : 'fast',
-              phase: 'select',
-            }),
-          };
-          picked = selection.object.template;
-          chosenTitles = selection.object.pages || [];
-          scan = safetyScan({ message: question, requests: selection.object.requests });
-          // A question back, when the message could mean two different things
-          // and they have different answers. Null when the model asked without
-          // giving anything to choose between, and the turn answers as usual.
-          clarify = selectionClarify(selection.object);
-          // The card is built from the ONE request it is about, not from the
-          // whole message — which is what stops a sentence describing a hoarse
-          // voice writing the wording on a knee card.
-          templateAnswer = renderSelection(selection.object, question, notebookPages, {
-            complaint: scan.complaint,
-            gist: (scan.routed && scan.routed.gist) || '',
-          });
-
-          // The page's own screen, when it is a typed page — see
-          // applyKindCard above.
-          applyKindCard(selection.object);
-          // And the referral pairing, read off the page rather than parsed
-          // out of it — see applyReferralRead above.
-          await applyReferralRead(selection.object);
-        } catch (e) {
-          // A picker that cannot answer is not a turn that cannot answer — and
-          // the scan already ran over the whole message, so a turn that ends in
-          // prose still carries every finding.
-          console.warn('[agent] template selection failed:', String(e).slice(0, 160));
-        }
-
-        const safety = safetyOutput(scan, {
-          cardScans: !!templateAnswer && CLINICAL_TEMPLATES.includes(picked),
-        });
-
-        if (templateAnswer && noteScan) {
-          const chosen = chosenOnScan(noteScan, chosenTitles);
-          if (chosen.length) send({ type: 'progress', stage: 'chosen', chosen });
-        }
-
-        send({
-          type: 'tool-result',
-          id: 'select',
-          tool: 'pick_template',
-          summary: clarify ? 'Asking which was meant' : (templateAnswer ? picked : 'No template fits — answering directly'),
-          items: [],
-        });
-
-        // ASKING BACK IS AN ANSWER. The message reads two ways and the two ways
-        // go different places, so the turn ends in one question with the
-        // readings as options; tapping one asks the original question again with
-        // the ambiguity settled. Cheaper than a wrong answer and far cheaper
-        // than a wrong referral.
-        if (clarify) {
-          // The bands go out with the question back, not after it. A red flag
-          // does not wait for the reader to say which of two things they meant.
-          send({
-            type: 'answer',
-            payload: payload({ clarify, alerts: safety.alerts, panel: safety.panel }),
-          });
-          const writtenAsk = logTurn({
-            outcome: 'template',
-            template: 'ask',
-            answer: shownText(safety.alerts, null) + '\n\n'
-              + [clarify.question, ...clarify.options.map((o) => '- ' + o)].join('\n'),
-            provenance: buildProvenance({ scan }),
-          });
-          controller.close();
-          await writtenAsk;
-          return;
-        }
-
-        if (templateAnswer) {
-          // A Notebook page or a referral card is checked against the question
-          // before it is shown — see checkAnswer above. Every other card is code
-          // whose shape was settled before the question was asked.
-          if (shouldCheck({ picked, card: templateAnswer, images: images.length, attachments: attachments.length })) {
-            const sourcePages = pagesForSources(templateAnswer.source, notebookPages);
-            const checked = await checkAnswer({ answer: answerToText(templateAnswer), pages: sourcePages });
-            if (checked.band === 'unknown') {
-              await withdraw({
-                was: {
-                  template: picked,
-                  source: (templateAnswer.source || []).join(' · '),
-                  answer: answerToText(templateAnswer),
-                },
-                fallback: sourcePages,
-                alerts: safety.alerts,
-                panel: safety.panel,
-              });
-              return;
-            }
-            if (checked.band === 'confirm') templateAnswer = withConfirmNote(templateAnswer, sourcePages);
-          }
-          send({
-            type: 'answer',
-            payload: payload({
-              template: templateAnswer,
-              alerts: safety.alerts,
-              panel: safety.panel,
-            }),
-          });
-          const written = logTurn({
-            outcome: 'template',
-            // A flagged card is logged under its flag — "referral:not-recorded"
-            // — so the gaps in the practice's notes show up as their own line
-            // on the stats page rather than hiding among answered referrals.
-            template: templateAnswer.flag ? `${picked}:${templateAnswer.flag}` : picked,
-            source: (templateAnswer.source || []).join(' · '),
-            answer: shownText(safety.alerts, templateAnswer),
-            provenance: buildProvenance({ scan, card: templateAnswer, pages: notebookPages }),
-          });
-          controller.close();
-          await written;
-          return;
-        }
-
         send({ type: 'status', text: 'Writing the answer' });
 
         const userContent = images.length
           ? [{ type: 'text', text: question }].concat(images.map((url) => ({ type: 'image', image: url })))
           : question;
 
+        // A picture is read by the images role, with the whole Notebook beside
+        // it exactly as a typed question has it.
         const proseModel = seeing ? imageModel : model;
         const proseBegan = Date.now();
         const generated = await generateText({
           model: openrouter(proseModel),
           abortSignal: deadline,
-          // The shortlist, the same text the picker read — see proseSystemPrompt.
-          system: proseSystemPrompt(notebookText),
+          // The whole Notebook first, then the rules — one byte-stable,
+          // cacheable prefix. Nothing about this question is in it.
+          system: proseSystemMessage(notebookText),
           // Capped for the same reason as readValues: an uncapped call reserves
           // the model's whole window and is refused when the balance is low.
           maxOutputTokens: PROSE_MAX_TOKENS,
@@ -1430,6 +1179,10 @@ export async function POST(request) {
         });
         recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: generated.usage });
         tookTime('answer', proseModel, proseBegan);
+        {
+          const { input, cached } = usageCounts(generated.usage);
+          console.info(`[agent] ${turnId} answer read ${input} input tokens, ${cached == null ? 'cache not reported' : cached + ' from the cache'}`);
+        }
 
         const markdown = String(generated.text || '').trim();
         if (!markdown) {
@@ -1446,73 +1199,72 @@ export async function POST(request) {
         // vouch for, would have cut every one of them out of the answer it just
         // asked for. A number written in the Notebook is a number the practice
         // wrote down; nothing else on this path is.
-        //
-        // EVERY PAGE, not only the shortlisted ones: the allow-list is about
-        // whether the practice wrote the number down, not about what this
-        // turn's prompt happened to carry, and it is the same list it was
-        // before the shortlist existed.
-        const verified = verifiedNumbers([question, history, attached, notebookPages.length ? notebookFullText(notebookPages) : '']);
-        const redact = (t) => redactUnverifiedNumbers(t, verified);
-        const prose = redact(markdown);
+        const verified = verifiedNumbers([question, history, attached, notebookText]);
+        const prose = redactUnverifiedNumbers(markdown, verified);
 
-        // AND WHETHER IT IS THE PRACTICE'S OWN WORDS, MEASURED.
-        //
-        // This path is handed the Notebook's shortlist and told to use its exact
-        // wording, so an answer off this path is routinely the practice's own
-        // page — and the card was telling the reader, in so many words, that no
-        // practice document was used and they should go and check. A warning
-        // that fires on the answers that do not need it is a warning nobody
-        // reads on the ones that do.
-        //
-        // So the claim is no longer a flag set by which branch we came down.
-        // The answer is compared against the pages it was written from, run of
-        // words by run of words: where it is demonstrably made of a page, the
-        // page is named and the banner goes. Where it is not, the banner is
-        // exactly what it always was. See lib/questions/grounding.mjs.
-        const madeOf = groundedIn(prose, notebookPages);
+        // THE CITATIONS, MADE LINKS — or plain words, where a heading names no
+        // page. Redacted first, so a link is never built out of a number the
+        // redactor would have taken out.
+        const refs = resolveReferences(prose, notebookPages);
+        const cited = citedPages(refs.cited, notebookPages);
+        if (refs.unknown.length) {
+          console.warn(`[agent] ${turnId} cited ${refs.unknown.length} heading(s) that name no page: ${refs.unknown.map((u) => JSON.stringify(u.slice(0, 80))).join(', ')}`);
+        }
+        referencesLog = { ...referencesLog, cited: refs.cited.map((c) => c.docId), unknown: refs.unknown.slice(0, 10).map((u) => u.slice(0, 200)) };
+        const citedSource = cited.map((page) => page.docTitle).join(' · ');
 
-        // CHECKED LIKE A CARD. The pages the answer is demonstrably made of go
-        // first, then the rest of what the writer was shown — the shortlist,
-        // when search narrowed it; a whole-Notebook fallback is too much to send
-        // and says nothing about which pages mattered. An answer written with no
+        send({
+          type: 'tool-result',
+          id: 'select',
+          tool: 'read_notebook',
+          summary: refs.cited.length ? refs.cited.map((c) => c.title).join(' · ') : 'No Notebook page cited',
+          items: [],
+        });
+
+        // "I DON'T KNOW" NAMES ITS PAGE AS THE CLOSEST, NOT AS A SOURCE. The
+        // writer cites the nearest page when the Notebook does not cover the
+        // question; calling that page a source would say the answer stood on
+        // it. It also keeps the question log honest: a prose answer with no
+        // "Sources:" line is filed on /questions as one the notes cannot
+        // answer (lib/questions/gaps.mjs).
+        const unknownLine = saysDontKnow(refs.body);
+        const closingLine = sourcesLine(refs.cited, unknownLine ? 'Closest page' : 'Sources');
+        const withClosing = (text) => (closingLine ? `${text}\n\n${closingLine}` : text);
+        let body = refs.body;
+
+        // CHECKED AGAINST THE PAGES IT CITES. An answer that cites nothing is
+        // checked against the question alone. An answer written with no
         // Notebook at all (it could not be loaded) did not come from it, and is
         // not checked against it.
-        const madePages = notebookPages.filter((page) => madeOf.some((m) => m.docTitle === page.docTitle));
-        let shownProse = prose;
-        if (notebookPages.length && shouldCheck({ prose: true, images: images.length, attachments: attachments.length })) {
-          const checked = await checkAnswer({
-            answer: prose,
-            pages: madePages.concat(shortlist.full ? [] : shortlist.pages),
-          });
+        if (notebookPages.length && shouldCheck({ images: images.length, attachments: attachments.length })) {
+          const checked = await checkAnswer({ answer: withClosing(refs.body), pages: cited });
           if (checked.band === 'unknown') {
             await withdraw({
-              was: { template: 'prose', source: madeOf.map((m) => m.docTitle).join(' · '), answer: prose },
-              fallback: madePages,
-              // The writer is told to name the closest page when the Notebook
-              // does not cover the question; that page leads the list.
-              prefer: pagesNamedIn(prose, notebookPages),
+              was: { template: 'prose', source: citedSource, answer: withClosing(refs.body) },
+              // The writer is told to cite the closest page when the Notebook
+              // does not cover the question; those pages lead the list.
+              prefer: cited,
               alerts: safety.alerts,
               panel: safety.panel,
             });
             return;
           }
-          if (checked.band === 'confirm') shownProse = withConfirmLine(prose, madePages);
+          if (checked.band === 'confirm') body = withConfirmLine(body, cited);
         }
+        const shownProse = withClosing(body);
 
         send({
           type: 'answer',
           payload: payload({
-            // WHAT THIS ANSWER IS MADE OF, rather than which branch produced
-            // it. Nothing here was retrieved and cited as a document passage,
-            // so there is no citation to open — but where the words are
-            // demonstrably the Notebook's, the pages are named and the reader
-            // is not told to go and check the practice's own writing. The bands
-            // above are not the model's work at all, which is why they apply on
-            // this path exactly as on every other.
-            general: !madeOf.length,
-            // The pages it was made of, for the line under the answer. Empty
-            // on an answer that really is the assistant's own work.
-            sources: madeOf.map((m) => m.docTitle),
+            // The assistant's own work when it cited no page of the Notebook;
+            // otherwise the pages are in the answer itself, as links, and the
+            // reader is not told to go and check the practice's own writing.
+            general: !refs.cited.length,
+            // Not repeated here: the pages are the answer's own closing line,
+            // as links. `references` carries them as data for anything that
+            // wants to draw them differently.
+            sources: [],
+            references: refs.cited,
             alerts: safety.alerts,
             panel: safety.panel,
             sections: [{
@@ -1528,8 +1280,11 @@ export async function POST(request) {
         });
         const written = logTurn({
           outcome: 'prose',
+          // The pages it cited, in the "Notebook: A / B" form the log's other
+          // readers count (the Referrals page's most-asked list, /stats).
+          source: unknownLine ? '' : citedSource,
           answer: shownText(safety.alerts, null) + (safety.alerts.length ? '\n\n---\n\n' : '') + shownProse,
-          provenance: buildProvenance({ scan, pages: madePages }),
+          provenance: buildProvenance({ scan }),
         });
         controller.close();
         await written;

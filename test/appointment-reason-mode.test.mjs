@@ -14,50 +14,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { COMMAND_SCHEMAS, SELECTION_SCHEMA, renderCommand, renderSelection, selectionPrompt } from '../lib/templates/route.mjs';
+import { COMMAND_SCHEMAS, renderCommand } from '../lib/templates/route.mjs';
 import { appointmentReasonAnswer } from '../lib/templates/writing.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
 import * as writing from '../lib/templates/writing.mjs';
 
-const templates = () => SELECTION_SCHEMA.shape.template._def.values;
-
-test('the picker cannot choose a written reason line at all', () => {
-  assert.ok(!templates().includes('appointmentReason'), 'appointmentReason is still on the picker');
-  // And the fields that existed only to fill it in are gone with it, so no
-  // model is asked for a reason line on this path.
-  assert.equal(SELECTION_SCHEMA.shape.reason, undefined);
-  assert.equal(SELECTION_SCHEMA.shape.details, undefined);
-});
-
-test('nothing renders one either, however the selection is shaped', () => {
-  const card = renderSelection(
-    { template: 'appointmentReason', reason: 'heartburn 3/52, worsening', details: [] },
-    'I have had heartburn for about 3 weeks and it is getting worse',
-  );
-  assert.equal(card, null, 'a reason card was rendered from a plain selection');
-
-  // The card itself no longer exists, so it cannot be reached another way.
+test('no written-reason card exists to be reached', () => {
   assert.equal(writing.writtenReasonAnswer, undefined);
 });
 
-test('the prompt sends a pasted patient message to triage, and names the mode', () => {
-  const prompt = selectionPrompt({ question: 'I have had heartburn for 3 weeks', notebook: '' });
-  assert.doesNotMatch(prompt, /"appointmentReason"/);
-  assert.match(prompt, /REASON FOR APPOINTMENT IS NOT WRITTEN ON THIS PATH/);
-  assert.match(prompt, /AccurX mode/);
-  // Triage is where a described patient goes now, first person or not.
-  assert.match(prompt, /INCLUDING first-person text a patient wrote/);
-});
-
 test('the house style is still answered, and says where the line gets written', () => {
-  assert.ok(templates().includes('appointmentReasonRules'), 'the house style is unreachable');
-  const card = renderSelection({ template: 'appointmentReasonRules' }, 'how should I write the reason for appointment');
+  const card = appointmentReasonAnswer();
   assert.equal(card.title, 'Writing the reason for appointment');
 
   const text = answerToText(card);
   assert.match(text, /choose the AccurX mode/i, 'the card does not say where the line is written');
-  // It teaches the style; it does not write anybody's line.
-  assert.equal(answerToText(appointmentReasonAnswer()), text);
 });
 
 test('the mode itself still writes the line, with where the request goes', () => {

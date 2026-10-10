@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { orQuery } from '../lib/search/query.mjs';
+import { orQuery, previousUserMessage } from '../lib/search/query.mjs';
 
 // The lexical arm ORs the question's words. A natural-language question under
 // AND matches almost nothing, because no page contains "how", "do" and "I"
@@ -32,4 +32,27 @@ test('orQuery repeats no word and stops at 24', () => {
 test('orQuery output carries nothing to_tsquery could read as syntax', () => {
   assert.equal(orQuery("a & b | c ! (d) 'e':* <-> f"), '');
   assert.equal(orQuery('blood&tests|today'), 'blood | tests | today');
+});
+
+// The staff member's previous message, for the answer check: "and for
+// children?" is not a question on its own.
+
+test('previousUserMessage is the staff member’s last message, not the assistant’s answer', () => {
+  const history = [
+    'Staff member: how do I refer to the district nurse?',
+    'The assistant answered: Email the district nurses.',
+  ].join('\n');
+  assert.equal(previousUserMessage(history), 'how do I refer to the district nurse?');
+});
+
+test('previousUserMessage takes only the LAST user message, all of its lines', () => {
+  const history = [
+    'Staff member: where is the rota?',
+    'The assistant answered: On the shared drive.',
+    'Staff member: a patient needs a dressing at home',
+    'she is housebound',
+    'The assistant answered: Refer to the district nurses.',
+  ].join('\n');
+  assert.equal(previousUserMessage(history), 'a patient needs a dressing at home\nshe is housebound');
+  assert.equal(previousUserMessage(''), '');
 });

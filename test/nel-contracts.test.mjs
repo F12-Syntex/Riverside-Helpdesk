@@ -5,7 +5,6 @@ import {
 } from '../lib/referrals/nel-contracts.mjs';
 import { contractNotFound, contractTemplateAnswer } from '../lib/templates/contracts.mjs';
 import { commandByName, forcedTemplate } from '../lib/commands.mjs';
-import { SELECTION_SCHEMA, selectionPrompt } from '../lib/templates/route.mjs';
 import { referralAnswer } from '../lib/templates/referrals.mjs';
 
 // The contract-to-template mapping out of PCIT's mobilisation Sitrep. Two things
@@ -241,8 +240,7 @@ test('Contract template is a mode, and it claims the contract template', () => {
 // asked in ordinary words, which meant PCIT's list answered a question nobody
 // had pointed at it. It is a mode's document now: reachable by arming Contract
 // template (or typing /template) and by nothing else.
-test('the contract template is reachable by the command and NOT by the router', () => {
-  assert.ok(!SELECTION_SCHEMA.shape.template._def.values.includes('contractTemplate'));
+test('the contract template is reachable by the command', () => {
   assert.equal(commandByName('template').template, 'contractTemplate');
 });
 
@@ -258,25 +256,6 @@ test('a miss on /template is answered by the Sitrep, not by prose', () => {
 });
 
 /* ------------------------------------------- not at the Notebook's expense */
-
-// The router picks ONE template, and the prompt makes "notebook" the fallback —
-// chosen when none of the numbered shapes fit. Adding contractTemplate high in
-// that list therefore put the practice's own procedures at risk: "how do we do
-// wound care" names a NEL contract, and answering it with PCIT's template names
-// and a build status from a dated bulletin would be a worse answer than the
-// Notebook page the reader wanted. The prompt has to say so out loud, because
-// nothing in the code can catch it — by the time a template is chosen, the
-// choice has been made.
-test('the prompt puts both NEL lists out of the router\'s reach', () => {
-  const prompt = selectionPrompt({ question: 'anything', notebook: 'Some page\n' });
-  assert.match(prompt, /THE TWO NEL LISTS ARE NOT ON THIS PATH/);
-  // The examples matter more than the rule: they are what a model actually
-  // pattern-matches against.
-  assert.match(prompt, /Which template for the ADHD shared pathway/);
-  assert.match(prompt, /choose "notebook"/);
-  // And it must not still be offering the template it can no longer render.
-  assert.doesNotMatch(prompt, /"contractTemplate"/);
-});
 
 // The other half of the same guard, on the referral side. That one IS enforced
 // in code — referralAnswer reads the Notebook before it reaches the tree — so

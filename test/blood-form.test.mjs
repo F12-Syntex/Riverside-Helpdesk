@@ -12,7 +12,6 @@ import test from 'node:test';
 import {
   BLOOD_FORMS, FORM_SECTIONS, bloodForm, bloodFormAnswer, clinicalDetails, findRecordedBloods, formItem,
 } from '../lib/templates/bloods.mjs';
-import { SELECTION_SCHEMA, renderSelection, selectionPrompt } from '../lib/templates/route.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
 
 const screen = (card) => card.blocks.find((b) => b.type === 'pathology');
@@ -222,27 +221,6 @@ test('the screen survives being written into the question log', () => {
   assert.match(text, /Ordered items: Electrolytes \+ Creatinine, Liver Profile \(LFT\), TFTs - Free T4 & TSH, Full Blood Count \(FBC\)/);
   assert.match(text, /Clinical details: NHS Health Check/);
   assert.match(text, /Biochemistry 1: Electrolytes \+ Creatinine, Liver Profile \(LFT\)/);
-});
-
-test('the picker can choose it, and the choice renders the card', () => {
-  // The template is on the schema the model fills in...
-  const templates = SELECTION_SCHEMA.shape.template._def.values;
-  assert.ok(templates.includes('bloodForm'), 'bloodForm is not a template the picker may choose');
-
-  // ...and the field it fills in beside it.
-  assert.ok(SELECTION_SCHEMA.shape.healthCheck, 'there is nothing to say which check it is');
-
-  // ...and it is described to the model, so choosing it is possible at all.
-  const prompt = selectionPrompt({ question: 'what bloods for an NHS health check', notebook: '' });
-  assert.match(prompt, /"bloodForm"/);
-
-  const card = renderSelection(
-    { template: 'bloodForm', healthCheck: 'new patient health check' },
-    'what bloods do I order for a new patient health check',
-  );
-  assert.equal(card.title, 'Blood form');
-  assert.deepEqual(screen(card).ordered, HEALTH_CHECK);
-  assert.equal(screen(card).clinicalDetails, 'New patient health check');
 });
 
 test('the recorded form matches by name however it is asked for', () => {

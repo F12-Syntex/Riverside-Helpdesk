@@ -124,26 +124,6 @@ test('Repeat medication is a mode', () => {
 
 /* -------------------------------------- a screenshot pasted into plain Q&A */
 
-// The screen does not have to be sent under /medication: pasted into ordinary
-// Q&A, the picker is told what the screen looks like and can choose the same
-// card. Nothing read is null there — the turn goes on to prose rather than
-// showing the how-to card for a mode the reader did not choose.
-test('the picker knows the medication screen, and builds the same card', async () => {
-  const { SELECTION_SCHEMA, renderSelection, selectionPrompt } = await import('../lib/templates/route.mjs');
-  assert.ok(SELECTION_SCHEMA.shape.template.options.includes('repeatMedication'));
-  const parsed = SELECTION_SCHEMA.parse({ template: 'repeatMedication', medication: SCREEN });
-  const card = renderSelection(parsed, 'Please look at the attached image.', []);
-  assert.equal(card.title, 'Repeat prescription request');
-  assert.equal(card.blocks.filter((b) => b.type === 'fields').length, 2);
-  assert.equal(renderSelection({ template: 'repeatMedication', medication: { groups: [] } }, '', []), null);
-
-  // The prompt describes the screen, and says when pictures are attached.
-  const prompt = selectionPrompt({ question: 'Please look at the attached image.', images: 1 });
-  assert.match(prompt, /12\. "repeatMedication"/);
-  assert.match(prompt, /ATTACHED: one picture/);
-  assert.doesNotMatch(selectionPrompt({ question: 'how do I refer for an ECG' }), /ATTACHED:/);
-});
-
 test('a picture that was sent and not read is said on the card', () => {
   const sent = renderCommand('repeatMedication', {}, '', { images: 1 });
   assert.match(sent.subtitle, /picture was sent/);

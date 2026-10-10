@@ -8,7 +8,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { REGISTRATION_SCENARIO_IDS, registrationAnswer } from '../lib/templates/registration.mjs';
-import { renderSelection, selectionClarify } from '../lib/templates/route.mjs';
 import { notebookPageAnswer } from '../lib/templates/notebook.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
 
@@ -54,35 +53,6 @@ test('an unknown scenario falls back to the whole card rather than an empty one'
   const card = registrationAnswer({ scenario: 'nonsense' });
   assert.match(card.title, /Register a new patient/);
   assert.match(flat(card), /Shows as a local patient, inactive/);
-});
-
-test('the router builds the card, and only for a scenario it knows', () => {
-  const whole = renderSelection({ template: 'registration', registrationScenario: 'none' }, 'how do I register a patient');
-  assert.match(whole.title, /Register a new patient/);
-  const named = renderSelection({ template: 'registration', registrationScenario: 'multiple' }, 'several patients came back');
-  assert.match(named.title, /several patients/i);
-});
-
-test('a question back needs a question and something to choose between', () => {
-  assert.deepEqual(
-    selectionClarify({ template: 'ask', askQuestion: 'Which referral?', askOptions: ['On e-RS', 'By email'] }),
-    { question: 'Which referral?', options: ['On e-RS', 'By email'] },
-  );
-  // One option is not a choice; no question is not a question. Both mean the
-  // turn answers as usual rather than showing an empty card.
-  assert.equal(selectionClarify({ template: 'ask', askQuestion: 'Which?', askOptions: ['Only this'] }), null);
-  assert.equal(selectionClarify({ template: 'ask', askQuestion: '', askOptions: ['a', 'b'] }), null);
-  assert.equal(selectionClarify({ template: 'notebook', askQuestion: 'Which?', askOptions: ['a', 'b'] }), null);
-  assert.equal(selectionClarify(null), null);
-});
-
-test('a question back is capped at four options', () => {
-  const clarify = selectionClarify({
-    template: 'ask',
-    askQuestion: 'Which one?',
-    askOptions: ['one', 'two', 'three', 'four', 'five', 'six'],
-  });
-  assert.equal(clarify.options.length, 4);
 });
 
 test('a Notebook page shows the pictures attached to it', () => {

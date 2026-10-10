@@ -9,7 +9,6 @@ import {
 } from '../lib/templates/referrals.mjs';
 import { formCommandAnswer } from '../lib/templates/lookup-command.mjs';
 import { commandByName, forcedTemplate } from '../lib/commands.mjs';
-import { SELECTION_SCHEMA } from '../lib/templates/route.mjs';
 
 // The NEL Referral Tree is 533 form names lifted out of a PDF, and the whole
 // value of them is that they are the strings staff type into EMIS. So these
@@ -255,14 +254,6 @@ test('Referral form is a mode, and it claims its own template', () => {
   assert.equal(command.fill, 'lookup');
   // The server honours a template only when a command claims it.
   assert.equal(forcedTemplate('referralForm'), 'referralForm');
-});
-
-// The router must not be able to choose it: an ordinary question keeps going
-// through `referral`, which checks the practice's own material first.
-test('the model cannot pick the command-only template', () => {
-  const templates = SELECTION_SCHEMA.shape.template._def.values;
-  assert.ok(!templates.includes('referralForm'));
-  assert.ok(templates.includes('referral'));
 });
 
 test('a miss on /form is answered by the tree, not by prose', () => {

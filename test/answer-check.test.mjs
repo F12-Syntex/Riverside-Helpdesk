@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { DECISIONS_URL, DECISION_MODELS, decide, decisionRequest, decisionUsage } from '../lib/ai/decisions.mjs';
 import {
   CHECK_CONFIRM_BELOW, CHECK_NAME, CHECK_QUESTIONS, CHECK_SOURCE_CHARS, CHECK_TIMEOUT_MS, CHECK_UNKNOWN_BELOW,
-  checkBand, checkProvenance, checkState, closestPages, pagesForSources, pagesNamedIn, runAnswerCheck, shouldCheck,
-  unknownAnswer, withConfirmLine, withConfirmNote,
+  checkBand, checkProvenance, checkState, closestPages, runAnswerCheck, shouldCheck,
+  unknownAnswer, withConfirmLine,
 } from '../lib/questions/answer-check.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
+import { citedPages, resolveReferences } from '../lib/questions/references.mjs';
 
 // The answer check withdraws a Notebook answer that does not answer the
 // question, flags a doubtful one, and — the rule everything else here protects
@@ -204,44 +205,36 @@ test('the sources are the pages in the order given, cut at the budget', () => {
   assert.equal('previousQuestion' in state, false, 'no previous message, no field');
 });
 
-test('only Notebook answers are checked, and never a turn with pictures or an attachment', () => {
-  const page = { title: 'X', blocks: [], source: ['Notebook: X'] };
-  assert.equal(shouldCheck({ prose: true }), true);
-  assert.equal(shouldCheck({ picked: 'notebook', card: page }), true);
-  assert.equal(shouldCheck({ picked: 'referral', card: page }), true);
-  // A card that already says the practice has nothing is the honest answer.
-  assert.equal(shouldCheck({ picked: 'referral', card: { ...page, flag: 'not-recorded' } }), false);
-  // Cards built in code are not Notebook answers.
-  for (const picked of ['triage', 'registration', 'documentCoding', 'bloodForm', 'referralProcess']) {
-    assert.equal(shouldCheck({ picked, card: page }), false, picked);
-  }
-  assert.equal(shouldCheck({ prose: true, images: 1 }), false);
-  assert.equal(shouldCheck({ picked: 'notebook', card: page, attachments: 1 }), false);
-  assert.equal(shouldCheck({ picked: 'notebook', card: null }), false);
+test('every Q&A answer is checked, never a turn with pictures or an attachment', () => {
+  assert.equal(shouldCheck({}), true);
+  assert.equal(shouldCheck({ images: 1 }), false);
+  assert.equal(shouldCheck({ attachments: 1 }), false);
 });
 
-test('the source pages are found by the titles the card cites', () => {
+test('the check reads the pages the answer cites, in citing order — and nothing when it cites none', () => {
   const pages = [
-    { docId: 'note:1', docTitle: 'Notebook: Referrals / District Nurse (DN)', text: 'dn' },
-    { docId: 'note:2', docTitle: 'Notebook: Referrals / Standard referral flow (e-RS)', text: 'ers' },
+    { docId: 'note:1', docTitle: 'Notebook: Referrals / District Nurse (DN)', text: 'Use the DN form.' },
+    { docId: 'note:2', docTitle: 'Notebook: Referrals / Standard referral flow (e-RS)', text: 'Book on e-RS.' },
+    { docId: 'note:3', docTitle: 'Notebook: Front desk / Parking', text: 'Never sent.' },
   ];
-  const found = pagesForSources(['Standard referral flow (e-RS)', 'Notebook: Referrals / District Nurse (DN)', 'Nothing'], pages);
-  assert.deepEqual(found.map((p) => p.docId), ['note:2', 'note:1']);
+  const { cited } = resolveReferences('Book it [[Standard referral flow (e-RS)]]; the DN differs [[Notebook: Referrals / District Nurse (DN)]].', pages);
+  const state = checkState({ question: 'q', answer: 'a', pages: citedPages(cited, pages) });
+  assert.equal(state.sources, '### Referrals / Standard referral flow (e-RS)\nBook on e-RS.\n\n### Referrals / District Nurse (DN)\nUse the DN form.');
+  assert.ok(!state.sources.includes('Never sent.'), 'an uncited page is not sent');
+  const none = resolveReferences('I don’t know — the Notebook does not cover this.', pages);
+  assert.equal(checkState({ question: 'q', answer: 'a', pages: citedPages(none.cited, pages) }).sources, '');
 });
 
 /* ------------------------------------------------------- what the reader sees */
 
-test('"I don\'t know" says so, names the closest pages and says when it was filed', () => {
-  const shortlist = {
-    full: false,
-    pages: [
-      { docId: 'note:12', docTitle: 'Notebook: Staff procedures / Car parking', text: '' },
-      { docId: 'note:7', docTitle: 'Notebook: Start here', text: '' },
-      { docId: 'note:9', docTitle: 'Notebook: Front desk / Opening hours', text: '' },
-      { docId: 'note:4', docTitle: 'Notebook: Fourth', text: '' },
-    ],
-  };
-  const closest = closestPages({ shortlist });
+test('"I don\'t know" says so, links the closest pages and says when it was filed', () => {
+  const cited = [
+    { docId: 'note:12', docTitle: 'Notebook: Staff procedures / Car parking', text: '' },
+    { docId: 'note:7', docTitle: 'Notebook: Start here', text: '' },
+    { docId: 'note:9', docTitle: 'Notebook: Front desk / Opening hours', text: '' },
+    { docId: 'note:4', docTitle: 'Notebook: Fourth', text: '' },
+  ];
+  const closest = closestPages({ prefer: cited });
   assert.equal(closest.length, 3);
   assert.deepEqual(closest[0], { title: 'Car parking', under: 'Staff procedures', href: '/notebook/car-parking-12' });
   assert.deepEqual(closest[1], { title: 'Start here', under: '', href: '/notebook/start-here-7' });
@@ -255,10 +248,12 @@ test('"I don\'t know" says so, names the closest pages and says when it was file
   assert.match(filed.blocks[0].text, /^I don’t know — the practice’s Notebook does not cover this/);
   assert.equal(filed.blocks[1].title, 'Closest pages');
   assert.deepEqual(filed.blocks[1].items, [
-    '**Car parking** — Practice notes › Staff procedures',
-    '**Start here**',
-    '**Opening hours** — Practice notes › Front desk',
+    '[Car parking](/notebook/car-parking-12) — Practice notes › Staff procedures',
+    '[Start here](/notebook/start-here-7)',
+    '[Opening hours](/notebook/opening-hours-9) — Practice notes › Front desk',
   ]);
+  // A page with no address is named, not linked.
+  assert.deepEqual(unknownAnswer({ closest: [{ title: 'Loose', under: '', href: '' }] }).blocks[1].items, ['**Loose**']);
   const text = answerToText(filed);
   assert.match(text, /added to the open questions/);
 
@@ -268,39 +263,16 @@ test('"I don\'t know" says so, names the closest pages and says when it was file
   assert.doesNotMatch(answerToText(unfiled), /has been added/);
 });
 
-test('a whole-Notebook shortlist is not a ranking, so the withdrawn answer\'s pages are offered', () => {
-  const all = [{ docId: 'note:1', docTitle: 'Notebook: A', text: '' }, { docId: 'note:2', docTitle: 'Notebook: B', text: '' }];
-  const fallback = [{ docId: 'note:2', docTitle: 'Notebook: B', text: '' }];
-  assert.deepEqual(closestPages({ shortlist: { full: true, pages: all }, fallback }).map((p) => p.title), ['B']);
-  assert.deepEqual(closestPages({ shortlist: { full: true, pages: all } }), []);
+test('the cited pages lead, the fallback fills, a page is offered once and nothing cited offers nothing', () => {
+  const a = { docId: 'note:1', docTitle: 'Notebook: A', text: '' };
+  const b = { docId: 'note:2', docTitle: 'Notebook: B', text: '' };
+  assert.deepEqual(closestPages({ prefer: [b], fallback: [a, b] }).map((p) => p.title), ['B', 'A']);
+  assert.deepEqual(closestPages({}), []);
 });
 
-test('a doubtful answer keeps everything and gains one line naming the page', () => {
-  const card = { title: 'District nurse', blocks: [{ type: 'text', markdown: 'page' }], source: ['Notebook: Referrals / District nurse'] };
+test('a doubtful answer gains one line naming the page', () => {
   const pages = [{ docId: 'note:1', docTitle: 'Notebook: Referrals / District nurse', text: 'page' }];
-  const flagged = withConfirmNote(card, pages);
-  assert.equal(flagged.blocks.length, 2);
-  assert.deepEqual(flagged.blocks[0], card.blocks[0]);
-  assert.equal(flagged.blocks[1].type, 'note');
-  assert.equal(flagged.blocks[1].tone, 'warn');
-  assert.match(flagged.blocks[1].text, /^Check this against the page \(\*\*District nurse\*\*\) before acting on it/);
-  assert.equal(card.blocks.length, 1, 'the original card is not mutated');
-
   const prose = withConfirmLine('The answer.\n\nSource: District nurse', pages);
   assert.ok(prose.startsWith('The answer.\n\nSource: District nurse\n\nCheck this against the page (**District nurse**)'));
   assert.match(withConfirmLine('x', []), /Check this against the practice’s page/);
-});
-
-test('the page a withdrawn written answer pointed to leads the closest pages', () => {
-  const pages = [
-    { docId: 'note:1', docTitle: 'Notebook: Contacts / Paradoc (out of hours)', text: '' },
-    { docId: 'note:2', docTitle: 'Notebook: Staff procedures / Attendance, lateness and EMIS login', text: '' },
-    { docId: 'note:3', docTitle: 'Notebook: Start', text: '' },
-  ];
-  const prose = 'I don’t know — the Notebook does not cover this. The closest page is **Notebook: Staff procedures / Attendance, lateness and EMIS login**. Start with the manager.';
-  const named = pagesNamedIn(prose, pages);
-  // A title too short to be a name ("Start") is not taken as one.
-  assert.deepEqual(named.map((p) => p.docId), ['note:2']);
-  const closest = closestPages({ shortlist: { full: false, pages: [pages[0], pages[1]] }, prefer: named });
-  assert.deepEqual(closest.map((p) => p.title), ['Attendance, lateness and EMIS login', 'Paradoc (out of hours)']);
 });
