@@ -18,6 +18,17 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.62.6` | 2026-10-10 | chore | `35fac9a` | chore: add a whole-Notebook baseline mode to the picker bench |
+| `6.62.5` | 2026-10-10 | chore | `b083dcb` | chore: send provider-pinned models through the app's router in the bench |
+| `6.62.4` | 2026-10-10 | fix | `72cc1b5` | fix: harden the search against hangs, image turns and stale pages |
+| `6.62.3` | 2026-10-10 | fix | `045340c` | fix: rank the notebook shortlist by meaning, not the fused score |
+| `6.62.2` | 2026-10-10 | docs | `e4743ab` | docs: describe lib/search as the one search system |
+| `6.62.1` | 2026-10-10 | chore | `2a9d145` | chore: measure the shortlist in the picker bench |
+| `6.62.0` | 2026-10-10 | feat | `8e575f6` | feat: show the AI a notebook shortlist instead of the whole notebook |
+| `6.61.0` | 2026-10-10 | feat | `d1b95cd` | feat: index every notebook change for hybrid search automatically |
+| `6.60.3` | 2026-10-10 | refactor | `3c63a16` | refactor: remove the trigger router and dead search code |
+| `6.60.2` | 2026-10-10 | docs | `cdecef1` | docs: add the search rebuild design and plan |
+| `6.60.1` | 2026-10-09 | docs | `c9786cd` | docs: record the picker timeout fix and Notebook prompt in versions |
 | `6.60.0` | 2026-10-09 | feat | `f4d6e2f` | feat: steer the picker toward finding the answer in the Notebook |
 | `6.59.4` | 2026-10-09 | fix | `5bdffc2` | fix: stop Claude's picker timing out on a rejected schema |
 | `6.59.3` | 2026-10-09 | docs | `a8b8a3f` | docs: record the REWORK_ACTIVE env fix in versions |
