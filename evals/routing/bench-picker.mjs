@@ -145,11 +145,12 @@ if (shortlistOnly) {
   console.log(`${cases.length} cases, shortlist only (no model calls), ${pages.length} pages`);
 } else {
   ai = await import('ai');
-  const { createOpenRouter } = await import('@openrouter/ai-sdk-provider');
   const { getModelRoles } = await import('../../lib/settings.js');
-  const { AI_SDK_EXTRA_BODY } = await import('../../lib/ai/openrouter.mjs');
+  // The endpoint's own provider: a model id pinned to a provider
+  // ("…@google-vertex/europe") is sent as the bare id with its routing.
+  const { createRouter } = await import('../../lib/ai/openrouter.mjs');
   model = opt('--model', '') || (await getModelRoles()).fast.model;
-  openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, extraBody: AI_SDK_EXTRA_BODY });
+  openrouter = createRouter(process.env.OPENROUTER_API_KEY);
   console.log(`${cases.length} cases x ${repeats} repeat${repeats === 1 ? '' : 's'} on ${model}, ${pages.length} pages`);
 }
 
