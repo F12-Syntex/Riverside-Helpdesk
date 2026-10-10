@@ -18,6 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.66.0` | 2026-10-11 | feat | `2708186` | feat: answer Q&A from the whole Notebook with linked page references |
+| `6.65.0` | 2026-10-11 | feat | `9864e14` | feat: render answer links and a Sources row in the chat |
+| `6.64.2` | 2026-10-11 | docs | `c0e7490` | docs: plan the whole-Notebook Q&A with clickable references |
+| `6.64.1` | 2026-10-11 | docs | `5f264a8` | docs: record the referrals page and answer check in versions |
 | `6.64.0` | 2026-10-11 | feat | `ab4d12f` | feat: make a natural-language referrals search the front page |
 | `6.63.0` | 2026-10-11 | feat | `1a85e3d` | feat: check every notebook answer with Jev and say when it doesn't know |
 | `6.62.8` | 2026-10-10 | docs | `ecf7422` | docs: plan the referrals front page and the Jev answer check |
