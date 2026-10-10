@@ -12,7 +12,6 @@ npm run rag:status          # what's indexed, what's new/changed/unsupported
 npm run rag:ingest          # process new or changed files only
 npm run rag:ingest -- -f    # force re-process everything
 npm run rag:ingest -- --offline  # parse locally and preserve/report missing vectors
-npm run rag:migrate-legacy  # one-time import of lib/emis-knowledge.js
 ```
 
 1. Copy files into `rag/sources/` (subfolders are fine).

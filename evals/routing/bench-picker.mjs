@@ -66,7 +66,8 @@ const { getSql, ensureNotebookSchema } = await import('../../lib/db.js');
 const { getModelRoles } = await import('../../lib/settings.js');
 const { AI_SDK_EXTRA_BODY } = await import('../../lib/ai/openrouter.mjs');
 const { SELECTION_SCHEMA, selectionPrompt, notebookFullText } = await import('../../lib/templates/route.mjs');
-const { pagePath } = await import('../../lib/routing/router.mjs');
+// A page's path without the 'Notebook:' prefix, as pages.md writes it.
+const pagePath = (title) => String(title || '').replace(/^notebook:\s*/i, '').trim();
 
 await ensureNotebookSchema();
 const sql = getSql();

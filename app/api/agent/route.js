@@ -47,7 +47,6 @@ import { needsAppointmentMode } from '@/lib/triage/destinations.mjs';
 import { looksMultiIntent } from '@/lib/safety/requests.mjs';
 import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
-import { routeQuestion } from '@/lib/routing/router.mjs';
 import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { groundedIn } from '@/lib/questions/grounding.mjs';
@@ -1082,8 +1081,6 @@ export async function POST(request) {
         // sidebar, right-click → Type) carries the values on that screen as
         // saved fields, so the screen is drawn above the page straight from
         // them: no model reads the page for it, and a draft is not drawn.
-        // Shared by the router's hit and the picker's choice, so a page
-        // reached either way is drawn the same.
         const applyKindCard = (selection) => {
           const typed = templateAnswer ? typedNotebookPage(selection, notebookPages) : null;
           if (typed) templateAnswer = withKindCard(templateAnswer, typed);
@@ -1153,34 +1150,8 @@ export async function POST(request) {
           }
         };
 
-        // THE ROUTER, IN FRONT OF THE PICKER. Strictly additive: a miss (and
-        // the switch being off, which is the default) falls through to the
-        // picker below, which behaves exactly as it did before the router
-        // existed. A confident, clear match on the trigger index renders the
-        // page with no model call at all; a close call between two pages asks
-        // back, with the pages as the options. See lib/routing/router.mjs.
-        //
-        // Not on a message with a picture — the picture has to be read — and
-        // not on a message that looks like several asks, because the picker's
-        // split into requests is what the unresolved panel is built from.
-        // The safety scan has already run over the whole message above, so a
-        // red flag is banded on the router path exactly as on every other.
-        const routed = (seeing || decompose)
-          ? null
-          : await routeQuestion(question, { pages: notebookPages, turnId }).catch(() => null);
-        if (routed && routed.decision === 'hit' && routed.page) {
-          picked = 'notebook:router';
-          const selection = { template: 'notebook', pages: [routed.page.docTitle] };
-          chosenTitles = selection.pages;
-          templateAnswer = renderSelection(selection, question, notebookPages, {});
-          if (templateAnswer) applyKindCard(selection);
-        } else if (routed && routed.decision === 'ambiguous' && routed.clarify) {
-          clarify = routed.clarify;
-        }
-
-        // The picker, unchanged — skipped only when the router has already
-        // answered or asked. (`if … try` is deliberate: the block is the
-        // picker as it was, brace for brace.)
+        // The picker. (`if … try` is deliberate: the block is the picker as
+        // it was, brace for brace — nothing above it answers or asks.)
         if (!templateAnswer && !clarify) try {
           // With a picture attached the picker runs on the images role and is
           // shown the picture, so a screenshot of a letter can be recognised
@@ -1217,7 +1188,7 @@ export async function POST(request) {
           // out of it — see applyReferralRead above.
           await applyReferralRead(selection.object);
         } catch (e) {
-          // A router that cannot answer is not a turn that cannot answer — and
+          // A picker that cannot answer is not a turn that cannot answer — and
           // the scan already ran over the whole message, so a turn that ends in
           // prose still carries every finding.
           console.warn('[agent] template selection failed:', String(e).slice(0, 160));
@@ -1254,9 +1225,7 @@ export async function POST(request) {
           });
           const writtenAsk = logTurn({
             outcome: 'template',
-            // The router's question back is logged under its own name, so the
-            // two kinds of asking can be told apart on the stats page.
-            template: routed && routed.decision === 'ambiguous' ? 'ask:router' : 'ask',
+            template: 'ask',
             answer: shownText(safety.alerts, null) + '\n\n'
               + [clarify.question, ...clarify.options.map((o) => '- ' + o)].join('\n'),
             provenance: buildProvenance({ scan }),

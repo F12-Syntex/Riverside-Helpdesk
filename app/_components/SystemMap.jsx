@@ -113,7 +113,7 @@ const FEATURES = [
   { p: '/diagram', name: 'System map', routes: ['this page'], deps: [] },
   { p: '/knowledge', name: 'Knowledge admin', routes: ['/api/knowledge', '+ analyse · conflicts', '+ status · sync'], deps: ['L', 'D', 'A'] },
 ];
-const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'referrals/ers-lookup', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'routing', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
+const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compose', 'agent/evidence', 'agent/web-search', 'lookup/cqc', 'lookup/contact-extract', 'ai/prompt', 'ai/quote-match', 'ai/openrouter', 'ai/claims', 'ai/context', 'ai/docfile', 'ai/medication', 'ai/rota', 'ai/usage', 'knowledge', 'knowledge-bootstrap', 'knowledge-context', 'notebook', 'attachments', 'audit/store', 'audit/describe', 'contacts', 'lookup', 'guides', 'medications', 'rota/logic', 'settings', 'db', 'dpia', 'routes', 'text-chunk'];
 // The four services the engine talks to. Everything that leaves the practice
 // leaves through one of the three on the right; see /dpia for what each holds.
 const DATA_NODES = [

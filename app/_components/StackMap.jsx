@@ -86,10 +86,10 @@ const STATS = [
   { v: '639', k: 'commits', c: P.dark },
   { v: '65,684', k: 'lines of code', c: P.bright },
   { v: '20', k: 'pages', c: P.aqua },
-  { v: '40', k: 'API routes', c: P.green },
+  { v: '39', k: 'API routes', c: P.green },
   { v: '122', k: 'lib modules', c: P.lgreen },
   { v: '51', k: 'components', c: P.purple },
-  { v: '31', k: 'Postgres tables', c: P.orange },
+  { v: '27', k: 'Postgres tables', c: P.orange },
   { v: '66', k: 'test files', c: P.pink },
   { v: '196', k: 'source documents', c: P.red },
   { v: '2,047', k: 'indexed chunks', c: P.grey },
@@ -121,16 +121,16 @@ const LAYERS = [
     items: ['/', '/lookup', '/tools', '/questions', '/signpost', '/reason', '/coding', '/notebook', '/medications', '/rota', '/templates', '/stats', '/settings', '/knowledge', '/dpia', '/diagram', '/stack', '/site-index', '/helpbot', 'middleware gate'],
   },
   {
-    name: 'Route handlers', sub: '40 endpoints', c: P.bright,
-    items: ['agent', 'reason', 'signpost', 'screen', 'docfile', 'medication +extract', 'notebook ×13', 'knowledge ×5', 'routing/learn', 'directory', 'cqc', 'lookup-web', 'rota', 'staff', 'settings +models', 'audit', 'questions +open +dismiss', 'feedback', 'attach', 'kb'],
+    name: 'Route handlers', sub: '39 endpoints', c: P.bright,
+    items: ['agent', 'reason', 'signpost', 'screen', 'docfile', 'medication +extract', 'notebook ×13', 'knowledge ×5', 'directory', 'cqc', 'lookup-web', 'rota', 'staff', 'settings +models', 'audit', 'questions +open +dismiss', 'feedback', 'attach', 'kb'],
   },
   {
     name: 'Domain libraries', sub: '122 modules · 28,170 lines', c: P.aqua,
-    items: ['agent', 'ai', 'safety ×11', 'routing ×6', 'templates ×24', 'referrals', 'notebook', 'lookup', 'medications', 'rota', 'audit', 'questions', 'guides', 'triage', 'attachments', 'contacts', 'db', 'settings', 'routes', 'dpia'],
+    items: ['agent', 'ai', 'safety ×11', 'templates ×24', 'referrals', 'notebook', 'lookup', 'medications', 'rota', 'audit', 'questions', 'guides', 'triage', 'attachments', 'contacts', 'db', 'settings', 'routes', 'dpia'],
   },
   {
     name: 'Data plane', sub: 'where state lives', c: P.green,
-    items: ['Neon Postgres', '31 tables', '36 indexes', 'pgvector', 'pg_trgm', 'Vercel Blob', 'rag/processed', '2,047 chunks', 'embeddings.json', 'catalog.json'],
+    items: ['Neon Postgres', '27 tables', '29 indexes', 'pgvector', 'pg_trgm', 'Vercel Blob', 'rag/processed', '2,047 chunks', 'embeddings.json', 'catalog.json'],
   },
   {
     name: 'Outside', sub: 'everything third party', c: P.purple,
@@ -281,9 +281,8 @@ const TABLES = [
   { g: 'Notebook', c: P.blue, t: ['notes', 'note_revisions', 'note_proposals', 'note_attachments', 'note_contradictions', 'note_defrag_runs', 'note_defrag_items', 'notebook_snapshots'] },
   { g: 'Knowledge', c: P.aqua, t: ['knowledge_entries', 'knowledge_passages', 'knowledge_claims', 'knowledge_claim_cache', 'knowledge_conflicts', 'knowledge_conflict_decisions', 'knowledge_analysis_jobs', 'knowledge_sync_state'] },
   { g: 'Audit · usage', c: P.orange, t: ['audit_events', 'audit_machines', 'question_log', 'open_questions', 'answer_feedback', 'ai_usage'] },
-  { g: 'Reference data', c: P.dark, t: ['medications', 'medication_aliases', 'snomed_terms', 'ers_directory'] },
+  { g: 'Reference data', c: P.dark, t: ['medications', 'medication_aliases'] },
   { g: 'Practice ops', c: P.green, t: ['staff', 'rotas', 'app_settings'] },
-  { g: 'Routing', c: P.purple, t: ['routing_triggers', 'routing_decisions'] },
 ];
 
 function Database() {
@@ -298,7 +297,7 @@ function Database() {
   const H = y + 60;
   return (
     <svg viewBox={'0 0 1200 ' + H} width="100%" style={s('display:block;height:auto;')} role="img"
-      aria-label="Thirty-one Postgres tables in six groups, with the extensions and index count.">
+      aria-label="Twenty-seven Postgres tables in five groups, with the extensions and index count.">
       {boxes.map((b) => (
         <g key={b.g}>
           <rect x="16" y={b.y} width="1168" height={b.h} rx="14" fill="#fff" stroke={P.line} strokeWidth="1.5" />
@@ -309,7 +308,7 @@ function Database() {
         </g>
       ))}
       <g>
-        {[['Neon serverless', 'HTTP driver · one fetch per query', P.green], ['pgvector', 'knowledge_passages · routing_triggers', P.purple], ['pg_trgm', 'snomed_terms · ers_directory', P.orange], ['36 indexes', 'incl. 1 unique · 3 vector/trigram', P.blue]].map((t, i) => (
+        {[['Neon serverless', 'HTTP driver · one fetch per query', P.green], ['pgvector', 'knowledge_passages', P.purple], ['pg_trgm', 'installed · no index uses it', P.orange], ['29 indexes', 'incl. 1 vector (hnsw)', P.blue]].map((t, i) => (
           <g key={t[0]}>
             <rect x={16 + i * 296} y={y} width="280" height="46" rx="12" fill={P.bg} stroke={t[2]} strokeWidth="1.5" />
             <text x={32 + i * 296} y={y + 20} fontFamily={FONT} fontSize="12.5" fontWeight="700" fill={t[2]}>{t[0]}</text>
@@ -540,7 +539,7 @@ export default function StackMap() {
       <Figure n="3" title="Model roles" note="eight call sites, one API key">
         <Roles />
       </Figure>
-      <Figure n="4" title="The database" note="Neon Postgres · 31 tables, created on first use">
+      <Figure n="4" title="The database" note="Neon Postgres · 27 tables, created on first use">
         <Database />
       </Figure>
       <Figure n="5" title="The corpus" note="how a practice document becomes a quotable chunk">
