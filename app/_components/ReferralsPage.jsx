@@ -143,7 +143,8 @@ const RF_CSS = `
      box, so it stays flush with the edge. */
   .rf-stage{position:relative;transition:padding-right .24s cubic-bezier(.2,.8,.3,1);}
   .rf-stage.is-open{padding-right:calc(min(560px,45vw) + var(--rv-gutter));}
-  .rf-drawer{position:absolute;inset:var(--rv-gutter) var(--rv-gutter) var(--rv-gutter) auto;z-index:20;width:min(560px,45vw);
+  /* Its foot lines up with the list card's: .rf's 28px bottom padding. */
+  .rf-drawer{position:absolute;inset:var(--rv-gutter) var(--rv-gutter) 28px auto;z-index:20;width:min(560px,45vw);
     box-shadow:0 0 0 1px rgba(33,43,50,.06),0 2px 6px rgba(33,43,50,.05),0 24px 60px -22px rgba(33,43,50,.32);}
   .rf-scrim{display:none;}
   .rf-drawer__head{padding:20px 26px 16px;}
