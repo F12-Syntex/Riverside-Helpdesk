@@ -10,7 +10,7 @@ import { highlightRanges } from '../../lib/lookup/fuzzy';
 import { noteKind } from '../../lib/notebook/kinds.mjs';
 import { filterReferrals } from '../../lib/search/referrals.mjs';
 import {
-  findReferral, historyStep, keyAction, readReferralUrl, referralUrl, startHighlight,
+  closesOnSearch, findReferral, historyStep, keyAction, readReferralUrl, referralUrl, startHighlight,
 } from '../../lib/search/referrals-view.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -466,6 +466,19 @@ export default function ReferralsPage() {
     }
   }, []);
 
+  // A new search, or the box cleared, closes the open referral: it belonged
+  // to the old list. Focus stays in the box being typed in.
+  const lastQ = React.useRef(null);
+  const keepFocus = React.useRef(false);
+  React.useEffect(() => {
+    if (!hydrated) return;
+    if (closesOnSearch({ prev: lastQ.current, next: trimmed, open: !!openId })) {
+      keepFocus.current = true;
+      close();
+    }
+    lastQ.current = trimmed;
+  }, [hydrated, trimmed]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Opened, or switched: the drawer starts at the top, with focus on its
   // heading, so a screen reader hears which referral it is.
   React.useEffect(() => {
@@ -475,12 +488,14 @@ export default function ReferralsPage() {
   }, [openId, chosen?.id]);
 
   // Closed, however it was closed (×, Esc, Back): focus goes back to the
-  // row that opened it, or to the box when that row is no longer listed.
+  // row that opened it, or to the box when that row is no longer listed —
+  // unless it was closed by typing, when focus is already where it belongs.
   const wasOpen = React.useRef(false);
   React.useEffect(() => {
     if (openId) { wasOpen.current = true; return; }
     if (!wasOpen.current) return;
     wasOpen.current = false;
+    if (keepFocus.current) { keepFocus.current = false; return; }
     const el = itemRefs.current.get(opener.current) || inputRef.current;
     if (el) el.focus({ preventScroll: false });
   }, [openId]);

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  MAX_Q, findReferral, historyStep, idFromParam, keyAction, paramFromId, readReferralUrl, referralUrl,
+  MAX_Q, closesOnSearch, findReferral, historyStep, idFromParam, keyAction, paramFromId, readReferralUrl, referralUrl,
   startHighlight,
 } from '../lib/search/referrals-view.mjs';
 
@@ -100,4 +100,15 @@ test('the open referral is found in the full list first, then the search rows', 
   assert.equal(findReferral('note:9', book, search), null);
   assert.equal(findReferral(null, book), null);
   assert.equal(findReferral('note:1', null, undefined, book).title, 'A');
+});
+
+test('a new search, or the box cleared, closes the open referral', () => {
+  assert.equal(closesOnSearch({ prev: 'skin', next: 'skin c', open: true }), true);
+  assert.equal(closesOnSearch({ prev: 'skin', next: '', open: true }), true);
+  // Nothing open, nothing to close.
+  assert.equal(closesOnSearch({ prev: 'skin', next: 'eye', open: false }), false);
+  // Only spaces changed: the same search.
+  assert.equal(closesOnSearch({ prev: 'skin', next: 'skin ', open: true }), false);
+  // Before the URL is read: a link with ?q=…&r=… keeps its referral open.
+  assert.equal(closesOnSearch({ prev: null, next: 'skin', open: true }), false);
 });
