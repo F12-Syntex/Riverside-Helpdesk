@@ -4,14 +4,17 @@
 // same vocabulary the notebook's AI formatter produces: ##/### headings,
 // bullet/numbered lists (with simple nesting and task items), tables,
 // blockquotes, horizontal rules and paragraphs. Inline content inside every
-// block goes through Rich's whitelist renderer (**bold**, <mark>, <u>, <kbd>
-// and the three NHS colour spans) — nothing is ever injected as HTML.
+// block goes through Rich's whitelist renderer (**bold**, <mark>, <u>, <kbd>,
+// the three NHS colour spans and links to allowed addresses) — nothing is ever
+// injected as HTML.
 //
 // Visual styling lives in globals.css under .riva-md, mirroring the notebook's
 // .nb-prose look so answers read like a well-formatted practice note.
 
 import React from 'react';
 import { renderInline, plainText } from './Rich';
+import { SourceChips } from './CiteChip';
+import { splitSources } from './links.mjs';
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const HR_RE = /^\s*(-{3,}|\*{3,}|_{3,})\s*$/;
@@ -173,10 +176,15 @@ function Block({ b, k }) {
 }
 
 export default function Md({ text }) {
-  const blocks = parseBlocks(text);
+  // A Notebook answer ends on "Sources: [Page](/notebook/…) · …". That line
+  // is shown as citation chips under the text rather than as a paragraph of
+  // links; any other link stays inline where it was written.
+  const { body, sources } = splitSources(text);
+  const blocks = parseBlocks(body);
   return (
     <div className="riva-md">
       {blocks.map((b, i) => <Block key={i} b={b} k={'b' + i} />)}
+      {sources.length > 0 && <SourceChips sources={sources} />}
     </div>
   );
 }

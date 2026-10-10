@@ -3,8 +3,13 @@
 // Safe renderer for the light inline formatting the assistant may use in its
 // answers — the same vocabulary as the notebook's AI formatter: **bold** key
 // facts, <mark> safety-critical warnings, <u>, <kbd> and the three NHS colour
-// spans. The markup is parsed into React elements (never injected as HTML);
-// anything outside this whitelist is stripped or shown as plain text.
+// spans — plus markdown links, which is how a Notebook answer names the pages
+// it was written from. The markup is parsed into React elements (never
+// injected as HTML); anything outside this whitelist is stripped or shown as
+// plain text, and a link whose address is not allowed (see ./links.mjs) is
+// shown as its words.
+
+import { LINK_RE, linkTarget, stripLinks } from './links.mjs';
 
 const COLOURS = new Set(['#d5281b', '#007f3b', '#005eb8']);
 
@@ -13,6 +18,20 @@ const KBD_STYLE = {
   font: 'inherit', fontSize: '0.85em', fontWeight: 600, background: '#f0f4f5',
   border: '1px solid #d8dde0', borderBottomWidth: 2, borderRadius: 4, padding: '0 5px',
 };
+const LINK_STYLE = {
+  color: '#005eb8', textDecoration: 'underline', textDecorationThickness: '1px', textUnderlineOffset: '2px',
+};
+
+// EVERY LINK OPENS IN A NEW TAB. The chat is not saved anywhere, so leaving
+// /ask in the same tab would throw the conversation away, and Back starts a
+// fresh page. A Notebook page opens beside it; another site also gets no way
+// back into this page (noopener) and no referrer sent with it.
+function InlineLink({ target, children }) {
+  if (target.kind === 'internal') {
+    return <a href={target.href} target="_blank" rel="noopener" style={LINK_STYLE}>{children}</a>;
+  }
+  return <a href={target.href} target="_blank" rel="noopener noreferrer" style={LINK_STYLE}>{children}</a>;
+}
 
 // Each pattern: regex (first capture = inner text unless innerIndex says
 // otherwise) and how to wrap the recursively-rendered inner content.
@@ -29,6 +48,15 @@ const PATTERNS = [
         ? <span key={key} style={{ color: m[1], fontWeight: 600 }}>{inner}</span>
         : <span key={key}>{inner}</span>
     ),
+  },
+  {
+    re: LINK_RE,
+    wrap: (inner, key, m) => {
+      const target = linkTarget(m[2]);
+      return target
+        ? <InlineLink key={key} target={target}>{inner}</InlineLink>
+        : <span key={key}>{inner}</span>;
+    },
   },
 ];
 
@@ -60,7 +88,7 @@ export function renderInline(text, keyBase) {
 // The same text with all formatting removed — for clipboard copies, the
 // save-to-guide prefill and the conversation history sent back to the model.
 export function plainText(text) {
-  return String(text || '')
+  return stripLinks(String(text || ''))
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(STRAY_TAG, '')
     .trim();
