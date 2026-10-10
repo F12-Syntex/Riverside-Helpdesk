@@ -174,3 +174,27 @@ test('buildShortlist adds up to three keyword pages the meaning ranking left out
   assert.equal(s.why['note:2'], 'words');
   assert.equal(s.why['note:4'], 'words');
 });
+
+test('a question with no words of its own does not search on the previous message', () => {
+  // A screenshot sent mid-conversation with "??" or nothing typed is about the
+  // screenshot, not about whatever was asked before it.
+  const history = 'Staff member: how do I refer to the district nurse?\nThe assistant answered: By email.';
+  assert.equal(shortlistQuery({ question: '', history }), '');
+  assert.equal(shortlistQuery({ question: '??', history }), '??');
+  // Attached text is what such a message is about, so it still counts.
+  const q = shortlistQuery({ question: '', history, attached: 'Discharge letter from the Homerton' });
+  assert.match(q, /Discharge letter/);
+  assert.doesNotMatch(q, /district nurse/);
+});
+
+test('after a bulk write every page is recent, so none joins as recent', () => {
+  // A restore, an import or a defrag stamps every page at once. Five
+  // arbitrary pages joining every shortlist for an hour is noise, not news.
+  const many = Array.from({ length: 30 }, (_, i) => page(i + 1, `Page ${i + 1}`, 'Text.', new Date(NOW - 60 * 1000)));
+  const s = buildShortlist({ ranked: [many[0]], pages: many, size: 12, now: NOW });
+  assert.deepEqual(s.pages.map((p) => p.docId), ['note:1']);
+  // A few pages edited in the hour are still a handful of real edits.
+  const few = many.map((p, i) => (i < 8 ? p : { ...p, updatedAt: new Date(NOW - DAY) }));
+  const t = buildShortlist({ ranked: [few[0]], pages: few, size: 12, now: NOW });
+  assert.equal(t.pages.length, 1 + 5);
+});

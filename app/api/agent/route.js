@@ -1068,8 +1068,10 @@ export async function POST(request) {
         // still name a page search missed, and that page is rendered whole
         // from `notebookPages` like any other.
         //
-        // Search failing, or having nothing to search with, is the whole
-        // Notebook — never nothing (lib/search/notebook.mjs).
+        // Search failing, taking too long, or having nothing to search with
+        // is the whole Notebook — never nothing (lib/search/notebook.mjs). So
+        // is a turn with pictures: what it is about is in the picture, which
+        // search cannot read.
         //
         // The search starts beside the Notebook read rather than after it: it
         // needs the pages only to roll its hits up, so the embedding call and
@@ -1080,7 +1082,7 @@ export async function POST(request) {
         // model falls back to the shapes it can still fill.
         const shortlistBegan = Date.now();
         const notebookLoading = notebook();
-        const shortlisting = notebookShortlist({ question, history, attached, pages: notebookLoading, multi: decompose });
+        const shortlisting = notebookShortlist({ question, history, attached, pages: notebookLoading, multi: decompose, seeing });
         const notebookPages = await notebookLoading;
         const shortlist = await shortlisting;
         // The same text goes to the picker, the referral read and the prose
@@ -1142,8 +1144,9 @@ export async function POST(request) {
         // which roughly doubled the wait on the commonest card there is. The
         // picker's choice still decides whether its result is used at all; a
         // read nobody asked for is thrown away. What it names is grounded
-        // against the full Notebook, so a short read can only miss, never
-        // invent.
+        // against the pages it was shown whole — a page it saw only by title
+        // has no values it could have read — so a short read can only miss,
+        // never invent.
         const readReferral = (name) => readValues({
           model: seeing ? imageModel : model,
           schema: REFERRAL_READ_SCHEMA,
@@ -1169,7 +1172,8 @@ export async function POST(request) {
             // the read now, told what the picker says is being referred.
             const read = (earlyReferral && await earlyReferral)
               || await readReferral(selection.referralName || '');
-            const grounded = groundReferralRead({ read, pages: notebookPages });
+            const shown = shortlist.full ? null : new Set(shortlist.pages.map((p) => p.docId));
+            const grounded = groundReferralRead({ read, pages: notebookPages, shown });
             const card = grounded && referralCardFromRead(grounded);
             if (card) templateAnswer = card;
           } catch (e) {

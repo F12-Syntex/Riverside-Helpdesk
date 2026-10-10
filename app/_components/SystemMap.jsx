@@ -40,7 +40,7 @@ const L1_NODES = [
   { x: 820, y: 60, w: 200, h: 100, title: 'Research loop', sub: 'the AI picks its own tools', fill: '#fff', border: '#9dc3e6', ink: INK, subInk: MUTED },
   { x: 820, y: 430, w: 200, h: 100, title: 'Quote check', sub: 'every claim, or it is dropped', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED },
   { x: 320, y: 430, w: 200, h: 100, title: 'Answer', sub: 'shown with its source', fill: '#fff', border: '#a7d8b6', ink: INK, subInk: MUTED },
-  { x: 370, y: 245, w: 300, h: 110, title: 'Notebook', sub: 'every page, in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', tag: 'FIRST SOURCE' },
+  { x: 370, y: 245, w: 300, h: 110, title: 'Notebook', sub: 'searched; best pages in full', fill: '#eaf7ee', border: '#8ccfa3', ink: '#075e34', subInk: '#3f7d5c', tag: 'FIRST SOURCE' },
   { x: 110, y: 230, w: 230, h: 84, title: 'Answer cache', sub: 'asked before, answered again', fill: '#fffdf5', border: '#e3d3a8', ink: '#6b4d00', subInk: '#8a6100' },
 ];
 const L1_EDGES = [

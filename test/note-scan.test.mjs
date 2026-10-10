@@ -71,3 +71,10 @@ test('a chosen page outside the shortlist is still placed on the grid', () => {
   const scan = scanShortlist(shortlistOf(3), PAGES, { question: 'sick notes' });
   assert.deepEqual(chosenOnScan(scan, ['Notebook: Reception / Sick notes']).map((c) => c.title), ['Sick notes']);
 });
+
+test('a chosen title copied with its list or heading marker is still placed', () => {
+  const scan = scanShortlist(shortlistOf(4), PAGES, { question: 'complaints' });
+  for (const title of ['- Notebook: Reception / Complaints', '### Notebook: Reception / Complaints', '- Complaints']) {
+    assert.deepEqual(chosenOnScan(scan, [title]).map((c) => c.title), ['Complaints'], title);
+  }
+});

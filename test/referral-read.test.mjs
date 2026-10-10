@@ -157,3 +157,13 @@ test('the early read starts only for messages that say refer', () => {
     assert.ok(!looksLikeReferral(q), q);
   }
 });
+
+test('a read naming a page it was shown by title only is thrown away', () => {
+  // The read is told it cannot read a titles-only page; if it names one
+  // anyway, nothing it says came off that page, so nothing is grounded.
+  const pages = PAGES.map((p, i) => ({ ...p, docId: `note:${i + 1}` }));
+  assert.equal(groundReferralRead({ read: READ, pages, shown: new Set(['note:2']) }), null);
+  assert.equal(groundReferralRead({ read: READ, pages, shown: new Set(['note:1']) }).specialty, 'Nutrition and Dietetics');
+  // A whole-Notebook turn showed every page.
+  assert.equal(groundReferralRead({ read: READ, pages, shown: null }).specialty, 'Nutrition and Dietetics');
+});

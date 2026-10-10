@@ -60,3 +60,11 @@ test('nothing to draw leaves the card unchanged', () => {
   assert.equal(withKindCard(plain, null), plain);
   assert.equal(withKindCard(null, typedNotebookPage(pick('Dermatology'), PAGES)), null);
 });
+
+test('a title copied with its list or heading marker still finds the typed page', () => {
+  // The titles-only list writes "- Notebook: …" and a page shown in full is
+  // under "### Notebook: …"; the picker sometimes copies the marker too.
+  for (const title of ['- Notebook: Referrals / Dermatology', '### Notebook: Referrals / Dermatology', '- Dermatology']) {
+    assert.ok(typedNotebookPage(pick(title), PAGES), title);
+  }
+});

@@ -471,9 +471,11 @@ sequenceDiagram
 4. **Notebook load** — `fullNotebookContext()` (`lib/notebook.js`) builds
    *every* non-empty Notebook page from the live tables, in full, and keeps the
    result in the server instance's memory. Each turn costs one one-row version
-   read (note count and latest `updated_at`, attachment count and highest id);
-   the pages are rebuilt only when that changes, so an edit is visible on the
-   very next question. The whole Notebook stays loaded in code on every turn:
+   read — each table's row count and the sum of `hashtext(id, xmin)` over its
+   rows, so any insert, update or delete moves it, whoever makes it and whether
+   or not it stamps `updated_at`; the pages are rebuilt only when that
+   changes, so an edit is visible on the very next question. A build whose
+   attachments read failed is used for that turn but not kept. The whole Notebook stays loaded in code on every turn:
    the deterministic resolvers need it, and a page the model names is always
    rendered from it — never from the search index.
 5. **Search and the shortlist** — `lib/search/` is the one search system, for
@@ -497,17 +499,27 @@ sequenceDiagram
      (**20** when the message looks like several requests), plus up to **5**
      pages edited in the **last hour** that search did not rank — a page just
      saved may not have its vector yet, and is the page somebody is most likely
-     asking about. These go into the prompt in full, in the same `### title`
+     asking about. When more than 20 pages were edited in the hour it was a
+     restore, import or defrag, and none join. These go into the prompt in full, in the same `### title`
      shape as before; then `OTHER PAGES (titles only, text not shown):` lists
      **every other page by title**, so the picker can still name a page search
      missed, and that page is rendered in full from step 4.
-   - *Never worse than before.* When the query has no searchable words (a
-     picture with no text), when search throws (database or embeddings down),
-     or when it matches no page at all, the turn falls back to the **whole
-     Notebook** — byte-identical to what every turn read before the shortlist
-     existed. A failed search is logged (`[search]`), never a failed turn.
-   - *Indexing is automatic.* A Notebook save updates the page's passages and
-     their full-text column at once, and `scheduleNoteEmbedding`
+   - *Never worse than before.* The turn falls back to the **whole Notebook**
+     — byte-identical to what every turn read before the shortlist existed —
+     with the reason in the turn's log: `image` (the turn has pictures; what
+     it is about is in the picture, which search cannot read), `no-text` (the
+     query has no searchable words — and a question with no words of its own
+     does not borrow the previous message's), `search-failed` (search threw,
+     or did not answer within **4 s**; the query's embedding alone is given up
+     at **2.5 s**, and the lexical arm then runs alone) and `no-match`
+     (nothing matched any page). A failed search is logged (`[search]`),
+     never a failed turn.
+   - *Indexing is automatic.* The index holds exactly the pages the model can
+     be shown (`isServedPage` / `notebookIndexText`,
+     `lib/knowledge-context.mjs`): a live typed note by its fields and then
+     its writing, anything else by its writing, every character of it in some
+     passage. A Notebook save, or a change of kind, updates the page's passages
+     and their full-text column at once, and `scheduleNoteEmbedding`
      (`index-notes.mjs`) embeds the new or changed passages in the background
      straight afterwards; every Q&A turn also kicks a catch-up, at most once a
      minute per server instance, so a background run that died is repaired by

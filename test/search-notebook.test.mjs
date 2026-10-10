@@ -229,3 +229,29 @@ test('the shortlist ranks by meaning first, then adds the top keyword pages', as
   assert.ok(s.pages.some((p) => p.docId === 'note:25'), 'the top keyword page still makes the shortlist');
   assert.equal(s.why['note:25'], 'words');
 });
+
+/* ------------------------------------------------ never hold a turn */
+
+test('a search that never answers falls back to the whole Notebook within the timeout', async (t) => {
+  const warned = quietWarn(t);
+  const began = Date.now();
+  const s = await notebookShortlist({
+    question: 'district nurse', pages: PAGES, search: () => new Promise(() => {}), timeoutMs: 40,
+  });
+  assert.equal(s.full, true);
+  assert.equal(s.reason, 'search-failed');
+  assert.equal(s.pages, PAGES);
+  assert.ok(Date.now() - began < 1000, 'the turn was not held on the hung search');
+  assert.equal(warned.length, 1);
+  assert.match(warned[0], /^\[search\]/);
+});
+
+test('a turn with pictures uses the whole Notebook and does not search', async () => {
+  let searched = false;
+  const search = async () => { searched = true; return hitsFor(3); };
+  const s = await notebookShortlist({ question: 'what do I do with this letter', seeing: true, pages: PAGES, search });
+  assert.equal(s.full, true);
+  assert.equal(s.reason, 'image');
+  assert.equal(s.pages, PAGES);
+  assert.equal(searched, false);
+});
