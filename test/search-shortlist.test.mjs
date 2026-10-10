@@ -153,3 +153,24 @@ test('a long previous message cannot push the question out of the query', () => 
   const q = shortlistQuery({ question: 'district nurse referral', history });
   assert.ok(q.startsWith('district nurse referral'));
 });
+
+test('rankPages can rank by one arm, ignoring passages that arm did not find', () => {
+  const ranked = rankPages([
+    { entryId: 'note:1', score: 0.9, semantic: 0, lexical: 0.8 },
+    { entryId: 'note:2', score: 0.5, semantic: 0.7, lexical: 0 },
+    { entryId: 'note:3', score: 0.4, semantic: 0.9, lexical: 0 },
+  ], PAGES, 'semantic');
+  assert.deepEqual(ranked.map((p) => p.docId), ['note:3', 'note:2']);
+});
+
+test('buildShortlist adds up to three keyword pages the meaning ranking left out', () => {
+  const s = buildShortlist({
+    ranked: [PAGES[0]],
+    keyword: [PAGES[0], PAGES[1], PAGES[2], PAGES[3], PAGES[4]],
+    pages: PAGES, size: 1, now: NOW,
+  });
+  assert.deepEqual(s.pages.map((p) => p.docId), ['note:1', 'note:2', 'note:3', 'note:4']);
+  assert.equal(s.why['note:1'], 'match');
+  assert.equal(s.why['note:2'], 'words');
+  assert.equal(s.why['note:4'], 'words');
+});

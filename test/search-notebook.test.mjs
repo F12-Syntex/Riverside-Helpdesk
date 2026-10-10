@@ -215,3 +215,17 @@ test('a search that fails while the Notebook loads still falls back to it', asyn
   assert.equal(s.pages, PAGES);
   assert.equal(warned.length, 1);
 });
+
+test('the shortlist ranks by meaning first, then adds the top keyword pages', async () => {
+  // Page 25 is the keyword arm's favourite and wins the fused score, but its
+  // meaning is weak; pages 1–20 are the meaning arm's, best first.
+  const hits = [
+    { entryId: 'note:25', score: 0.05, semantic: 0, lexical: 0.9 },
+    ...Array.from({ length: 20 }, (_, i) => ({ entryId: `note:${i + 1}`, score: 0.02 - i / 2000, semantic: 0.9 - i / 100, lexical: 0 })),
+  ];
+  const s = await notebookShortlist({ question: 'district nurse', pages: PAGES, search: async () => hits });
+  assert.equal(s.pages[0].docId, 'note:1', 'the best meaning match leads');
+  assert.deepEqual(s.pages.slice(0, 12).map((p) => p.docId), Array.from({ length: 12 }, (_, i) => `note:${i + 1}`));
+  assert.ok(s.pages.some((p) => p.docId === 'note:25'), 'the top keyword page still makes the shortlist');
+  assert.equal(s.why['note:25'], 'words');
+});
