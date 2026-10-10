@@ -11,9 +11,11 @@
  * "@google-vertex/europe", which serves the model from that provider and no
  * other (see lib/model-id.mjs).
  *
- * Blank inherits: only the top row has to be set. The one exception is
- * Images, which falls back to a vision model of its own rather than to the
- * row above — the row above may not see pictures.
+ * Blank inherits: only the top row has to be set. The exceptions are Images,
+ * which falls back to a vision model of its own rather than to the row above —
+ * the row above may not see pictures — and Answer check, which is not a chat
+ * model at all. Its field searches the decision models instead (OpenRouter's
+ * chat list does not carry them) and still takes any id typed into it.
  * ------------------------------------------------------------------ */
 
 import React from 'react';
@@ -28,7 +30,7 @@ const LIST_LIMIT = 40;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed', 'images'];
+const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed', 'images', 'check'];
 
 // A model's advertised rate. Shown per row because it is the number people
 // compare models on — but it is not what a question costs, which is why the
@@ -199,6 +201,13 @@ export default function SettingsPage() {
     () => buildIndex(models.map((m) => ({ label: m.name, aliases: [m.id, m.id.replace(/[/:-]/g, ' ')], model: m }))),
     [models],
   );
+  // The answer check's own list: decision models, which the chat catalogue
+  // above does not include. Sent by the server with the settings.
+  const checkModels = React.useMemo(() => (setting && setting.checkModels) || [], [setting]);
+  const checkIndex = React.useMemo(
+    () => buildIndex(checkModels.map((m) => ({ label: m.name, aliases: [m.id, m.id.replace(/[/:-]/g, ' ')], model: m }))),
+    [checkModels],
+  );
 
   // Written to both places the machine remembers things, for a year, the same
   // way the machine id is held (lib/audit/client.js).
@@ -237,12 +246,18 @@ export default function SettingsPage() {
     // model above may not see pictures at all. The default comes from the
     // server, so an empty box is captioned with what it actually resolves to.
     images: roleValue('images') || (setting ? setting.defaultImagesModel : ''),
+    // Like Images, its own default rather than any row above: no chat model
+    // can stand in for a decision model.
+    check: roleValue('check') || (setting ? setting.defaultCheckModel : ''),
   };
+  // Priced from the catalogue, or — for the decision models it does not list —
+  // from the rates the server sent with them.
+  const priced = React.useMemo(() => models.concat(checkModels), [models, checkModels]);
   const priceOf = (id) => {
     const plain = String(id).split('@')[0];
-    return models.find((m) => m.id === plain) || models.find((m) => m.id === plain.split(':')[0]) || null;
+    return priced.find((m) => m.id === plain) || priced.find((m) => m.id === plain.split(':')[0]) || null;
   };
-  const prices = React.useMemo(() => Object.fromEntries(models.map((m) => [m.id, m])), [models]);
+  const prices = React.useMemo(() => Object.fromEntries(priced.map((m) => [m.id, m])), [priced]);
 
   // The estimate. Measured tokens per question from ai_usage, priced at whatever
   // each role is set to now — so changing a model here changes the figure before
@@ -351,6 +366,17 @@ export default function SettingsPage() {
             <ModelField
               label="Images model" value={roleValue('images')} models={models} index={index}
               placeholder={(setting && setting.defaultImagesModel) || 'vendor/model'} onChange={(v) => setRole('images', v)}
+            />
+          </Row>
+          {/* The one row that is not a chat model. It scores each Notebook
+              answer before it is shown — does it answer what was asked? — and
+              never writes anything. Its list is OpenRouter's decision models,
+              which the chat list above does not carry; any id can still be
+              typed. Blank is TypeSafe's Jev, named in the box. */}
+          <Row name="Answer check" job="Checks each Notebook answer answers the question" rate={rateLine(priceOf(resolved.check))} used={usedLine('check')}>
+            <ModelField
+              label="Answer check model" value={roleValue('check')} models={checkModels} index={checkIndex}
+              placeholder={(setting && setting.defaultCheckModel) || 'vendor/model'} onChange={(v) => setRole('check', v)}
             />
           </Row>
 

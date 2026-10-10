@@ -2,7 +2,10 @@
 // on, read by every AI route through lib/settings and changed from /settings
 // without a redeploy — plus the per-role overrides beside it, so the jobs the
 // main model is not the best fit for (searching the web, cheap background work,
-// reading an image) can run on a model chosen for that job.
+// reading an image) can run on a model chosen for that job. The answer check is
+// one of those roles, and the one that is not a chat model at all: its default
+// and the decision models it can be set to come back with the main setting
+// (getAiModelSetting), because OpenRouter's chat catalogue does not list them.
 import { NextResponse } from 'next/server';
 import { getAiModelSetting, getModelRoleSettings, setAiModel, setModelRole, ROLE_SETTING_KEY } from '@/lib/settings';
 import { readUsageAverages } from '@/lib/ai/usage';

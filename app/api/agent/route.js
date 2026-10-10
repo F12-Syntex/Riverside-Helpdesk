@@ -29,6 +29,13 @@
 // about ten output tokens, and no way for a procedure to be paraphrased on its
 // way to somebody following it.
 //
+// EVERY NOTEBOOK ANSWER IS CHECKED BEFORE IT GOES OUT. A page card, a referral
+// card or a written answer is put to a decision model (the `check` role) with
+// the question and the pages it came from: does it answer what was asked? A low
+// score withdraws it for an honest "I don't know" and files the question; a
+// middling one adds a line asking the reader to check it against the page; a
+// check that fails or is slow changes nothing (lib/questions/answer-check.mjs).
+//
 // EVERY TURN IS WRITTEN DOWN. As the answer goes out, the question, the answer
 // as text, the template that built it and the model that ran are recorded in
 // question_log (lib/questions/log.js) and read back at /stats. That is how the
@@ -85,6 +92,14 @@ import { recordUsage } from '@/lib/ai/usage';
 import { recordQuestion } from '@/lib/questions/log';
 import { loggingOffIn } from '@/lib/questions/opt-out.mjs';
 import { answerToText } from '@/lib/questions/flatten.mjs';
+import { decide, decisionUsage } from '@/lib/ai/decisions.mjs';
+import {
+  checkProvenance, closestPages, pagesForSources, pagesNamedIn, runAnswerCheck, shouldCheck, unknownAnswer,
+  withConfirmLine, withConfirmNote,
+} from '@/lib/questions/answer-check.mjs';
+import { noteUnansweredQuestion } from '@/lib/questions/open';
+import { isCollectableQuestion } from '@/lib/questions/gaps.mjs';
+import { previousUserMessage } from '@/lib/search/query.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -414,6 +429,13 @@ export async function POST(request) {
       // with the turn's provenance, so a wrong answer on /stats can be told
       // apart as "the page was never shortlisted" or "it was, and was missed".
       let shortlistLog = null;
+      // What the answer check made of the answer, once it has run: the score,
+      // the model and how long it took — or why it did not run. Kept with the
+      // provenance for the same reason as the shortlist: a withdrawn answer, or
+      // one that went out with a "check this" line, has to be explainable on
+      // /stats, and the scores against staff verdicts are what the thresholds
+      // get tuned on.
+      let checkLog = null;
       const logTurn = (turn) => {
         // The whole turn's time, in the runtime logs whether or not this desk
         // records its questions — it carries no words of the question.
@@ -435,7 +457,13 @@ export async function POST(request) {
           images: images.length,
           attachments: attachments.length,
           ...turn,
-          provenance: shortlistLog ? { ...(turn.provenance || {}), shortlist: shortlistLog } : turn.provenance,
+          provenance: (shortlistLog || checkLog)
+            ? {
+              ...(turn.provenance || {}),
+              ...(shortlistLog ? { shortlist: shortlistLog } : {}),
+              ...(checkLog ? { check: checkLog } : {}),
+            }
+            : turn.provenance,
         });
         if (process.env.VERCEL) {
           try { waitUntil(writing); } catch (e) { /* awaited below instead */ }
@@ -1097,6 +1125,70 @@ export async function POST(request) {
         // The page(s) the turn settled on, for the card to mark on that scan.
         let chosenTitles = [];
 
+        // THE ANSWER CHECK — see lib/questions/answer-check.mjs. One decision
+        // call on the `check` role, in front of an answer that is already
+        // built. Never throws: a check that fails, or does not answer within
+        // three seconds, comes back as 'pass' and the answer goes out as it was.
+        const checkAnswer = async ({ answer: shown, pages }) => {
+          send({ type: 'status', text: 'Checking the answer' });
+          const checkModel = roles.check.model;
+          const result = await runAnswerCheck({
+            decide,
+            model: checkModel,
+            question,
+            previous: previousUserMessage(history),
+            answer: shown,
+            pages,
+            signal: deadline,
+            onUsage: (usage) => recordUsage({ turnId, role: 'check', phase: 'check', model: checkModel, usage: decisionUsage(usage) }),
+          });
+          console.info(result.error
+            ? `[agent] ${turnId} check on ${checkModel} failed after ${result.ms}ms: ${result.error}`
+            : `[agent] ${turnId} check on ${result.model} scored ${result.score} (${result.band}) in ${result.ms}ms`);
+          checkLog = checkProvenance(result);
+          return result;
+        };
+
+        // A WITHDRAWN ANSWER. The check said it does not answer the question, so
+        // the reader is told the Notebook does not cover it — with the closest
+        // pages search found — and the question is filed on /questions as one
+        // the notes cannot answer. Filed here rather than by the question log
+        // (lib/questions/log.js files prose with no source line, and "failed"
+        // and "not recorded" turns), because only this path knows why; and only
+        // when this desk records its questions at all, the same promise the log
+        // keeps (lib/questions/opt-out.mjs). What was withdrawn is kept in the
+        // provenance, so the thresholds can be judged against what they took
+        // away.
+        const withdraw = async ({ was, fallback = [], prefer = [], alerts = [], panel = null }) => {
+          const closest = closestPages({ shortlist, fallback, prefer });
+          const filing = logging && isCollectableQuestion(question);
+          const card = unknownAnswer({ closest, filed: filing });
+          checkLog = {
+            ...(checkLog || {}),
+            closest: closest.map((p) => p.href || p.title),
+            withdrawn: {
+              template: was.template || '',
+              source: String(was.source || '').slice(0, 400),
+              answer: String(was.answer || '').slice(0, 2000),
+            },
+          };
+          send({ type: 'answer', payload: payload({ template: card, alerts, panel }) });
+          const writtenUnknown = logTurn({
+            outcome: 'template',
+            // Its own line on /stats: told apart from a page the picker never
+            // found, and from a referral the practice has not recorded.
+            template: 'unknown:check',
+            source: '',
+            answer: shownText(alerts, card),
+            provenance: buildProvenance({ scan, card }),
+          });
+          const filed = filing
+            ? noteUnansweredQuestion({ question, reason: 'no-page', turnId, machineId })
+            : Promise.resolve();
+          controller.close();
+          await Promise.all([writtenUnknown, filed]);
+        };
+
         let templateAnswer = null;
         let clarify = null;
         let picked = 'none';
@@ -1267,6 +1359,27 @@ export async function POST(request) {
         }
 
         if (templateAnswer) {
+          // A Notebook page or a referral card is checked against the question
+          // before it is shown — see checkAnswer above. Every other card is code
+          // whose shape was settled before the question was asked.
+          if (shouldCheck({ picked, card: templateAnswer, images: images.length, attachments: attachments.length })) {
+            const sourcePages = pagesForSources(templateAnswer.source, notebookPages);
+            const checked = await checkAnswer({ answer: answerToText(templateAnswer), pages: sourcePages });
+            if (checked.band === 'unknown') {
+              await withdraw({
+                was: {
+                  template: picked,
+                  source: (templateAnswer.source || []).join(' · '),
+                  answer: answerToText(templateAnswer),
+                },
+                fallback: sourcePages,
+                alerts: safety.alerts,
+                panel: safety.panel,
+              });
+              return;
+            }
+            if (checked.band === 'confirm') templateAnswer = withConfirmNote(templateAnswer, sourcePages);
+          }
           send({
             type: 'answer',
             payload: payload({
@@ -1358,6 +1471,34 @@ export async function POST(request) {
         // exactly what it always was. See lib/questions/grounding.mjs.
         const madeOf = groundedIn(prose, notebookPages);
 
+        // CHECKED LIKE A CARD. The pages the answer is demonstrably made of go
+        // first, then the rest of what the writer was shown — the shortlist,
+        // when search narrowed it; a whole-Notebook fallback is too much to send
+        // and says nothing about which pages mattered. An answer written with no
+        // Notebook at all (it could not be loaded) did not come from it, and is
+        // not checked against it.
+        const madePages = notebookPages.filter((page) => madeOf.some((m) => m.docTitle === page.docTitle));
+        let shownProse = prose;
+        if (notebookPages.length && shouldCheck({ prose: true, images: images.length, attachments: attachments.length })) {
+          const checked = await checkAnswer({
+            answer: prose,
+            pages: madePages.concat(shortlist.full ? [] : shortlist.pages),
+          });
+          if (checked.band === 'unknown') {
+            await withdraw({
+              was: { template: 'prose', source: madeOf.map((m) => m.docTitle).join(' · '), answer: prose },
+              fallback: madePages,
+              // The writer is told to name the closest page when the Notebook
+              // does not cover the question; that page leads the list.
+              prefer: pagesNamedIn(prose, notebookPages),
+              alerts: safety.alerts,
+              panel: safety.panel,
+            });
+            return;
+          }
+          if (checked.band === 'confirm') shownProse = withConfirmLine(prose, madePages);
+        }
+
         send({
           type: 'answer',
           payload: payload({
@@ -1376,7 +1517,7 @@ export async function POST(request) {
             panel: safety.panel,
             sections: [{
               heading: '',
-              markdown: prose,
+              markdown: shownProse,
               basis: 'general',
               critical: false,
               cite: null,
@@ -1387,8 +1528,8 @@ export async function POST(request) {
         });
         const written = logTurn({
           outcome: 'prose',
-          answer: shownText(safety.alerts, null) + (safety.alerts.length ? '\n\n---\n\n' : '') + prose,
-          provenance: buildProvenance({ scan, pages: notebookPages.filter((page) => madeOf.some((m) => m.docTitle === page.docTitle)) }),
+          answer: shownText(safety.alerts, null) + (safety.alerts.length ? '\n\n---\n\n' : '') + shownProse,
+          provenance: buildProvenance({ scan, pages: madePages }),
         });
         controller.close();
         await written;

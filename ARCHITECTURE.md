@@ -207,8 +207,8 @@ Every third party the system sends data to, and what reaches each one.
 
 | Recipient | Reached from | What is sent | Controls in code |
 | --- | --- | --- | --- |
-| **OpenRouter** (`openrouter.ai/api/v1`) | Server | Staff questions; extracts of practice documents and Notebook pages; whole Notebook pages when opened; pasted AccurX consultation text (`/signpost`, `/reason`); pasted document text and screenshots (`/coding`); medicine names and questions; note text for AI formatting/organising; passage text for claim extraction; **all text embedded for search** — contact passages, practice-document passages, Notebook passages (in the background after every save), and, **on every Q&A turn that reads the Notebook, the search query**: the staff question, the staff member's previous message in the conversation and the first 1,000 characters of any attached text (`lib/search/search.mjs` embeds it for the semantic arm); a `/practice` question is embedded the same way. Attached images are sent as base64 data URLs. | Every call sets `provider: { data_collection: 'deny' }`. Embedding calls additionally pin `provider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' }`. `HTTP-Referer: https://riverside-practice.local` and `X-Title` headers are sent for attribution. |
-| **Downstream model providers** | Via OpenRouter | Whatever OpenRouter forwards. Which company actually receives a prompt depends on which model is selected at `/settings` and on OpenRouter's routing. | `data_collection: 'deny'` restricts routing to providers that do not retain or train on prompts. The *geographic location* of those providers is not constrained by any code here — **[to confirm]**, and material for the international-transfer section of the DPIA. |
+| **OpenRouter** (`openrouter.ai/api/v1`) | Server | Staff questions; extracts of practice documents and Notebook pages; whole Notebook pages when opened; pasted AccurX consultation text (`/signpost`, `/reason`); pasted document text and screenshots (`/coding`); medicine names and questions; note text for AI formatting/organising; passage text for claim extraction; **all text embedded for search** — contact passages, practice-document passages, Notebook passages (in the background after every save), and, **on every Q&A turn that reads the Notebook, the search query**: the staff question, the staff member's previous message in the conversation and the first 1,000 characters of any attached text (`lib/search/search.mjs` embeds it for the semantic arm); a `/practice` question is embedded the same way. Attached images are sent as base64 data URLs. **On every Q&A turn whose answer came from the Notebook, the answer check** (`api/alpha/decisions`, the `check` role — §8 step 10): the question, the staff member's previous message, the answer as shown, and the text of the Notebook pages it came from (≤72,000 characters); never an attachment or a picture — a turn carrying either is not checked. | Every call sets `provider: { data_collection: 'deny' }`; the answer check additionally sets `zdr: true` (zero data retention — `DECISION_PROVIDER`, `lib/ai/decisions.mjs`). Embedding calls additionally pin `provider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' }`. `HTTP-Referer: https://riverside-practice.local` and `X-Title` headers are sent for attribution. |
+| **Downstream model providers** | Via OpenRouter | Whatever OpenRouter forwards. Which company actually receives a prompt depends on which model is selected at `/settings` and on OpenRouter's routing. The answer check's default model, `typesafe/jev-1.13`, is served by **TypeSafe**. | `data_collection: 'deny'` restricts routing to providers that do not retain or train on prompts. The *geographic location* of those providers is not constrained by any code here — **[to confirm]**, and material for the international-transfer section of the DPIA. |
 | **Exa** (search engine) | Via OpenRouter's `openrouter:web_search` server tool | The **web search query text**, which the model composes from the staff question. `lib/agent/web-search.mjs` requests `engine: 'exa'`. The same server tool is used by `/api/medication`. | Query only; no practice documents. But the query is model-generated from the question, so a poorly-worded question could carry content into it. |
 | **Arbitrary web hosts** | Server (`lib/lookup/web-contact.mjs`, `contact-extract.mjs`) | An HTTP GET for the page. The server's IP is exposed to the site owner. No practice data is sent in the body. | Pages are fetched to extract `tel:`/`mailto:` links and visible numbers verbatim. |
 | **Neon** (PostgreSQL) | Server | All stored application data (§7). | TLS (`sslmode=require` in the example connection string). Region is in the connection string, which lives in the git-ignored `.env.local` — **[to confirm]**. |
@@ -438,6 +438,9 @@ sequenceDiagram
       A->>OR: PROSE — fast role, the shortlist as system prompt
       A->>A: redact any number the Notebook, question or attachment does not contain
     end
+    opt the answer came from the Notebook (page card, referral card, prose)
+      A->>OR: CHECK — check role, one decision call (Jev):<br/>does the answer answer the question? → a score 0–1
+    end
     A-->>B: answer payload — or a question back with options
   end
   A->>PG: question_log row, ai_usage rows (after the answer has gone out)
@@ -554,7 +557,27 @@ sequenceDiagram
    (`redactUnverifiedNumbers`). The number check reads the **whole** Notebook,
    not the shortlist, so a number is never redacted for being on a page the
    writer was not shown.
-10. **Log** — after the answer has been sent: one `question_log` row (the
+10. **Answer check** — before a Notebook answer (a page card, a referral card,
+   or prose) is sent, one call to OpenRouter's **decisions** endpoint on the
+   `check` role (`lib/ai/decisions.mjs`, `lib/questions/answer-check.mjs`):
+   a `noul` question — does the answer actually answer the question that was
+   asked, using the practice information it was given? — over the question,
+   the staff member's previous message, the answer as the reader will see it
+   and the text of its source pages (the pages it was made of, then the rest of
+   the shortlist; ≤72,000 characters). It returns one probability. **Below
+   0.5** the answer is withdrawn: the reader gets an "I don't know — the
+   Notebook does not cover this" card naming the three closest pages, the turn
+   is logged as template `unknown:check`, and the question is filed on
+   `/questions` (`noteUnansweredQuestion`, reason `no-page`) — only when the
+   desk records its questions. **0.5–0.8**: the answer goes out with one line
+   asking the reader to check it against the page. **0.8 and above**:
+   unchanged. A failed call or no reply within **3 s** changes nothing. Not run
+   for slash commands, the directory card, a question back, a "not recorded"
+   card, or a turn with a picture or an attachment. The score, model and time
+   (or the error) go into the turn's provenance as `check`, with the withdrawn
+   answer when there was one. The thresholds are constants in code — starting
+   values to tune on labelled turns.
+11. **Log** — after the answer has been sent: one `question_log` row (the
    question, the answer as text, the template that built it, the model that
    ran) and one `ai_usage` row per model call.
 
@@ -716,6 +739,7 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes, writes the reason line and booking notes, and says whether the message reports somebody having already dealt with it. | `OPENROUTER_ACCURX_MODEL` → **fast** |
 | **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
 | **images** | `ai_model_images` | Any message with a picture attached — a screenshot of the repeat-medication screen to format for AccurX, a photo of a letter — whichever path it takes: a command, the template picker, or prose. | `OPENROUTER_IMAGES_MODEL` → **its own default**, `DEFAULT_IMAGES_MODEL = mistralai/ministral-14b-2512` |
+| **check** ("Answer check") | `ai_model_check` | Scoring each Notebook answer before it is shown — does it answer the question? (§8 step 10). A **decision** model on OpenRouter's `api/alpha/decisions` endpoint, not a chat model; it writes nothing. | **its own default**, `DEFAULT_CHECK_MODEL = typesafe/jev-1.13`; no environment variable. Not in OpenRouter's chat catalogue, so `/settings` offers `DECISION_MODELS` for this row and takes any typed id. The `typesafe/jev-latest` alias was refused by the endpoint on 2026-10-10. |
 
 **The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
 the only two that do, and for opposite reasons. `accurx` falls back to fast so
@@ -1183,3 +1207,11 @@ should record explicitly:
     committed (`git log --all` returns nothing for the backup path). The
     repository-visibility question (item 3) governs all of it, and now governs
     the signed Chrome extension release as well (§9.2).
+19. **The answer check is a new recipient path.** Every Notebook answer is now
+    sent, with its question, the staff member's previous message and its source
+    pages, to OpenRouter's `api/alpha/decisions` endpoint and on to **TypeSafe**
+    (the Jev model's provider) — `provider: { data_collection: 'deny', zdr:
+    true }`, which TypeSafe accepted when checked on 2026-10-10. OpenRouter
+    labels the endpoint *alpha*. TypeSafe should be named in the DPIA's
+    supplier list, with the same residency question as item 4; attachments and
+    pictures are never sent to it (a turn carrying either is not checked).
