@@ -21,9 +21,10 @@
 // model. That answer IS written by the model, has nothing behind it, and says
 // so on the card.
 //
-// THE NOTEBOOK IS A TEMPLATE TOO. It arrives as a list of page titles, and the
-// model returns a title — the page is then rendered from the database exactly
-// as the practice wrote it. So even the open-ended questions come back as a
+// THE NOTEBOOK IS A TEMPLATE TOO. The model is shown a shortlist of pages —
+// the likeliest few in full, every other page by title (lib/search) — and
+// returns a title; the page is then rendered from the database exactly as the
+// practice wrote it. So even the open-ended questions come back as a
 // variable filled in, not as prose the model composed: same answer every time,
 // about ten output tokens, and no way for a procedure to be paraphrased on its
 // way to somebody following it.
@@ -54,7 +55,7 @@ import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/comm
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
 import { referralCardFromRead } from '@/lib/templates/referrals.mjs';
 import {
-  REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralPages, referralReadPrompt,
+  REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralReadPrompt,
 } from '@/lib/agent/referral-read.mjs';
 import {
   PRACTICE_ANSWER_SCHEMA, groundPracticeAnswer, practiceAnswerPrompt, practiceSources,
@@ -68,13 +69,16 @@ import {
   contractsForTemplate, pcitPages, resolvePick, searchForContract, sourceLines, templateRoster,
   templatesOf,
 } from '@/lib/agent/contract-intent.mjs';
-import { searchKnowledge } from '@/lib/knowledge';
+import { searchPassages } from '@/lib/search/search.mjs';
+import { notebookShortlist } from '@/lib/search/notebook.mjs';
+import { shortlistText } from '@/lib/search/shortlist.mjs';
+import { scheduleNoteEmbedding } from '@/lib/search/index-notes.mjs';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { contactEntries } from '@/lib/contacts-store';
-import { scanNotes, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
+import { scanShortlist, scanEvent, chosenOnScan } from '@/lib/agent/note-scan.mjs';
 import { createRouter, reasoningFor } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
@@ -384,6 +388,14 @@ export async function POST(request) {
   // held in a cookie on the computer it was set at, and read once per turn.
   const logging = !loggingOffIn(request.headers.get('cookie') || '');
 
+  // THE NOTEBOOK'S SEARCH INDEX, CAUGHT UP. Every save embeds its own page in
+  // the background; this repairs whatever a save's run did not finish (a
+  // frozen instance, an API outage) and fills any backlog. Fire-and-forget,
+  // at most once a minute per server instance, never awaited and never
+  // throwing — and run on every turn, commands included, so a desk that only
+  // ever uses /accurx still keeps the index current for everybody else.
+  scheduleNoteEmbedding();
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -397,6 +409,11 @@ export async function POST(request) {
       // not cover this. Never allowed to fail a turn — recordQuestion swallows
       // its own errors — and on Vercel it is handed to waitUntil so the row is
       // still written after the response has been closed.
+      // What the Notebook shortlist was on this turn, once there is one: how
+      // many pages went in whole, and whether search narrowed it at all. Kept
+      // with the turn's provenance, so a wrong answer on /stats can be told
+      // apart as "the page was never shortlisted" or "it was, and was missed".
+      let shortlistLog = null;
       const logTurn = (turn) => {
         // The whole turn's time, in the runtime logs whether or not this desk
         // records its questions — it carries no words of the question.
@@ -418,6 +435,7 @@ export async function POST(request) {
           images: images.length,
           attachments: attachments.length,
           ...turn,
+          provenance: shortlistLog ? { ...(turn.provenance || {}), shortlist: shortlistLog } : turn.provenance,
         });
         if (process.env.VERCEL) {
           try { waitUntil(writing); } catch (e) { /* awaited below instead */ }
@@ -460,30 +478,19 @@ export async function POST(request) {
         ...extra,
       });
 
-      // THE NOTEBOOK, FETCHED ONCE, WHEREVER IT IS FIRST NEEDED.
+      // THE NOTEBOOK, FETCHED AT MOST ONCE A TURN.
       //
-      // It used to be one `let notebookPages = []` beside the model call, two
-      // hundred lines below the two list commands that also read it — so /form
-      // and /template threw `Cannot access 'notebookPages' before
-      // initialization` on every single call, ended the turn, and the reader
-      // got nothing. A `let` in the same function body is not undefined before
-      // its line: it is a ReferenceError, and the branch above it was written
-      // as though it were.
+      // Every page, as live in the notes table — read only by the picker path
+      // below (commands never open it). fullNotebookContext keeps the pages in
+      // server memory and re-reads them only when a one-row version check says
+      // the Notebook changed, so this is usually one small query. The model is
+      // never shown all of it: it sees the turn's shortlist. The full set stays
+      // here in code because the deterministic resolvers need every page — a
+      // title the picker names off the titles-only list, the referral card's
+      // own pathway lookup, a typed page's screen, the number allow-list.
       //
-      // So it is a function, declared before anything that could want it, and
-      // the read happens at most once per turn no matter how many callers ask.
       // A Notebook that cannot be read leaves the templates working rather than
       // failing the turn — the same best-effort it always had.
-      //
-      // WHY A LIST COMMAND WANTS IT AT ALL, given /form and /template answer
-      // from PCIT's two files: because the practice's own written procedure
-      // outranks a published list about the same service. A dozen referrals go
-      // by email with this practice's own form and address, and the tree will
-      // happily answer those with somebody else's — "district nurse" is
-      // Islington's service on the tree and RP ACN 2022 here. It is one
-      // database read, no model and no tokens, and it is the step that stops
-      // the command being the one path that talks somebody out of their own
-      // practice's process.
       let notebookRead = null;
       const notebook = async () => {
         if (notebookRead) return notebookRead;
@@ -517,7 +524,7 @@ export async function POST(request) {
         //
         // A COMMAND SKIPS THE CHOOSING. /accurx and /coding have already said
         // what the message is, so the model is asked for that one template's
-        // values and nothing else: no Notebook catalogue to read, a schema with
+        // values and nothing else: no Notebook to read, a schema with
         // one field in it, and no way for the turn to end up somewhere else.
         const searching = command === 'practiceSearch';
         // The two list lookups. Named here rather than described as "filling in
@@ -636,7 +643,7 @@ export async function POST(request) {
             // is what the documents were found to say.
             let chunks = [];
             try {
-              const hits = await searchKnowledge(question, 12, { kind: 'document', semantic: true });
+              const hits = await searchPassages(question, { kinds: ['document'], limit: 12 });
               chunks = hits.map(knowledgeHitToDocumentChunk);
               // What the search found, for the working card: the documents
               // the passages came from, in the order they ranked.
@@ -1030,36 +1037,6 @@ export async function POST(request) {
           return;
         }
 
-        // THE NOTEBOOK GOES IN IN FULL.
-        //
-        // The model's job is to name the page, not to write the answer again —
-        // the page itself is rendered from the database, exactly as the
-        // practice wrote it, so nothing can garble a procedure. It used to see
-        // one line per page and choose from titles; that could not tell two
-        // similarly titled pages apart, and could not see a value written
-        // inside a page. Now it reads the bodies. About 26k tokens in and ten
-        // out, with the block first in the prompt so a provider that caches
-        // prefixes pays for it once. The catalogue is the fallback for a
-        // Notebook that has outgrown the budget.
-        //
-        // Best-effort: a Notebook that cannot be read leaves the templates
-        // working rather than failing the turn. The prompt says so, and the
-        // model falls back to the shapes it can still fill. Read through the
-        // memoised `notebook()` declared at the top of this stream, so a turn
-        // that already loaded it for a list command does not load it twice.
-        const notebookPages = await notebook();
-        const notebookText = notebookPages.length ? notebookFullText(notebookPages) : '';
-        // The working card's pass over every page for the question's words:
-        // real, and in code, but display only — nothing below reads it. See
-        // lib/agent/note-scan.mjs.
-        const noteScan = notebookPages.length ? scanNotes(question, notebookPages) : null;
-        if (noteScan) send(scanEvent(noteScan));
-        // The page(s) the turn settled on, for the card to mark on that scan.
-        let chosenTitles = [];
-
-        let templateAnswer = null;
-        let clarify = null;
-        let picked = 'none';
         // ONE EXTRA FIELD, ON THE SAME CALL, AND ONLY WHEN IT IS WORTH IT.
         //
         // The schema returns exactly one template, so a message asking for five
@@ -1071,8 +1048,56 @@ export async function POST(request) {
         //
         // "How do I refer for an ECG" is one ask. It is asked with exactly the
         // schema and exactly the prompt it was asked with before any of this
-        // existed, and costs exactly what it used to.
+        // existed, and costs exactly what it used to. Decided before the
+        // Notebook is searched, because a message asking several things gets a
+        // longer shortlist — room for a page per request.
         const decompose = looksMultiIntent(question);
+
+        // THE NOTEBOOK GOES IN AS A SHORTLIST.
+        //
+        // The model's job is to name the page, not to write the answer again —
+        // the page itself is rendered from the database, exactly as the
+        // practice wrote it, so nothing can garble a procedure. It reads page
+        // BODIES, not just titles: titles alone cannot tell two similarly
+        // titled pages apart or show a value written inside a page. But not
+        // every body: the whole Notebook was ~43k tokens on every call, most of
+        // the cost of a turn and most of the wait. So search (lib/search) picks
+        // the pages likeliest to answer — 12, or 20 for a message asking
+        // several things, plus anything edited in the last hour — and those go
+        // in whole; every other page goes in by title only, so the model can
+        // still name a page search missed, and that page is rendered whole
+        // from `notebookPages` like any other.
+        //
+        // Search failing, or having nothing to search with, is the whole
+        // Notebook — never nothing (lib/search/notebook.mjs).
+        //
+        // The search starts beside the Notebook read rather than after it: it
+        // needs the pages only to roll its hits up, so the embedding call and
+        // the database read overlap.
+        //
+        // Best-effort: a Notebook that cannot be read leaves the templates
+        // working rather than failing the turn. The prompt says so, and the
+        // model falls back to the shapes it can still fill.
+        const shortlistBegan = Date.now();
+        const notebookLoading = notebook();
+        const shortlisting = notebookShortlist({ question, history, attached, pages: notebookLoading, multi: decompose });
+        const notebookPages = await notebookLoading;
+        const shortlist = await shortlisting;
+        // The same text goes to the picker, the referral read and the prose
+        // writer, so all three are reading the same pages.
+        const notebookText = notebookPages.length ? shortlistText(shortlist, notebookPages) : '';
+        shortlistLog = { size: shortlist.pages.length, full: shortlist.full, reason: shortlist.reason || '' };
+        console.info(`[agent] ${turnId} shortlist ${shortlist.full ? 'whole Notebook' + (shortlist.reason ? ' (' + shortlist.reason + ')' : '') : shortlist.pages.length + ' of ' + notebookPages.length + ' pages'} in ${seconds(shortlistBegan)}`);
+        // The working card: the shortlist, lit on a grid of every page.
+        // Display only — nothing below reads it. See lib/agent/note-scan.mjs.
+        const noteScan = notebookPages.length ? scanShortlist(shortlist, notebookPages, { question }) : null;
+        if (noteScan) send(scanEvent(noteScan));
+        // The page(s) the turn settled on, for the card to mark on that scan.
+        let chosenTitles = [];
+
+        let templateAnswer = null;
+        let clarify = null;
+        let picked = 'none';
 
         // THE PAGE'S OWN SCREEN, when it is a typed page.
         //
@@ -1111,19 +1136,21 @@ export async function POST(request) {
         // read fails, comes back empty or names a page the Notebook does not
         // have. One extra call, on referral turns only.
         //
-        // IT READS THE REFERRAL PAGES, NOT THE WHOLE NOTEBOOK (referralPages),
-        // and when the message says "refer" it is STARTED BESIDE THE PICKER
-        // rather than after it. It used to be a second full-Notebook call
-        // queued behind the first, which roughly doubled the wait on the
-        // commonest card there is. The picker's choice still decides whether
-        // its result is used at all; a read nobody asked for is thrown away.
+        // IT READS THE SAME SHORTLIST THE PICKER READS, and when the message
+        // says "refer" it is STARTED BESIDE THE PICKER rather than after it.
+        // It used to be a second full-Notebook call queued behind the first,
+        // which roughly doubled the wait on the commonest card there is. The
+        // picker's choice still decides whether its result is used at all; a
+        // read nobody asked for is thrown away. What it names is grounded
+        // against the full Notebook, so a short read can only miss, never
+        // invent.
         const readReferral = (name) => readValues({
           model: seeing ? imageModel : model,
           schema: REFERRAL_READ_SCHEMA,
           text: referralReadPrompt({
             name,
             question,
-            notebook: notebookFullText(referralPages(notebookPages, name)),
+            notebook: notebookText,
           }),
           role: seeing ? 'images' : 'fast',
           phase: 'referralRead',
@@ -1270,7 +1297,7 @@ export async function POST(request) {
         const generated = await generateText({
           model: openrouter(proseModel),
           abortSignal: deadline,
-          // The whole Notebook, the same text the picker read — see systemFor.
+          // The shortlist, the same text the picker read — see proseSystemPrompt.
           system: proseSystemPrompt(notebookText),
           // Capped for the same reason as readValues: an uncapped call reserves
           // the model's whole window and is refused when the balance is low.
@@ -1296,19 +1323,24 @@ export async function POST(request) {
           return;
         }
 
-        // THE NOTEBOOK COUNTS AS VERIFIED. The model is now shown it and told to
+        // THE NOTEBOOK COUNTS AS VERIFIED. The model is shown it and told to
         // use its exact wording, so the numbers it writes are largely the
         // practice's own — and the redactor, which strips any number it cannot
         // vouch for, would have cut every one of them out of the answer it just
         // asked for. A number written in the Notebook is a number the practice
         // wrote down; nothing else on this path is.
-        const verified = verifiedNumbers([question, history, attached, notebookText]);
+        //
+        // EVERY PAGE, not only the shortlisted ones: the allow-list is about
+        // whether the practice wrote the number down, not about what this
+        // turn's prompt happened to carry, and it is the same list it was
+        // before the shortlist existed.
+        const verified = verifiedNumbers([question, history, attached, notebookPages.length ? notebookFullText(notebookPages) : '']);
         const redact = (t) => redactUnverifiedNumbers(t, verified);
         const prose = redact(markdown);
 
         // AND WHETHER IT IS THE PRACTICE'S OWN WORDS, MEASURED.
         //
-        // This path is handed the whole Notebook and told to use its exact
+        // This path is handed the Notebook's shortlist and told to use its exact
         // wording, so an answer off this path is routinely the practice's own
         // page — and the card was telling the reader, in so many words, that no
         // practice document was used and they should go and check. A warning

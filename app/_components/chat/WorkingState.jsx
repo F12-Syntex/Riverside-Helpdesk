@@ -11,17 +11,18 @@ import TextShimmer from './TextShimmer';
  * server, sent as it happened (app/api/agent/route.js, `progress`):
  *
  *   - the Notebook, one cell per page, in its sections. The cells light
- *     as the pass over every page for the question's words is shown, the
- *     count beside them is the real count, and the pages that use those
- *     words light up where they sit (lib/agent/note-scan.mjs);
- *   - the pages that matched, named, as the pass reaches them;
+ *     as the pass over every page is shown, the count beside them is the
+ *     real count, and the pages search shortlisted for the model to read
+ *     in full light up where they sit (lib/agent/note-scan.mjs);
+ *   - the shortlisted pages, named, as the pass reaches them;
  *   - the page the turn settled on, marked when the model names it;
  *   - for a search of the practice documents, the documents it found.
  *
  * The pass itself takes milliseconds on the server; the sweep replays it
  * at a pace that can be watched. The count it lands on, and every page it
  * lights, are the real ones. While the model reads, a light passes over
- * the whole grid — because the model does read the whole Notebook.
+ * the whole grid — the model reads the shortlisted pages in full and every
+ * other page's title, so it can still name one search missed.
  *
  * The bar is stages, not time: a segment fills when its stage is done
  * and the one in hand shimmers. It never moves for a clock.
@@ -213,13 +214,15 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
         <div className="riva-scan">
           <NoteGrid notes={notes} swept={swept} hits={hits} chosen={chosen} reading={scanned && !chosen.size && !selectDone} />
           <div className="riva-scan-note">
-            {!notes.terms.length
+            {/* matched === total is the whole-Notebook fallback: search
+                could not narrow it down, so every page goes in. */}
+            {notes.matched >= notes.total
               ? 'Every page goes to the model to read for meaning'
               : !scanned
-                ? 'Looking for ' + quoteTerms(notes.terms)
-                : notes.matched
-                  ? notes.matched + ' of ' + notes.total + ' pages mention ' + quoteTerms(notes.terms) + ' — the model reads them all'
-                  : 'No page uses these words exactly — the model reads them all for meaning'}
+                ? (notes.terms.length ? 'Looking for ' + quoteTerms(notes.terms) : 'Searching the Notebook')
+                : notes.matched + ' of ' + notes.total + ' pages shortlisted'
+                  + (notes.terms.length ? ' for ' + quoteTerms(notes.terms) : '')
+                  + ' — the model reads those in full and the rest by title'}
           </div>
           {listed.length > 0 && (
             <ol className={'riva-scan-list' + (chosen.size ? ' has-chosen' : '')}>

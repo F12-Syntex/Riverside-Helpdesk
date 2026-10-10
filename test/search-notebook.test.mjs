@@ -187,3 +187,31 @@ test('the run is handed to defer so a serverless request waits for it', async ()
   await deferred[0];
   assert.equal(f.calls.length, 1);
 });
+
+test('the search starts before a loading Notebook arrives', async () => {
+  let started = false;
+  let arrive = null;
+  const pages = new Promise((resolve) => { arrive = () => resolve(PAGES); });
+  const search = async () => { started = true; return hitsFor(3); };
+  const shortlisting = notebookShortlist({ question: 'district nurse', pages, search });
+  await tick();
+  assert.equal(started, true, 'search runs while the pages are still loading');
+  arrive();
+  const s = await shortlisting;
+  assert.equal(s.full, false);
+  assert.deepEqual(s.pages.map((p) => p.docId), ['note:1', 'note:2', 'note:3']);
+});
+
+test('a search that fails while the Notebook loads still falls back to it', async (t) => {
+  const warned = quietWarn(t);
+  let arrive = null;
+  const pages = new Promise((resolve) => { arrive = () => resolve(PAGES); });
+  const shortlisting = notebookShortlist({ question: 'district nurse', pages, search: () => { throw new Error('down'); } });
+  await tick();
+  arrive();
+  const s = await shortlisting;
+  assert.equal(s.full, true);
+  assert.equal(s.reason, 'search-failed');
+  assert.equal(s.pages, PAGES);
+  assert.equal(warned.length, 1);
+});

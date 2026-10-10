@@ -1,6 +1,7 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import { REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralPages, referralReadPrompt } from '../lib/agent/referral-read.mjs';
+import { REFERRAL_READ_SCHEMA, groundReferralRead, looksLikeReferral, referralReadPrompt } from '../lib/agent/referral-read.mjs';
+import { shortlistText } from '../lib/search/shortlist.mjs';
 import { referralCardFromRead } from '../lib/templates/referrals.mjs';
 
 // THE GAP THIS FILE EXISTS FOR. The pairing a referral needs was got off the
@@ -117,35 +118,35 @@ test('a page that does not say how it is sent gets the card that says so', () =>
   assert.ok(shown.items.some((i) => i.value === 'Nutrition and Dietetics'));
 });
 
-test('the prompt puts the Notebook first, so the prefix caches', () => {
+test('the prompt embeds the Notebook text it is given, ahead of the message', () => {
   const a = referralReadPrompt({ name: 'x', question: 'q1', notebook: 'PAGES' });
-  const b = referralReadPrompt({ name: 'x', question: 'q2', notebook: 'PAGES' });
-  const shared = a.slice(0, a.indexOf('THE MESSAGE:'));
-  assert.equal(shared, b.slice(0, b.indexOf('THE MESSAGE:')));
   assert.ok(a.startsWith('THE PRACTICE NOTEBOOK'));
+  assert.ok(a.includes('\nPAGES\n'));
+  assert.ok(a.indexOf('PAGES') < a.indexOf('THE MESSAGE:'));
+  // Everything but the message is the same from one question to the next.
+  const b = referralReadPrompt({ name: 'x', question: 'q2', notebook: 'PAGES' });
+  assert.equal(a.slice(0, a.indexOf('THE MESSAGE:')), b.slice(0, b.indexOf('THE MESSAGE:')));
 });
 
 test('the schema refuses a route it was not given', () => {
   assert.throws(() => REFERRAL_READ_SCHEMA.parse({ ...READ, route: 'fax' }));
 });
 
-// The read is handed the referral pages only, so a referral turn no longer pays
-// for the whole Notebook twice.
-const MIXED = [
-  ...PAGES,
-  { docTitle: 'Notebook: Appointments / Flu vaccination booking', text: 'Book flu jabs in the nurse clinic.' },
-  { docTitle: 'Notebook: Contacts / Mental health', text: 'Dietitian drop-in on Tuesdays.' },
+// The read is handed the turn's shortlist: referral pages search ranked in
+// full, every other page by title. A titles-only page cannot be read off, and
+// the prompt says so.
+const OTHERS = [
+  { docId: 'note:90', docTitle: 'Notebook: Appointments / Flu vaccination booking', text: 'Book flu jabs in the nurse clinic.' },
 ];
 
-test('the referral read sees referral pages, plus any page naming the service', () => {
-  const titles = (list) => list.map((p) => p.docTitle);
-  assert.deepEqual(titles(referralPages(MIXED, '')), titles(PAGES));
-  assert.deepEqual(titles(referralPages(MIXED, 'dietitian')), [...titles(PAGES), 'Notebook: Contacts / Mental health']);
-});
-
-test('a Notebook with no referral headings is read whole', () => {
-  const plain = MIXED.slice(2);
-  assert.equal(referralPages(plain, '').length, plain.length);
+test('the read sees shortlisted pages whole and is told titles-only pages cannot be read', () => {
+  const all = [...PAGES.map((p, i) => ({ docId: 'note:' + (i + 1), ...p })), ...OTHERS];
+  const shortlist = { full: false, pages: all.slice(0, PAGES.length), why: {} };
+  const prompt = referralReadPrompt({ name: 'dietitian', question: 'dietitian referral', notebook: shortlistText(shortlist, all) });
+  assert.ok(prompt.includes(PAGES[0].text.trim().split('\n')[0]), 'a shortlisted page is in full');
+  assert.ok(prompt.includes('- Notebook: Appointments / Flu vaccination booking'), 'the other page is named');
+  assert.ok(!prompt.includes('Book flu jabs'), 'and not shown');
+  assert.match(prompt, /Read ONLY pages shown in full/);
 });
 
 test('the early read starts only for messages that say refer', () => {
