@@ -1,5 +1,19 @@
 # What the router measured
 
+> **2026-10-10 — the router is gone.** The trigger-phrase router and
+> `evals/routing/bench-pages.mjs`, which produced the numbers below, were
+> removed in the search rebuild (`docs/superpowers/specs/2026-10-10-search-rebuild-design.md`);
+> the `routing_*` tables are left in the database, unused. The picker no longer
+> reads the whole Notebook: it reads a search shortlist (the best pages in full,
+> every other page by title). `evals/routing/bench-picker.mjs` now builds each
+> case's prompt from that shortlist and reports `shortlistRecall` (how often the
+> expected page reached the prompt in full) beside `pageCorrectRate`,
+> `pageWrongRate` and `meanInputTokens`; `--shortlist-only` measures the search
+> alone, with no model calls. Of the commands below, the `bench-pages.mjs` one no
+> longer exists, and the `bench-picker.mjs` one still runs but measures the
+> shortlisted picker, not the whole-Notebook baseline this page describes. The
+> numbers are kept as the record of what the router achieved.
+
 The numbers `evals/routing/bench-pages.mjs` produced against
 `evals/routing/pages.md` (52 cases, 43 of them real staff questions taken
 verbatim from `question_log`), five repeats, 260 routed turns per run. Written
