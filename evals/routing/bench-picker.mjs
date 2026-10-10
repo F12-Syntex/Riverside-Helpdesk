@@ -47,6 +47,9 @@ const opt = (name, fallback) => { const i = args.indexOf(name); return i > -1 &&
 const valued = new Set(['--repeats', '--concurrency', '--model']);
 const outFile = args.find((a, i) => !a.startsWith('--') && !valued.has(args[i - 1])) || 'routing-picker-report.json';
 const shortlistOnly = args.includes('--shortlist-only');
+// --full: the baseline — every case reads the whole Notebook, as every turn
+// did before the shortlist, so the two can be compared on the same cases.
+const fullNotebook = args.includes('--full');
 const repeats = shortlistOnly ? 1 : Math.max(1, Number(opt('--repeats', 1)) || 1);
 const concurrency = Math.max(1, Number(opt('--concurrency', 3)) || 3);
 
@@ -79,7 +82,7 @@ const { buildFullNotebookSources } = await import('../../lib/knowledge-context.m
 const { getSql, ensureNotebookSchema } = await import('../../lib/db.js');
 const { SELECTION_SCHEMA, selectionPrompt } = await import('../../lib/templates/route.mjs');
 const { notebookShortlist } = await import('../../lib/search/notebook.mjs');
-const { shortlistText } = await import('../../lib/search/shortlist.mjs');
+const { fullShortlist, shortlistText } = await import('../../lib/search/shortlist.mjs');
 const { looksMultiIntent } = await import('../../lib/safety/requests.mjs');
 // A page's path without the 'Notebook:' prefix, as pages.md writes it.
 const pagePath = (title) => String(title || '').replace(/^notebook:\s*/i, '').trim();
@@ -116,7 +119,10 @@ const shortlists = new Map();
 function shortlistFor(c) {
   if (!shortlists.has(c.question)) {
     const multi = looksMultiIntent(c.question);
-    shortlists.set(c.question, notebookShortlist({ question: c.question, history: '', attached: '', pages, multi })
+    const making = fullNotebook
+      ? Promise.resolve(fullShortlist(pages, 'baseline'))
+      : notebookShortlist({ question: c.question, history: '', attached: '', pages, multi });
+    shortlists.set(c.question, making
       .then((shortlist) => ({ shortlist, multi, text: shortlistText(shortlist, pages) })));
   }
   return shortlists.get(c.question);
