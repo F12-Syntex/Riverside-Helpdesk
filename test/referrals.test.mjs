@@ -6,11 +6,12 @@ import assert from 'node:assert/strict';
 
 import { buildFullNotebookSources } from '../lib/knowledge-context.mjs';
 import {
-  HUB_MIN_CARDS, MAX_RESULTS, MIN_RESULTS, alphabetical, filterReferrals, isHub, isLiveCard, pageTitle,
+  HUB_MIN_CARDS, MAX_RESULTS, alphabetical, filterReferrals, isHub, isLiveCard, pageTitle,
   popularReferrals, priorityTag, rankReferrals, referralNameText, referralPages, referralQuery, routeOf,
   shapeResult,
 } from '../lib/search/referrals.mjs';
 import { searchReferrals } from '../lib/search/referrals-search.mjs';
+import { conceptsOf } from '../lib/search/referral-aliases.mjs';
 
 const ers = (service, extra = {}) => ({ service, specialty: service, clinicType: 'General', priority: 'Routine', ...extra });
 
@@ -98,46 +99,50 @@ test('the words that only ask for "a referral" are taken out of the query', () =
   assert.equal(referralQuery('reflux'), 'reflux');
 });
 
-test('ranking is by meaning, then keywords break near-ties, then a card beats a page', () => {
+test('ranking is by name first: the share of the query the page name says, aliases included', () => {
+  const pages = referralPages(PAGES);
+  // "skin" is Dermatology: both dermatology cards, the 2WW one first (its name says "2WW skin", the reader's own word).
+  assert.deepEqual(titles(rankReferrals(pages, { concepts: conceptsOf('skin') })), ['2WW Dermatology', 'Normal Dermatology']);
+  // "cancer skin": the card that says both first; the pages saying one of them under it.
+  assert.deepEqual(titles(rankReferrals(pages, { concepts: conceptsOf('cancer skin') })),
+    ['2WW Dermatology', 'Cancer referrals (2WW)', 'Normal Dermatology']);
+  // An alias phrase: "heart tracing" is the ECG.
+  assert.equal(titles(rankReferrals(pages, { concepts: conceptsOf('heart tracing') }))[0], 'ECG and 48-hour tape');
+  // Several words of one group are one concept: every one of them is "the district nurse".
+  assert.deepEqual(titles(rankReferrals(pages, { concepts: conceptsOf('nurse to visit at home') })), ['District Nurse']);
+});
+
+test('keywords break ties between equal names, and a card beats a plain page', () => {
   const pages = referralPages(PAGES);
   const id = (title) => byTitle(title).docId;
-  const scores = new Map([
-    [id('Cancer referrals (2WW)'), { semantic: 0.45, lexical: 1 }],
-    [id('2WW Dermatology'), { semantic: 0.43, lexical: 0.2 }],
-    [id('Normal Dermatology'), { semantic: 0.30, lexical: 0 }],
-    [id('ECG and 48-hour tape'), { semantic: 0.10, lexical: 0 }],
-  ]);
-  // The card's own name is nearer than any of its passages.
-  const names = new Map([[id('2WW Dermatology'), 0.47]]);
-  assert.deepEqual(titles(rankReferrals(pages, { scores, names })).slice(0, 3),
-    ['2WW Dermatology', 'Cancer referrals (2WW)', 'Normal Dermatology']);
-  // Meaning decides: a keyword-only page does not jump a page that means the query.
-  const keywordOnly = new Map([[id('ECG and 48-hour tape'), { semantic: 0.05, lexical: 5 }], [id('District Nurse'), { semantic: 0.4, lexical: 0 }]]);
-  assert.equal(titles(rankReferrals(pages, { scores: keywordOnly }))[0], 'District Nurse');
-  // Among near-equals the keyword arm breaks the tie.
-  const tie = new Map([[id('Normal Dermatology'), { semantic: 0.4, lexical: 0 }], [id('2WW Dermatology'), { semantic: 0.4, lexical: 1 }]]);
-  assert.equal(titles(rankReferrals(pages, { scores: tie }))[0], '2WW Dermatology');
-  // And a live card beats a plain page that means the query as well.
-  const level = new Map([[id('Cancer referrals (2WW)'), { semantic: 0.4 }], [id('2WW Dermatology'), { semantic: 0.39 }]]);
-  assert.equal(titles(rankReferrals(pages, { scores: level }))[0], '2WW Dermatology');
+  // Both dermatology names say "dermatology"; the text decides.
+  const scores = new Map([[id('Normal Dermatology'), { lexical: 1 }], [id('2WW Dermatology'), { lexical: 0.1 }]]);
+  assert.equal(titles(rankReferrals(pages, { concepts: conceptsOf('dermatology'), scores }))[0], 'Normal Dermatology');
+  // A page whose name says nothing does not sit under a page whose name is the query, however good its words.
+  const body = new Map([[id('Cancer referrals (2WW)'), { lexical: 1 }], [id('District Nurse'), { lexical: 0.2 }]]);
+  assert.deepEqual(titles(rankReferrals(pages, { concepts: conceptsOf('ecg'), scores: body })), ['ECG and 48-hour tape']);
+  // Under a page whose name says half the query, very good words come in; middling words do not.
+  assert.deepEqual(titles(rankReferrals(pages, { concepts: conceptsOf('ecg qwerty'), scores: body })),
+    ['ECG and 48-hour tape', 'Cancer referrals (2WW)']);
 });
 
-test('with no vectors the keyword arm ranks alone, and leaves out what it did not find', () => {
+test('with no name matching, the keyword arm ranks alone, and leaves out what it did not find', () => {
   const pages = referralPages(PAGES);
   const scores = new Map([
-    [byTitle('ECG and 48-hour tape').docId, { semantic: 0, lexical: 0.4 }],
-    [byTitle('District Nurse').docId, { semantic: 0, lexical: 0.9 }],
+    [byTitle('ECG and 48-hour tape').docId, { lexical: 0.4 }],
+    [byTitle('District Nurse').docId, { lexical: 0.9 }],
   ]);
-  assert.deepEqual(titles(rankReferrals(pages, { scores })), ['District Nurse', 'ECG and 48-hour tape']);
-  assert.deepEqual(rankReferrals(pages, { scores: new Map() }), []);
+  assert.deepEqual(titles(rankReferrals(pages, { concepts: conceptsOf('qwerty'), scores })), ['District Nurse', 'ECG and 48-hour tape']);
+  assert.deepEqual(rankReferrals(pages, { concepts: conceptsOf('qwerty'), scores: new Map() }), []);
 });
 
-test('a search shows at least MIN_RESULTS, then only what is near the best, up to MAX_RESULTS', () => {
-  const many = Array.from({ length: 20 }, (_, i) => ({ docId: 'note:' + (100 + i), path: ['Referrals', 'Page ' + i], noteKind: 'note' }));
-  const far = new Map(many.map((p, i) => [p.docId, { semantic: i === 0 ? 0.9 : 0.2 }]));
-  assert.equal(rankReferrals(many, { scores: far }).length, MIN_RESULTS);
-  const close = new Map(many.map((p, i) => [p.docId, { semantic: 0.5 - i * 0.001 }]));
-  assert.equal(rankReferrals(many, { scores: close }).length, MAX_RESULTS);
+test('a search shows what is near the best, up to MAX_RESULTS', () => {
+  const many = Array.from({ length: 20 }, (_, i) => ({ docId: 'note:' + (100 + i), path: ['Referrals', 'Clinic ' + i], noteKind: 'note' }));
+  assert.equal(rankReferrals(many, { concepts: conceptsOf('clinic') }).length, MAX_RESULTS);
+  // One page says both words, the others one: half a concept down, within the spread.
+  const two = many.map((p, i) => (i === 0 ? { ...p, path: ['Referrals', 'Clinic falls'] } : p));
+  assert.equal(titles(rankReferrals(two, { concepts: conceptsOf('falls clinic') }))[0], 'Clinic falls');
+  assert.equal(rankReferrals(two, { concepts: conceptsOf('falls clinic') }).length, MAX_RESULTS);
 });
 
 test('the empty box: the most asked for over the log, else A–Z', () => {
@@ -174,34 +179,21 @@ test('the instant filter matches names and card fields, typos included, never th
   assert.deepEqual(filterReferrals(rows, '  '), []);
 });
 
-test('the search ranks on keywords alone when the query cannot be embedded', async () => {
+test('the search scores the listed pages by every alias of the query, "referral" taken out', async () => {
   const pages = referralPages(PAGES);
   let asked = null;
-  const ranked = await searchReferrals('nurse referral', pages, {
-    embed: async () => { throw new Error('embedding API down'); },
-    embedMany: async () => { throw new Error('embedding API down'); },
-    scorePassages: async (ids, words, vector) => {
-      asked = { ids, words, vector };
-      return new Map([[byTitle('District Nurse').docId, { semantic: 0, lexical: 0.5 }]]);
+  const ranked = await searchReferrals('district nurse referral', pages, {
+    scorePassages: async (ids, words) => {
+      asked = { ids, words };
+      return new Map([[byTitle('District Nurse').docId, { lexical: 0.5 }]]);
     },
-    budgetMs: 200,
   });
   assert.deepEqual(titles(ranked), ['District Nurse']);
-  // "referral" was taken out before searching, and only the listed pages were scored.
-  assert.equal(asked.words, 'nurse');
-  assert.equal(asked.vector, null);
+  assert.match(asked.words, /\bhousebound\b/);
+  assert.doesNotMatch(asked.words, /referral/);
   assert.equal(asked.ids.length, pages.length);
-});
-
-test('the search scores each page by the nearer of its passages and its name', async () => {
-  const pages = referralPages(PAGES);
-  const unit = (i) => Array.from({ length: 1536 }, (_, j) => (j === i ? 1 : 0));
-  const ranked = await searchReferrals('heart tracing', pages, {
-    embed: async () => unit(0),
-    // Every name gets a vector; only ECG's points the query's way.
-    embedMany: async (texts) => texts.map((t) => (t.startsWith('ECG') ? unit(0) : unit(1))),
-    scorePassages: async () => new Map([[byTitle('Cardiology: RACPC').docId, { semantic: 0.4, lexical: 0 }]]),
-    budgetMs: 1000,
-  });
-  assert.deepEqual(titles(ranked).slice(0, 2), ['ECG and 48-hour tape', 'Cardiology: RACPC']);
+  // Nothing to search with: nothing asked of the database.
+  asked = null;
+  assert.deepEqual(await searchReferrals('  ', pages, { scorePassages: async () => { asked = true; return new Map(); } }), []);
+  assert.equal(asked, null);
 });
