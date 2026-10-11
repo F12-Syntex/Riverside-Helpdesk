@@ -817,12 +817,14 @@ class RiversidePracticeQA extends React.Component {
       // so it must not be read as an empty one. Without this a perfectly good
       // ECG referral card was declined as needing a clinician.
       if (!data.answerable || (!data.template && !(data.sections || []).length)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], citations: [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', draft: '', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], citations: [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
         return;
       }
       // turnId identifies this answer to the server, so a verdict pressed under
       // it is stored against the answer it was actually about.
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', general: data.general === true, template: data.template || null, intro: data.intro, sections: data.sections, validation: data.validation || null, citations: data.citations, alerts: data.alerts || [], panel: data.panel || null });
+      // `streamed`: the reader has watched this answer arrive, so it takes
+      // the draft's place without playing its entrance again.
+      this.updateAi(idx, (msg) => ({ status: 'done', answerKind: 'answer', statusText: '', streamed: !!msg.draft, draft: '', turnId: data.turnId || '', general: data.general === true, template: data.template || null, intro: data.intro, sections: data.sections, validation: data.validation || null, citations: data.citations, alerts: data.alerts || [], panel: data.panel || null }));
     } catch (e) {
       // An abort is this conversation being left, not a failed answer: there is
       // no card left to mark as broken.
@@ -839,6 +841,10 @@ class RiversidePracticeQA extends React.Component {
   onAgentEvent(idx, ev) {
     if (!ev || !ev.type) return;
     if (ev.type === 'status') { this.updateAi(idx, { statusText: ev.text || '' }); return; }
+    // The answer so far, as the model writes it — the whole of it each time,
+    // already redacted and linked on the server. Drawn in place of the working
+    // card until the `answer` event replaces it with what was decided.
+    if (ev.type === 'draft') { this.updateAi(idx, { draft: String(ev.markdown || '') }); return; }
     // Real progress on the turn itself — the Notebook read, the documents
     // found — kept by stage for the working card.
     if (ev.type === 'progress' && ev.stage) {
@@ -1236,6 +1242,11 @@ class RiversidePracticeQA extends React.Component {
           template: m.template || null,
           hasTemplate: !!m.template,
           aiLoading: m.status === 'loading',
+          // The streamed answer, while the turn is still finishing: the check
+          // can still withdraw it, so it is shown only until the turn ends.
+          draft: m.status === 'loading' ? (m.draft || '') : '',
+          hasDraft: m.status === 'loading' && !!m.draft,
+          streamed: !!m.streamed,
           aiError: m.status === 'error',
           aiDeclined: m.status === 'declined',
           aiDone: m.status === 'done',

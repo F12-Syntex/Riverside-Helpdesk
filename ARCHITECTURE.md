@@ -471,7 +471,7 @@ sequenceDiagram
    attachments read failed is used for that turn but not kept.
 5. **The writer reads the whole Notebook** — there is **no search, no
    shortlist, no page picker and no card** on the Q&A path (the Referrals page,
-   `/`, is where the cards live). One `generateText` call on the **fast role**
+   `/`, is where the cards live). One `streamText` call on the **fast role**
    (the **images** role when a picture is attached), `temperature: 0.2`, output
    capped at `PROSE_MAX_TOKENS` (3,000 — the count includes any thinking the
    model does first). The system prompt (`proseSystemPrompt` /
@@ -499,6 +499,19 @@ sequenceDiagram
    - The progress card's "notes" stage is the whole Notebook, read:
      `{ type: 'progress', stage: 'notes', total, sections, terms: [], matched:
      total, matches: [] }` (`lib/agent/notebook-progress.mjs`).
+   - *Streamed.* The answer is sent as it is written: each settled stretch goes
+     out as `{ type: 'draft', markdown }` — the whole text so far, at most
+     about eight a second — already redacted (step 7) and linked (step 6), and
+     the browser draws it in place of the working card with a "Writing the
+     answer" / "Checking the answer" line under it. What is still being
+     written at the end — a run of digits, an unclosed `[[` — is held back
+     until the next words settle it (`settledDraft`, `lib/agent/draft.mjs`),
+     so a number is never shown before the redactor has seen all of it. The
+     finished answer still goes through every step below, and the `answer`
+     event replaces the draft with what was decided — including the "not
+     covered" card when the check withdraws it (step 8). `timedFetch`
+     (`lib/ai/openrouter.mjs`) logs a stream by its status alone: reading a
+     clone of the body for its usage would hold the whole stream back.
 6. **Citations become links, in code** — after the number redaction (step 7),
    `resolveReferences` (`lib/questions/references.mjs`) finds every
    `[[…]]` outside code and matches it against the pages with the Notebook's

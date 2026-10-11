@@ -33,7 +33,7 @@
 // behind it is unchanged, so it is stored at the moment it is given.
 import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { generateObject, generateText, zodSchema } from 'ai';
+import { generateObject, generateText, streamText, zodSchema } from 'ai';
 import {
   COMMAND_SCHEMAS, commandPrompt, notebookFullText, proseSystemMessage, renderCommand,
 } from '@/lib/templates/route.mjs';
@@ -76,6 +76,7 @@ import {
   checkProvenance, closestPages, runAnswerCheck, shouldCheck, unknownAnswer, withConfirmLine,
 } from '@/lib/questions/answer-check.mjs';
 import { citedPages, resolveReferences, saysDontKnow, sourcesLine } from '@/lib/questions/references.mjs';
+import { draftThrottle, settledDraft } from '@/lib/agent/draft.mjs';
 import { noteUnansweredQuestion } from '@/lib/questions/open';
 import { isCollectableQuestion } from '@/lib/questions/gaps.mjs';
 import { previousUserMessage } from '@/lib/search/query.mjs';
@@ -1046,11 +1047,29 @@ export async function POST(request) {
           ? [{ type: 'text', text: question }].concat(images.map((url) => ({ type: 'image', image: url })))
           : question;
 
+        // THE NOTEBOOK COUNTS AS VERIFIED. The model is shown it and told to
+        // use its exact wording, so the numbers it writes are largely the
+        // practice's own — and the redactor, which strips any number it cannot
+        // vouch for, would have cut every one of them out of the answer it just
+        // asked for. A number written in the Notebook is a number the practice
+        // wrote down; nothing else on this path is.
+        const verified = verifiedNumbers([question, history, attached, notebookText]);
+        // What the reader may see of the text so far: redacted and linked
+        // exactly as the finished answer is, less the tail that could still
+        // become a number or a citation (lib/agent/draft.mjs).
+        const draftOf = (text) => resolveReferences(redactUnverifiedNumbers(text, verified), notebookPages).body.trim();
+
         // A picture is read by the images role, with the whole Notebook beside
         // it exactly as a typed question has it.
         const proseModel = seeing ? imageModel : model;
         const proseBegan = Date.now();
-        const generated = await generateText({
+        // STREAMED. The reader starts reading a second after the model starts
+        // writing, rather than when it stops: each settled stretch goes out as
+        // a `draft` event, and the browser draws it in place of the working
+        // card. The finished answer still goes through everything below — the
+        // check can still withdraw it — and the `answer` event replaces the
+        // draft with what was decided.
+        const generated = streamText({
           model: openrouter(proseModel),
           abortSignal: deadline,
           // The whole Notebook first, then the rules — one byte-stable,
@@ -1068,14 +1087,30 @@ export async function POST(request) {
           ],
           temperature: 0.2,
         });
-        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: generated.usage });
+        let streamedText = '';
+        let drafted = '';
+        const draftDue = draftThrottle();
+        const sendDraft = (text) => {
+          const draft = draftOf(text);
+          if (!draft || draft === drafted) return;
+          drafted = draft;
+          send({ type: 'draft', markdown: draft });
+        };
+        for await (const delta of generated.textStream) {
+          streamedText += delta;
+          if (draftDue()) sendDraft(settledDraft(streamedText));
+        }
+        // All of it, while the check runs: nothing is still being written.
+        sendDraft(streamedText);
+        const answerUsage = await generated.usage;
+        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: answerUsage });
         tookTime('answer', proseModel, proseBegan);
         {
-          const { input, cached } = usageCounts(generated.usage);
+          const { input, cached } = usageCounts(answerUsage);
           console.info(`[agent] ${turnId} answer read ${input} input tokens, ${cached == null ? 'cache not reported' : cached + ' from the cache'}`);
         }
 
-        const markdown = String(generated.text || '').trim();
+        const markdown = streamedText.trim();
         if (!markdown) {
           send({ type: 'error', error: 'The assistant did not return an answer.' });
           const written = logTurn({ outcome: 'failed', error: 'The model returned an empty answer.' });
@@ -1084,13 +1119,6 @@ export async function POST(request) {
           return;
         }
 
-        // THE NOTEBOOK COUNTS AS VERIFIED. The model is shown it and told to
-        // use its exact wording, so the numbers it writes are largely the
-        // practice's own — and the redactor, which strips any number it cannot
-        // vouch for, would have cut every one of them out of the answer it just
-        // asked for. A number written in the Notebook is a number the practice
-        // wrote down; nothing else on this path is.
-        const verified = verifiedNumbers([question, history, attached, notebookText]);
         const prose = redactUnverifiedNumbers(markdown, verified);
 
         // THE CITATIONS, MADE LINKS — or plain words, where a heading names no

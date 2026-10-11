@@ -80,6 +80,24 @@ function Feedback({ v }) {
   );
 }
 
+// The answer while it is still being written. The same prose the finished
+// answer is drawn in, and under it one quiet line saying what is happening —
+// "Writing the answer", then "Checking the answer" — so the reader can start
+// reading at once and still see it is not final.
+function Draft({ markdown, statusText }) {
+  return (
+    <div className="riva-answer-flow">
+      <div style={s('padding:16px 0 6px;')}>
+        <Md text={markdown} />
+      </div>
+      <div role="status" style={s('display:flex;align-items:center;gap:7px;padding:4px 0 12px;font-size:13px;color:#768692;')}>
+        <span style={s('display:flex;animation:rivaSpin 1s linear infinite;')}><Svg w={13} sw={2.4}>{Icons.spinner}</Svg></span>
+        {statusText || 'Writing the answer'}
+      </div>
+    </div>
+  );
+}
+
 // One section of the body. Two looks, because the reader must be able to tell
 // them apart without reading: a critical block is a red callout, and an
 // ordinary block is plain text with its quiet citation.
@@ -121,7 +139,9 @@ export default function AiAnswer({ v }) {
       <div style={s('min-width:0;')}>
         {/* The agent is working: one readable line saying what it is doing
             now, rather than a grid of every lookup in unreadable type. */}
-        {v.aiLoading && <WorkingState steps={v.steps} statusText={v.statusText} progress={v.progress} />}
+        {v.aiLoading && (v.hasDraft
+          ? <Draft markdown={v.draft} statusText={v.statusText} />
+          : <WorkingState steps={v.steps} statusText={v.statusText} progress={v.progress} />)}
 
         {v.aiError && (
           <div style={s('padding:18px 0;font-size:17px;line-height:1.5;color:#212b32;')}>
@@ -141,7 +161,7 @@ export default function AiAnswer({ v }) {
         )}
 
         {v.aiDone && (
-          <div className="riva-answer-flow">
+          <div className={'riva-answer-flow' + (v.streamed ? ' is-settled' : '')}>
             {/* The question is already the heading of the page (ChatView renders
                 it as the h1 with the rule under it), so printing it again here
                 gave every answer two titles. Only the intro belongs in this
