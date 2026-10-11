@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.69.0` | 2026-10-11 | feat | `dbb6c08` | feat: stream the Q&A answer as it is written |
+| `6.68.5` | 2026-10-11 | docs | `8560ab6` | docs: record the embedding removal and Q&A cleanup in versions |
 | `6.68.4` | 2026-10-11 | docs | `56ce436` | docs: drop references to the code the Q&A cleanup removed |
 | `6.68.3` | 2026-10-11 | refactor | `e9c20de` | refactor: strip the Q&A to the whole-Notebook answer |
 | `6.68.2` | 2026-10-11 | docs | `b973d81` | docs: describe search without embeddings |
