@@ -5,8 +5,6 @@ import {
 } from '../lib/referrals/nel-contracts.mjs';
 import { contractNotFound, contractTemplateAnswer } from '../lib/templates/contracts.mjs';
 import { commandByName, forcedTemplate } from '../lib/commands.mjs';
-import { referralAnswer } from '../lib/templates/referrals.mjs';
-
 // The contract-to-template mapping out of PCIT's mobilisation Sitrep. Two things
 // are being guarded here. One is that the table was read correctly, which is
 // harder than it sounds: its cells wrap over several lines, a row can straddle a
@@ -253,21 +251,6 @@ test('a miss on /template is answered by the Sitrep, not by prose', () => {
   // It says what the list does and does not cover, and that it is dated.
   assert.match(JSON.stringify(card.blocks), /not every service the practice runs/);
   assert.match(JSON.stringify(card.blocks), /support@primarycareit\.co\.uk/);
-});
-
-/* ------------------------------------------- not at the Notebook's expense */
-
-// The other half of the same guard, on the referral side. That one IS enforced
-// in code — referralAnswer reads the Notebook before it reaches the tree — so
-// this pins the behaviour rather than the wording.
-test('the practice\'s own page answers, and the tree is not read at all', () => {
-  const pages = [{
-    docTitle: 'Referrals sent by email',
-    text: 'These go by email rather than e-RS:\n- Wheelchair service\n',
-  }];
-  const card = referralAnswer({ question: 'wheelchair referral', name: 'wheelchair', pages });
-  assert.match(card.subtitle, /email/i);
-  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
 });
 
 /* ------------------------------------- a shortlist somebody can read */

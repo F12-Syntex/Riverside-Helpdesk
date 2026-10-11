@@ -11,19 +11,13 @@ import TextShimmer from './TextShimmer';
  * server, sent as it happened (app/api/agent/route.js, `progress`):
  *
  *   - for a question, the whole Notebook going to the model: "Reading the
- *     Notebook — N pages", N being the real count. Every page is read, so
- *     there is no shortlist and no grid of matches to show; the pages the
- *     answer used are named on the answer itself, as links.
- *   - (older turns, and the log viewer) a search that shortlisted pages:
- *     the Notebook, one cell per page, in its sections, lit as the pass
- *     over every page is shown, the shortlisted pages lit where they sit
- *     and named as the pass reaches them, and the page the turn settled
- *     on marked when the model names it;
- *   - for a search of the practice documents, the documents it found.
- *
- * The shortlist pass takes milliseconds on the server; the sweep replays
- * it at a pace that can be watched. The count it lands on, and every page
- * it lights, are the real ones.
+ *     Notebook — N pages", N being the real count (lib/agent/
+ *     notebook-progress.mjs). Every page is read, so there is no shortlist
+ *     to show; the pages the answer used are named on the answer itself, as
+ *     links.
+ *   - for a search of the practice documents (/practice), the documents it
+ *     found.
+ *   - for anything else, the steps the server reported, as they ran.
  *
  * The bar is stages, not time: a segment fills when its stage is done
  * and the one in hand shimmers. It never moves for a clock.
@@ -69,54 +63,6 @@ function useElapsed() {
   return (now - start) / 1000;
 }
 
-// How far the shown pass has got, 0 → total. Starts when the scan arrives
-// and runs at a watchable pace; with reduced motion it is simply done.
-function useSweep(total) {
-  const [count, setCount] = React.useState(0);
-  React.useEffect(() => {
-    if (!total) { setCount(0); return undefined; }
-    const still = typeof window !== 'undefined' && window.matchMedia
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (still) { setCount(total); return undefined; }
-    const ms = Math.max(700, Math.min(1800, total * 11));
-    const start = performance.now();
-    let raf = 0;
-    const tick = (t) => {
-      const k = Math.min(1, (t - start) / ms);
-      // Eased, so it sets off quickly and settles onto the last page.
-      setCount(Math.round(total * (1 - Math.pow(1 - k, 2.2))));
-      if (k < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [total]);
-  return count;
-}
-
-// One cell per Notebook page, in its sections, lit as the pass reaches it.
-function NoteGrid({ notes, swept, hits, chosen, reading }) {
-  const cells = [];
-  let i = 0;
-  notes.sections.forEach((sec, si) => {
-    for (let n = 0; n < sec.count; n += 1, i += 1) {
-      const idx = i;
-      let cls = 'riva-scan-cell';
-      if (si % 2) cls += ' is-alt';
-      if (n === 0 && si > 0) cls += ' is-first';
-      if (idx < swept) cls += ' is-lit';
-      if (idx === swept - 1 && swept < notes.total) cls += ' is-head';
-      if (hits.has(idx) && idx < swept) cls += ' is-hit';
-      if (chosen.has(idx)) cls += ' is-chosen';
-      cells.push(<span key={idx} className={cls} title={sec.name} />);
-    }
-  });
-  return (
-    <div className={'riva-scan-grid' + (reading ? ' is-reading' : '')} aria-hidden="true">
-      {cells}
-    </div>
-  );
-}
-
 function Segments({ stages }) {
   const current = stages.findIndex((st) => !st.done);
   return (
@@ -128,29 +74,20 @@ function Segments({ stages }) {
   );
 }
 
-const quoteTerms = (terms) => (terms || []).slice(0, 4).map((t) => '“' + t + '”').join(', ');
-
 export default function WorkingState({ steps = [], statusText = '', progress = null }) {
   useBusyPage();
   const elapsed = useElapsed();
 
   const notes = progress && progress.notes && progress.notes.total ? progress.notes : null;
-  const chosenList = (progress && progress.chosen && progress.chosen.chosen) || [];
   const docs = progress && progress.documents ? progress.documents : null;
-  // The whole Notebook goes to the model: nothing was shortlisted, so there
-  // is nothing to light on a grid — only the count is true to show.
-  const whole = !!notes && !(notes.matches || []).length
-    && (notes.matched == null || notes.matched >= notes.total);
-  const swept = useSweep(notes && !whole ? notes.total : 0);
-  const scanned = !!notes && (whole || swept >= notes.total);
-  const reading = whole ? 'Reading the Notebook — ' + notes.total + (notes.total === 1 ? ' page' : ' pages') : '';
+  const reading = notes ? 'Reading the Notebook — ' + notes.total + (notes.total === 1 ? ' page' : ' pages') : '';
   // The status line as it stood when the Notebook arrived. The title keeps
   // saying the Notebook is being read until the server says something new
   // ("Writing the answer", "Checking the answer"), never going back to a
   // line from before the read.
   const statusAtNotes = React.useRef(null);
-  if (whole && statusAtNotes.current === null) statusAtNotes.current = statusText;
-  const movedOn = whole && !!statusText && statusText !== statusAtNotes.current;
+  if (notes && statusAtNotes.current === null) statusAtNotes.current = statusText;
+  const movedOn = !!notes && !!statusText && statusText !== statusAtNotes.current;
 
   const rows = steps.map((st, i) => ({
     key: st.id || i,
@@ -160,44 +97,20 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
   }));
   const running = rows.find((r) => !r.done);
   const done = rows.filter((r) => r.done).length;
-  const selectDone = steps.some((st) => st.id === 'select' && st.status === 'done');
-
-  const hits = new Set(notes ? (notes.matches || []).map((m) => m.index) : []);
-  // Marked only once the pass has been shown reaching the end, so the
-  // story on screen keeps the order it happened in.
-  const chosen = new Set(scanned ? chosenList.map((c) => c.index) : []);
-  // The matched pages, as the pass reaches them; the chosen page leads once
-  // it is known, whether or not it used the question's own words.
-  const shown = notes ? (notes.matches || []).filter((m) => m.index < swept) : [];
-  const listed = chosen.size
-    ? chosenList.map((c) => Object.assign({}, c, shown.find((m) => m.index === c.index)))
-      .concat(shown.filter((m) => !chosen.has(m.index)))
-    : shown;
 
   // The line that says what is happening now, from what has actually
   // happened — never from the clock.
   let now;
-  if (whole) now = movedOn ? statusText : reading;
-  else if (notes && !scanned) now = 'Checking every page of the Notebook';
-  else if (notes && chosen.size) now = selectDone && statusText ? statusText : 'Opening ' + chosenList[0].title;
-  else if (notes && !selectDone) now = 'Reading the Notebook for the right page';
-  else if (notes) now = statusText || 'Putting the answer together';
+  if (notes) now = movedOn ? statusText : reading;
   else if (docs) now = statusText || 'Reading what the documents say';
   else now = (running && running.label) || statusText || (rows.length ? 'Putting the answer together' : 'Reading the practice documents');
 
   // Real stages, each done when it is done.
   let stages;
-  if (whole) {
+  if (notes) {
     stages = [
       { key: 'open', label: 'Notebook opened', done: true },
       { key: 'read', label: 'Every page read', done: movedOn },
-      { key: 'answer', label: 'Answer ready', done: false },
-    ];
-  } else if (notes) {
-    stages = [
-      { key: 'open', label: 'Notebook opened', done: true },
-      { key: 'scan', label: 'Every page checked', done: scanned },
-      { key: 'pick', label: 'Page chosen', done: scanned && (chosen.size > 0 || selectDone) },
       { key: 'answer', label: 'Answer ready', done: false },
     ];
   } else if (rows.length) {
@@ -212,15 +125,12 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
   return (
     <div className="riva-work" role="status" aria-live="polite">
       <div className="riva-work-head">
-        {(!notes || whole) && <BoxLoader />}
+        <BoxLoader />
         <div className="riva-work-now">
           <div className="riva-work-kicker">
             <span className="riva-work-pulse" />
             {notes ? 'Notebook' : docs ? 'Practice documents' : 'Working on it'}
             <span className="riva-work-clock">{secs}s</span>
-            {notes && !whole && (
-              <span className="riva-work-count">{Math.min(swept, notes.total)} / {notes.total} pages</span>
-            )}
             {!notes && docs && <span className="riva-work-count">{docs.matched} passages</span>}
             {!notes && !docs && rows.length > 0 && <span className="riva-work-count">{done}/{rows.length} lookups</span>}
           </div>
@@ -230,38 +140,11 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
         </div>
       </div>
 
-      {whole && (
+      {notes && (
         <div className="riva-scan">
           <div className="riva-scan-note">
             Every page goes to the model; the answer links the pages it used
           </div>
-        </div>
-      )}
-
-      {notes && !whole && (
-        <div className="riva-scan">
-          <NoteGrid notes={notes} swept={swept} hits={hits} chosen={chosen} reading={scanned && !chosen.size && !selectDone} />
-          <div className="riva-scan-note">
-            {!scanned
-              ? ((notes.terms || []).length ? 'Looking for ' + quoteTerms(notes.terms) : 'Searching the Notebook')
-              : notes.matched + ' of ' + notes.total + ' pages shortlisted'
-                + ((notes.terms || []).length ? ' for ' + quoteTerms(notes.terms) : '')
-                + ' — the model reads those in full and the rest by title'}
-          </div>
-          {listed.length > 0 && (
-            <ol className={'riva-scan-list' + (chosen.size ? ' has-chosen' : '')}>
-              {listed.map((m) => (
-                <li key={m.index} className={'riva-scan-item' + (chosen.has(m.index) ? ' is-chosen' : '')}>
-                  <span className="riva-scan-mark">
-                    {chosen.has(m.index) ? <Svg w={11} sw={3.2}>{Icons.check}</Svg> : null}
-                  </span>
-                  <span className="riva-scan-sec">{m.section}</span>
-                  <span className="riva-scan-title">{m.title}</span>
-                  {chosen.has(m.index) && <span className="riva-scan-badge">Chosen</span>}
-                </li>
-              ))}
-            </ol>
-          )}
         </div>
       )}
 

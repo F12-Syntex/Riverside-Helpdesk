@@ -41,7 +41,6 @@ import Rich from '../chat/Rich';
 import Md from '../chat/Md';
 import CopyButton from './CopyButton';
 import ErsForm from './ErsForm';
-import ProfMessage from './ProfMessage';
 import EmailForm from './EmailForm';
 import PathologyForm from './PathologyForm';
 
@@ -207,7 +206,6 @@ export function Blocks({ blocks, leadFirst = false, bare = false }) {
       {grouped.map((b, i) => {
         if (b.type === 'fields') return <Fields key={i} title={b.title} items={b.items} footnote={b.footnote} lead={i === lead} />;
         if (b.type === 'ers') return <ErsForm key={i} block={b} bare={bare} />;
-        if (b.type === 'profMessage') return <ProfMessage key={i} block={b} />;
         if (b.type === 'emailForm') return <EmailForm key={i} block={b} bare={bare} />;
         if (b.type === 'pathology') return <PathologyForm key={i} block={b} />;
         if (b.type === 'note') return <Note key={i} tone={b.tone} text={b.text} />;
@@ -273,18 +271,6 @@ export function Blocks({ blocks, leadFirst = false, bare = false }) {
                     <img src={img.url} alt={img.alt || 'Picture from the practice’s own page'} loading="lazy"
                       style={s('display:block;max-width:100%;width:auto;height:auto;max-height:420px;background:#fff;')} />
                   </a>
-                ))}
-              </div>
-            </div>
-          );
-        }
-        if (b.type === 'ask') {
-          return (
-            <div key={i} className="riva-tv-panel" style={s(bare ? 'padding:0;' : 'padding:14px 16px;')}>
-              <div style={s('font-size:16px;font-weight:600;color:#212b32;margin-bottom:10px;')}>{b.question}</div>
-              <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
-                {b.options.map((o, n) => (
-                  <span key={n} style={s('background:#f0f6fb;border:1px solid #cfe1f0;border-radius:999px;padding:8px 15px;font-size:14.5px;font-weight:600;color:#005eb8;')}>{o}</span>
                 ))}
               </div>
             </div>

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  GAP_REASONS, gapLabel, isCollectableQuestion, normaliseQuestion, unansweredReason,
+  GAP_REASONS, gapReason, isCollectableQuestion, normaliseQuestion, unansweredReason,
 } from '../lib/questions/gaps.mjs';
 
 // The /questions list writes half of itself, off the row the question log
@@ -13,7 +13,7 @@ test('a turn that fell over is collected, and says so rather than blaming the no
   assert.equal(unansweredReason({ outcome: 'failed', error: 'out of credit' }), 'failed');
   // It is labelled as the model call it was, so nobody writes a Notebook page
   // to fix an OpenRouter balance.
-  assert.equal(gapLabel('failed'), 'The turn failed');
+  assert.equal(gapReason('failed').label, 'The turn failed');
 });
 
 test('a card that rendered under its own not-recorded flag is a gap in the practice’s notes', () => {

@@ -118,7 +118,7 @@ const LAYERS = [
   },
   {
     name: 'App Router', sub: 'Next.js 14.2 · 20 pages', c: P.blue,
-    items: ['/', '/ask', '/lookup', '/tools', '/questions', '/signpost', '/reason', '/coding', '/notebook', '/medications', '/rota', '/templates', '/stats', '/settings', '/knowledge', '/dpia', '/diagram', '/stack', '/site-index', '/helpbot', 'middleware gate'],
+    items: ['/', '/ask', '/lookup', '/tools', '/questions', '/signpost', '/reason', '/coding', '/notebook', '/medications', '/rota', '/stats', '/settings', '/knowledge', '/dpia', '/diagram', '/stack', '/site-index', '/helpbot', 'middleware gate'],
   },
   {
     name: 'Route handlers', sub: '39 endpoints', c: P.bright,
@@ -126,7 +126,7 @@ const LAYERS = [
   },
   {
     name: 'Domain libraries', sub: '122 modules · 28,170 lines', c: P.aqua,
-    items: ['agent', 'ai', 'safety ×11', 'templates ×24', 'referrals', 'notebook', 'lookup', 'medications', 'rota', 'audit', 'questions', 'guides', 'triage', 'attachments', 'contacts', 'db', 'settings', 'routes', 'dpia'],
+    items: ['agent', 'ai', 'safety ×10', 'templates ×20', 'referrals', 'notebook', 'lookup', 'medications', 'rota', 'audit', 'questions', 'guides', 'triage', 'attachments', 'contacts', 'db', 'settings', 'routes', 'dpia'],
   },
   {
     name: 'Data plane', sub: 'where state lives', c: P.green,
@@ -178,10 +178,10 @@ const PIPE = [
   { t: 'Patient-data screen', s: 'holds the send', c: P.red, tag: 'super-speed role' },
   { t: 'Redact identifiers', s: 'regex, no model', c: P.grey, tag: 'deterministic' },
   { t: 'Safety scan', s: 'red flags · NG12 · acuity', c: P.orange, tag: '0 model calls' },
-  { t: 'Router', s: 'trigger index, lexical', c: P.purple, tag: 'ships OFF' },
-  { t: 'Template picker', s: 'model returns a name, not prose', c: P.blue, tag: '24 templates' },
-  { t: 'Render in code', s: 'card assembled from blocks', c: P.aqua, tag: '8 commands' },
-  { t: 'Quote check · log', s: 'claim dropped if unquoted', c: P.green, tag: '3 tables written' },
+  { t: 'Directory', s: 'a contact detail, verbatim', c: P.purple, tag: 'no model' },
+  { t: 'Whole Notebook', s: 'one call, prose citing its pages', c: P.blue, tag: 'cached prefix' },
+  { t: 'Commands', s: 'card assembled from blocks', c: P.aqua, tag: '7 commands' },
+  { t: 'Answer check · log', s: 'withdrawn if it does not answer', c: P.green, tag: '3 tables written' },
 ];
 
 function Turn() {
@@ -193,7 +193,7 @@ function Turn() {
   });
   return (
     <svg viewBox="0 0 1200 372" width="100%" style={s('display:block;height:auto;')} role="img"
-      aria-label="A turn: message, patient-data screen, redaction, safety scan, router, template picker, render, quote check.">
+      aria-label="A turn: message, patient-data screen, redaction, safety scan, directory, whole-Notebook answer, commands, answer check.">
       <defs><Arrow id="turnArrow" /></defs>
       {pos.map((p, i) => {
         const n = pos[i + 1]; if (!n) return null;

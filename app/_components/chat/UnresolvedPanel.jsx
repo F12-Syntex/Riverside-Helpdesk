@@ -14,8 +14,8 @@
 // a regex cannot match a paraphrase and this does not have to: it lists what was
 // written, whether or not anything recognised it.
 //
-// AN UNANSWERED ITEM IS TAPPABLE and asks that one item on its own, through the
-// same re-ask the clarify options use. Answering the fifth thing somebody wrote
+// AN UNANSWERED ITEM IS TAPPABLE and asks that one item on its own, as a
+// question of its own in the same conversation. Answering the fifth thing somebody wrote
 // should be one press, not retyping it.
 //
 // DISMISSAL IS EXPLICIT AND RECORDED, AND IT DOES NOT BLOCK ANYTHING. A

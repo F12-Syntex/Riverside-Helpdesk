@@ -32,7 +32,7 @@ test('the server honours only a template a command claims', () => {
   assert.equal(forcedTemplate('practiceSearch'), 'practiceSearch');
   assert.equal(forcedTemplate('repeatMedication'), 'repeatMedication');
   // The withdrawn modes are not honoured: sent up anyway, the message is
-  // answered the ordinary way. The router can still choose documentCoding.
+  // answered the ordinary way.
   assert.equal(forcedTemplate('contactSearch'), '');
   assert.equal(forcedTemplate('documentCoding'), '');
   // Anything else — including a real template no command offers — is ignored,
@@ -47,19 +47,11 @@ test('the server honours only a template a command claims', () => {
   assert.equal(commandByTemplate('triage'), null);
 });
 
-test('the coding card falls back to the coding rules, never to prose', () => {
-  const filed = renderCommand('documentCoding', {
+test('the withdrawn coding card renders nothing', () => {
+  assert.equal(renderCommand('documentCoding', {
     document: { date: '07-Aug-2026', site: 'HUH', department: 'Ophthalmology', actions: [] },
-  });
-  assert.ok(filed && filed.title);
-  const rendered = JSON.stringify(filed);
-  assert.match(rendered, /07-Aug-2026/);
-  assert.match(rendered, /HUH/);
-  assert.match(rendered, /Ophthalmology/);
-
-  // Nothing to build a title from: still the practice's own material.
-  const nothing = renderCommand('documentCoding', {});
-  assert.ok(nothing && nothing.title, 'the rules card answers instead');
+  }), null);
+  assert.equal(renderCommand('documentCoding', {}), null);
 });
 
 // /consultation writes the one line that goes on the record. The line is
@@ -178,10 +170,9 @@ test('a command whose model call failed says so on the card it falls back to', (
   assert.match(asked.subtitle, /shorthand it is read in/);
   assert.doesNotMatch(JSON.stringify(asked), /out of credit/i);
 
-  // Filing a document falls the same way, for the same reason.
-  const coding = renderCommand('documentCoding', {}, 'a letter', { failed: 'rate limit exceeded (429)' });
-  assert.match(coding.blocks.find((b) => b.type === 'note' && b.tone === 'warn').text, /No filing title was built/);
-  assert.match(coding.blocks.find((b) => b.type === 'note' && b.tone === 'warn').text, /rate-limiting/);
+  // A provider that is rate-limiting is named as one.
+  const limited = renderCommand('consultationNote', {}, 'x', { failed: 'rate limit exceeded (429)' });
+  assert.match(limited.blocks.find((b) => b.type === 'note' && b.tone === 'warn').text, /rate-limiting/);
 });
 
 // The prompt for a written-up contact says the job and the rules, and puts
@@ -480,13 +471,6 @@ const copied = (card) => card.blocks
   .flatMap((b) => b.items)
   .filter((item) => item.copy);
 
-test('the coding card offers the filing title', () => {
-  const card = renderCommand('documentCoding', {
-    document: { date: '07-Aug-2026', site: 'HUH', department: 'Ophthalmology', actions: ['d/c'] },
-  });
-  assert.deepEqual(copied(card).map((f) => f.label), ['Title']);
-});
-
 test('a triage card offers where it goes', () => {
   const card = triagePatientAnswer({ condition: 'sore throat', text: 'pt sore throat' });
   const one = copied(card);
@@ -500,7 +484,7 @@ test('exactly one value per card carries it', () => {
   for (const card of [
     triagePatientAnswer({ condition: 'knee pain', text: 'adult with knee pain for weeks' }),
     triagePatientAnswer({ condition: 'stitches out', text: 'pt needs her stitches out on Thursday' }),
-    renderCommand('documentCoding', { document: { date: '07-Aug-2026', site: 'HUH', department: 'Cardiology', actions: [] } }),
+    renderCommand('consultationNote', { contact: 'tel c/w pt', summary: 'sore throat 1/52' }),
   ]) {
     assert.equal(copied(card).length, 1, card.title + ' should offer exactly one');
   }

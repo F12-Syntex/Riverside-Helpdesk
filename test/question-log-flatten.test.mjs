@@ -4,8 +4,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { answerToText, answerSummary } from '../lib/questions/flatten.mjs';
-import { answer, bullets, contacts, expand, fields, field, message, note, profMessage, steps, table, text } from '../lib/templates/blocks.mjs';
+import { answerToText } from '../lib/questions/flatten.mjs';
+import { answer, bullets, contacts, expand, fields, field, message, note, steps, table, text } from '../lib/templates/blocks.mjs';
 import { notebookPageAnswer } from '../lib/templates/notebook.mjs';
 
 test('a template answer keeps its title, its steps and their order', () => {
@@ -40,7 +40,6 @@ test('every block type reaches the text, including what is behind a disclosure',
       expand('The long way round', [steps(['Hidden step one.'])], 'rarely needed'),
       contacts([{ label: 'Secretaries', tel: '020 7946 0000', note: 'weekdays' }]),
       message('Your appointment is booked.'),
-      profMessage({ to: 'acn@nhs.net', body: 'Dear Colleague,\n\nPlease find attached a referral.' }),
       text('## A heading\n\nSome prose.'),
     ],
   });
@@ -54,8 +53,6 @@ test('every block type reaches the text, including what is behind a disclosure',
   assert.match(out, /1\. Hidden step one\./); // the disclosure's contents, not only its label
   assert.match(out, /Secretaries · 020 7946 0000 · weekdays/);
   assert.match(out, /Your appointment is booked\./);
-  assert.match(out, /To: acn@nhs\.net/);
-  assert.match(out, /Please find attached a referral\./); // the wording, not just that a window was shown
   assert.match(out, /## A heading/);
 });
 
@@ -78,10 +75,4 @@ test('highlighting is dropped and the text is capped, so one page cannot fill a 
   assert.ok(!out.includes('<mark>'), 'the markup the card renders is not part of the wording');
   assert.equal(out.length, 200);
   assert.ok(out.endsWith('…'));
-});
-
-test('the summary is the first real line, without its markdown', () => {
-  assert.equal(answerSummary('# Refer for an ECG\n\nOpen the record.'), 'Refer for an ECG');
-  assert.equal(answerSummary('- First bullet\n- Second'), 'First bullet');
-  assert.equal(answerSummary(''), '');
 });

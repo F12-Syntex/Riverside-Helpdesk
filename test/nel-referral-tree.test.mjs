@@ -5,7 +5,7 @@ import {
   isConfident, nelTree, rankForms,
 } from '../lib/referrals/nel-tree.mjs';
 import {
-  nelFormNotFound, nelReferralFormAnswer, referralAnswer,
+  nelFormNotFound, nelReferralFormAnswer,
 } from '../lib/templates/referrals.mjs';
 import { formCommandAnswer } from '../lib/templates/lookup-command.mjs';
 import { commandByName, forcedTemplate } from '../lib/commands.mjs';
@@ -268,52 +268,10 @@ test('a miss on /form is answered by the tree, not by prose', () => {
   assert.match(JSON.stringify(card.blocks), /ask in ordinary words/);
 });
 
-/* -------------------------------------------------------- the precedence */
+/* ------------------------------------------------- the mode reads the tree */
 
-// The practice's own material answers a different question — how a referral is
-// SENT — and it is the more specific answer, so it has to win. These two guard
-// the order in referralAnswer.
-test('a referral the practice records beats the tree', () => {
-  const card = referralAnswer({ question: 'how do I refer for an ECG', name: 'ECG', pages: [] });
-  assert.match(card.subtitle, /email/i);
-  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
-});
-
-test('a referral the Notebook lists beats the tree', () => {
-  // "Wheelchair service referral" is on the tree for City & Hackney. With the
-  // practice's own page listing it as emailed, the page is the answer.
-  const pages = [{
-    docTitle: 'Referrals sent by email',
-    text: 'These referrals go by email rather than e-RS:\n- Wheelchair service\n- Dietitian\n',
-  }];
-  const card = referralAnswer({ question: 'wheelchair referral', name: 'wheelchair', pages });
-  assert.match(card.subtitle, /email/i);
-  assert.match(JSON.stringify(card.blocks), /Wheelchair service/);
-});
-
-// THE TREE IS THE REFERRAL FORM MODE'S DOCUMENT AND NOBODY ELSE'S. It used to
-// be the last step of the ordinary referral card, which meant PCIT's list — a
-// list of what exists in North East London, not of how THIS practice sends
-// anything — answered questions nobody had pointed at it. A question asked in
-// ordinary words is now answered from the practice's own material or not at
-// all, and the honest card names the mode that does search the tree.
-test('a referral nobody has recorded does NOT reach the tree', () => {
-  const card = referralAnswer({ question: 'tongue tie referral', name: 'tongue tie', pages: [] });
-  assert.notEqual(card.title, 'Tongue Tie Referral Form 2021 CH');
-  assert.match(card.subtitle, /Not recorded/);
-  assert.ok(!/Referral Tree/.test(JSON.stringify(card.source)));
-  // The dead end names the way on.
-  assert.match(JSON.stringify(card.blocks), /choose \*\*Referral form\*\*/);
-});
-
-// The command still reads it, which is the whole point of restricting it.
 test('the same name still answers when Referral form is the one asking', () => {
   assert.equal(nelReferralFormAnswer('tongue tie').title, 'Tongue Tie Referral Form 2021 CH');
-});
-
-test('a referral nobody has recorded and the tree lacks is still honest', () => {
-  const card = referralAnswer({ question: 'printer toner referral', name: 'printer toner', pages: [] });
-  assert.match(card.subtitle, /Not recorded/);
 });
 
 /* ------------------------------- what a trial with clinical personas found */
@@ -416,9 +374,9 @@ test('every found form says the practice may email it instead', () => {
 // practice's Notebook, not the contract specifications, and no model. It used to
 // put the practice's own emailed-referrals page first, on the argument that the
 // tree answers "district nurse" with Islington's service while this practice
-// emails RP ACN 2022. That argument still holds for a referral question asked in
-// ordinary words, and referralAnswer still acts on it; a command that names a
-// document must answer from that document.
+// emails RP ACN 2022. A question asked in ordinary words still reads
+// the practice's own Notebook; a command that names a document must answer
+// from that document.
 test('the command reads the tree and not the practice pages', () => {
   const pages = [{
     docTitle: 'Referrals sent by email',

@@ -1,21 +1,18 @@
 # What the router measured
 
-> **2026-10-10 — the router is gone.** The trigger-phrase router and
-> `evals/routing/bench-pages.mjs`, which produced the numbers below, were
-> removed in the search rebuild (`docs/superpowers/specs/2026-10-10-search-rebuild-design.md`);
-> the `routing_*` tables are left in the database, unused. The picker no longer
-> reads the whole Notebook: it reads a search shortlist (the best pages in full,
-> every other page by title). `evals/routing/bench-picker.mjs` now builds each
-> case's prompt from that shortlist and reports `shortlistRecall` (how often the
-> expected page reached the prompt in full) beside `pageCorrectRate`,
-> `pageWrongRate` and `meanInputTokens`; `--shortlist-only` measures the search
-> alone, with no model calls. Of the commands below, the `bench-pages.mjs` one no
-> longer exists, and the `bench-picker.mjs` one still runs but measures the
-> shortlisted picker, not the whole-Notebook baseline this page describes. The
-> numbers are kept as the record of what the router achieved.
+> **2026-10-10 — the router is gone.** The trigger-phrase router and the
+> bench that produced the numbers below were removed in the search rebuild
+> (`docs/superpowers/specs/2026-10-10-search-rebuild-design.md`); the
+> `routing_*` tables are left in the database, unused.
+>
+> **2026-10-11 — and so is the picker.** A Q&A question is now answered in one
+> call over the whole Notebook, citing the pages it used; there is no page to
+> pick. The picker bench and the golden set of expected pages both benches
+> marked against went with it, so neither command named below exists any more.
+> The numbers are kept as the record of what the router achieved.
 
-The numbers `evals/routing/bench-pages.mjs` produced against
-`evals/routing/pages.md` (52 cases, 43 of them real staff questions taken
+The numbers the router bench produced against its golden set of expected pages
+(52 cases, 43 of them real staff questions taken
 verbatim from `question_log`), five repeats, 260 routed turns per run. Written
 2026-09-18, against the live Notebook with 1,735 trigger phrases over all 132
 non-empty pages.
@@ -67,14 +64,9 @@ have given with a question. At 0.70 a quarter of turns became questions; at
   which are instant, verbatim and cost no model call.
 - 52 cases is enough to see a rate and not enough to trust its third digit.
 
-Re-run after any change to the trigger index, the phrases, or the thresholds:
-
-```
-node evals/routing/bench-pages.mjs report.json --repeats 5
-```
 ## The picker baseline — attempted, and blocked
 
-`evals/routing/bench-picker.mjs` runs the EXISTING selection call over the same
+The picker bench ran the then-existing selection call over the same
 cases, with the same schema, the same prompt and the same whole-Notebook block
 the endpoint uses, including the plain-text retry `readValues` falls back to.
 It exists because measuring the router alone measures very little: a turn
@@ -90,14 +82,5 @@ the time of writing — so every model call, in this harness and in the live
 assistant, is refused. The partial numbers from the first run are not recorded
 here: half a run against a key that died mid-run is not a measurement.
 
-So the comparison is still open, and it is the one thing that would justify
-turning the router on:
-
-```
-node evals/routing/bench-picker.mjs picker.json --repeats 3
-```
-
-Read `pageCorrectRate` and `pageWrongRate` against the 5.8% and 0% above, and
-`structuredRetryRate` — how often the provider refuses the schema and the
-endpoint pays for a second call — which is also the honest input cost of a turn
-the router would have answered for the price of one embedding.
+So the comparison was never made, and with both the router and the picker
+gone it no longer can be.

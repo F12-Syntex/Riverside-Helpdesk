@@ -5,8 +5,8 @@
 //   A CONTACT DETAIL the practice directory holds is answered from it,
 //   verbatim, with no model at all (lib/templates/directory.mjs).
 //
-//   A SLASH COMMAND (/accurx, /coding, /practice, /form, /template,
-//   /consultation, /medication — lib/commands.mjs) names its card outright.
+//   A SLASH COMMAND (/accurx, /practice, /form, /template, /consultation,
+//   /medication — lib/commands.mjs) names its card outright.
 //   The model fills that one card's values and code renders it, so the shape
 //   of the answer cannot drift however the model words things.
 //
@@ -35,16 +35,13 @@ import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { generateObject, generateText, zodSchema } from 'ai';
 import {
-  COMMAND_SCHEMAS, DECOMPOSING_COMMANDS, MULTI_COMMAND_SCHEMAS,
-  commandPrompt, notebookFullText, proseSystemMessage, renderCommand,
+  COMMAND_SCHEMAS, commandPrompt, notebookFullText, proseSystemMessage, renderCommand,
 } from '@/lib/templates/route.mjs';
 import { acuityBandAnswer, confidentialityAnswer, unresolvedPanel } from '@/lib/templates/safety.mjs';
 import { readingVerdict } from '@/lib/templates/accurx-route.mjs';
 import { needsAppointmentMode } from '@/lib/triage/destinations.mjs';
-import { looksMultiIntent } from '@/lib/safety/requests.mjs';
-import { bandFindings, rescore, safetyScan } from '@/lib/safety/scan.mjs';
+import { bandFindings, safetyScan } from '@/lib/safety/scan.mjs';
 import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
-import { CLASSIFY_SCHEMA, applyClassification, classifyPrompt, toClassify } from '@/lib/safety/triage-pass.mjs';
 import { buildProvenance } from '@/lib/questions/provenance.mjs';
 import { checksPatientData, commandByTemplate, forcedTemplate } from '@/lib/commands.mjs';
 import { practiceSearchAnswer } from '@/lib/templates/practice.mjs';
@@ -154,14 +151,11 @@ function machineFromCookie(request) {
  *   the panel still shows the sentence was written and that nothing
  *   answered it.
  *
- * `cardScans` says whether the card about to render runs the triage
- * net over its own text. When it does, a finding inside the routed
- * complaint is already that card's business and saying it twice is
- * noise. When it does not — a Notebook page, a referral, a filing
- * title — nothing else in this turn will mention it.
+ * No card on any path that bands runs the triage net over its own
+ * text, so every finding is the band's to say (bandFindings).
  * ------------------------------------------------------------------ */
-function safetyOutput(scan, { cardScans = false } = {}) {
-  const band = bandFindings(scan, { cardScans });
+function safetyOutput(scan) {
+  const band = bandFindings(scan);
   return {
     // The emergency band before the refusal: one of them is measured in
     // minutes and the other is not.
@@ -173,77 +167,14 @@ function safetyOutput(scan, { cardScans = false } = {}) {
   };
 }
 
-// Stage 2 must never be the reason a turn does not answer. Anything slower than
-// this is abandoned and the deterministic floor stands on its own.
-const CLASSIFY_TIMEOUT_MS = 15000;
-
+// A call that must not hold up the turn: abandoned after `ms`, and the caller
+// carries on without it.
 function withTimeout(promise, ms) {
   let timer = null;
   return Promise.race([
     promise.finally(() => clearTimeout(timer)),
     new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timed out')), ms); }),
   ]);
-}
-
-/**
- * THE ONE SECOND PASS IN THE APP — /accurx only.
- *
- * One small structured call per decomposed request, issued together so five of
- * them cost one round trip rather than five. Each returns an enum and a label:
- * no prose, nothing that could reach the reader as advice.
- *
- * The model may only RAISE acuity — the veto lives in applyClassification, not
- * here — so a weak reading changes nothing and a good one catches the item the
- * patterns could not phrase-match. Every failure path returns the scan exactly
- * as the deterministic floor left it.
- */
-async function deepenTriage({ openrouter, model, question, scan, turnId, send }) {
-  const { take, skipped } = toClassify((scan.items || []).filter((item) => !item.trivia));
-  if (!take.length) return scan;
-
-  send({ type: 'status', text: 'Reading each request' });
-  send({
-    type: 'tool-start',
-    id: 'classify',
-    tool: 'read_each_request',
-    label: 'Reading each request on its own',
-    detail: take.length + (take.length === 1 ? ' request' : ' requests'),
-  });
-
-  const verdicts = await Promise.all(take.map(async (item) => {
-    try {
-      const out = await withTimeout(generateObject({
-        model: openrouter(model),
-        schema: CLASSIFY_SCHEMA,
-        temperature: 0,
-        prompt: classifyPrompt(item.text, question),
-      }), CLASSIFY_TIMEOUT_MS);
-      recordUsage({ turnId, role: 'fast', phase: 'classify', model, usage: out.usage });
-      return out.object;
-    } catch (e) {
-      // One request unread is one request the scanners still ranked. Say so in
-      // the log and carry on with the other four.
-      console.warn('[agent] request classification failed:', String(e).slice(0, 160));
-      return null;
-    }
-  }));
-
-  const read = new Map(take.map((item, i) => [item.id, verdicts[i]]));
-  const raised = verdicts.filter(Boolean).length;
-
-  send({
-    type: 'tool-result',
-    id: 'classify',
-    tool: 'read_each_request',
-    summary: raised + ' of ' + take.length + ' read',
-    items: [],
-  });
-
-  return rescore({
-    ...scan,
-    items: (scan.items || []).map((item) => (read.has(item.id) ? applyClassification(item, read.get(item.id)) : item)),
-    unread: skipped,
-  });
 }
 
 const NDJSON_HEADERS = {
@@ -283,13 +214,13 @@ export async function POST(request) {
   // message posted to /api/agent by anything else is held to it too. It runs
   // before the model sees the question and before question_log stores it.
   //
-  // EXCEPT ON THE ONE TEMPLATE THAT IS NOT CHECKED. Coding is handed a letter
-  // about a patient — that is its input — so the browser sends it unredacted
-  // and the endpoint must not redact it either: a guard that runs on only one
-  // side of the wire edits the letter without protecting anything, and files it
-  // under [name removed]. `checksPatientData` answers for both sides off the
-  // same flag (lib/commands.mjs), and a template no command claims is redacted
-  // as everything else is.
+  // EXCEPT ON A TEMPLATE THAT IS NOT CHECKED. No mode opts out today; Coding
+  // did, being handed a letter about a patient — that was its input — so the
+  // browser sent it unredacted and the endpoint must not redact it either: a
+  // guard that runs on only one side of the wire edits the letter without
+  // protecting anything, and files it under [name removed]. `checksPatientData`
+  // answers for both sides off the same flag (lib/commands.mjs), and a template
+  // no command claims is redacted as everything else is.
   const checked = checksPatientData(commandByTemplate(command));
   // Every contact the practice holds, added ones included (lib/contacts-store.js):
   // the names the guard leaves alone, and the rows the directory card answers from.
@@ -468,18 +399,8 @@ export async function POST(request) {
         alerts: [],
         panel: null,
         intro: '',
-        keyPoints: [],
         sections: [],
-        message: '',
-        messageCite: null,
-        messageWeb: null,
-        tip: '',
-        gaps: '',
-        followUps: [],
-        clarify: null,
-        referralRoute: null,
         citations: [],
-        contacts: [],
         validation: { attempts: 0, checked: 0, verified: 0, dropped: 0, problems: [] },
         ...extra,
       });
@@ -522,10 +443,10 @@ export async function POST(request) {
         .join('\n\n---\n\n');
 
       try {
-        // A COMMAND NAMES ITS CARD. /accurx and /coding have already said
-        // what the message is, so the model is asked for that one template's
-        // values and nothing else: no Notebook to read, a schema with
-        // one field in it, and no way for the turn to end up somewhere else.
+        // A COMMAND NAMES ITS CARD. /accurx and /consultation have already
+        // said what the message is, so the model is asked for that one
+        // template's values and nothing else: no Notebook to read, one schema,
+        // and no way for the turn to end up somewhere else.
         const searching = command === 'practiceSearch';
         // The two list lookups. Named here rather than described as "filling in
         // the card", which is what the model-filled commands do and would be a
@@ -550,12 +471,10 @@ export async function POST(request) {
           detail: question.slice(0, 120),
         });
 
-        // The whole message, scanned, whatever this turn turns out to be. It is
-        // reassigned once the model has had a chance to split the message up;
-        // until then it stands on the message as one piece, so a turn that
-        // fails before that point still carries its safety findings.
+        // The whole message, scanned, whatever this turn turns out to be. Only
+        // /accurx replaces it (see below); a turn that fails before then still
+        // carries its safety findings.
         let scan = safetyScan({ message: question });
-        let stage2 = '';
 
         // THE DIRECTORY IS ASKED BEFORE THE MODEL IS.
         //
@@ -582,7 +501,7 @@ export async function POST(request) {
           });
           // The bands still apply. A red flag in the same message as a request
           // for a number is still a red flag.
-          const directorySafety = safetyOutput(scan, { cardScans: false });
+          const directorySafety = safetyOutput(scan);
           send({
             type: 'answer',
             payload: payload({
@@ -700,7 +619,7 @@ export async function POST(request) {
                     summary: grounded.citations.map((c) => c.docTitle).join(' · ') || 'The practice documents',
                     items: [],
                   });
-                  const practiceSafety = safetyOutput(scan, { cardScans: false });
+                  const practiceSafety = safetyOutput(scan);
                   send({
                     type: 'answer',
                     payload: payload({
@@ -876,11 +795,6 @@ export async function POST(request) {
               }
             }
           } else {
-            // A long /accurx is decomposed on the same call, exactly as an
-            // ordinary message is. A short one is not, so "/accurx pt has a sore
-            // throat since Friday" costs what it always cost.
-            const decompose = looksMultiIntent(question);
-
             // ONE CALL ON /accurx, FOR THE WHOLE CARD.
             //
             // It was ten: one per destination asking whether the message was
@@ -891,16 +805,15 @@ export async function POST(request) {
             //
             // lib/triage/destinations.mjs describes them now, so the whole
             // ladder goes into one prompt as data and one reader sees what nine
-            // saw between them. Same schema, same veto: what it names is checked
-            // against the patterns in accurxAnswer and can only raise.
+            // saw between them.
             //
             // It runs on the `accurx` role rather than `fast` (lib/settings.js),
             // because it is now the call that decides where somebody goes as
             // well as the one that writes the line — the practice can put a
             // better model on it without paying for one everywhere else.
             // A screenshot beats the rest: a command sent with a picture on it
-            // — a /medication screen, a /coding letter photographed — is read
-            // by the images role, because the others may not see it at all.
+            // — a /medication screen — is read by the images role, because the
+            // others may not see it at all.
             const callModel = seeing ? imageModel : reading ? roles.accurx.model : model;
             const callRole = seeing ? 'images' : reading ? 'accurx' : 'fast';
 
@@ -925,8 +838,8 @@ export async function POST(request) {
               const filled = {
                 object: await readValues({
                   model: callModel,
-                  schema: (decompose && MULTI_COMMAND_SCHEMAS[command]) || COMMAND_SCHEMAS[command],
-                  text: commandPrompt({ template: command, question, attached, decompose, images: images.length }),
+                  schema: COMMAND_SCHEMAS[command],
+                  text: commandPrompt({ template: command, question, attached, images: images.length }),
                   role: callRole,
                   phase: reading ? 'accurxRead' : 'command',
                 }),
@@ -942,42 +855,29 @@ export async function POST(request) {
               //
               // On this path the reading is the only judgement now, its account
               // is on the card, and every request the message made is listed
-              // there with what happens to it. The second pass goes with them —
-              // there is no band left for it to raise.
+              // there with what happens to it.
               //
               // THE PRIVACY GUARDS ARE NOT PART OF THIS. Identifier redaction and
               // the patient-data screen run before anything is sent and are not
               // clinical judgement: they are about what leaves the building.
-              scan = reading
-                ? { items: [], complaint: '', routed: null, decomposed: false }
-                : safetyScan({ message: question, requests: filled.object.requests });
-
-              if (!reading && DECOMPOSING_COMMANDS.includes(command) && scan.decomposed) {
-                scan = await deepenTriage({ openrouter, model, question, scan, turnId, send });
-                stage2 = 'triage';
-              }
+              if (reading) scan = { items: [], complaint: '', routed: null, decomposed: false };
 
               // Where it goes comes back on the same values now, so renderCommand
               // reads it off them (readingVerdict). What is kept here is whether
               // the reading happened at all, for the log line below.
               route = reading ? readingVerdict(filled.object) : null;
-              commandAnswer = renderCommand(command, filled.object, question, {
-                complaint: scan.complaint,
-                gist: (scan.routed && scan.routed.gist) || '',
-              });
+              commandAnswer = renderCommand(command, filled.object, question);
             } catch (e) {
               // The call did not come back. The command still said what this is,
               // so the card is rendered from nothing rather than answered as
-              // something else: the patterns' own triage of the message as
-              // written, or the rules for titling a document. Nothing was read,
-              // so nothing raises it — which is exactly what not asking means.
+              // something else: the routing card with nothing read, the house
+              // style for a record entry, or how /medication is used.
               console.warn('[agent] command values failed:', String(e).slice(0, 160));
               route = null;
               // A picture that was sent and not read is said on the card
               // rather than answered with "paste a screenshot".
               commandAnswer = renderCommand(command, {}, question, { images: images.length, failed: String(e && e.message ? e.message : e).slice(0, 120) });
             }
-            if (route) stage2 = stage2 ? stage2 + '+accurxRoute' : 'accurxRoute';
           }
 
           send({
@@ -993,7 +893,7 @@ export async function POST(request) {
           // deterministic floor, which is what it was written for.
           const commandSafety = reading
             ? { alerts: [], panel: null }
-            : safetyOutput(scan, { cardScans: DECOMPOSING_COMMANDS.includes(command) });
+            : safetyOutput(scan);
 
           send({
             type: 'answer',
@@ -1013,7 +913,7 @@ export async function POST(request) {
             provenance: buildProvenance({
               scan,
               card: commandAnswer,
-              stage2,
+              stage2: route ? 'accurxRoute' : '',
               // Both halves: what the reading said, and where the card sent
               // them. A read that was overruled by the patterns is exactly the
               // thing worth being able to find later.
@@ -1075,7 +975,7 @@ export async function POST(request) {
         // The bands. The whole message, scanned once above; no card on this
         // path runs the triage net over its own text, so every finding is
         // the band's to say.
-        const safety = safetyOutput(scan, { cardScans: false });
+        const safety = safetyOutput(scan);
 
         // THE ANSWER CHECK — see lib/questions/answer-check.mjs. One decision
         // call on the `check` role, in front of an answer that is already
@@ -1251,10 +1151,9 @@ export async function POST(request) {
             // otherwise the pages are in the answer itself, as links, and the
             // reader is not told to go and check the practice's own writing.
             general: !refs.cited.length,
-            // Not repeated here: the pages are the answer's own closing line,
-            // as links. `references` carries them as data for anything that
-            // wants to draw them differently.
-            sources: [],
+            // The pages are the answer's own closing line, as links.
+            // `references` carries them as data for anything that wants to
+            // draw them differently.
             references: refs.cited,
             alerts: safety.alerts,
             panel: safety.panel,

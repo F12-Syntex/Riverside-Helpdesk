@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  hasQuestionAnchor, isQuestionAnchor, newQuestionAnchor, questionAnchorsIn, questionContext, questionQuote, stripQuestionMarks,
+  hasQuestionAnchor, isQuestionAnchor, newQuestionAnchor, questionAnchorsIn, questionContext, stripQuestionMarks,
 } from '../lib/notebook/questions.mjs';
 
 const PAGE = [
@@ -51,13 +51,6 @@ test('a colour inside a marker keeps its own closing tag', () => {
 test('a page with no markers comes back untouched', () => {
   const body = 'Plain <span style="color:#d5281b">red</span> text </span>';
   assert.equal(stripQuestionMarks(body), body);
-});
-
-test('the quote is the marked words as plain text, across every segment', () => {
-  assert.equal(questionQuote(PAGE, 'k3v9x2m7qa'), 'duty doctor');
-  assert.equal(questionQuote(PAGE, 'ab12cd34ef'), '999 for chest pain Same question, second paragraph');
-  assert.equal(questionQuote('A <span data-q="k3v9x2m7qa">**bold** <span style="color:red">red</span></span>', 'k3v9x2m7qa'), 'bold red');
-  assert.equal(questionQuote(PAGE, 'missing123'), '');
 });
 
 test('stripping can be limited to some anchors, leaving the rest marked', () => {

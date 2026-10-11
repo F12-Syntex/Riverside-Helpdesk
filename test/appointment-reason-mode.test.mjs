@@ -8,27 +8,19 @@
 // half that matters: the mode reads for both, and the card shows both.
 //
 // So this file holds the line. The template is off the picker, the fields it
-// filled in are gone, and the only thing plain Q&A still says about a reason
-// for appointment is how one is written — the house style, which is a question
-// about the practice's rules rather than a line written from somebody's message.
+// filled in are gone, and the house-style card went with the /templates
+// gallery: a question about how a reason is written is answered from the
+// Notebook like any other.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { COMMAND_SCHEMAS, renderCommand } from '../lib/templates/route.mjs';
-import { appointmentReasonAnswer } from '../lib/templates/writing.mjs';
 import { answerToText } from '../lib/questions/flatten.mjs';
 import * as writing from '../lib/templates/writing.mjs';
 
 test('no written-reason card exists to be reached', () => {
   assert.equal(writing.writtenReasonAnswer, undefined);
-});
-
-test('the house style is still answered, and says where the line gets written', () => {
-  const card = appointmentReasonAnswer();
-  assert.equal(card.title, 'Writing the reason for appointment');
-
-  const text = answerToText(card);
-  assert.match(text, /choose the AccurX mode/i, 'the card does not say where the line is written');
+  assert.equal(writing.appointmentReasonAnswer, undefined);
 });
 
 test('the mode itself still writes the line, with where the request goes', () => {

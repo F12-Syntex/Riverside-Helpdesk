@@ -543,20 +543,9 @@ class RiversidePracticeQA extends React.Component {
           lines.push('The assistant showed the guide “' + g.question + '”: ' + steps + (g.tip ? '  Tip: ' + g.tip : ''));
         }
       } else if (m.kind === 'ai') {
-        if (m.answerKind === 'docfile') {
-          lines.push('The assistant gave the document filing title “' + (m.title || '') + '”.');
-        } else if (m.answerKind === 'triage') {
-          const bits = 'The assistant triaged the request as ' + (m.urgency || 'unclear')
-            + (m.route ? ', routing to ' + plainText(m.route) : '') + '.';
-          lines.push(bits);
-        } else {
-          // New answers carry markdown sections; older saved chats carry steps.
-          const body = (m.sections && m.sections.length)
-            ? m.sections.map((sec) => mdPlain(sec.markdown)).join(' ')
-            : (m.steps || []).map((t, i) => (i + 1) + ') ' + plainText(t && t.text ? t.text : t)).join('  ');
-          const txt = (body || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
-          if (txt) lines.push('The assistant answered: ' + txt);
-        }
+        const body = (m.sections || []).map((sec) => mdPlain(sec.markdown)).join(' ');
+        const txt = (body || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+        if (txt) lines.push('The assistant answered: ' + txt);
       } else if (m.kind === 'suggest') {
         lines.push('The assistant: ' + m.text);
       }
@@ -670,8 +659,6 @@ class RiversidePracticeQA extends React.Component {
     // answer says how it was asked for. Empty for an ordinary question.
     const askedAs = command ? command.label : '';
     const userMsg = { role: 'user', text: t, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings), askedAs };
-    // answerKind is filled in from the reply — the server decides whether this
-    // message is a how-to answer or a triage of an incoming patient request.
     // The images ride along on the bot message too, so a retry can resend them.
     // The attached documents ride along for the same reason: a retry has to send
     // the letter the question was asked about, or it asks a different question.
@@ -679,7 +666,7 @@ class RiversidePracticeQA extends React.Component {
     // search it runs appears in the card while it is still working.
     // `commandTemplate` rides along so a retry asks the same way: retrying an
     // AccurX triage as an ordinary question would answer a different thing.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, tip: '', message: '', messageCite: null, gaps: '', validation: null, citations: [], contacts: [], clarify: null, alerts: [], panel: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, validation: null, citations: [], alerts: [], panel: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
@@ -803,7 +790,7 @@ class RiversidePracticeQA extends React.Component {
     if (local) {
       // `local` also keeps the verdict row off it: a verdict posts the question
       // to /api/feedback, and a local mode's text is not to leave the browser.
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', local: true, template: local, sections: [], intro: '', keyPoints: [], message: '', messageCite: null, tip: '', gaps: '', followUps: [], citations: [], contacts: [], alerts: [], panel: null });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', local: true, template: local, sections: [], intro: '', citations: [], alerts: [], panel: null });
       return;
     }
     // History is the conversation BEFORE this question (idx-1 = the user message
@@ -822,66 +809,20 @@ class RiversidePracticeQA extends React.Component {
     if (ctrl) this.aiAborts.add(ctrl);
     try {
       const data = await askAgent(
-        { question, history, customGuides: this.state.customGuides, images, attachments, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
+        { question, history, images, attachments, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
         (ev) => { if (this.runId === run) this.onAgentEvent(idx, ev); },
       );
       if (this.runId !== run) return;
-      if (data.kind === 'docfile') {
-        this.updateAi(idx, {
-          status: 'done',
-          answerKind: 'docfile',
-          title: data.title,
-          date: data.date,
-          source: data.source,
-          department: data.department,
-          actions: data.actions,
-          note: data.note,
-        });
-        return;
-      }
-      if (data.kind === 'triage') {
-        this.updateAi(idx, {
-          status: 'done',
-          answerKind: 'triage',
-          urgency: data.urgency,
-          urgencyReason: data.urgencyReason,
-          summary: data.summary,
-          actions: data.actions,
-          redFlags: data.redFlags,
-          route: data.route,
-          patientMessage: data.patientMessage,
-          patientMessageCite: data.patientMessageCite,
-          citations: data.citations,
-          contacts: data.contacts || [],
-        });
-        return;
-      }
-      // A question back: the question as asked has more than one documented
-      // answer, so the assistant asks which was meant rather than choosing.
-      if (data.clarify && data.clarify.question && (data.clarify.options || []).length >= 2) {
-        this.updateAi(idx, {
-          status: 'done', answerKind: 'answer', statusText: '',
-          intro: data.intro || '', keyPoints: [], sections: data.sections || [],
-          message: '', messageCite: null, tip: '', gaps: data.gaps || '',
-          followUps: [], referralRoute: null, validation: null,
-          citations: data.citations || [], contacts: data.contacts || [],
-          clarify: data.clarify,
-          // A red flag does not wait for the reader to say which of two
-          // things they meant, so the bands go out with the question back.
-          turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null,
-        });
-        return;
-      }
-      // A templated answer carries its content in `template`, not in sections
-      // or a message, so it must not be read as an empty one. Without this a
-      // perfectly good ECG referral card was declined as needing a clinician.
-      if (!data.answerable || (!data.template && !data.sections.length && !data.message)) {
-        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], message: '', messageCite: null, tip: '', citations: [], contacts: data.contacts || [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
+      // A templated answer carries its content in `template`, not in sections,
+      // so it must not be read as an empty one. Without this a perfectly good
+      // ECG referral card was declined as needing a clinician.
+      if (!data.answerable || (!data.template && !(data.sections || []).length)) {
+        this.updateAi(idx, { status: 'declined', answerKind: 'answer', intro: data.intro || 'This needs a clinician’s judgement, so I cannot answer it here.', sections: [], citations: [], turnId: data.turnId || '', alerts: data.alerts || [], panel: data.panel || null });
         return;
       }
       // turnId identifies this answer to the server, so a verdict pressed under
       // it is stored against the answer it was actually about.
-      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', general: data.general === true, sources: data.sources || [], template: data.template || null, intro: data.intro, keyPoints: data.keyPoints || [], sections: data.sections, message: data.message, messageCite: data.messageCite, messageWeb: data.messageWeb || null, tip: data.tip, gaps: data.gaps || '', followUps: data.followUps || [], referralRoute: data.referralRoute || null, validation: data.validation || null, citations: data.citations, contacts: data.contacts || [], alerts: data.alerts || [], panel: data.panel || null });
+      this.updateAi(idx, { status: 'done', answerKind: 'answer', statusText: '', turnId: data.turnId || '', general: data.general === true, template: data.template || null, intro: data.intro, sections: data.sections, validation: data.validation || null, citations: data.citations, alerts: data.alerts || [], panel: data.panel || null });
     } catch (e) {
       // An abort is this conversation being left, not a failed answer: there is
       // no card left to mark as broken.
@@ -898,8 +839,8 @@ class RiversidePracticeQA extends React.Component {
   onAgentEvent(idx, ev) {
     if (!ev || !ev.type) return;
     if (ev.type === 'status') { this.updateAi(idx, { statusText: ev.text || '' }); return; }
-    // Real progress on the search itself — the Notebook scanned, the page
-    // chosen, the documents found — kept by stage for the working card.
+    // Real progress on the turn itself — the Notebook read, the documents
+    // found — kept by stage for the working card.
     if (ev.type === 'progress' && ev.stage) {
       this.updateAi(idx, (msg) => ({ progress: Object.assign({}, msg.progress, { [ev.stage]: ev }) }));
       return;
@@ -984,52 +925,6 @@ class RiversidePracticeQA extends React.Component {
     this.fetchAI(m.question, idx);
   }
 
-  // Format the exact contacts for copying. Each line carries where its number
-  // came from, so a number pasted into a task still says how far to trust it.
-  contactLines(m) {
-    if (!m.contacts || !m.contacts.length) return [];
-    const lines = ['', 'Contacts:'];
-    for (const c of m.contacts) {
-      const vals = (c.phones || []).map((p) => p.display).concat(c.emails || []);
-      lines.push('- ' + c.label + ': ' + vals.join(', ') + (c.source ? ' (' + c.source + ')' : ''));
-    }
-    return lines;
-  }
-
-  copyTriage(m, idx) {
-    const label = { emergency: 'EMERGENCY', urgent: 'Urgent: duty doctor', routine: 'Routine', 'self-care': 'Self-care / signpost', unclear: 'Unclear: escalate' }[m.urgency] || 'Unclear';
-    const lines = ['Triage notes', 'Urgency: ' + label + (m.urgencyReason ? ' (' + plainText(m.urgencyReason) + ')' : '')];
-    if (m.summary) lines.push('Request: ' + plainText(m.summary));
-    if (m.actions && m.actions.length) {
-      lines.push('', 'Actions:');
-      m.actions.forEach((a, i) => {
-        const src = a && a.cite ? '  [' + a.cite.docTitle + ', ' + a.cite.location + ']'
-          : (a && a.basis === 'judgement' ? '  [AI judgement]' : '');
-        lines.push((i + 1) + '. ' + plainText(a && a.text ? a.text : a) + src);
-      });
-    }
-    if (m.route) lines.push('', 'Route to: ' + m.route);
-    if (m.redFlags && m.redFlags.length) {
-      lines.push('', 'Escalate if:');
-      m.redFlags.forEach((r) => {
-        const src = r && !r.cite && r.basis === 'judgement' ? '  [AI judgement]' : '';
-        lines.push('- ' + plainText(r && r.text ? r.text : r) + src);
-      });
-    }
-    if (m.patientMessage) lines.push('', 'Draft reply to patient:', m.patientMessage);
-    lines.push(...this.contactLines(m));
-    lines.push('', 'Routing suggestion from the practice’s documents. Not clinical advice.');
-    try { navigator.clipboard.writeText(lines.join('\n')); } catch (e) {}
-    this.flagCopied(idx);
-  }
-
-  // Copy just the filing title — that is what gets pasted into the document
-  // title field in EMIS; everything else on the card is context.
-  copyDocFile(m, idx) {
-    try { navigator.clipboard.writeText(m.title || ''); } catch (e) {}
-    this.flagCopied(idx);
-  }
-
   // `patch` may be a function of the current message. Streamed tool events can
   // land several to a tick, so a snapshot-based update would drop steps; the
   // functional form always builds on the newest message.
@@ -1062,52 +957,22 @@ class RiversidePracticeQA extends React.Component {
   }
 
   copyAi(m, idx) {
-    // An answer can carry BOTH a procedure (sections) and a suggested message —
-    // copy everything, never just one part. Copying only the message here used
-    // to silently drop the whole procedure the reader meant to paste.
-    const hasSections = this.answerSections(m).some((sec) => (sec.markdown || '').trim());
     const lines = [m.question, ''];
     if (m.intro) lines.push(plainText(m.intro), '');
-    if (m.keyPoints && m.keyPoints.length) {
-      lines.push('In brief:');
-      m.keyPoints.forEach((p) => lines.push('- ' + (p.critical ? 'CRITICAL: ' : '') + plainText(p.text)));
-      lines.push('');
-    }
     this.answerSections(m).forEach((sec) => {
       if (!(sec.markdown || '').trim()) return;
       if (sec.heading) lines.push((sec.critical ? 'CRITICAL — ' : '') + sec.heading);
       else if (sec.critical) lines.push('CRITICAL');
-      if (sec.basis === 'judgement') lines.push('[AI judgement, not from the practice’s documents]');
-      if (sec.basis === 'web' && sec.web) lines.push('[From the web, not practice policy]');
       lines.push(mdPlain(sec.markdown));
       if (sec.cite) lines.push('[Source: ' + sec.cite.docTitle + ', ' + sec.cite.location + ']');
-      if (sec.basis === 'web' && sec.web) lines.push('[' + sec.web.title + ' — ' + sec.web.url + ']');
       lines.push('');
     });
-    if (m.gaps) lines.push('Not in the practice’s own material: ' + plainText(m.gaps), '');
-    if (m.message) {
-      lines.push(hasSections ? 'Suggested message:' : '', m.message, '');
-      if (m.messageCite) lines.push('[Source: ' + m.messageCite.docTitle + ', ' + m.messageCite.location + ']', '');
-    }
-    if (m.tip) lines.push('Tip: ' + plainText(m.tip));
-    lines.push(...this.contactLines(m));
     // The same sentence the card shows, so a pasted answer carries where it
     // came from rather than losing it on the clipboard.
-    const madeOf = Array.isArray(m.sources) ? m.sources : [];
     lines.push('', m.general
       ? 'Written by the assistant for this request; no practice document was used.'
-      : madeOf.length
-        ? 'Written by the assistant from: ' + madeOf.join(' · ')
-        : 'From the practice’s documents; AI judgement marked where used.');
+      : 'From the practice’s documents.');
     try { navigator.clipboard.writeText(lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()); } catch (e) {}
-    this.flagCopied(idx);
-  }
-
-  // Just the drafted wording, exactly as it stands. A reformatted email or a
-  // message to a patient is written to be pasted somewhere else, and pasting it
-  // with the rest of the answer wrapped around it is not what anyone wants.
-  copyMessage(m, idx) {
-    try { navigator.clipboard.writeText(m.message || ''); } catch (e) {}
     this.flagCopied(idx);
   }
 
@@ -1127,7 +992,7 @@ class RiversidePracticeQA extends React.Component {
         category: 'appointments',
         intro: plainText(m.intro || ''),
         steps: steps.length ? steps : ['', ''],
-        tip: plainText(m.tip || ''),
+        tip: '',
       },
     });
   }
@@ -1327,68 +1192,8 @@ class RiversidePracticeQA extends React.Component {
         };
       }
       if (m.kind === 'ai') {
-        // The server tells us whether this turned out to be a how-to answer, a
-        // triage of an incoming patient request, or a pasted medical document
-        // to file; render the matching card.
-        if (m.answerKind === 'docfile') {
-          return {
-            isDocFile: true,
-            aiLoading: m.status === 'loading',
-            aiError: m.status === 'error',
-            aiDone: m.status === 'done',
-            title: m.title || '',
-            // The title's parts, labelled, so a wrong date or department is
-            // easy to spot against the document before filing.
-            parts: [
-              { label: 'Date', value: m.date || '' },
-              { label: 'From', value: m.source || '' },
-              { label: 'Department', value: m.department || '' },
-              { label: 'Note', value: (!m.actions || !m.actions.length) ? (m.note || 'no action') : '' },
-            ].filter((p) => p.value),
-            actions: m.actions || [],
-            hasActions: !!(m.actions && m.actions.length),
-            onRetry: () => self.retryAi(idx),
-            onCopy: () => self.copyDocFile(m, idx),
-            copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy title',
-          };
-        }
-        if (m.answerKind === 'triage') {
-          const cite = (c) => ({
-            hasCite: !!c,
-            citeLabel: c ? (c.docTitle + ', ' + c.location) : '',
-            onCite: c ? (() => self.openViewer(c)) : (() => {}),
-          });
-          return {
-            isTriage: true,
-            aiLoading: m.status === 'loading',
-            aiError: m.status === 'error',
-            aiDone: m.status === 'done',
-            urgency: m.urgency || 'unclear',
-            urgencyReason: m.urgencyReason || '',
-            hasUrgencyReason: !!(m.urgencyReason && m.urgencyReason.length),
-            summary: m.summary || '',
-            hasSummary: !!(m.summary && m.summary.length),
-            actions: (m.actions || []).map((a, i) => Object.assign({ num: i + 1, text: (a && a.text != null) ? a.text : a, isJudgement: !!(a && a.basis === 'judgement' && !a.cite) }, cite(a && a.cite))),
-            hasActions: !!(m.actions && m.actions.length),
-            redFlags: (m.redFlags || []).map((r) => Object.assign({ text: (r && r.text != null) ? r.text : r, isJudgement: !!(r && r.basis === 'judgement' && !r.cite) }, cite(r && r.cite))),
-            hasRedFlags: !!(m.redFlags && m.redFlags.length),
-            route: m.route || '',
-            hasRoute: !!(m.route && m.route.length),
-            patientMessage: m.patientMessage || '',
-            hasPatientMessage: !!(m.patientMessage && m.patientMessage.length),
-            patientMessageCiteLabel: m.patientMessageCite ? (m.patientMessageCite.docTitle + ', ' + m.patientMessageCite.location) : '',
-            hasPatientMessageCite: !!m.patientMessageCite,
-            onPatientMessageCite: m.patientMessageCite ? (() => self.openViewer(m.patientMessageCite)) : (() => {}),
-            onRetry: () => self.retryAi(idx),
-            onCopy: () => self.copyTriage(m, idx),
-            copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy notes',
-            contacts: m.contacts || [],
-            hasContacts: !!(m.contacts && m.contacts.length),
-          };
-        }
         const sections = this.answerSections(m).map((sec, i) => {
           const cite = sec.cite || null;
-          const web = sec.basis === 'web' ? (sec.web || null) : null;
           // Pictures that live in the cited source (a notebook note's attached
           // images, or the cited PDF page) — shown as thumbnails under the
           // section; clicking opens the image full-size in the source panel.
@@ -1401,23 +1206,7 @@ class RiversidePracticeQA extends React.Component {
             // Safety-critical, breach-risk or deadline sections are shown as a
             // red callout instead of ordinary body text, so they cannot be
             // skimmed past.
-            isCritical: !!sec.critical && sec.basis !== 'judgement' && sec.basis !== 'reasoned',
-            isJudgement: sec.basis === 'judgement',
-            // The assistant's own working: the practice's material settles this
-            // but does not say it outright, so the answer applies what it does
-            // say. Shown as reasoning, with the sources it was built on, and
-            // never as something the practice wrote down.
-            isReasoned: sec.basis === 'reasoned',
-            premises: (sec.premises || []).map((p, n) => ({
-              key: n,
-              label: p.docTitle + (p.location ? ', ' + p.location : ''),
-              onOpen: () => self.openViewer(p),
-            })),
-            // Written from a web page, not the practice's own material — shown
-            // with its own marker and a link out, never as practice policy.
-            isWeb: !!web,
-            webLabel: web ? web.title : '',
-            webUrl: web ? web.url : '',
+            isCritical: !!sec.critical,
             hasCite: !!cite,
             citeLabel: cite ? (cite.docTitle + ', ' + cite.location) : '',
             onCite: cite ? (() => self.openViewer(cite)) : (() => {}),
@@ -1425,18 +1214,9 @@ class RiversidePracticeQA extends React.Component {
             hasImages: images.length > 0,
           };
         });
-        // Pictures on the suggested-message citation (each source image is shown
-        // once, against the first cite it belongs to — which can be the message).
-        const messageImages = self.citeThumbs(m.messageCite);
         const steps = m.steps || [];
         const validation = m.validation || null;
         const dropped = validation ? validation.dropped : 0;
-        const usedWeb = sections.some((sec) => sec.isWeb);
-        // Both kinds share the amber block, so the provenance note at the foot
-        // of the card covers both: the reader is told once that amber is not
-        // the practice's own words.
-        const usedJudgement = sections.some((sec) => sec.isJudgement);
-        const usedReasoning = sections.some((sec) => sec.isReasoned);
         return {
           isAi: true,
           // A request the assistant carried out itself — formatting, rewriting,
@@ -1462,14 +1242,6 @@ class RiversidePracticeQA extends React.Component {
           question: m.question,
           intro: m.intro || '',
           hasIntro: !!(m.intro && m.intro.length),
-          // The answer in brief: two to four lines, each one already verified
-          // against the section it summarises. Read first, acted on first.
-          keyPoints: (m.keyPoints || []).map((point, i) => ({
-            key: i,
-            text: point.text || '',
-            isCritical: !!point.critical,
-          })),
-          hasKeyPoints: !!(m.keyPoints && m.keyPoints.length),
           sections,
           hasSections: sections.length > 0,
           // The agent's own working — which searches it ran and what they
@@ -1478,72 +1250,27 @@ class RiversidePracticeQA extends React.Component {
           hasSteps: steps.length > 0,
           statusText: m.statusText || '',
           progress: m.progress || null,
-          usedJudgement,
-          usedReasoning,
-          usedWeb,
-          // What the practice's material does not cover, and anything the model
-          // wrote that could not be verified against a source and was dropped.
-          gaps: m.gaps || '',
-          hasGaps: !!(m.gaps && m.gaps.length),
-          // A step with its own procedure behind it — creating the referral
-          // letter, say — is offered as a question rather than inlined. Tapping
-          // it asks it here, in the same conversation, so the context is kept.
-          followUps: (m.followUps || []).map((q, i) => ({ key: i, question: q, onClick: () => self.ask(q) })),
-          hasFollowUps: !!(m.followUps && m.followUps.length),
-          // The four e-RS fields, lifted out of the steps so they are the first
-          // thing seen — getting the speciality or clinic type wrong sends the
-          // referral to the wrong place.
-          referralRoute: m.referralRoute || null,
-          hasReferralRoute: !!(m.referralRoute && (m.referralRoute.specialty || m.referralRoute.clinicType || m.referralRoute.priority || (m.referralRoute.clinicTypeOptions || []).length)),
+          // Anything the model wrote that could not be verified against a
+          // source and was dropped.
           hasDropped: dropped > 0,
           droppedNote: dropped > 0
             ? dropped + ' unverifiable ' + (dropped === 1 ? 'claim was' : 'claims were') + ' removed before this answer was shown'
             : '',
-          // THE PAGES IT WAS MADE OF. On the prose path the answer is written
-          // by the model from the Notebook in its prompt, so it is measured
-          // against those pages rather than declared to come from nowhere
-          // (lib/questions/grounding.mjs). Where it is the practice's own
-          // words, they are named here and the general banner does not show.
-          sources: Array.isArray(m.sources) ? m.sources : [],
-          hasSources: !!(Array.isArray(m.sources) && m.sources.length),
-          sourceLine: 'From: ' + (Array.isArray(m.sources) ? m.sources : []).join(' · '),
-          hasProvenanceNote: usedJudgement || usedReasoning || usedWeb || dropped > 0 || !!m.general || !!(Array.isArray(m.sources) && m.sources.length),
-          message: m.message || '',
-          hasMessage: !!(m.message && m.message.length),
-          onCopyMessage: () => self.copyMessage(m, idx),
-          copyMessageLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy',
-          hasMessageCite: !!m.messageCite,
-          messageCiteLabel: m.messageCite ? (m.messageCite.docTitle + ', ' + m.messageCite.location) : '',
-          onMessageCite: m.messageCite ? (() => self.openViewer(m.messageCite)) : (() => {}),
-          messageImages,
-          hasMessageImages: messageImages.length > 0,
-          hasTip: !!(m.tip && m.tip.length),
-          tip: m.tip || '',
+          // The pages a Q&A answer used are its own closing line, as links, so
+          // the foot of the card only says when nothing of the practice's was.
+          hasProvenanceNote: dropped > 0 || !!m.general,
           onRetry: () => self.retryAi(idx),
           onCopy: () => self.copyAi(m, idx),
           copyLabel: this.state.copiedIdx === idx ? 'Copied' : 'Copy steps',
           onSave: () => self.prefillFromAi(m),
-          contacts: m.contacts || [],
-          hasContacts: !!(m.contacts && m.contacts.length),
-          // A question back to the reader. Tapping an answer asks the original
-          // question again with the ambiguity settled, so the history keeps
-          // both the question that was too vague and the one that was not.
-          clarifyQuestion: m.clarify ? m.clarify.question : '',
-          clarifyOptions: (m.clarify ? m.clarify.options : []).map((opt, i) => ({
-            key: i,
-            label: opt,
-            onPick: () => self.ask(m.question + ' — ' + opt),
-          })),
-          hasClarify: !!(m.clarify && m.clarify.question && m.clarify.options.length),
           // The deterministic bands, above the card. Cards in their own right,
           // rendered by the same view — they are not decoration on the answer,
           // they are statements the answer does not make.
           alerts: (m.alerts || []).map((answer, i) => ({ key: i, answer })),
           hasAlerts: !!(m.alerts && m.alerts.length),
           // Every request the message contained. Tapping an unanswered one
-          // asks it on its own, through the same re-ask the clarify options
-          // use, so the transcript keeps both the message that asked for five
-          // things and the answer to the fifth.
+          // asks it on its own, so the transcript keeps both the message that
+          // asked for five things and the answer to the fifth.
           panel: m.panel || null,
           hasPanel: !!(m.panel && (m.panel.items || []).length > 1),
           onAskItem: (item) => self.ask(item.text || item.label),

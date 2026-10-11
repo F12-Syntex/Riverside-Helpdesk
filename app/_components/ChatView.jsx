@@ -5,8 +5,6 @@ import { s, Hover, Svg, Icons } from './ui';
 import GuideCard from './chat/GuideCard';
 import SuggestBubble from './chat/SuggestBubble';
 import AiAnswer from './chat/AiAnswer';
-import TriageAnswer from './chat/TriageAnswer';
-import DocFileAnswer from './chat/DocFileAnswer';
 
 /* ------------------------------------------------------------------ *
  * One question at a time.
@@ -210,8 +208,6 @@ export default function ChatView({ v }) {
               {m.isAnswer && <GuideCard v={m} />}
               {m.isSuggest && <SuggestBubble v={m} />}
               {m.isAi && <AiAnswer v={m} />}
-              {m.isTriage && <TriageAnswer v={m} />}
-              {m.isDocFile && <DocFileAnswer v={m} />}
             </div>
           ))}
 

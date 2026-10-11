@@ -1,13 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findPathwayReferral, isPathwayPage, readPathways } from '../lib/referrals/pathways.mjs';
-import { findReferralService, referralAnswer } from '../lib/templates/referrals.mjs';
+import { isPathwayPage, readPathways } from '../lib/referrals/pathways.mjs';
 
-// THE GAP THIS FILE EXISTS FOR. The practice keeps its e-RS pairings in the
-// Notebook under "Referral pathways / All Clinic types and their specialities".
-// The referral card was built from a copy of that list typed into code, so a
-// pathway the practice added — or corrected — on its own page never reached
-// the reader. The pages below are the three shapes the practice writes them in.
+// The practice keeps its e-RS pairings in the Notebook under "Referral
+// pathways / All Clinic types and their specialities", and the Notebook's own
+// checks read them (lib/notebook/rules.mjs, lib/notebook/validate.mjs). The
+// pages below are the three shapes the practice writes them in.
 
 // 1. A page per referral, labelled fields.
 const VASCULAR = {
@@ -37,8 +35,7 @@ const LIST = {
 - Speech and language: Speech and Language Therapy / Adult`,
 };
 
-// A pathway the array in code ALSO records, with a different clinic type. The
-// practice's page is newer and must win.
+// A labelled page with a priority.
 const RACPC = {
   docTitle: 'Notebook: Referrals / Referral pathways / All Clinic types and their specialities / Rapid Access Chest Pain Clinic',
   text: `Speciality: Cardiology
@@ -53,7 +50,8 @@ const ELSEWHERE = {
 };
 
 const PAGES = [VASCULAR, TABLE, LIST, RACPC, ELSEWHERE];
-const flat = (card) => JSON.stringify(card);
+// The pathway read off `pages` under this name.
+const named = (pages, name) => readPathways(pages).find((e) => e.name === name);
 
 test('only pages under the Referral pathways section are read as pathways', () => {
   assert.ok(isPathwayPage(VASCULAR));
@@ -66,56 +64,38 @@ test('only pages under the Referral pathways section are read as pathways', () =
   assert.ok(!names.some((n) => /Podiatry|Useful notes/.test(n)));
 });
 
-test('a page per referral: the title names it and the labelled lines fill the card', () => {
-  const card = referralAnswer({ question: 'how do I refer for vascular surgery', name: 'vascular surgery', pages: PAGES });
-  assert.match(card.title, /Vascular surgery referral/);
-  assert.match(flat(card), /Vascular Surgery/);
-  assert.match(flat(card), /Varicose Veins/);
-  assert.match(flat(card), /Royal London Hospital/);
-  assert.match(flat(card), /names the side/);
-  assert.ok(card.source.includes(VASCULAR.docTitle), 'the page it came from is on the card');
-  assert.doesNotMatch(card.subtitle, /Not recorded/);
+test('a page per referral: the title names it and the labelled lines fill it in', () => {
+  const entry = named(PAGES, 'Vascular surgery');
+  assert.ok(entry, 'the page title names the pathway');
+  assert.equal(entry.specialty, 'Vascular Surgery');
+  assert.equal(entry.clinicType, 'Varicose Veins');
+  assert.equal(entry.hospital, 'Royal London Hospital');
+  assert.match(entry.note, /names the side/);
+  assert.equal(entry.page, VASCULAR.docTitle, 'the page it came from is kept');
+  assert.equal(named(PAGES, 'Rapid Access Chest Pain Clinic').priority, 'Urgent');
 });
 
-test('a table row is a pathway, matched by the name the model read', () => {
-  const entry = findPathwayReferral({ name: 'hernia', pages: PAGES });
+test('a table row is a pathway', () => {
+  const entry = named(PAGES, 'Hernia');
   assert.equal(entry.specialty, 'Not Otherwise Specified');
   assert.equal(entry.clinicType, 'Hernias');
   assert.equal(entry.route, 'ers');
 });
 
 test('a 2WW row keeps 2WW in both boxes and is flagged as cancer', () => {
-  const card = referralAnswer({ question: '2ww skin cancer referral', name: 'skin cancer', pages: PAGES });
-  const screen = card.blocks.find((b) => b.type === 'ers');
-  assert.equal(screen.specialty, '2WW');
-  assert.equal(screen.clinicType, '2WW Dermatology');
-  assert.equal(screen.priority, '2WW');
-  assert.match(card.warn, /2WW/);
+  const entry = named(PAGES, 'Suspected skin cancer (2WW)');
+  assert.equal(entry.specialty, '2WW');
+  assert.equal(entry.clinicType, '2WW Dermatology');
+  assert.equal(entry.priority, '2WW');
+  assert.equal(entry.cancer, true);
 });
 
 test('a list line is a pathway: name, speciality, clinic type', () => {
-  const entry = findPathwayReferral({ name: 'rheumatology', pages: PAGES });
+  const entry = named(PAGES, 'Rheumatology');
   assert.equal(entry.specialty, 'Rheumatology');
   assert.equal(entry.clinicType, 'Inflammatory Arthritis');
-  const salt = findPathwayReferral({ name: 'speech and language', pages: PAGES });
+  const salt = named(PAGES, 'Speech and language');
   assert.equal(salt.specialty, 'Speech and Language Therapy / Adult');
-});
-
-test('the practice page outranks the copy in code when both record a referral', () => {
-  const card = referralAnswer({ question: 'racpc referral', name: 'rapid access chest pain clinic', pages: PAGES });
-  assert.match(flat(card), /Rapid Access Chest Pain/);
-  assert.doesNotMatch(flat(card), /Ischaemic Heart Disease/);
-  assert.ok(card.source.includes(RACPC.docTitle));
-});
-
-test('matched from the question when the model named nothing', () => {
-  const entry = findPathwayReferral({ name: '', question: 'how do I do a hernia referral', pages: PAGES });
-  assert.equal(entry.name, 'Hernia');
-});
-
-test('without a pathway page the code list still answers as before', () => {
-  const card = referralAnswer({ question: 'racpc referral', name: 'racpc', pages: [ELSEWHERE] });
-  assert.match(flat(card), /Ischaemic Heart Disease/);
 });
 
 test('a heading or a sentence on a pathway page is not a referral', () => {
@@ -163,15 +143,6 @@ test('the physio page yields one record per clinic, bold labels and all, standar
   assert.equal(entries[0].clinicType, 'Not otherwise specified');
   assert.equal(entries[1].specialty, 'ESP');
   assert.equal(entries[1].hospital, "ST LEONARD'S");
-
-  // "physio" finds standard first; "esp" finds the other.
-  const card = referralAnswer({ question: 'how to refer to physio', name: 'physio', pages: [PHYSIO] });
-  const screen = card.blocks.find((b) => b.type === 'ers');
-  assert.equal(screen.specialty, 'Physiotherapy');
-  assert.match(flat(card), /Also on this page/);
-  assert.match(flat(card), /ESP/);
-  const esp = referralAnswer({ question: 'esp referral', name: 'esp', pages: [PHYSIO] });
-  assert.equal(esp.blocks.find((b) => b.type === 'ers').specialty, 'ESP');
 });
 
 test('a vertical two-column table is a labelled block, and "Clinic:" is the clinic type', () => {
@@ -199,43 +170,12 @@ test('a vertical two-column table is a labelled block, and "Clinic:" is the clin
   assert.equal(hernia.clinicType, 'Hernias');
 });
 
-test('the code list matches whole words only, so physiotherapy is not OT', () => {
-  assert.equal(findReferralService('physiotherapy referral'), null);
-  assert.equal(findReferralService('ot referral').name, 'Occupational therapy (OT)');
-});
-
-test('the e-RS card is the screen, with the steps behind a disclosure and the hospital on it', () => {
-  const card = referralAnswer({ question: 'racpc referral', name: 'racpc', pages: [] });
-  const screen = card.blocks.find((b) => b.type === 'ers');
-  assert.equal(screen.specialty, 'Cardiology');
-  assert.equal(screen.hospital, 'Homerton University Hospital');
-  assert.match(screen.pathway, /Rapid Access Chest Pain/);
-  assert.equal(screen.priority, 'Urgent');
-  // No bare steps on the card: they live in the disclosure.
-  assert.ok(!card.blocks.some((b) => b.type === 'steps'));
-  const opened = card.blocks.find((b) => b.type === 'expand' && /steps/i.test(b.label));
-  assert.ok(opened && opened.blocks.some((b) => b.type === 'steps'));
-});
-
-test('the unrecorded card says it does not know, and is flagged', () => {
-  const card = referralAnswer({ question: 'how do I refer for a minmax', name: 'minmax', pages: [] });
-  assert.equal(card.flag, 'not-recorded');
-  assert.match(flat(card), /don’t know/);
-  assert.doesNotMatch(flat(card), /Smartcard/);
-});
-
-test('nothing recorded anywhere is still the honest card', () => {
-  const card = referralAnswer({ question: 'how do I refer for hyperbaric oxygen', name: 'hyperbaric oxygen', pages: PAGES });
-  assert.match(card.subtitle, /Not recorded/);
-});
-
 /* ------------------------------------------------- the shape live today */
 //
 // EVERY PAGE ABOVE IS ONE WE WROTE. The practice then renamed the section to
 // "Pathway cards (A to Z)" and rewrote the cards, and these tests went on
-// passing while the live Notebook produced ZERO pathways and every referral
-// card fell back to the copied array. So the cards below are the practice's
-// own, copied from the Notebook as it stands.
+// passing while the live Notebook produced ZERO pathways. So the cards below
+// are the practice's own, copied from the Notebook as it stands.
 
 // The section as it is named now, with the labels bold — the commonest card.
 const HERNIA_CARD = {
@@ -281,27 +221,27 @@ test('the Pathway cards section is read as pathways', () => {
   assert.equal(readPathways(CARDS).length, 3);
 });
 
-test("a card's own pairing wins over the copy in code", () => {
-  const entry = findPathwayReferral({ name: 'hernia', pages: CARDS });
+test('a card with bold labels is read', () => {
+  const entry = named(CARDS, 'General surgery: hernias');
   assert.equal(entry.specialty, 'Surgery - Not Otherwise Specified');
   assert.equal(entry.clinicType, 'Hernias');
 });
 
 test('a heading that is a label is read, with the value under it', () => {
-  const entry = findPathwayReferral({ name: 'physiotherapy', pages: CARDS });
+  const entry = named(CARDS, 'Physiotherapy (standard)');
   assert.equal(entry.specialty, 'Physiotherapy');
   assert.equal(entry.clinicType, 'Not Otherwise Specified');
   assert.equal(entry.route, 'ers');
 });
 
 test('a slash in the page title is part of the title, not a path', () => {
-  const entry = findPathwayReferral({ name: 'audiology', pages: CARDS });
-  assert.ok(entry, "audiology must find its own card");
+  const entry = named(CARDS, 'Audiology / hearing test');
+  assert.ok(entry, 'the card is named by its whole title');
   assert.equal(entry.specialty, 'Diagnostic Physiological Measurement');
 });
 
 test('e-RS named in the route beats the word email in the same sentence', () => {
-  const entry = findPathwayReferral({ name: 'audiology', pages: CARDS });
+  const entry = named(CARDS, 'Audiology / hearing test');
   assert.equal(entry.route, 'ers');
 });
 
@@ -309,9 +249,7 @@ test('e-RS named in the route beats the word email in the same sentence', () => 
 // heading, whose speciality and clinic type repeat: three normal ones all say
 // "Dermatology / Not otherwise specified" and two 2WW ones both say "2WW / 2WW
 // skin". What tells them apart is the hospital selection rule, and that column
-// was read by nothing — so the page answered as two pathways, not five, and
-// "dermatology referral" came back as the 2WW card headed "Priority is 2WW,
-// never Routine": a routine referral sent down the cancer pathway.
+// was read by nothing — so the page read as two pathways, not five.
 const DERM = {
   docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / ERS referrals / Dermatology and Telederm',
   text: `## Normal Dermatology
@@ -362,131 +300,6 @@ test('the hospital selection rule is read, and is what tells five pathways apart
   assert.deepEqual([...new Set(entries.map((e) => e.hospital))], ['']);
 });
 
-test('a 2WW pathway is not the answer to a question that did not ask for one', () => {
-  const entry = findPathwayReferral({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
-  assert.equal(entry.name, 'Normal Dermatology');
-  assert.equal(entry.specialty, 'Dermatology');
-  assert.equal(entry.clinicType, 'Not otherwise specified');
-  assert.equal(entry.cancer, false);
-
-  const card = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
-  const screen = card.blocks.find((b) => b.type === 'ers');
-  assert.equal(screen.priority, 'Routine');
-  assert.equal(screen.specialty, 'Dermatology');
-  assert.equal(screen.hospitalRule, "First hospital that isn't a telederm / community hospital");
-  assert.equal(flat(card).includes('Priority is 2WW, never Routine'), false);
-});
-
-test('asking for the two week wait still gets the 2WW pathway', () => {
-  const entry = findPathwayReferral({ name: 'dermatology', question: '2ww dermatology referral', pages: [DERM] });
-  assert.equal(entry.name, '2WW Dermatology');
-  assert.equal(entry.specialty, '2WW');
-  assert.equal(entry.clinicType, '2WW skin');
-  assert.equal(entry.hospitalRule, "First hospital that isn't a telederm");
-
-  const card = referralAnswer({ name: 'dermatology', question: 'suspected skin cancer referral', pages: [DERM] });
-  assert.equal(card.blocks.find((b) => b.type === 'ers').specialty, '2WW');
-});
-
-test('the heading above a table names its rows, so telederm and community are findable', () => {
-  const tele = findPathwayReferral({ name: 'teledermatology', question: 'teledermatology referral', pages: [DERM] });
-  assert.equal(tele.name, 'Normal Telederm');
-  assert.equal(tele.hospitalRule, 'First hospital that is a telederm');
-
-  const community = findPathwayReferral({ name: 'community dermatology', question: 'community dermatology referral', pages: [DERM] });
-  assert.equal(community.name, 'Normal Community');
-  assert.equal(community.hospitalRule, 'First hospital that is a community hospital');
-});
-
-// THE QUALIFIER IS IN THE QUESTION EVEN WHEN IT IS NOT IN THE NAME. The model
-// reads the bare service off a message — "dermatology" — so the word that told
-// the five dermatology pathways apart was thrown away before the lookup, the
-// shortest name won, and a reader asking for a community referral was sent to
-// the first hospital that is NOT a community one.
-test('a qualifier the extracted name dropped still picks the pathway', () => {
-  const community = findPathwayReferral({ name: 'dermatology', question: 'community dermatology referral', pages: [DERM] });
-  assert.equal(community.name, 'Normal Community');
-  assert.equal(community.hospitalRule, 'First hospital that is a community hospital');
-
-  const tele = findPathwayReferral({ name: 'dermatology', question: 'teledermatology referral', pages: [DERM] });
-  assert.equal(tele.name, 'Normal Telederm');
-  assert.equal(tele.hospitalRule, 'First hospital that is a telederm');
-
-  // And the plain question still gets the plain pathway.
-  const plain = findPathwayReferral({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
-  assert.equal(plain.name, 'Normal Dermatology');
-});
-
-test('the siblings on the dermatology page are all offered, rules and all', () => {
-  const card = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
-  const text = flat(card);
-  assert.match(text, /Also on this page/);
-  for (const name of ['Normal Community', '2WW Dermatology', '2WW Telederm Dermatology']) assert.ok(text.includes(name), `${name} must be offered`);
-  assert.match(text, /First hospital that is a community hospital/);
-});
-
-// THE ROW THE MODEL READ, COPIED OFF THE PAGE. The page is in its prompt in
-// full, so where it hands back the heading it took the answer from, nothing has
-// to be reconstructed from the bare service name — and the heading wins even
-// when every other signal points at the page's plainest pathway.
-test('the heading copied off the page decides it', () => {
-  const entry = findPathwayReferral({
-    name: 'dermatology', question: 'dermatology referral', variant: 'Normal Community Dermatology', pages: [DERM],
-  });
-  assert.equal(entry.name, 'Normal Community');
-  assert.equal(entry.hospitalRule, 'First hospital that is a community hospital');
-
-  // A heading that names nothing on the page changes nothing: the question is
-  // read as it always was, rather than the card answering about a pathway the
-  // practice does not record.
-  const bogus = findPathwayReferral({
-    name: 'dermatology', question: 'dermatology referral', variant: 'Sunshine Dermatology', pages: [DERM],
-  });
-  assert.equal(bogus.name, 'Normal Dermatology');
-});
-
-// NOTHING IN THE QUESTION CHOSE BETWEEN THEM. Two pathways, both fitting every
-// word the reader wrote, each sending the referral somewhere different: the sort
-// still puts one first, on the length of its name, which is not a reason. The
-// card has to say so rather than present the toss-up as the answer.
-const PHYSIO_AGES = {
-  docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Physiotherapy',
-  text: `## Adult physiotherapy
-
-| Category | Specialty | Clinic Type |
-| --- | --- | --- |
-| Adult physiotherapy | Physiotherapy | Adult |
-
-## Child physiotherapy
-
-| Category | Specialty | Clinic Type |
-| --- | --- | --- |
-| Child physiotherapy | Physiotherapy | Paediatric |
-`,
-};
-
-test('a question that chose neither pathway is answered saying so', () => {
-  const entry = findPathwayReferral({ name: 'physiotherapy', question: 'physiotherapy referral', pages: [PHYSIO_AGES] });
-  assert.ok(entry.ambiguous, 'the tie must be reported');
-
-  const card = referralAnswer({ name: 'physiotherapy', question: 'physiotherapy referral', pages: [PHYSIO_AGES] });
-  const text = flat(card);
-  assert.match(text, /records more than one version of this referral/);
-  assert.match(text, /Child physiotherapy|Adult physiotherapy/);
-});
-
-test('a question that did choose is answered without the caveat', () => {
-  const adult = findPathwayReferral({ name: 'physiotherapy', question: 'adult physiotherapy referral', pages: [PHYSIO_AGES] });
-  assert.equal(adult.name, 'Adult physiotherapy');
-  assert.ok(!adult.ambiguous);
-
-  // And the page of five dermatology pathways does not nag on the plain
-  // question: the normal card is the one with the fewest words nobody asked for.
-  const plain = referralAnswer({ name: 'dermatology', question: 'dermatology referral', pages: [DERM] });
-  assert.doesNotMatch(flat(plain), /records more than one version/);
-});
-
-
 test('a hospital written as an instruction is a rule, not a name in the dropdown', () => {
   const PAGE = {
     docTitle: 'Notebook: Referrals / Pathway cards (A to Z) / Skin lesion',
@@ -519,6 +332,4 @@ test('a typed page card is named by its Service, not by its route', () => {
   const names = readPathways([page]).map((e) => e.name);
   assert.ok(!names.some((n) => /^e-?rs referral$/i.test(n)), names.join(' | '));
   assert.ok(names.includes('Foot Health'), names.join(' | '));
-  const card = referralAnswer({ question: 'foot health referral', name: 'foot health', pages: [page] });
-  assert.doesNotMatch(card.title, /referral referral/i);
 });

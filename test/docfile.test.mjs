@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAiJson } from '../lib/ai/prompt.js';
-import { normaliseDocDate, resolveDocfileDate, docfileActiveItems, sanitizeDocfileActions, sanitizeDocfileNote } from '../lib/ai/docfile.mjs';
+import { normaliseDocDate, resolveDocfileDate, docfileActiveItems, sanitizeDocfileNote } from '../lib/ai/docfile.mjs';
+
+// The items' text alone, as the filing title uses it.
+const sanitizeDocfileActions = (actions, options) => docfileActiveItems(actions, options).map((item) => item.text);
 
 test('normalises short UK dates without changing the day and month', () => {
   assert.equal(normaliseDocDate('7/8/26'), '07-Aug-2026');

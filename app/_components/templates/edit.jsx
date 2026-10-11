@@ -2,7 +2,7 @@
 
 // The controls that make a drawn screen into an editable one.
 //
-// THE SAME PICTURE, TYPED INTO. ErsForm, ProfMessage and PathologyForm draw
+// THE SAME PICTURE, TYPED INTO. ErsForm, EmailForm and PathologyForm draw
 // the three screens a referral is actually typed into, and they draw them for
 // a reader: radios that do not move, boxes that cannot be clicked. The
 // Notebook needs the same picture with the values editable — because what a

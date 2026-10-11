@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ACCURX_READ_SCHEMA, DESTINATIONS, accurxReadPrompt, applyRoute, destinationLabel,
-  rankOfDestination, readingVerdict, signpostsFrom,
+  ACCURX_READ_SCHEMA, DESTINATIONS, accurxReadPrompt, destinationLabel,
+  readingVerdict, signpostsFrom,
 } from '../lib/templates/accurx-route.mjs';
 import { accurxAnswer } from '../lib/templates/accurx.mjs';
 import { triagePatientAnswer } from '../lib/templates/triage.mjs';
@@ -39,6 +39,11 @@ const words = (card) => flat(card.blocks)
 
 /* ------------------------------------------------------------- the ladder */
 
+// How senior a destination is on the ladder (lib/triage/destinations.mjs) —
+// what decides whether a card means somebody moves now (route-card.mjs,
+// meansNow). An unknown one is the bottom.
+const rankOfDestination = (id) => (DESTINATIONS.find((d) => d.id === String(id || '')) || {}).rank || 0;
+
 test('every destination the schema offers is one the ladder ranks', () => {
   for (const d of DESTINATIONS) {
     assert.ok(rankOfDestination(d.id) > 0, d.id);
@@ -60,55 +65,7 @@ test('a clinician outranks a pharmacist and a physiotherapist', () => {
 test('a nurse clinic can never take a message off a doctor', () => {
   for (const clinic of ['nurse', 'diabeticNurse']) {
     assert.ok(rankOfDestination('gp') > rankOfDestination(clinic), clinic);
-    for (const floor of ['gp', 'dutyDoctor', 'emergency']) {
-      assert.equal(applyRoute(floor, { destination: clinic, evidence: 'Pain killers three times a day' }, MISCARRIAGE).destination, floor);
-    }
   }
-});
-
-/* -------------------------------------------------------------- the veto */
-
-test('the reading may raise where a message goes', () => {
-  const out = applyRoute('fcp', { destination: 'dutyDoctor', evidence: 'Swelling in both legs' }, MISCARRIAGE);
-  assert.equal(out.destination, 'dutyDoctor');
-  assert.equal(out.raised, true);
-  assert.equal(out.because, 'Swelling in both legs');
-});
-
-test('the reading may NEVER lower it, however sure it sounds', () => {
-  for (const said of ['pharmacy', 'fcp', 'gp', 'minorEyeService']) {
-    const out = applyRoute('emergency', { destination: said, evidence: 'symptoms are ongoing' }, MISCARRIAGE);
-    assert.equal(out.destination, 'emergency', said + ' must not be able to undo an emergency');
-    assert.equal(out.raised, false);
-  }
-  assert.equal(applyRoute('gp', { destination: 'fcp' }, MISCARRIAGE).destination, 'gp');
-  // The same destination is not a raise either.
-  assert.equal(applyRoute('fcp', { destination: 'fcp' }, MISCARRIAGE).raised, false);
-});
-
-test('a verdict that is missing, unsure or nonsense changes nothing', () => {
-  for (const verdict of [null, undefined, {}, { destination: 'unsure' }, { destination: 'A&E' }, { destination: '' }]) {
-    const out = applyRoute('fcp', verdict, MISCARRIAGE);
-    assert.equal(out.destination, 'fcp');
-    assert.equal(out.raised, false);
-  }
-});
-
-test('a quote that is not in the message is dropped, and the raise still stands', () => {
-  const out = applyRoute('fcp', {
-    destination: 'dutyDoctor',
-    evidence: 'the patient reports a possible clot',
-  }, MISCARRIAGE);
-  assert.equal(out.destination, 'dutyDoctor', 'an unevidenced escalation still escalates — that is the safe direction');
-  assert.equal(out.because, '', 'but it does not get to quote words nobody wrote');
-});
-
-test('a quote is matched however the punctuation differs', () => {
-  const out = applyRoute('fcp', {
-    destination: 'dutyDoctor',
-    evidence: 'Swelling in both legs, accompanied by pain',
-  }, MISCARRIAGE);
-  assert.equal(out.because, 'Swelling in both legs, accompanied by pain');
 });
 
 /* ------------------------------------------------------------- the card */
@@ -240,8 +197,8 @@ test('the quote is checked against the WHOLE message, not the routed complaint',
 
 // The reading is ONE call now, so there is nothing to fold: the schema returns
 // the destination itself. What is left to check is the adapter between what that
-// call returns and what applyRoute and signpostsFrom already took — and, above
-// all, that a reading which cannot be trusted still means "leave it alone".
+// call returns and what the card and signpostsFrom take — and, above all, that
+// a reading which cannot be trusted is never read as somewhere to send it.
 
 test('a destination the reader named is carried through as it stands', () => {
   const verdict = readingVerdict({
@@ -250,7 +207,6 @@ test('a destination the reader named is carried through as it stands', () => {
   });
   assert.equal(verdict.destination, 'dutyDoctor');
   assert.equal(verdict.evidence, 'Swelling in both legs');
-  assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, true);
 });
 
 // The reading is shown the routing guide and nothing else, so there is no page
@@ -269,26 +225,23 @@ test('a page the reader names is dropped: it was shown no pages', () => {
 test('"unsure" is a real answer, and it changes nothing', () => {
   const verdict = readingVerdict({ destination: 'unsure', evidence: '' });
   assert.equal(verdict.destination, 'unsure');
-  assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, false);
 });
 
 test('a destination that is not on the ladder is the same as no answer', () => {
   // The enum stops the model returning one, but these values also arrive from
   // renderCommand's fallback path and from anything a later caller hands in. An
-  // id nothing can rank must never raise a card.
+  // id the ladder does not have is read as "unsure".
   const verdict = readingVerdict({ destination: 'district-nurse', evidence: 'x' });
   assert.equal(verdict.destination, 'unsure');
-  assert.equal(applyRoute('fcp', verdict, MISCARRIAGE).raised, false);
 });
 
 test('a reading that did not happen is null, not a verdict', () => {
-  // The call failed, or the command was not /accurx. applyRoute treats null as
-  // never having asked, which is what it is.
+  // The call failed, or the command was not /accurx. Null is never having
+  // asked, which is what it is.
   assert.equal(readingVerdict(null), null);
   assert.equal(readingVerdict({}), null);
   assert.equal(readingVerdict({ destination: '' }), null);
   assert.equal(readingVerdict('dutyDoctor'), null);
-  assert.equal(applyRoute('fcp', readingVerdict(null), MISCARRIAGE).raised, false);
 });
 
 test('the nurse clinics come back for the note, whatever the destination was', () => {
@@ -335,9 +288,6 @@ test('the eye A&E ties with 999 and takes the tie', () => {
   // is what the prompt is written from and what a fold would have used.
   const ids = DESTINATIONS.map((d) => d.id);
   assert.ok(ids.indexOf('eyeEmergency') < ids.indexOf('emergency'), 'the specific one is offered first');
-  // And neither can shove the other sideways once the patterns have chosen.
-  assert.equal(applyRoute('emergency', { destination: 'eyeEmergency' }, CHEMICAL).raised, false);
-  assert.equal(applyRoute('eyeEmergency', { destination: 'emergency' }, CHEMICAL).raised, false);
 });
 
 // On its words alone this is a minor eye service referral: "red", "sore" and
@@ -733,9 +683,8 @@ test('nothing found is silence, not a finding', () => {
 });
 
 test('a quote the message does not contain is dropped, and the panel stands', () => {
-  // Exactly what applyRoute does with an escalation it cannot evidence: the
-  // finding survives, the sentence claiming the patient wrote something they
-  // did not does not.
+  // A quote that cannot be found in the message: the finding survives, the
+  // sentence claiming the patient wrote something they did not does not.
   const card = accurxAnswer({
     condition: 'rash', text: 'rash again, i was seen about it last month', reason: 'rash recurring',
     route: readingVerdict({

@@ -2,8 +2,6 @@
 
 import { s, Hover, Svg, Icons } from '../ui';
 import CiteChip from './CiteChip';
-import JudgementChip from './JudgementChip';
-import ContactsCard from './ContactsCard';
 import WorkingState from './WorkingState';
 import Rich from './Rich';
 import Md from './Md';
@@ -11,26 +9,12 @@ import TemplateView from '../templates/TemplateView';
 import AccurxCard from './AccurxCard';
 import SpellCard from './SpellCard';
 import UnresolvedPanel from './UnresolvedPanel';
-import ErsForm from '../templates/ErsForm';
-
-// A section written from a web page rather than the practice's own material.
-// Deliberately unlike a citation chip: it opens the internet, not a practice
-// document, and the reader must be able to tell those apart at a glance.
-function WebChip({ label, url }) {
-  return (
-    <a href={url} target="_blank" rel="noreferrer" title={url}
-      style={s('margin-top:5px;display:inline-flex;align-items:center;gap:5px;max-width:100%;font-size:12px;font-weight:500;color:#8a6100;text-decoration:none;')}>
-      <Svg w={11} sw={2} style={s('flex:none;opacity:.8;')}>{Icons.globe}</Svg>
-      <span style={s('min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px dotted #d8bd7a;')}>From the web: {label}</span>
-    </a>
-  );
-}
 
 // The assistant's answer, laid out like an AI-formatted notebook page: markdown
-// sections (headings, lists, tables, highlights) with per-section provenance —
-// a quiet citation link for document-backed sections (with any pictures from
-// that source shown as thumbnails), and a clearly marked amber block for
-// anything that comes from the assistant's own judgement.
+// sections (headings, lists, tables, highlights), with a quiet citation link
+// under a document-backed section (and any pictures from that source shown as
+// thumbnails). A Q&A answer is one section of prose whose citations are links
+// to the Notebook pages it used; a command answers with its card instead.
 
 // Thumbnails of the pictures that live in a section's source — a notebook
 // note's attached images, or the cited PDF page. Click to view full-size.
@@ -96,42 +80,9 @@ function Feedback({ v }) {
   );
 }
 
-// The answer in brief, at the top of the card. Someone with a patient at the
-// desk reads this and nothing else, so it carries the whole answer in two to
-// four lines — and a point that risks safety, a breach or a deadline is red,
-// not another grey bullet.
-function KeyPoints({ points }) {
-  return (
-    <div style={s('margin:14px 0 0;border:1px solid #dde4e7;border-radius:12px;background:#fff;padding:13px 16px 14px;')}>
-      <div style={s('font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#768692;margin-bottom:9px;')}>In brief</div>
-      <ul style={s('margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;')}>
-        {points.map((p) => (
-          <li key={p.key} style={s('display:flex;gap:9px;align-items:flex-start;')}>
-            {/* Only a critical point gets an icon — the warning is the
-                information. Every other point takes a plain bullet. */}
-            {p.isCritical ? (
-              <span style={s('flex:none;margin-top:2px;display:flex;color:#d5281b;')}>
-                <Svg w={15} sw={2.4}>{Icons.alertCircle}</Svg>
-              </span>
-            ) : (
-              <span aria-hidden="true" style={s('flex:none;width:15px;display:flex;justify-content:center;padding-top:9px;')}>
-                <span style={s('width:5px;height:5px;border-radius:50%;background:#768692;')} />
-              </span>
-            )}
-            <span style={s('font-size:15.5px;line-height:1.45;color:#212b32;' + (p.isCritical ? 'font-weight:700;' : ''))}>
-              <Rich text={p.text} />
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// One section of the body. Three looks, because the reader must be able to tell
-// them apart without reading: a critical block is a red callout, a web-sourced
-// block is amber-edged and links out, and an ordinary practice-backed block is
-// plain text with its quiet citation.
+// One section of the body. Two looks, because the reader must be able to tell
+// them apart without reading: a critical block is a red callout, and an
+// ordinary block is plain text with its quiet citation.
 function Section({ sec }) {
   const heading = sec.hasHeading ? (
     <div style={s('font-size:17.5px;font-weight:700;color:#212b32;margin:0 0 7px;letter-spacing:-0.01em;')}>{sec.heading}</div>
@@ -146,7 +97,7 @@ function Section({ sec }) {
         </div>
         <Md text={sec.markdown} />
         {sec.hasImages && <SourceImages images={sec.images} />}
-        {sec.isWeb ? <WebChip label={sec.webLabel} url={sec.webUrl} /> : (sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />)}
+        {sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />}
       </div>
     );
   }
@@ -156,87 +107,7 @@ function Section({ sec }) {
       {heading}
       <Md text={sec.markdown} />
       {sec.hasImages && <SourceImages images={sec.images} />}
-      {sec.isWeb ? <WebChip label={sec.webLabel} url={sec.webUrl} /> : (sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />)}
-    </div>
-  );
-}
-
-// The fields that decide where a referral goes, drawn as the e-RS screen they
-// are typed into (app/_components/templates/ErsForm.jsx — the same picture a
-// templated referral card shows). A receptionist reading this has e-RS open,
-// and the speciality + clinic type pairing is the thing they came for. Wrong
-// pairing means the referral lands in the wrong service.
-
-// The pairing above was not recorded in the practice's notes — it was worked out
-// from the practice's own data. That has to be said, and saying "matched from a
-// list" is not enough on its own: the reader is about to type these two values
-// into e-RS, so the block names every source the determination went through —
-// the SNOMED concept the wording resolved to, the e-RS referral-types list the
-// pairing came out of, how close the match was, and what else was close to it.
-function DeterminedFrom({ label, children }) {
-  return (
-    <li style={s('display:flex;flex-wrap:wrap;gap:2px 8px;')}>
-      <span style={s('flex:none;font-weight:700;')}>{label}</span>
-      <span style={s('flex:1 1 180px;min-width:0;overflow-wrap:anywhere;')}>{children}</span>
-    </li>
-  );
-}
-
-function Determined({ determination }) {
-  const d = determination || null;
-  const snomed = d && d.snomed && d.snomed.conceptId ? d.snomed : null;
-  const alternatives = d ? (d.alternatives || []).filter((a) => a && a.specialty && a.clinicType) : [];
-  // A percentage rather than the raw score: the reader is judging how much to
-  // trust a value, not reading a ranking function.
-  const closeness = d && typeof d.confidence === 'number' && d.confidence > 0
-    ? Math.round(d.confidence * 100) + '% match'
-    : '';
-
-  return (
-    <div style={s('padding:11px 16px 12px;border-top:1px solid #eef1f2;background:#fffdf5;font-size:13.5px;line-height:1.5;color:#8a6100;')}>
-      <div style={s('display:flex;gap:8px;align-items:flex-start;')}>
-        <span style={s('flex:none;display:flex;margin-top:2px;')}><Svg w={15} stroke="#b58500" sw={2.2}>{Icons.alertCircle}</Svg></span>
-        <span>
-          <strong>Not recorded in the practice&rsquo;s notes.</strong> This pairing was determined from the practice&rsquo;s
-          own referral data &mdash; check it against the doctor&rsquo;s task before sending.
-        </span>
-      </div>
-      {d && (
-        <ul style={s('margin:9px 0 0 23px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13px;')}>
-          {snomed && (
-            <DeterminedFrom label="Condition">
-              {snomed.term} &mdash; SNOMED CT {snomed.conceptId}
-            </DeterminedFrom>
-          )}
-          <DeterminedFrom label="Pairing">
-            e-RS referral types &mdash; the specialities and clinic types e-RS accepts{closeness ? ' (' + closeness + ')' : ''}
-          </DeterminedFrom>
-          {!!alternatives.length && (
-            <DeterminedFrom label="Also close">
-              {alternatives.map((a) => a.specialty + ' / ' + a.clinicType).join('; ')}
-            </DeterminedFrom>
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ReferralRoute({ route }) {
-  const block = {
-    requestType: route.requestType || 'Referral',
-    priority: route.priority || 'Routine',
-    specialty: route.specialty || '',
-    clinicType: route.clinicType || '',
-    clinicTypeOptions: (route.clinicTypeOptions || []).filter(Boolean),
-    clinicTypeCondition: String(route.clinicTypeCondition || '').trim(),
-    hospital: route.hospital || '',
-    hospitalRule: route.hospitalRule || '',
-    pathway: route.pathway || '',
-  };
-  return (
-    <div style={s('margin:16px 0 0;')}>
-      <ErsForm block={block} below={route.source === 'suggested' ? <Determined determination={route.determination} /> : null} />
+      {sec.hasCite && <CiteChip label={sec.citeLabel} onClick={sec.onCite} />}
     </div>
   );
 }
@@ -260,17 +131,13 @@ export default function AiAnswer({ v }) {
         )}
 
         {v.aiDeclined && (
-          <>
-            <div style={s('padding:18px 0;display:flex;gap:11px;align-items:flex-start;')}>
-              <span style={s('flex:none;display:flex;margin-top:4px;color:#4c6272;')}><Svg w={18} sw={2}>{Icons.infoCircle}</Svg></span>
-              <div style={s('flex:1;min-width:0;')}>
-                <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
-                <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
-              </div>
+          <div style={s('padding:18px 0;display:flex;gap:11px;align-items:flex-start;')}>
+            <span style={s('flex:none;display:flex;margin-top:4px;color:#4c6272;')}><Svg w={18} sw={2}>{Icons.infoCircle}</Svg></span>
+            <div style={s('flex:1;min-width:0;')}>
+              <p style={s('margin:0;font-size:18px;line-height:1.55;color:#212b32;')}><Rich text={v.intro} /></p>
+              <p style={s('margin:8px 0 0;font-size:15px;line-height:1.5;color:#768692;')}>Please check with the relevant lead, or a clinician if it is a clinical question.</p>
             </div>
-            <ContactsCard v={v} />
-            {v.hasContacts && <div style={s('height:12px;')} />}
-          </>
+          </div>
         )}
 
         {v.aiDone && (
@@ -297,8 +164,8 @@ export default function AiAnswer({ v }) {
             ))}
 
             {/* A templated answer. The template already decided the whole
-                shape, so it renders on its own — the markdown sections, key
-                points and citations below are all empty for these. */}
+                shape, so it renders on its own — the markdown sections below
+                are empty for these. */}
             {v.hasTemplate && (
               <div style={s('margin:16px 0 0;')}>
                 {/* An AccurX request has its own card: the same answer, drawn
@@ -314,129 +181,19 @@ export default function AiAnswer({ v }) {
               <UnresolvedPanel panel={v.panel} onAsk={v.onAskItem} onDismiss={v.onDismissItem} />
             )}
 
-            {/* The question as asked has more than one answer in the practice's
-                own material, so the assistant asks which was meant rather than
-                choosing one and hoping. Tapping an answer asks it properly. */}
-            {v.hasClarify && (
-              <div style={s('margin:16px 0 0;background:#fff;border:1px solid #cfe1f0;border-radius:12px;padding:16px 18px 17px;animation:rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;')}>
-                <div style={s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#005eb8;margin-bottom:9px;')}>
-                  <Svg w={14} sw={2.4} style={s('flex:none;')}>{Icons.question}</Svg>Which did you mean?
-                </div>
-                <p style={s('margin:0 0 13px;font-size:17px;line-height:1.5;color:#212b32;')}>{v.clarifyQuestion}</p>
-                <div style={s('display:flex;flex-wrap:wrap;gap:8px;')}>
-                  {v.clarifyOptions.map((o) => (
-                    <Hover key={o.key} tag="button" type="button" className="riva-lift" onClick={o.onPick}
-                      base="background:#f0f6fb;border:1px solid #cfe1f0;border-radius:999px;padding:10px 18px;font:inherit;font-size:15.5px;font-weight:600;color:#005eb8;cursor:pointer;text-align:left;"
-                      hover="background:#005eb8;border-color:#005eb8;color:#fff;">
-                      {o.label}
-                    </Hover>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {v.hasReferralRoute && <ReferralRoute route={v.referralRoute} />}
-
-            {v.hasKeyPoints && <KeyPoints points={v.keyPoints} />}
-
             {v.hasSections && (
               <div style={s('padding:16px 0 6px;display:flex;flex-direction:column;gap:16px;')}>
-                {v.sections.map((sec) => (sec.isJudgement || sec.isReasoned) ? (
-                  <div key={sec.key} style={s('border:1px dashed #ecd39a;background:#fffdf5;border-radius:12px;padding:12px 16px 13px;')}>
-                    <div style={s('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6100;margin-bottom:8px;')}>
-                      <Svg w={14} stroke="#b58500" sw={2.2} style={s('flex:none;')}>{Icons.alertCircle}</Svg>
-                      {sec.isReasoned ? 'Worked out from the practice’s material' : 'AI judgement'}
-                    </div>
-                    <Md text={sec.markdown} />
-                    {/* What the working was built on. The reader can open each
-                        one and disagree with the step that was taken — which is
-                        the whole difference between reasoning and being told. */}
-                    {sec.isReasoned && sec.premises.length > 0 && (
-                      <div style={s('margin-top:10px;padding-top:9px;border-top:1px solid #f0e2c0;display:flex;flex-wrap:wrap;align-items:center;gap:6px;')}>
-                        <span style={s('font-size:12.5px;color:#8a6100;font-weight:600;')}>Based on</span>
-                        {sec.premises.map((p) => (
-                          <Hover key={p.key} tag="button" type="button" onClick={p.onOpen}
-                            base="background:#fff;border:1px solid #e6d3a8;border-radius:999px;padding:3px 10px;font:inherit;font-size:12.5px;color:#7a5600;cursor:pointer;"
-                            hover="background:#fdf6e4;border-color:#d8bd7d;">
-                            {p.label}
-                          </Hover>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Section key={sec.key} sec={sec} />
-                ))}
-              </div>
-            )}
-
-            {v.hasGaps && (
-              // What the practice's own material does not cover, said plainly
-              // rather than filled in from the model's general knowledge.
-              <div style={s('margin:12px 0 4px;display:flex;gap:10px;align-items:flex-start;border:1px solid #dde4e7;background:#fff;border-radius:10px;padding:12px 14px;')}>
-                <span style={s('flex:none;color:#4c6272;display:flex;margin-top:2px;')}><Svg w={16} sw={2.2}>{Icons.infoCircle}</Svg></span>
-                <div style={s('font-size:14.5px;line-height:1.5;color:#4c6272;')}>
-                  <strong style={s('color:#212b32;')}>Not in the practice&rsquo;s own material:</strong> <Rich text={v.gaps} />
-                </div>
-              </div>
-            )}
-
-            {v.hasMessage && (
-              <div style={s('margin:10px 0 4px;')}>
-                {/* The wording is written to be pasted somewhere else, so it
-                    carries its own Copy — taking it out of the answer by hand
-                    is the one thing the reader should not have to do. */}
-                <div style={s('display:flex;align-items:center;gap:12px;margin-bottom:6px;')}>
-                  <div style={s('flex:1;min-width:0;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;')}>
-                    {v.isGeneral ? 'Ready to paste' : 'Suggested message'}
-                  </div>
-                  <Hover tag="button" type="button" onClick={v.onCopyMessage} className="riva-lift"
-                    base="flex:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d5dee2;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;color:#005eb8;cursor:pointer;"
-                    hover="border-color:#005eb8;background:#f7fbff;">
-                    <Svg w={13} sw={2.2}>{Icons.copy}</Svg>{v.copyMessageLabel}
-                  </Hover>
-                </div>
-                <div style={s('padding:14px 16px;background:#fff;border:1px solid #dde4e7;border-radius:8px;font-size:17px;line-height:1.6;white-space:pre-wrap;')}>{v.message}</div>
-                {v.hasMessageImages && <SourceImages images={v.messageImages} />}
-                {v.hasMessageCite ? <CiteChip label={v.messageCiteLabel} onClick={v.onMessageCite} /> : <JudgementChip label="AI-drafted wording: check before sending" />}
-              </div>
-            )}
-
-            {v.hasTip && <div style={s('margin:14px 0 4px;background:#e8f1f8;padding:12px 16px;border-radius:8px;font-size:17px;line-height:1.55;')}><strong>Tip:</strong> <Rich text={v.tip} /></div>}
-
-            {v.hasFollowUps && (
-              // A step with its own procedure behind it is left out of the answer
-              // and offered here instead. One tap asks it in this same chat, so
-              // the reader never loses the referral they were part way through.
-              <div style={s('margin:14px 0 4px;')}>
-                <div style={s('font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#768692;margin-bottom:7px;')}>Ask next</div>
-                <div style={s('display:flex;flex-direction:column;gap:8px;')}>
-                  {v.followUps.map((f) => (
-                    <Hover key={f.key} className="riva-lift" onClick={f.onClick}
-                      base="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid #dde4e7;border-radius:10px;padding:12px 15px;cursor:pointer;font:inherit;font-size:16px;font-weight:600;color:#005eb8;transition:border-color .16s ease,background-color .16s ease;"
-                      hover="border-color:#005eb8;background:#f7fbff;">
-                      <span>{f.question}</span>
-                    </Hover>
-                  ))}
-                </div>
+                {v.sections.map((sec) => <Section key={sec.key} sec={sec} />)}
               </div>
             )}
 
             <Feedback v={v} />
 
             <div style={s('height:12px;')} />
-            <ContactsCard v={v} />
-            {v.hasContacts && <div style={s('height:12px;')} />}
 
             {v.hasProvenanceNote && (
               <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding:10px 0 12px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.5;')}>
                 {v.isGeneral && <span style={s('font-size:12.5px;color:#768692;')}>Written by the assistant for this request; no practice document was used</span>}
-                {/* Written by the assistant, out of the practice's own pages —
-                    which is a different thing from written out of nothing, and the
-                    only honest way to say it is to name them. */}
-                {v.hasSources && <span style={s('font-size:12.5px;color:#768692;')}>{v.sourceLine}</span>}
-                {(v.usedJudgement || v.usedReasoning) && <span style={s('font-size:12.5px;color:#768692;')}>{v.usedReasoning ? 'Amber blocks are the assistant\u2019s own working from the sources named in them, not the practice\u2019s own words' : 'Amber blocks are AI judgement, not the practice\u2019s documents'}</span>}
-                {v.usedWeb && <span style={s('font-size:12.5px;color:#768692;')}>Sections marked &ldquo;from the web&rdquo; are general guidance found online, not practice policy</span>}
                 {v.hasDropped && <span style={s('font-size:12.5px;color:#768692;')}>{v.droppedNote}</span>}
               </div>
             )}
