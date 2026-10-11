@@ -679,8 +679,8 @@ clickable sources they can open in-browser.
 
 The assistant keeps each source type predictable:
 
-- **Documents:** found by PostgreSQL full-text (`GIN`) search rather than by a
-  vector, and served by `/practice`, which shows the passages themselves with no
+- **Documents:** found by PostgreSQL full-text (`GIN`) search, and served by
+  `/practice`, which shows the passages themselves with no
   model in the path (`lib/templates/practice.mjs`). **Unedited is not the same as
   unformatted**: the words are exactly the document's, but they are laid out the
   way every other piece of text in the app is — a heading naming the document,
@@ -693,10 +693,8 @@ The assistant keeps each source type predictable:
   the page TITLES and returns one; the page is then rendered from the database
   as the practice wrote it, so a long process is never truncated to a snippet
   and never paraphrased.
-- **Contacts:** the one remaining embedded corpus, because a caller asks for
-  "the district nurses" rather than a title. A full-text + semantic search
-  retrieves matching
-  structured directory entries. Telephone numbers and emails are displayed
+- **Contacts:** a full-text search retrieves matching structured directory
+  entries. Telephone numbers and emails are displayed
   deterministically rather than copied by the AI.
 - Document and Notebook output still requires a server-verified verbatim quote.
 - `rag:ingest` updates portable parsed artefacts; a persisted bundle fingerprint
@@ -719,7 +717,6 @@ Set these in `.env.local` (see `.env.local.example`):
 | --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter API key (server-side only). |
 | ~~`OPENROUTER_AI_MODEL`~~ | **Gone.** The chat/vision model is a practice setting now: change it at `/settings`, where it is picked from the live OpenRouter catalogue and stored in Postgres (`app_settings`). Defaults to `google/gemini-3.5-flash-lite`. Should be vision-capable — the ingester reads images with it whenever the fast model cannot. A **routing variant** can be pinned to it there too — `:nitro` (fastest provider), `:floor` (cheapest), `:free`, `:online`, or anything else typed, e.g. `openai/gpt-oss-120b:nitro` — and a full id can be typed straight into the search box when the catalogue does not list it. |
-| `OPENROUTER_EMBED_MODEL` | Embedding model for the contact directory, the practice documents and the router's trigger phrases (default `openai/text-embedding-3-small`). Notebook pages are not embedded: they go into the prompt whole. |
 | `OPENROUTER_ANALYSIS_MODEL` | Optional default for the **fast** role — the reading: the template picker, claim extraction, the medicine-name extractor, the ingester's image transcription. Wants a cheap model that calls tools reliably. |
 | `OPENROUTER_WEB_MODEL` | Optional default for the **web search** role — searching the internet and reading a page for a phone number. A search-grounded model such as `perplexity/sonar` belongs here. Falls back to `OPENROUTER_MEDICATION_MODEL`, then `OPENROUTER_ANALYSIS_MODEL`. |
 | `DATABASE_URL` | Neon Postgres. Powers the staff rota and the Notebook. |

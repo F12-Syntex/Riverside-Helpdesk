@@ -1,105 +1,52 @@
 # How the bot answers — explained simply
 
-The bot never knows anything on its own. Every answer is built fresh from the
-practice's own documents. It works in two steps.
+The bot never knows anything on its own. Every answer is built fresh from what
+the practice has written down: the Notebook, and the practice documents.
 
-## Step 1 — Find the right text (the search)
+## A question — the whole Notebook, read every time
 
-- Ahead of time, every practice document is cut into small chunks and turned
-  into a list of numbers (an "embedding") that captures its meaning. These are
-  saved to disk once.
-- When someone asks a question, we turn *the question* into the same kind of
-  numbers and compare it against every chunk to find the closest matches
-  (cosine similarity). We keep the top 5.
-- Repeated/near-identical chunks are merged so the same fact doesn't fill up
-  all 5 slots.
-- For follow-ups like "how is this done?", a small cheap model first rewrites
-  the question into a full standalone search ("how is a smear test done?") so
-  the search looks in the right place.
+- When someone asks a question, the bot is given **every Notebook page, in
+  full**, with the question. Nothing is searched for and nothing is cut short:
+  the model reads the Notebook the way a colleague would, and answers from it.
+- It answers in plain prose, with **a link to each Notebook page it used**, so
+  the reader can open the page and check.
+- Before the answer is shown, a second model **checks it against the
+  Notebook** (not when a picture or a file is attached to the question). If the Notebook does not say, the bot says it does not know, offers
+  the closest pages, and files the question for somebody to write down.
+- A question about a contact the practice directory holds is answered straight
+  from the directory, with no model at all.
 
-This step is **exact and 1:1**: every match points straight back to a real
-passage in a real document. There is no training and nothing that can drift —
-that's the whole point. The data is small and changes whenever a policy is
-updated, and every answer has to be traceable to a source, so a deterministic
-search beats a trained model here.
+The Notebook is read live: a page written or edited a moment ago is in the
+next answer. There is no training and no index to rebuild.
 
-## Step 2 — Word the answer (the LLM)
+## /practice — the practice documents
 
-- The 5 found passages are handed to the LLM as numbered **Sources**.
-- The LLM is **not allowed to use its own knowledge**. It can only answer from
-  those Sources. If they don't cover the question, it must decline.
-- For every sentence it writes, it must (a) say which Source it came from and
-  (b) copy the exact words from that Source that prove it.
-- Back on the server, we **check** that the quote really appears in that
-  Source. If the LLM picked the wrong Source number, we fix it. If no quote
-  checks out, we fall back instead of letting it make something up.
+The documents in `rag/sources/` (policies, forms, guidance) are searched by
+their **words** — Postgres full-text search, with the document's title weighted
+above its text. The best passages go to the model with the question, and it
+answers in prose. Every part of that answer must **quote the passage it stands
+on**, and the server checks the quote is really there; a part whose quote is not
+found is deleted before anyone sees it.
 
-## Why it's built this way
+## The Referrals page — finding the right card
 
-The LLM is **not** the source of truth — it's just a **phraser**. The truth
-lives entirely in the search step, which is exact and auditable. So:
+The front page lists every referral in the Notebook's Referrals section. Type
+it the way you would say it — "skin", "cancer skin", "nurse to visit at home" —
+and it is matched by **name**: each everyday word stands for the words the cards
+use ("skin" for Dermatology and Teledermatology, "heart tracing" for the ECG),
+from a list kept in `lib/search/referral-aliases.mjs`, with typos allowed.
+Nothing opens until you choose a result.
 
-- The search handles the part that must be **accurate** (finding the right
-  document text).
-- The LLM only handles the part that must be **readable** (wording it nicely in
-  plain NHS English).
-- A verification check sits between them, so the LLM can't drift away from the
-  real document.
+## Commands — one job each
 
-**In one line:** a deterministic search finds the exact document passage, and
-the LLM is only allowed to rephrase it — with every sentence checked back
-against a word-for-word quote. No training, no guessing, fully traceable.
+A message starting with a slash asks for one particular card: `/accurx` routes a
+pasted online-consultation request by the practice's own rules, `/form` and
+`/template` find a form or a letter, `/consultation` and `/medication` read
+pasted text, and `/practice` searches the documents (above).
 
-## Triage — same engine, different job (and the bot picks which)
+## What is never done
 
-There's no mode switch. The bot reads each message and decides for itself
-whether it's a staff **how-to question** or an **incoming patient request** to
-route (for example an Accurx online consultation — usually first-person, often
-with prompts like "Describe the problem", "How long", "Have you tried
-anything"). It returns a `kind` of `"answer"` or `"triage"` and the UI shows the
-matching card.
-
-For a patient request it hands back **action notes**: an urgency band (emergency
-/ urgent / routine / self-care / unclear), the actions to take, who to route the
-request to, safety-net red flags, and an optional draft reply to the patient.
-
-It uses the **exact same two steps** as above — search the practice's documents,
-then let the LLM word the answer — and the **same verification**: every action
-and every red flag must quote the document that backs it, checked on the server.
-The only differences are the instructions given to the LLM:
-
-- It is doing **care navigation / routing**, not clinical assessment. It applies
-  the practice's own triage, duty-doctor and signposting rules; it never
-  diagnoses or gives medical advice.
-- If the documents don't settle how to route a request, it doesn't guess — it
-  marks the urgency **unclear** and says to escalate to the duty doctor.
-- A possible emergency (chest pain, breathing difficulty, stroke signs, etc.)
-  is flagged **emergency** with call-999 / alert-a-clinician as the first action.
-
-As more triage and signposting documents are added to the knowledge base, the
-notes get richer automatically — there is nothing to retrain.
-
-## Supplementary context — your own notes, applied live
-
-The knowledge base (`rag/sources/`) is embedded ahead of time, so changing it
-means re-ingesting and redeploying. For guidance you tweak often — "sore throat →
-Pharmacy First", who covers duty this week, local signposting — there's a second
-channel that is read **at request time** instead: **supplementary context**.
-
-It can come from three places:
-
-- **The Notebook** (main) — the in-app `/notebook` page. Write a note (or a
-  sub-note like "How to book appointments"); it's stored in Postgres and used on
-  the very next request. No keys, no redeploy.
-- **URLs** — any direct text/markdown links you configure (optional).
-- **`rag/context/`** — committed baseline notes (these do need a redeploy).
-
-Every non-empty Notebook page is added to every request **in full**. Notebook
-pages are never chunked, shortened or selected by similarity. Configured URLs
-and committed baseline notes are also supplied in full. They are added as
-numbered **Sources**, so they go through the same quote check as document
-passages: the model has to quote the note, and the server verifies it. Your
-instructions influence the answer, but they cannot be silently invented; each
-one appears as a citation.
-
-Write notes at `/notebook`; more detail is in `rag/context/README.md`.
+- **No embeddings.** No question or page is turned into numbers and sent to an
+  embeddings service; search is by words.
+- **No training.** Nothing the practice writes is used to train a model. Every
+  call goes only to providers set not to keep or train on what they are sent.

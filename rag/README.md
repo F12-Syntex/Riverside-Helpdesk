@@ -11,7 +11,7 @@ the browser.
 npm run rag:status          # what's indexed, what's new/changed/unsupported
 npm run rag:ingest          # process new or changed files only
 npm run rag:ingest -- -f    # force re-process everything
-npm run rag:ingest -- --offline  # parse locally and preserve/report missing vectors
+npm run rag:ingest -- --offline  # parse locally; keep the previous summaries
 ```
 
 1. Copy files into `rag/sources/` (subfolders are fine).
@@ -41,23 +41,21 @@ record, so nothing downstream cares about the original format:
 }
 ```
 
-Embeddings are stored separately (`embeddings.json`) keyed by chunk `id`.
-
 ### Processed artifacts (`processed/`)
 
 | File | What |
 |------|------|
 | `catalog.json` | One entry per document: `title`, `summary`, `tags`. The always-on "awareness" layer (Tier A). |
 | `chunks.jsonl.gz` | Deterministic gzip containing one JSON chunk record per line. Legacy plain JSONL remains readable. |
-| `embeddings.json` | `{ model, dim, ids, vectors }`, aligned to chunk order. |
 | `manifest.json` | Per-document `{ path, sha256, size, mtime, chunks, title, processedAt }` — drives `rag:status`. |
 
 ## How document retrieval works (two tiers)
 
 - **Tier A — catalogue.** Every request includes the compact canonical catalogue
   (title + summary + tags), so it is aware of all active sources.
-- **Tier B — hybrid retrieval.** PostgreSQL full-text and pgvector HNSW rankings
-  are fused; the top original passages are pulled in full with their provenance.
+- **Tier B — full-text retrieval.** PostgreSQL full-text search ranks the
+  passages (the document title weighted above its text); the top original
+  passages are pulled in full with their provenance.
 
 Both happen server-side via `lib/knowledge.js`, filtered to `kind='document'`.
 The Notebook is not part of document RAG: every Notebook page is supplied whole
@@ -106,18 +104,17 @@ documents don't contain the answer, it says so rather than guessing.
 
 ## Storage: when to change approach
 
-Chunk **count** (number of vectors), not total tokens, decides the tier:
+Chunk **count**, not total tokens, decides the tier:
 
 | Approach | Good up to | Breaks because |
 |----------|-----------|----------------|
 | Keyword scoring | ~20–50 docs | recall — synonyms/paraphrases stop matching |
-| In-repo vector index (fallback) | ~1,000–2,000 docs (≈50k chunks) | serverless memory + cold-start load |
-| **Postgres full-text + pgvector (current)** | unbounded for this practice | operational database capacity |
+| **Postgres full-text (current)** | unbounded for this practice | recall on paraphrase — a question that shares no word with the document |
 
 The parser output remains storage-agnostic. A persisted bundle fingerprint loads
 only new or changed passages into canonical Postgres after ingestion.
 
 ## Embeddings
 
-`openai/text-embedding-3-small` via OpenRouter (same `OPENROUTER_API_KEY`),
-1536-dim, ~$0.02 per million tokens. Override with `OPENROUTER_EMBED_MODEL`.
+None. Documents were embedded until 2026-10-11; the search is full-text now,
+and ingestion sends nothing to an embeddings endpoint.

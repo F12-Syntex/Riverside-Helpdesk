@@ -89,7 +89,7 @@ at `/index`. `lib/dpia.js` records them all as live processing on that basis.
 
 | Store | Product | What it holds |
 | --- | --- | --- |
-| Relational database | **Neon** serverless PostgreSQL | All application state — see §7 for the full table inventory. Extensions used: `vector` (pgvector, 1536-dim, HNSW cosine indexes) and `pg_trgm`. |
+| Relational database | **Neon** serverless PostgreSQL | All application state — see §7 for the full table inventory. Extensions used: `pg_trgm`, and `vector` (pgvector) — installed, with the `knowledge_passages.embedding` column and its HNSW index, but **nothing reads or writes vectors** since 2026-10-11 (§8). |
 | Object storage | **Vercel Blob** | Notebook file attachments. |
 | Browser storage | `localStorage`, `sessionStorage`, one cookie | Chat history, custom guides, machine/session identifiers. |
 | Repository files | Git | Practice source documents, parsed artefacts, the CQC extract, the practice contact directory, the e-RS referral-types CSV. |
@@ -126,7 +126,7 @@ flowchart LR
   end
 
   subgraph Third["Third parties reached from the server"]
-    OR["OpenRouter<br/>chat, embeddings, web-search tool"]
+    OR["OpenRouter<br/>chat, web-search tool"]
     LLM["Downstream model providers<br/>routed by OpenRouter<br/>data_collection deny"]
     EXA["Exa search engine<br/>via OpenRouter web_search"]
     WEB["Arbitrary web pages<br/>fetched and read for phone numbers"]
@@ -207,7 +207,7 @@ Every third party the system sends data to, and what reaches each one.
 
 | Recipient | Reached from | What is sent | Controls in code |
 | --- | --- | --- | --- |
-| **OpenRouter** (`openrouter.ai/api/v1`) | Server | Staff questions; extracts of practice documents and Notebook pages; whole Notebook pages when opened; pasted AccurX consultation text (`/signpost`, `/reason`); pasted document text and screenshots (`/coding`); medicine names and questions; note text for AI formatting/organising; passage text for claim extraction; **all text embedded for search** — contact passages, practice-document passages, Notebook passages (in the background after every save), and a `/practice` question (`lib/search/search.mjs` embeds it for the semantic arm; an ordinary Q&A question is not embedded since 2026-10-11). **On every Q&A turn, the whole Notebook** — every page, in full, as the cached first part of the prompt (§8 step 5). Attached images are sent as base64 data URLs. **On every Q&A turn, the answer check** (`api/alpha/decisions`, the `check` role — §8 step 8): the question, the staff member's previous message, the answer as shown, and the text of the Notebook pages it cites (≤72,000 characters); never an attachment or a picture — a turn carrying either is not checked. | Every call sets `provider: { data_collection: 'deny' }`; the answer check additionally sets `zdr: true` (zero data retention — `DECISION_PROVIDER`, `lib/ai/decisions.mjs`). Embedding calls additionally pin `provider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' }`. `HTTP-Referer: https://riverside-practice.local` and `X-Title` headers are sent for attribution. |
+| **OpenRouter** (`openrouter.ai/api/v1`) | Server | Staff questions; extracts of practice documents and Notebook pages; whole Notebook pages when opened; pasted AccurX consultation text (`/signpost`, `/reason`); pasted document text and screenshots (`/coding`); medicine names and questions; note text for AI formatting/organising; passage text for claim extraction. **Nothing is embedded** since 2026-10-11: search is Postgres full-text, so no question or passage goes to an embeddings endpoint. **On every Q&A turn, the whole Notebook** — every page, in full, as the cached first part of the prompt (§8 step 5). Attached images are sent as base64 data URLs. **On every Q&A turn, the answer check** (`api/alpha/decisions`, the `check` role — §8 step 8): the question, the staff member's previous message, the answer as shown, and the text of the Notebook pages it cites (≤72,000 characters); never an attachment or a picture — a turn carrying either is not checked. | Every call sets `provider: { data_collection: 'deny' }`; the answer check additionally sets `zdr: true` (zero data retention — `DECISION_PROVIDER`, `lib/ai/decisions.mjs`). Embedding calls additionally pin `provider: { order: ['azure'], allow_fallbacks: false, data_collection: 'deny' }`. `HTTP-Referer: https://riverside-practice.local` and `X-Title` headers are sent for attribution. |
 | **Downstream model providers** | Via OpenRouter | Whatever OpenRouter forwards. Which company actually receives a prompt depends on which model is selected at `/settings` and on OpenRouter's routing. The answer check's default model, `typesafe/jev-1.13`, is served by **TypeSafe**. | `data_collection: 'deny'` restricts routing to providers that do not retain or train on prompts. The *geographic location* of those providers is not constrained by any code here — **[to confirm]**, and material for the international-transfer section of the DPIA. |
 | **Exa** (search engine) | Via OpenRouter's `openrouter:web_search` server tool | The **web search query text**, which the model composes from the staff question. `lib/agent/web-search.mjs` requests `engine: 'exa'`. The same server tool is used by `/api/medication`. | Query only; no practice documents. But the query is model-generated from the question, so a poorly-worded question could carry content into it. |
 | **Arbitrary web hosts** | Server (`lib/lookup/web-contact.mjs`, `contact-extract.mjs`) | An HTTP GET for the page. The server's IP is exposed to the site owner. No practice data is sent in the body. | Pages are fetched to extract `tel:`/`mailto:` links and visible numbers verbatim. |
@@ -277,7 +277,7 @@ versioning. Tables, grouped by the feature that owns them:
 | Table | Purpose | Notes |
 | --- | --- | --- |
 | `knowledge_entries` | One row per document / Notebook page / contact: `kind ('document' \| 'note' \| 'contact'), title, content, data (jsonb), source_ref, authority, status, content_hash, claims_stale`. | Holds the **full text** of every practice document and every Notebook page. |
-| `knowledge_passages` | Chunked passages: `heading, content, content_hash, embedding vector(1536), location (jsonb), search_doc tsvector` (generated, GIN-indexed). | **Every kind is embedded — contacts, documents and Notebook pages.** This table is the search index `lib/search/` reads (§8). Documents are embedded as they are synced (changed in `a46bb33`) so a document added since the last `rag:ingest` does not silently drop out of the semantic arm of `/practice`. A Notebook save writes its passages with no vector — the editor's autosave never waits on an embedding call — and `lib/search/index-notes.mjs` embeds them straight afterwards in the background, with a throttled catch-up at the start of every Q&A turn (`fillMissingKnowledgeEmbeddingsByKind`, 200 passages per call, newest edits first). Unchanged text keeps its vector by `content_hash`. Embedding means the passage text is sent to OpenRouter's embeddings endpoint. |
+| `knowledge_passages` | Chunked passages: `heading, content, content_hash, embedding vector(1536), location (jsonb), search_doc tsvector` (generated, GIN-indexed). | The full-text search index `lib/search/` reads (§8), for every kind — contacts, documents and Notebook pages. **`embedding` is no longer written or read** (since 2026-10-11): the column and its HNSW index were left in place, and vectors stored before then are still held, unread; a passage written since has none, or keeps its old one. A Notebook save writes its page's passages at once, with no call to any provider. |
 | `knowledge_claims` | Atomic claims extracted from passages: `subject, predicate, value, normalized_key, quote, fingerprint, confidence`. | Extracted by a model (`lib/ai/claims.js`, fast role) from passage text. |
 | `knowledge_conflicts`, `knowledge_conflict_decisions` | Detected contradictions between claims, and the decisions taken on them. | — |
 | `knowledge_claim_cache` | `content_hash → claims (jsonb)`. | Avoids re-sending unchanged text to the model. |
@@ -392,7 +392,7 @@ an individual by workstation.
 | Path | Contents |
 | --- | --- |
 | `rag/sources/` | ~200 original practice documents (`.doc`, `.docx`, `.pdf`, `.rtf`, `.pptx`). Policies, protocols, forms, registration and DBS forms. |
-| `rag/processed/` | `catalog.json`, `chunks.jsonl.gz`, `embeddings.json`, `manifest.json` — the parsed and embedded artefacts. |
+| `rag/processed/` | `catalog.json`, `chunks.jsonl.gz`, `manifest.json` — the parsed artefacts. (`embeddings.json`, 60 MB of vectors, was deleted on 2026-10-11.) |
 | `public/assets/rag/` | Public display copies of the above (see §6). |
 | `lib/contacts.data.json` | The practice's own telephone directory — names, numbers, emails. |
 | `lib/lookup/cqc.data.json.gz` | The CQC register extract, ~57k registered services. Public data. |
@@ -456,7 +456,7 @@ sequenceDiagram
    `/medication`, `/practice`, `/form`, `/template` (`lib/commands.mjs`), so the
    model is asked for that one card's values and nothing else, and the card is
    rendered in code (`renderCommand`, `lib/templates/route.mjs`). `/practice`
-   is the only path that retrieves practice *documents*: hybrid search over
+   is the only path that retrieves practice *documents*: full-text search over
    `knowledge_passages` (`searchPassages`, `lib/search/search.mjs`, restricted
    to `kind = 'document'`), answered in prose with each part quote-checked
    against the passage it cites (`lib/agent/practice-answer.mjs`); a part whose
@@ -590,15 +590,17 @@ what was typed.
   The rule and its measurements are in `lib/search/referrals.mjs`.
 - **How a search ranks** (`GET /api/referrals?q=`, `lib/search/referrals-search.mjs`).
   The words that only say "a referral" ("referral", "ref", their typos) are
-  dropped. The query is embedded through the Q&A's own `queryVector` (same
-  cache, same 2.5 s budget). Each page then scores the better of two cosines —
-  its best passage in `knowledge_passages`, and its *name text* (title plus the
-  card's fields and aliases, embedded once per server instance and cached by
-  text) — plus a small share of its Postgres full-text rank and a small bonus
-  for a live e-RS or email card. With no vector the full-text rank orders the
-  list alone. Nothing new is stored: the name vectors live in memory, and the
-  name texts sent to the embedding provider are the card fields the index
-  already sends (§10, provider routing).
+  dropped. What is left is read as *concepts* (`lib/search/referral-aliases.mjs`):
+  each word or phrase in a hand-written alias group stands for the whole group —
+  "skin" for Dermatology and Teledermatology, "heart tracing" for the ECG,
+  "nurse to visit at home" for the district nurses — and a word in no group
+  stands for itself, matched loosely (a prefix, a typo or two). Each page scores
+  the share of the concepts its *name text* says (title plus the card's fields
+  and aliases), a small bonus when the name has the reader's own words, a share
+  of its Postgres full-text rank over its passages (every alias searched), and a
+  small bonus for a live e-RS or email card. When no page's name matches, the
+  full-text rank orders the list alone. No provider is called and nothing is
+  stored.
 - **What a row opens to.** The Q&A's own card for that page, built on the server
   exactly as an answer is: `notebookPageAnswer` with `withKindCard` drawing the
   e-RS or email screen from the saved fields. No model is anywhere in the page.
@@ -622,7 +624,7 @@ what was typed.
 | Medication check | `POST /api/medication` | Medicine name + optional question, to OpenRouter with the `openrouter:web_search` server tool (Exa). | The result is cached in `medications`; the question text is stored in the `queries` jsonb. |
 | Medicine extraction | `POST /api/medication/extract` | A pasted list or prescription snippet. | Nothing. Audit records the size only. |
 | Notebook format / organise | `POST /api/notebook/format`, `/organize` | The note's text, to OpenRouter — and, for format with "include question data" ticked, the page's answered questions with their answers and highlighted words. Returned as a diff/plan the user must confirm — nothing is saved unseen. | The confirmed result is saved as note text. Audit records the action only. |
-| Notebook edit | `PATCH /api/notebook` | Nothing to OpenRouter inside the save itself (`upsertKnowledgeEntry(..., { embed: false })`). Straight afterwards, in the background, the page's new or changed passages are **sent to OpenRouter's embeddings endpoint** for search (`lib/search/index-notes.mjs`), and the text is queued for **claim extraction**, which sends it to the fast-role model. | `notes`, `knowledge_entries`, `knowledge_passages`, `knowledge_claims`. |
+| Notebook edit | `PATCH /api/notebook` | Nothing to OpenRouter inside the save itself: the page's passages are written for full-text search there and then. Straight afterwards, in the background, the text is queued for **claim extraction**, which sends it to the fast-role model. | `notes`, `knowledge_entries`, `knowledge_passages`, `knowledge_claims`. |
 | Notebook backup | `GET /api/notebook/export` | — | Downloads every note and attachment record as one JSON file, to any caller. |
 | Notebook saves | `/api/notebook/snapshots` (+ `/load`, `/import`) | — | A save is every note and attachment record, kept in `notebook_snapshots` and downloadable as the same JSON file, to any caller. Loading one replaces the Notebook; the state it discards is saved first. |
 | Instant lookup (register) | `GET /api/cqc` | Nothing external — the gzipped extract is searched on the server. | Query text recorded in the audit log. |
@@ -639,8 +641,7 @@ what was typed.
 | Answers into the Notebook | `POST /api/questions/writein` | Every answered question not yet written in (question and answer), and the page list (ids, titles, the first 140 characters of each page) to OpenRouter's fast model to place them; then each target page's whole text with its answers to the reasoning model. `plan` stores nothing — every page's change is shown for the user to confirm. | `apply` takes a whole-Notebook save (`notebook_snapshots`, kind `auto`), snapshots each page into `note_revisions` (reason `questions`), refuses a page changed since the plan, creates new pages under "Uncategorised", and sets `open_questions.written_at`. |
 | Tidy questions into the template | `GET/POST /api/questions/reformat` | Up to 40 questions not yet in the template (question, note, and for Notebook ones the page title and the asked-about words) to OpenRouter. `plan` stores nothing; every proposal is shown for the user to confirm. | `apply` writes `title`, `points`, `question` and `formatted_at` on the kept rows (the note is cleared once it is in the points) and marks the unticked ones as looked at. |
 | Open questions | `GET/POST/PATCH/DELETE /api/questions/open` | Nothing external. | `open_questions` — ask one, write the answer to one, reopen or remove one, or clear every answered one (`DELETE ?status=answered`). Rendered at `/questions`. **Not best-effort:** unlike `/api/feedback`, a failed write is reported, because somebody typing out a question they need answering must not have it silently dropped. |
-| Search, on a `/practice` question | inside `POST /api/agent` | **The question to OpenRouter's embeddings endpoint** for the semantic arm (`lib/search/search.mjs`). An ordinary Q&A question is **not** embedded since 2026-10-11 — the writer reads the whole Notebook instead (§8). The last 200 query vectors are kept in the server instance's memory. | **Nothing new.** No query text or vector is written anywhere. |
-| Note embedding catch-up | inside `POST /api/agent` (and after every Notebook save) | Notebook passages that have no vector yet, to OpenRouter's embeddings endpoint, at most 200 per call — at most once a minute per server instance from Q&A turns. | The vectors, in `knowledge_passages.embedding`. |
+| Search, on a `/practice` question | inside `POST /api/agent` | **Nothing external for the search itself**: Postgres full-text over the document passages (`lib/search/search.mjs`). The passages it finds then go to the reasoning model with the question, to be answered. | **Nothing new.** No query text is written anywhere by the search. |
 | Defragment the Notebook | `GET/POST /api/notebook/defrag`, `/defrag/run` | **Notebook page text to OpenRouter** — to propose rewrites and to find contradictions between pages. | `note_defrag_runs`, `note_defrag_items`, `note_contradictions`, `note_proposals`, and `note_revisions` before every apply. |
 | Undo a page rewrite | `POST/GET /api/notebook/revert` | Nothing external. | Restores from `note_revisions`, writing a further revision first. |
 | Notebook map | `GET /api/notebook/map` | Nothing external. | Reads the notes; renders the treemap at `/notebook`. |
@@ -657,7 +658,7 @@ never its text.
 
 | Endpoint | Methods | Postgres | OpenRouter | Blob | Open web | Audit content |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/api/agent` | POST | yes — `notes`, `knowledge_*`, `question_log`, `open_questions` (only a turn it could not answer), `ai_usage` | yes — the prose answer over the whole Notebook, the answer check, each command's own call (`/accurx` reading, `/coding`, `/practice`), and embeddings (a `/practice` question; note passages missing a vector) | no | no | recorded (≤400 chars) |
+| `/api/agent` | POST | yes — `notes`, `knowledge_*`, `question_log`, `open_questions` (only a turn it could not answer), `ai_usage` | yes — the prose answer over the whole Notebook, the answer check, each command's own call (`/accurx` reading, `/coding`, `/practice`) | no | no | recorded (≤400 chars) |
 | `/api/screen` | POST | yes — `ai_usage` | yes — superSpeed role | no | no | not described |
 | `/api/attach` | POST | no | **no** | no | no | not described |
 | `/api/signpost` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
@@ -667,11 +668,11 @@ never its text.
 | `/api/medication/extract` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
 | `/api/cqc` | GET | no | no | no | no | recorded |
 | `/api/lookup-web` | GET | no | yes — web role, plus the search tool | no | **yes — direct GETs to up to 4 pages found** | recorded |
-| `/api/directory` | GET | yes — `knowledge_*` | yes (embeddings, on sync) | no | no | not described |
-| `/api/kb` | GET | yes — `knowledge_*` | yes (embeddings, on sync) | no | no | not described |
+| `/api/directory` | GET | yes — `knowledge_*` | no | no | no | not described |
+| `/api/kb` | GET | yes — `knowledge_*` | no | no | no | not described |
 | `/api/knowledge` | GET POST PATCH DELETE | yes | yes — claim extraction | no | no | **guarded** |
-| `/api/knowledge/analyse`, `/conflicts`, `/status`, `/sync` | POST GET PATCH | yes | yes — claim extraction, embeddings | no | no | **guarded** (`/api/knowledge` prefix) |
-| `/api/notebook` | GET POST PATCH DELETE | yes — `notes`, `note_attachments`, `knowledge_*` | embeds changed passages in the background, and queues claim extraction, on edit | **deletes blobs on note delete** | no | recorded |
+| `/api/knowledge/analyse`, `/conflicts`, `/status`, `/sync` | POST GET PATCH | yes | yes — claim extraction | no | no | **guarded** (`/api/knowledge` prefix) |
+| `/api/notebook` | GET POST PATCH DELETE | yes — `notes`, `note_attachments`, `knowledge_*` | queues claim extraction, on edit | **deletes blobs on note delete** | no | recorded |
 | `/api/notebook/attachments` | POST DELETE | yes — `note_attachments` | no | **yes — uploads and deletes, `access: 'public'`** | no | recorded |
 | `/api/notebook/format` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
 | `/api/notebook/organize` | POST | yes | yes | no | no | **guarded** |
@@ -793,10 +794,6 @@ the build if any file writes the completions URL, a `data_collection` key or a
 - Every chat completion sets `provider: { data_collection: 'deny' }`, which
   restricts OpenRouter to providers contractually set not to retain or train on
   prompt data.
-- Embeddings additionally pin `provider: { order: ['azure'],
-  allow_fallbacks: false, data_collection: 'deny' }` — a single zero-retention
-  provider with no fallback. (Embeddings are the one endpoint that does not go
-  through `chatBody`; there is nothing to reason about.)
 - **Extended reasoning is held to the minimum everywhere** (`reasoning: {
   effort: 'minimal', exclude: true }` — `NO_REASONING` in
   `lib/ai/openrouter.mjs`), not only on the agent. It asks for minimal effort
@@ -837,7 +834,7 @@ reset or deleted.
 | **Staff names, roles, hours, leave, mobile numbers** | `staff`, `rotas`, `lib/contacts.data.json`, practice documents in `rag/sources/` and `public/assets/rag/` | Yes |
 | **Staff and third-party names inside practice documents** | `knowledge_entries.content`, `knowledge_passages.content`; sent to OpenRouter as answer context | Yes — DPIA risk #3 |
 | **Patient data pasted into a question** | `audit_events.detail`, `question_log`; sent to OpenRouter | **No — DPIA risk #1, rated High.** The on-screen warning is the only control; automatic screening is listed as "to do". |
-| **Patient data typed into a Notebook note** | `notes.body`, `knowledge_entries`, `knowledge_passages`, `knowledge_claims`, attachments in Blob; sent to OpenRouter for claim extraction and, passage by passage, to its embeddings endpoint for search | **No — DPIA risk #2, rated High.** |
+| **Patient data typed into a Notebook note** | `notes.body`, `knowledge_entries`, `knowledge_passages`, `knowledge_claims`, attachments in Blob; sent to OpenRouter for claim extraction | **No — DPIA risk #2, rated High.** |
 | **Patient consultation text (AccurX)** | Transits `/signpost`, `/reason`, `/docfile` to OpenRouter. **Not stored anywhere**; the audit log records size only. | Yes, by design — the tools exist for it. The UI states identifiers should be removed first; nothing enforces it. |
 | **Patient data inside a Notebook attachment** | Vercel Blob, at a **public URL** | No |
 | **Device identifiers** | `audit_machines`, browser cookie + localStorage | Yes |
@@ -897,7 +894,7 @@ running application does:
 
 ```
 npm run rag:status     # what is indexed / new / changed
-npm run rag:ingest     # parse and embed new or changed files in rag/sources/
+npm run rag:ingest     # parse and summarise new or changed files in rag/sources/
 npm run rag:prune
 ```
 
@@ -912,10 +909,8 @@ document images are sent to OpenRouter at ingest time. Output goes to
 `npm run data:cqc -- <csv>` rebuilds the CQC extract from a newer published
 export.
 
-**The Notebook's search index needs no step here.** Notebook passages are
-embedded by the running application, in the background after each save and in
-a catch-up from Q&A turns (§8, step 5); `npm run rag:ingest` is for practice
-documents only.
+**The Notebook's search index needs no step here.** A Notebook save writes the
+page's passages itself; `npm run rag:ingest` is for practice documents only.
 
 At runtime, `/api/knowledge/sync` idempotently reconciles the committed bundle,
 the Notebook and the contacts into the canonical Postgres tables; a persisted
@@ -927,10 +922,9 @@ a reparse.
 
 | Variable | Purpose |
 | --- | --- |
-| `OPENROUTER_API_KEY` | Server-side only. The single credential for chat, embeddings and web search. |
+| `OPENROUTER_API_KEY` | Server-side only. The single credential for chat and web search. |
 | `DATABASE_URL` | Neon pooled connection string. |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob. |
-| `OPENROUTER_EMBED_MODEL` | Default `openai/text-embedding-3-small`. |
 | `OPENROUTER_ANALYSIS_MODEL`, `OPENROUTER_RESEARCH_MODEL`, `OPENROUTER_WEB_MODEL`, `OPENROUTER_MEDICATION_MODEL` | Role fallbacks, overridden by `/settings`. |
 | `SUPPLEMENTARY_CONTEXT_URLS`, `SUPPLEMENTARY_CONTEXT_TTL` | Optional extra context fetched from direct URLs at request time. |
 
@@ -1185,16 +1179,15 @@ should record explicitly:
     there when somebody presses a verdict button, and nothing in
     `/api/feedback` reads the cookie. The DPIA's "what is stored" answer, and
     anything the practice tells staff about that switch, needs to say so.
-16. **Search embeds Notebook pages after every save, and `/practice`
-    questions; the Q&A no longer embeds the question.** From 2026-10-10 to
-    2026-10-11 the Notebook search embedded every Q&A question, the previous
-    message and the first 1,000 characters of any attachment. Since the Q&A
-    began reading the whole Notebook (§8) it does not search, so an ordinary
-    question no longer reaches the embeddings endpoint; a `/practice` question
-    still does, and every Notebook page's text is still embedded in the
-    background after each save (Azure-pinned, `data_collection: 'deny'`,
-    `allow_fallbacks: false`) for `/practice` and the Referrals page. The
-    DPIA's list of what is sent where should say so.
+16. **Nothing is embedded any more; vectors embedded before are still held.**
+    From 2026-10-10 to 2026-10-11 the Notebook search embedded every Q&A
+    question, the previous message and the first 1,000 characters of any
+    attachment, and every Notebook, document and contact passage was sent to
+    the embeddings endpoint (Azure-pinned, `data_collection: 'deny'`). Since
+    2026-10-11 no text goes to an embeddings endpoint: search is Postgres
+    full-text. The vectors already in `knowledge_passages.embedding` were left
+    in the database, unread, until somebody clears the column. The DPIA's list
+    of what is sent where says so.
 17. **The assistant runs on the fast role, not the reasoning role.** §10 records
     the discrepancy in full. For the DPIA this matters because the model named on
     `/settings` as "the model the practice runs on" is not, on an install with a
