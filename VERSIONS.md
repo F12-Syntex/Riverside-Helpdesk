@@ -18,6 +18,12 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.68.4` | 2026-10-11 | docs | `56ce436` | docs: drop references to the code the Q&A cleanup removed |
+| `6.68.3` | 2026-10-11 | refactor | `e9c20de` | refactor: strip the Q&A to the whole-Notebook answer |
+| `6.68.2` | 2026-10-11 | docs | `b973d81` | docs: describe search without embeddings |
+| `6.68.1` | 2026-10-11 | refactor | `888b334` | refactor: remove embeddings from the app, keeping the database as is |
+| `6.68.0` | 2026-10-11 | feat | `1a67eda` | feat: search referrals by name and aliases, with no embeddings |
+| `6.67.6` | 2026-10-11 | docs | `adbe1c6` | docs: record the referral drawer fixes in versions |
 | `6.67.5` | 2026-10-11 | fix | `8ed7ef3` | fix: line the referral drawer's foot up with the list card's |
 | `6.67.4` | 2026-10-11 | fix | `61285ce` | fix: close the open referral when the search changes |
 | `6.67.3` | 2026-10-11 | docs | `fcf6dfc` | docs: record the floating referral drawer in versions |
