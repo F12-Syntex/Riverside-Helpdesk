@@ -130,7 +130,7 @@ const LAYERS = [
   },
   {
     name: 'Data plane', sub: 'where state lives', c: P.green,
-    items: ['Neon Postgres', '27 tables', '29 indexes', 'pgvector', 'pg_trgm', 'Vercel Blob', 'rag/processed', '2,047 chunks', 'embeddings.json', 'catalog.json'],
+    items: ['Neon Postgres', '27 tables', '29 indexes', 'pgvector', 'pg_trgm', 'Vercel Blob', 'rag/processed', '2,047 chunks', 'chunks.jsonl.gz', 'catalog.json'],
   },
   {
     name: 'Outside', sub: 'everything third party', c: P.purple,
@@ -178,7 +178,7 @@ const PIPE = [
   { t: 'Patient-data screen', s: 'holds the send', c: P.red, tag: 'super-speed role' },
   { t: 'Redact identifiers', s: 'regex, no model', c: P.grey, tag: 'deterministic' },
   { t: 'Safety scan', s: 'red flags · NG12 · acuity', c: P.orange, tag: '0 model calls' },
-  { t: 'Router', s: 'trigger index, lexical + vector', c: P.purple, tag: 'ships OFF' },
+  { t: 'Router', s: 'trigger index, lexical', c: P.purple, tag: 'ships OFF' },
   { t: 'Template picker', s: 'model returns a name, not prose', c: P.blue, tag: '24 templates' },
   { t: 'Render in code', s: 'card assembled from blocks', c: P.aqua, tag: '8 commands' },
   { t: 'Quote check · log', s: 'claim dropped if unquoted', c: P.green, tag: '3 tables written' },
@@ -242,7 +242,6 @@ const ROLES = [
   { k: 'fast', u: 'reading · search loop · extraction', m: 'openai/gpt-oss-120b', f: 'env default', c: P.aqua },
   { k: 'images', u: 'screenshots · photos of letters', m: 'mistralai/ministral-14b-2512', f: 'own default', c: P.pink },
   { k: 'medication', u: 'Medication Check + web tool', m: 'openai/gpt-4.1-nano', f: 'env default', c: P.orange },
-  { k: 'embeddings', u: 'knowledge + router vectors', m: 'openai/text-embedding-3-small', f: 'Azure only · no retention', c: P.green },
   { k: 'web', u: 'one open-internet search', m: 'inherits', f: 'medication → fast', c: P.light },
   { k: 'accurx', u: 'where a pasted request goes', m: 'inherits', f: 'fast', c: P.purple },
   { k: 'superSpeed', u: 'the pre-send screen', m: 'inherits', f: 'fast', c: P.red },
@@ -326,9 +325,9 @@ const RAG = [
   { t: 'rag/sources', s: '196 files · 54.5 MB', c: P.dark },
   { t: '7 parsers', s: 'pdf · docx · doc · pptx · rtf · text · image', c: P.blue },
   { t: 'chunk', s: 'headings kept, tables kept whole', c: P.bright },
-  { t: 'embed', s: 'text-embedding-3-small', c: P.aqua },
+  { t: 'summarise', s: 'one line per document (fast role)', c: P.aqua },
   { t: 'rag/processed', s: '188 docs · 2,047 chunks', c: P.green },
-  { t: 'search', s: 'cosine + catalogue summaries', c: P.lgreen },
+  { t: 'search', s: 'Postgres full-text + catalogue', c: P.lgreen },
 ];
 const TYPES = [['doc', 116], ['docx', 54], ['rtf', 9], ['pdf', 8], ['pptx', 1]];
 
@@ -337,7 +336,7 @@ function Corpus() {
   const max = TYPES[0][1];
   return (
     <svg viewBox="0 0 1200 250" width="100%" style={s('display:block;height:auto;')} role="img"
-      aria-label="Ingestion pipeline from source files through parsers, chunking and embedding to the searchable store, with the file-type mix.">
+      aria-label="Ingestion pipeline from source files through parsers, chunking and summarising to the searchable store, with the file-type mix.">
       <defs><Arrow id="ragArrow" /></defs>
       {RAG.map((r, i) => {
         const x = 16 + i * (W + GAP);
@@ -452,7 +451,7 @@ const CODE = [
   ['test', 9848, P.green, '66 files · node --test'],
   ['app/api', 4736, P.bright, '40 route handlers'],
   ['scripts', 3428, P.orange, '21 build + data scripts'],
-  ['rag', 1627, P.purple, 'ingest · parse · embed'],
+  ['rag', 1627, P.purple, 'ingest · parse · chunk'],
   ['evals', 672, P.pink, 'routing bench + golden set'],
 ];
 

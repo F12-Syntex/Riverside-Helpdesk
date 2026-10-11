@@ -6,7 +6,6 @@
 // Run with:  npm run rag:prune            (remove orphaned documents)
 //            npm run rag:prune -- --dry    (list what would be removed only)
 import path from 'node:path';
-import { config } from './lib/config.mjs';
 import { getParser } from './parsers/index.mjs';
 import { loadStore, removeDoc, writeStore } from './lib/index-io.mjs';
 import { listSourceFiles, resolveSourceDocIds } from './lib/sources.mjs';
@@ -40,9 +39,7 @@ function main() {
   }
 
   for (const o of orphans) removeDoc(store, o.docId);
-  // writeStore garbage-collects any embedding no longer referenced by a live
-  // chunk, so the removed documents' vectors are reclaimed automatically.
-  writeStore(store, { model: config().embedModel });
+  writeStore(store);
 
   const docs = Object.keys(store.manifest.documents).length;
   console.log(`\nDone. Pruned ${orphans.length} document(s). ${docs} document(s), ${store.chunks.length} chunk(s) remain.`);

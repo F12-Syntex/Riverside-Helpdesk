@@ -12,7 +12,7 @@ function main() {
   const docIds = resolveSourceDocIds(supportedFiles, store.manifest);
   const seenDocIds = new Set();
 
-  const rows = { new: [], changed: [], current: [], unsupported: [], semanticGaps: [] };
+  const rows = { new: [], changed: [], current: [], unsupported: [] };
   for (const file of files) {
     const ext = path.extname(file).toLowerCase();
     const rel = relPath(file);
@@ -22,9 +22,7 @@ function main() {
     const prev = store.manifest.documents[docId];
     if (!prev) rows.new.push(rel);
     else if (prev.sha256 !== sha256(file)) rows.changed.push(rel);
-    else if (Number(prev.missingEmbeddings) > 0) {
-      rows.semanticGaps.push(`${rel} (${prev.missingEmbeddings} passage(s))`);
-    } else rows.current.push(rel);
+    else rows.current.push(rel);
   }
 
   // Documents indexed but whose source file is gone (candidates for cleanup).
@@ -49,14 +47,12 @@ function main() {
   list('NEW — not yet processed', rows.new);
   list('CHANGED — will re-process', rows.changed);
   list('UNSUPPORTED — no parser', rows.unsupported);
-  list('SEMANTIC GAPS — lexical RAG is available', rows.semanticGaps);
   list('ORPHANED — indexed but source missing', orphans);
   console.log(`\nUp to date: ${rows.current.length} file(s).`);
 
   const pending = rows.new.length + rows.changed.length;
   if (pending) console.log(`\n${pending} file(s) pending. Run:  npm run rag:ingest`);
-  if (rows.semanticGaps.length) console.log('\nRun npm run rag:ingest with an embedding key to backfill semantic gaps.');
-  if (!pending && !rows.semanticGaps.length) console.log('\nEverything is up to date.');
+  if (!pending) console.log('\nEverything is up to date.');
 }
 
 main();

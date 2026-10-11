@@ -61,7 +61,6 @@ import {
   templatesOf,
 } from '@/lib/agent/contract-intent.mjs';
 import { searchPassages } from '@/lib/search/search.mjs';
-import { scheduleNoteEmbedding } from '@/lib/search/index-notes.mjs';
 import { knowledgeHitToDocumentChunk } from '@/lib/knowledge-context.mjs';
 import { fullNotebookContext } from '@/lib/notebook';
 import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract.mjs';
@@ -389,14 +388,6 @@ export async function POST(request) {
   // This machine's own answer to "record what I ask here?". Set at /settings,
   // held in a cookie on the computer it was set at, and read once per turn.
   const logging = !loggingOffIn(request.headers.get('cookie') || '');
-
-  // THE NOTEBOOK'S SEARCH INDEX, CAUGHT UP. Every save embeds its own page in
-  // the background; this repairs whatever a save's run did not finish (a
-  // frozen instance, an API outage) and fills any backlog. Fire-and-forget,
-  // at most once a minute per server instance, never awaited and never
-  // throwing — and run on every turn, commands included, so a desk that only
-  // ever uses /accurx still keeps the index current for everybody else.
-  scheduleNoteEmbedding();
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

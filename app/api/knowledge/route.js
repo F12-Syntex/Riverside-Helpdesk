@@ -27,12 +27,11 @@ async function save(body) {
     const data = { ...(body.data || {}), parentId: note.parentId, noteRevision: new Date(note.updatedAt).getTime() };
     delete data.backendOverride; delete data.correctedAt;
     // updateNote already mirrored the page into canonical knowledge. This upsert
-    // keeps the entry's data/authority in step, but notebook pages never carry
-    // vectors — embed:false avoids re-embedding image-markdown/blob-URL text.
+    // keeps the entry's data/authority in step.
     return upsertKnowledgeEntry({
       ...body, id: `note:${note.id}`, content: stripQuestionMarks(note.body), data,
       sourceRef: `notebook:${note.id}`, authority: body.authority ?? 90,
-    }, { embed: false });
+    });
   }
   const entry = await upsertKnowledgeEntry({
     ...body,

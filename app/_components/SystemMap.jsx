@@ -119,11 +119,11 @@ const ENGINE_CHIPS = ['agent/tools', 'agent/select', 'agent/score', 'agent/compo
 // leaves through one of the three on the right; see /dpia for what each holds.
 const DATA_NODES = [
   { cx: 260, w: 420, label: 'PostgreSQL (Neon)', sub: 'notes · knowledge · staff · audit log · settings', dep: 'D', hot: true },
-  { cx: 778, w: 420, label: 'OpenRouter', sub: 'chat / vision · embeddings · analysis · web search tool', dep: 'A', hot: true },
+  { cx: 778, w: 420, label: 'OpenRouter', sub: 'chat / vision · analysis · web search tool', dep: 'A', hot: true },
   { cx: 1296, w: 420, label: 'Exa · web hosts', sub: 'search query text, then the pages read for a number', dep: 'A' },
   { cx: 1814, w: 420, label: 'Vercel Blob', sub: 'Notebook attachments, at public URLs', dep: 'B' },
 ];
-const RAG_NODES = ['rag/sources', 'parsers', 'chunk', 'embed (AI)', 'rag/processed'];
+const RAG_NODES = ['rag/sources', 'parsers', 'chunk', 'summarise (AI)', 'rag/processed'];
 
 const ARCH_W = colX(FEATURES.length - 1) + COL_W + COL_X0;
 const routeH = (f) => 16 + f.routes.length * 15 + 8;

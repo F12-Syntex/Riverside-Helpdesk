@@ -1,6 +1,6 @@
 // Parser registry. Each parser turns one file type into an array of raw
 // sections ({ text, headingPath?, section?, page?, images? }); the ingest
-// pipeline then chunks and embeds them. Adding a new file type = add one module
+// pipeline then chunks and indexes them. Adding a new file type = add one module
 // here and register its extensions — nothing else in the system changes.
 import * as text from './text.mjs';
 import * as image from './image.mjs';

@@ -1,7 +1,7 @@
-// Ingestion pipeline:  source file -> parser -> chunks -> embeddings + catalogue.
+// Ingestion pipeline:  source file -> parser -> chunks + catalogue.
 // Run with:  npm run rag:ingest        (process new/changed files only)
 //            npm run rag:ingest -- -f  (force re-process everything)
-//            npm run rag:ingest -- --offline  (parse locally; leave new vectors missing)
+//            npm run rag:ingest -- --offline  (parse locally; keep the previous summaries)
 //
 // Idempotent: each file is hashed; unchanged files are skipped. Output is the
 // committed index under rag/processed that the live app reads from.
@@ -10,9 +10,8 @@ import path from 'node:path';
 import { config, PUBLIC_ASSETS_RAG } from './lib/config.mjs';
 import { getParser, SUPPORTED_EXTS } from './parsers/index.mjs';
 import { chunkText, makeChunkId, estTokens, contentHashOf } from './lib/chunk.mjs';
-import { embedTexts } from './lib/embed.mjs';
 import { summariseDoc } from './lib/summarize.mjs';
-import { loadStore, upsertDoc, writeStore, cachedVector } from './lib/index-io.mjs';
+import { loadStore, upsertDoc, writeStore } from './lib/index-io.mjs';
 import { listSourceFiles, relPath, resolveSourceDocIds, docTitleFor, sha256 } from './lib/sources.mjs';
 
 function publicCopyFactory(docId) {
@@ -45,7 +44,7 @@ async function main() {
   const offline = args.includes('--offline');
   const cfg = config();
   if (!offline && !cfg.apiKey) {
-    console.error('OPENROUTER_API_KEY is not set (.env.local). Cannot embed.');
+    console.error('OPENROUTER_API_KEY is not set (.env.local). Cannot summarise; use --offline.');
     process.exit(1);
   }
 
@@ -71,8 +70,7 @@ async function main() {
     }
     const hash = sha256(file);
     const prev = store.manifest.documents[docId];
-    const hasSemanticGaps = Number(prev?.missingEmbeddings) > 0;
-    if (!force && prev && prev.sha256 === hash && (!hasSemanticGaps || offline)) { skipped++; continue; }
+    if (!force && prev && prev.sha256 === hash) { skipped++; continue; }
 
     process.stdout.write(`INGEST ${rel}  … `);
     try {
@@ -136,37 +134,6 @@ async function main() {
       }
       if (!records.length) { console.log('no text extracted, skipped'); skipped++; continue; }
 
-      // Embed only passages we have never embedded before. Reuse cached vectors
-      // for text already in the index (shared boilerplate, or paragraphs that
-      // survived an edit elsewhere in this file) so re-ingest stays cheap and the
-      // store never holds two copies of the same vector.
-      const vectors = new Array(records.length);
-      const toEmbed = [];
-      const toEmbedIdx = [];
-      const localByHash = new Map();
-      records.forEach((r, i) => {
-        const hit = cachedVector(store, r.contentHash) || localByHash.get(r.contentHash);
-        if (hit) { vectors[i] = hit; return; }
-        if (localByHash.has(r.contentHash)) return;
-        localByHash.set(r.contentHash, null); // reserve so duplicates within this doc embed once
-        toEmbed.push(r.text);
-        toEmbedIdx.push(i);
-      });
-      if (toEmbed.length && !offline) {
-        const fresh = await embedTexts(toEmbed);
-        // Vectors are mapped back to chunks by position, so a short or reordered
-        // response would silently attach the wrong vector to a passage. Fail loud.
-        if (!Array.isArray(fresh) || fresh.length !== toEmbed.length) {
-          throw new Error(`Embedding count mismatch: ${Array.isArray(fresh) ? fresh.length : 'non-array'} returned for ${toEmbed.length} inputs`);
-        }
-        fresh.forEach((v, k) => {
-          const i = toEmbedIdx[k];
-          vectors[i] = v;
-          localByHash.set(records[i].contentHash, v);
-        });
-        // Backfill any same-doc duplicates that reserved before their vector existed.
-        records.forEach((r, i) => { if (!vectors[i]) vectors[i] = localByHash.get(r.contentHash); });
-      }
       const previousCatalog = store.catalog.get(docId);
       let metadata;
       if (offline) {
@@ -178,21 +145,15 @@ async function main() {
         const sample = records.map((r) => r.text).join('\n\n').slice(0, 4000);
         metadata = await summariseDoc(title, sample);
       }
-      const missingEmbeddings = records.filter((record, index) => !vectors[index]).length;
 
       const st = fs.statSync(file);
       upsertDoc(store, {
         docId,
         chunks: records,
-        vectors,
         catalog: { docId, title, summary: metadata.summary, tags: metadata.tags, chunks: records.length, source: 'rag/sources/' + rel },
-        manifest: { path: 'rag/sources/' + rel, sha256: hash, size: st.size, mtime: st.mtimeMs, chunks: records.length, title, processedAt: new Date().toISOString(), missingEmbeddings },
+        manifest: { path: 'rag/sources/' + rel, sha256: hash, size: st.size, mtime: st.mtimeMs, chunks: records.length, title, processedAt: new Date().toISOString() },
       });
-      const reused = records.length - missingEmbeddings;
-      const details = offline && missingEmbeddings
-        ? `${reused} vectors reused, ${missingEmbeddings} semantic embeddings pending`
-        : `${toEmbed.length} embedded, ${reused} reused`;
-      console.log(`${records.length} chunks (${details})`);
+      console.log(`${records.length} chunks`);
       processed++;
     } catch (e) {
       console.log('FAILED: ' + e.message);
@@ -200,7 +161,7 @@ async function main() {
     }
   }
 
-  if (processed) writeStore(store, { model: cfg.embedModel });
+  if (processed) writeStore(store);
   const total = Object.keys(store.manifest.documents).length;
   console.log(`\nDone. ${processed} processed, ${skipped} unchanged/skipped, ${failed} failed. Total documents indexed: ${total}.`);
 }

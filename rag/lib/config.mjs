@@ -2,7 +2,6 @@
 // the offline ingestion scripts (run via `node`) and the live Next.js API route.
 import fs from 'node:fs';
 import path from 'node:path';
-import { NO_RETENTION } from '../../lib/ai/openrouter.mjs';
 
 export const ROOT = process.cwd();
 export const RAG_DIR = path.join(ROOT, 'rag');
@@ -15,7 +14,6 @@ export const PUBLIC_ASSETS_RAG = path.join(ROOT, 'public', 'assets', 'rag');
 export const CATALOG_PATH = path.join(PROCESSED_DIR, 'catalog.json');
 export const CHUNKS_PATH = path.join(PROCESSED_DIR, 'chunks.jsonl');
 export const CHUNKS_GZIP_PATH = path.join(PROCESSED_DIR, 'chunks.jsonl.gz');
-export const EMBEDDINGS_PATH = path.join(PROCESSED_DIR, 'embeddings.json');
 export const MANIFEST_PATH = path.join(PROCESSED_DIR, 'manifest.json');
 
 // Next.js loads .env.local automatically; standalone `node` scripts do not, so
@@ -74,21 +72,14 @@ export function config() {
   loadEnv();
   return {
     apiKey: process.env.OPENROUTER_API_KEY,
-    // Embeddings are served by OpenRouter too; one key for everything.
-    embedModel: process.env.OPENROUTER_EMBED_MODEL || 'openai/text-embedding-3-small',
     // Cheap text analysis (query condensing, document summarising). A small,
     // inexpensive model routed only to zero-retention providers.
     analysisModel: process.env.OPENROUTER_ANALYSIS_MODEL || 'openai/gpt-oss-120b',
     base: 'https://openrouter.ai/api/v1',
     referer: 'https://riverside-practice.local',
     title: 'Riverside Practice Q&A',
-    // OpenRouter provider routing for privacy (see openrouter.ai/docs/provider-routing).
-    // Embeddings: pin to Azure, which OpenRouter marks "Private" — it does not
-    // train on prompts and does not retain prompt data. No fallback to other
-    // providers, so embedding content never leaves a zero-retention path.
-    // Every other call is a chat completion and builds its body with chatBody
-    // (lib/ai/openrouter.mjs), which applies the same no-retention routing and
-    // turns extended reasoning off — so there is no second provider key here.
-    embedProvider: { order: ['azure'], allow_fallbacks: false, ...NO_RETENTION },
+    // Every call is a chat completion and builds its body with chatBody
+    // (lib/ai/openrouter.mjs), which applies the no-retention provider routing
+    // and turns extended reasoning off — so there is no provider key here.
   };
 }

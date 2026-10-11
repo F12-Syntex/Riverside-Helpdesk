@@ -7,7 +7,7 @@ export function estTokens(text) {
 }
 
 // Content-addressing: a stable fingerprint of a chunk's *meaning-bearing* text,
-// so the same passage appearing in several documents shares a single embedding
+// so the same passage appearing in several documents is recognised as one
 // instead of bloating the index. Normalised (lowercased, whitespace collapsed)
 // so trivial formatting differences fold together — but nothing semantic is
 // guessed at; only text that is identical after normalisation is merged.
