@@ -47,14 +47,13 @@ It provides:
 | Tools index | `/tools` | The short list of tools staff reach for. Lists the Q&A and Instant lookup only. |
 | Notebook saves | `/notebook/saves` | Take, download, delete and **load** a whole-Notebook save. Loading one replaces the Notebook. |
 | Answer feedback review | `/feedback` | Every answer a verdict was left on, newest first, with the question whole. **Not in the route registry** (`lib/routes.js`), so it is not listed at `/index` and `lib/dpia.js` does not record it. |
-| Template debug page | `/templates` | Renders the answer templates for inspection. **Not in the route registry** either. |
 | System map / index | `/diagram`, `/index` | Documentation pages. The system map is drawn in `app/_components/SystemMap.jsx`. |
 
 **The route registry is not the whole app.** `lib/routes.js` is what `/index`
-lists and what `lib/dpia.js` enumerates as live processing, and three live
-surfaces are absent from it: the pages `/feedback` and `/templates`, and the
-endpoints `POST /api/feedback`, `POST /api/screen` and `POST /api/attach`. All
-five answer. `/api/feedback` is the one that matters for the assessment, because
+lists and what `lib/dpia.js` enumerates as live processing, and live
+surfaces are absent from it: the page `/feedback`, and the endpoints
+`POST /api/feedback`, `POST /api/screen` and `POST /api/attach`. All four
+answer. `/api/feedback` is the one that matters for the assessment, because
 it stores question text (§7.1). §9.1 is the inventory taken from the filesystem
 rather than from the registry, and is the one to assess against.
 
@@ -1022,9 +1021,7 @@ action" risk.
     allowed to retire. Nothing now catches what the reading misses and nothing
     retires what it raises, so it is given the guide's own front-page rule
     instead: **when you are not sure, route upward**; `dutyDoctor` is the right
-    answer for anything that cannot be confidently placed. `applyRoute` still
-    implements the never-lower fold and is still tested, but the only caller that
-    passes it a floor is the ordinary router's own triage card.
+    answer for anything that cannot be confidently placed.
   - **`unsure`, a timeout, no key, a refusal, an unknown destination** all land on
     the duty doctor — one rule in one place (`lib/templates/accurx.mjs`) rather
     than a special case per failure.

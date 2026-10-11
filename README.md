@@ -48,20 +48,6 @@ clickable sources they can open in-browser.
   wording twice is one row with a count, so the gap being hit five times a week
   is visible as the thing to write down next. The switch that turns the question
   log off at a desk turns this off with it.
-- **A router sits in front of the picker, off by default** (`lib/routing/`).
-  The picker returns one of an enum with no score, so a near-miss on wording
-  and a total miss look the same to it and the failure is a cliff. The router
-  matches the question against short *trigger phrases* per Notebook page — how
-  staff would ask for it, generated once (`npm run routing:seed`) and learned
-  from taps on a "which did you mean?" card — by exact form, tsvector and
-  embedding, fused by reciprocal rank, and decides on two numbers: how alike
-  the best phrasing is (cosine), and how far ahead of the runner-up page it is
-  (the same cosine units — a gap between fused ranking scores says nothing
-  about content). A confident, clear match renders the page with no model call; a
-  close call asks back; anything else falls through to the picker unchanged.
-  Switch and thresholds live at `/settings`; `npm run routing:stats` shows
-  coverage and the fall-through rate; `evals/routing/bench-pages.mjs` measures
-  it against a golden set the judging agent writes (`evals/routing/pages.md`).
 - **A message that asks for five things gets five things acknowledged.** The
   selection call returns exactly one template, which is why an eConsult listing
   a knee, a hoarse voice, a repeat prescription, a fit note and a question about
@@ -136,8 +122,7 @@ clickable sources they can open in-browser.
     switched off alone: half a guard edits the reader's letter without being any
     use against what the letter was always going to carry. What still holds is
     the answer itself — the filing title never carries a name, an NHS number or
-    a date of birth, because `DOC_CODING_RULES` says so and the prompt is built
-    from that list. Like the standalone helpers at `/coding`, `/signpost` and
+    a date of birth, because the filing rules say so. Like the standalone helpers at `/coding`, `/signpost` and
     `/reason`, which have never redacted what is pasted into them, **it is the
     paste that carries the duty to take identifiers out first** — recorded as
     exactly that in the DPIA, under "Identifiers left in text pasted into the
@@ -417,9 +402,8 @@ clickable sources they can open in-browser.
   going straight to Moorfields — the wording drops its Copy, moves below
   everything the routing card has to say, and is renamed the handover note:
   nobody is booking an appointment off "interrupt the duty doctor now". Which of
-  the two it is comes from `endsInAnEmergency` in `lib/templates/triage.mjs`,
-  next to the branches that produce those cards, so the two cannot drift apart.
-  It decomposes a long message and runs the second pass over each request.
+  the two it is comes from `meansNow` in `lib/templates/route-card.mjs`, next
+  to the destinations it judges, so the two cannot drift apart.
 - **`/accurx` also says who to book it with, when the message says somebody has
   already dealt with it** (`lib/templates/accurx.mjs`, rules in
   `lib/templates/writing.mjs`). Patients say this themselves and say it in
@@ -617,8 +601,7 @@ clickable sources they can open in-browser.
   decomposed spans), `spans.mjs` (locality — message-wide checks against
   span-local assertions), `ng12.mjs`, `redflags.mjs`, `confidentiality.mjs`,
   `acuity.mjs` (the rank table), `scan.mjs` (which request the card is about,
-  and what has to be said above it), `triage-pass.mjs` (the `/accurx` second
-  pass and the veto that keeps it honest). No model is consulted anywhere in
+  and what has to be said above it). No model is consulted anywhere in
   the folder; `lib/templates/safety.mjs` renders what it finds.
 - **`lib/answer-cache/`** — answers already given, so the same question is not
   researched twice. `match.mjs` holds the free half (the canonical form of a
