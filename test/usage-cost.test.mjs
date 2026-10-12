@@ -148,6 +148,9 @@ test('the per-model history keeps a model that is no longer in use', () => {
   assert.equal(oss.inUse, true);
   assert.equal(gemini.turns, 40);
   assert.ok(Math.abs(gemini.cost - 0.0028) < 1e-9);
+  assert.equal(gemini.charged, null, 'no recorded charge is not $0');
+  const charged = summariseModelCosts({ byModel: { [GEMINI]: { inputTokens: 1, outputTokens: 1, avgCost: 0.0031, turns: 3 } }, prices: PRICES });
+  assert.equal(charged[0].charged, 0.0031);
 });
 
 test('the history is dearest first, with unpriced models last rather than cheapest', () => {

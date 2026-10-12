@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { usageCounts } from '../lib/ai/usage-counts.mjs';
+import { costOf, usageCounts } from '../lib/ai/usage-counts.mjs';
 
 // What ai_usage records for one call: the whole prompt, the output, and how much
 // of the prompt the provider read from its cache.
@@ -27,4 +27,18 @@ test('a provider that says nothing about caching is recorded as not said, not as
 
 test('nonsense is not a count', () => {
   assert.deepEqual(usageCounts({ inputTokens: 'x', outputTokens: -3, cachedInputTokens: 4.6 }), { input: 0, output: 0, cached: 5 });
+});
+
+test('the charge OpenRouter reports is read from the AI SDK metadata or a raw response', () => {
+  assert.equal(costOf({ metadata: { openrouter: { usage: { cost: 0.000022869 } } } }), 0.000022869);
+  assert.equal(costOf({ usage: { prompt_tokens: 2, cost: 0.0004 } }), 0.0004);
+  assert.equal(costOf({ usage: { cost: 0 } }), 0);
+});
+
+test('no charge reported is null, not free', () => {
+  assert.equal(costOf({ usage: { inputTokens: 3 } }), null);
+  assert.equal(costOf({}), null);
+  assert.equal(costOf(), null);
+  assert.equal(costOf({ usage: { cost: 'x' } }), null);
+  assert.equal(costOf({ usage: { cost: -1 } }), null);
 });

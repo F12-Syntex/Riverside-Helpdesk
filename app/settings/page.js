@@ -263,7 +263,11 @@ export default function SettingsPage() {
   // each role is set to now — so changing a model here changes the figure before
   // anything is saved, and a role nobody has run yet is left out rather than
   // guessed at.
-  const measured = (setting && setting.usage) || { byRole: {}, byModel: {}, turns: 0, windowDays: 0 };
+  const measured = (setting && setting.usage) || { byRole: {}, byModel: {}, turns: 0, window: 0, rolling: null };
+  // What the questions in the rolling window were actually charged, as
+  // OpenRouter reported it — beside the estimate, not instead of it: the
+  // estimate prices the models chosen NOW, the charge is what was spent.
+  const rolling = measured.rolling || null;
   const estimate = estimateQueryCost({ averages: measured.byRole, roleModels: resolved, prices });
   // Every model that has ever answered a question here, with what it cost. Kept
   // per model, so switching away does not erase a model's record and switching
@@ -387,8 +391,7 @@ export default function SettingsPage() {
                 <>
                   <strong>{formatCost(estimate.total)}</strong>
                   <span style={s('font-size:13px;color:#768692;')}>
-                    {' '}— measured over {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
-                    {measured.windowDays ? ` in the last ${measured.windowDays} days` : ''}
+                    {' '}— at list prices, measured over the last {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
                     {estimate.missing.length ? `, excluding ${estimate.missing.join(' and ')} (not run yet)` : ''}
                     {estimate.unpriced.length ? `, excluding ${estimate.unpriced.join(' and ')} (no published price)` : ''}
                   </span>
@@ -401,6 +404,30 @@ export default function SettingsPage() {
             </span>
           </div>
 
+          {rolling && rolling.turns > 0 && (
+            <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding:14px 0 2px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;')}>
+              <span style={s('flex:0 0 150px;font-size:15.5px;font-weight:600;color:#212b32;')}>
+                Last {rolling.turns.toLocaleString()} question{rolling.turns === 1 ? '' : 's'}
+              </span>
+              <span style={s('flex:1 1 260px;font-size:15.5px;color:#212b32;font-variant-numeric:tabular-nums;line-height:1.5;')}>
+                {rolling.costedTurns > 0 ? (
+                  <>
+                    <strong>{formatCost(rolling.totalCost)}</strong> charged in total, <strong>{formatCost(rolling.avgCost)}</strong> per question on average
+                  </>
+                ) : (
+                  <span style={s('font-size:13.5px;color:#768692;')}>No charges recorded yet — they appear as questions are asked.</span>
+                )}
+                <span style={{ ...s('display:block;font-size:13px;color:#768692;') }}>
+                  {rolling.avgInputTokens.toLocaleString()} tokens in
+                  {rolling.avgCachedTokens != null ? ` (${rolling.avgCachedTokens.toLocaleString()} from cache)` : ''}
+                  {' '}and {rolling.avgOutputTokens.toLocaleString()} out per question
+                  {rolling.costedTurns > 0 && rolling.costedTurns < rolling.turns ? `; charges from ${rolling.costedTurns} of them` : ''}
+                  {rolling.since ? ` · since ${new Date(rolling.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                </span>
+              </span>
+            </div>
+          )}
+
           {history.length > 0 && (
             <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding-top:14px;')}>
               <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>
@@ -408,6 +435,14 @@ export default function SettingsPage() {
               </div>
               <div style={s('overflow-x:auto;')}>
                 <table style={s('width:100%;border-collapse:collapse;font-size:13.5px;')}>
+                  <thead>
+                    <tr style={s('font-size:11.5px;color:#768692;text-align:right;')}>
+                      <th style={s('padding:0 10px 4px 0;font-weight:600;text-align:left;')}>Model</th>
+                      <th style={s('padding:0 10px 4px 0;font-weight:600;')}>Estimate</th>
+                      <th style={s('padding:0 10px 4px 0;font-weight:600;')}>Charged</th>
+                      <th style={s('padding:0 0 4px;font-weight:600;')}>Questions</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {history.map((row) => (
                       <tr key={row.model}>
@@ -418,6 +453,9 @@ export default function SettingsPage() {
                         <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#212b32;font-variant-numeric:tabular-nums;')}>
                           {row.priced ? formatCost(row.cost) : 'no published price'}
                         </td>
+                        <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#212b32;font-variant-numeric:tabular-nums;')}>
+                          {row.charged != null ? formatCost(row.charged) : '—'}
+                        </td>
                         <td style={s('padding:5px 0;text-align:right;white-space:nowrap;color:#768692;font-variant-numeric:tabular-nums;')}>
                           {row.turns.toLocaleString()} question{row.turns === 1 ? '' : 's'}
                         </td>
@@ -427,7 +465,7 @@ export default function SettingsPage() {
                 </table>
               </div>
               <p style={s('margin:8px 0 0;font-size:12.5px;color:#768692;line-height:1.45;')}>
-                Kept per model. Switching model shows nothing until it has been used; switching back brings its record with it.
+                Per model, over the last {measured.window || 100} questions: the estimate at list prices, then what OpenRouter actually charged. Older questions are dropped as new ones come in, so a model shows here only while it has questions in that window.
               </p>
             </div>
           )}

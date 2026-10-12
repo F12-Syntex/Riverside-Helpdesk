@@ -113,7 +113,7 @@ export async function POST(request) {
     }), SCREEN_TIMEOUT_MS);
     // No turn id: this is not a turn. The row still names the role, so the
     // settings page can price what the screen costs per message.
-    recordUsage({ role: 'superSpeed', phase: 'screen', model, usage: out.usage });
+    recordUsage({ role: 'superSpeed', phase: 'screen', model, usage: out.usage, metadata: out.providerMetadata });
 
     const kinds = kindsOf(out.object);
     return NextResponse.json(verdict({

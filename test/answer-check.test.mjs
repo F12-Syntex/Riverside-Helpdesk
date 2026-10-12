@@ -60,7 +60,8 @@ test('decide returns the answers and the usage', async () => {
   assert.equal(out.answers.answers.noul, 0.94);
   assert.equal(out.model, 'typesafe/jev-1.13-20260917');
   assert.equal(out.provider, 'TypeSafe');
-  assert.deepEqual(decisionUsage(out.usage), { inputTokens: 382, outputTokens: 20 });
+  // The charge rides along, so ai_usage records what the check cost.
+  assert.deepEqual(decisionUsage(out.usage), { inputTokens: 382, outputTokens: 20, cost: 0.000016 });
 });
 
 test('decide throws on a refused request, naming why', async () => {

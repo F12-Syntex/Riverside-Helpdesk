@@ -278,7 +278,7 @@ export async function POST(request) {
       if (isClaude(id)) throw new Error('structured output skipped for Claude');
       const abortSignal = AbortSignal.any([deadline, AbortSignal.timeout(STRUCTURED_BUDGET_MS)]);
       const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, abortSignal, ...withImages(text) });
-      recordUsage({ turnId, role, phase, model: id, usage: out.usage });
+      recordUsage({ turnId, role, phase, model: id, usage: out.usage, metadata: out.providerMetadata });
       tookTime(phase, id, began);
       return out.object;
     } catch (first) {
@@ -291,7 +291,7 @@ export async function POST(request) {
         abortSignal: deadline,
         ...withImages(text + '\n\nReply with ONE JSON object and nothing else — no prose, no code fence — matching this JSON Schema:\n' + JSON.stringify(zodSchema(schema).jsonSchema)),
       });
-      recordUsage({ turnId, role, phase: phase + 'Text', model: id, usage: loose.usage });
+      recordUsage({ turnId, role, phase: phase + 'Text', model: id, usage: loose.usage, metadata: loose.providerMetadata });
       tookTime(phase + 'Text', id, began);
       const raw = String(loose.text || '');
       const a = raw.indexOf('{');
@@ -604,7 +604,7 @@ export async function POST(request) {
                   abortSignal: deadline,
                   prompt: practiceAnswerPrompt({ question, extracts }),
                 });
-                recordUsage({ turnId, role: 'reasoning', phase: 'practice', model: roles.reasoning.model, usage: written.usage });
+                recordUsage({ turnId, role: 'reasoning', phase: 'practice', model: roles.reasoning.model, usage: written.usage, metadata: written.providerMetadata });
                 const grounded = written.object.answerable
                   ? groundPracticeAnswer({
                     written: written.object,
@@ -734,7 +734,7 @@ export async function POST(request) {
                     web: web && web.ok ? web.summary : '',
                   }),
                 }), INTENT_TIMEOUT_MS);
-                recordUsage({ turnId, role: 'fast', phase: 'contractIntent', model, usage: picked.usage });
+                recordUsage({ turnId, role: 'fast', phase: 'contractIntent', model, usage: picked.usage, metadata: picked.providerMetadata });
                 // THE ANSWER IS A TEMPLATE, NOT A CONTRACT. The reader has a
                 // job in front of them and wants to know what to open; a
                 // template is a page set holding dozens of entries, so their
@@ -1103,7 +1103,8 @@ export async function POST(request) {
         // All of it, while the check runs: nothing is still being written.
         sendDraft(streamedText);
         const answerUsage = await generated.usage;
-        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: answerUsage });
+        const answerMetadata = await generated.providerMetadata;
+        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: answerUsage, metadata: answerMetadata });
         tookTime('answer', proseModel, proseBegan);
         {
           const { input, cached } = usageCounts(answerUsage);

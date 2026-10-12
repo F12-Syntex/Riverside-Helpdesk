@@ -24,7 +24,7 @@ async function usage() {
     return await readUsageAverages();
   } catch (e) {
     console.warn('[settings] could not read measured usage:', String(e).slice(0, 140));
-    return { byRole: {}, turns: 0, windowDays: 0 };
+    return { byRole: {}, byModel: {}, turns: 0, window: 0, rolling: null };
   }
 }
 
@@ -37,7 +37,7 @@ async function state() {
     // The roles are an addition to a page that worked without them. If they
     // cannot be read, the model picker must still load.
     console.warn('[settings] could not read the model roles:', String(e).slice(0, 160));
-    return { ...setting, roles: [], roleStored: {}, roleResolved: {}, usage: { byRole: {}, turns: 0, windowDays: 0 } };
+    return { ...setting, roles: [], roleStored: {}, roleResolved: {}, usage: { byRole: {}, byModel: {}, turns: 0, window: 0, rolling: null } };
   }
 }
 
