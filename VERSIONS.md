@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.70.0` | 2026-10-13 | feat | `4069e35` | feat: walk first-time readers through asking a question |
+| `6.69.4` | 2026-10-13 | fix | `c506a81` | fix: tell Claude not to think so the answer modes fill their cards |
+| `6.69.3` | 2026-10-12 | docs | `4b4208d` | docs: record the rework notice removal in versions |
 | `6.69.2` | 2026-10-12 | fix | `e3eb0c8` | fix: remove the Q&A rework notice |
 | `6.69.1` | 2026-10-11 | docs | `4c81bb2` | docs: record the streamed answer in versions |
 | `6.69.0` | 2026-10-11 | feat | `dbb6c08` | feat: stream the Q&A answer as it is written |
