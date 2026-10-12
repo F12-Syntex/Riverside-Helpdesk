@@ -41,6 +41,10 @@ const row = (page) => ({ ...shapeResult(page), card: cardFor(page) });
 
 export async function GET(request) {
   const q = (request.nextUrl.searchParams.get('q') || '').slice(0, 200).trim();
+  // The ask counts do not depend on the Notebook, so on the A–Z list they are
+  // read alongside it rather than after it. Caught here and settled below, so
+  // a failed log is never an unhandled rejection when the Notebook fails first.
+  const asks = q ? null : referralAskCounts().then((counts) => ({ counts }), (error) => ({ error }));
   let pages;
   try {
     pages = referralPages(await fullNotebookContext());
@@ -55,7 +59,9 @@ export async function GET(request) {
     // shows anyway.
     let popular = [];
     try {
-      popular = popularReferrals(await referralAskCounts(), pages).map((page) => page.docId);
+      const { counts, error } = await asks;
+      if (error) throw error;
+      popular = popularReferrals(counts, pages).map((page) => page.docId);
     } catch (e) {
       console.warn('[referrals] most asked: ' + String(e?.message || e).slice(0, 200));
     }

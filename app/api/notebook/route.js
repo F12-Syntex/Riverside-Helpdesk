@@ -19,9 +19,12 @@ export const maxDuration = 60;
 
 export async function GET() {
   try {
-    const notes = await listNotes();
+    // Two independent reads, issued together: each is a round trip to Neon.
     // Attachments are non-fatal: the notebook still works if blob metadata fails.
-    const attachments = await listAttachments().catch(() => []);
+    const [notes, attachments] = await Promise.all([
+      listNotes(),
+      listAttachments().catch(() => []),
+    ]);
     return NextResponse.json({ notes, attachments });
   } catch (e) {
     return NextResponse.json({ error: 'Could not load notes.', detail: String(e).slice(0, 300) }, { status: 500 });

@@ -194,6 +194,11 @@ export async function POST(request) {
   // drive, and no reasoning phase to hand off to: this is the whole turn. An
   // unset fast role resolves to the reasoning model, so an install that has only
   // ever chosen one model still works.
+  //
+  // The contact directory (read further down) is started first so its query
+  // overlaps this one; both are cached, so this only matters on a cold turn.
+  // contactEntries() never rejects — it falls back to the bundled directory.
+  const contactsRead = contactEntries();
   const roles = await getModelRoles();
   const model = roles.fast.model;
 
@@ -225,7 +230,7 @@ export async function POST(request) {
   const checked = checksPatientData(commandByTemplate(command));
   // Every contact the practice holds, added ones included (lib/contacts-store.js):
   // the names the guard leaves alone, and the rows the directory card answers from.
-  const contacts = await contactEntries();
+  const contacts = await contactsRead;
   const question = checked ? redactIdentifiers(asked, { allow: contacts }).text : asked;
   const history = typeof body?.history === 'string' ? body.history : '';
   const images = Array.isArray(body?.images)
