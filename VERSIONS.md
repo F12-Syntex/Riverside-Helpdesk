@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.71.0` | 2026-10-13 | feat | `bdb43e5` | feat: keep AI usage to the last 100 questions, with the real charge |
+| `6.70.3` | 2026-10-13 | docs | `6dfc774` | docs: record the graft setup in versions |
 | `6.70.2` | 2026-10-13 | chore | `53325b6` | chore: set up graft for Claude Code in this repo |
 | `6.70.1` | 2026-10-13 | docs | `f484808` | docs: record the Claude reasoning fix and the ask intro in versions |
 | `6.70.0` | 2026-10-13 | feat | `4069e35` | feat: walk first-time readers through asking a question |
