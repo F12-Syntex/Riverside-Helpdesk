@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.71.5` | 2026-10-13 | fix | `f2015df` | fix: make the ask tour quick and native, Esc moves on a step |
+| `6.71.4` | 2026-10-13 | docs | `52292d4` | docs: record the schema and query speed-ups in versions |
 | `6.71.3` | 2026-10-13 | perf | `0d55053` | perf: issue independent database reads together on hot routes |
 | `6.71.2` | 2026-10-13 | perf | `e2f3d3d` | perf: check the database schema in one round trip on a cold start |
 | `6.71.1` | 2026-10-13 | docs | `e471abf` | docs: record the rolling AI usage window in versions |
