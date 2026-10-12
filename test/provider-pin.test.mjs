@@ -82,8 +82,8 @@ test('the AI SDK path sends the same thing', async () => {
     assert.deepEqual(sent.provider.only, ['google-vertex/europe']);
     assert.equal(sent.provider.allow_fallbacks, false);
     assert.equal(sent.provider.data_collection, 'deny');
-    // A Claude model: no reasoning field — see the next test file.
-    assert.equal('reasoning' in sent, false);
+    // A Claude model is told not to think — see test/no-reasoning.test.mjs.
+    assert.deepEqual(sent.reasoning, { enabled: false });
 
     await generateText({ model: openrouter('openai/gpt-oss-120b'), prompt: 'hi', maxRetries: 0 }).catch(() => {});
     assert.equal(sent.model, 'openai/gpt-oss-120b');

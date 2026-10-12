@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { chatBody, chatRequest, createRouter, reasoningFor, AI_SDK_EXTRA_BODY, NO_REASONING, NO_RETENTION } from '../lib/ai/openrouter.mjs';
+import { chatBody, chatRequest, createRouter, isClaude, reasoningFor, AI_SDK_EXTRA_BODY, CLAUDE_NO_THINKING, NO_REASONING, NO_RETENTION } from '../lib/ai/openrouter.mjs';
 
 // Every model call this app makes has to carry two things: no-retention provider
 // routing, and no extended reasoning. Both used to be copied by hand into a
@@ -36,17 +36,22 @@ test('a call site cannot switch thinking back on by accident', () => {
   assert.deepEqual(AI_SDK_EXTRA_BODY.reasoning, NO_REASONING);
 });
 
-test('a Claude model is sent no reasoning field, because minimal effort switches its thinking ON', () => {
+test('a Claude model is told not to think, because minimal effort switches its thinking ON', () => {
   // OpenRouter turns any effort level into an Anthropic thinking budget of at
-  // least 1,024 tokens, so "minimal" made Haiku think before every call it
-  // would otherwise have answered straight away. Claude's own default is no
-  // thinking, and the way to get it is to send nothing.
+  // least 1,024 tokens, so "minimal" made Haiku think before every call. And
+  // sending nothing no longer works either: Haiku 5.5 thinks by default, and
+  // on a long AccurX request it spent the whole 2,000-token read cap doing it
+  // and returned no JSON at all. `enabled: false` is the only off switch.
   for (const id of ['anthropic/claude-haiku-5.5', 'anthropic/claude-sonnet-4.6:nitro', 'anthropic/claude-haiku-5.5@google-vertex/europe']) {
-    assert.equal(reasoningFor(id), null, id);
+    assert.ok(isClaude(id), id);
+    assert.deepEqual(reasoningFor(id), CLAUDE_NO_THINKING, id);
     const body = chatBody({ model: id, messages: [], reasoning: { enabled: true } });
-    assert.equal('reasoning' in body, false, id);
+    assert.deepEqual(body.reasoning, { enabled: false }, id);
     assert.deepEqual(JSON.parse(JSON.stringify(body)).provider.data_collection, 'deny');
   }
+  // A variant that asks to think is left to its own setting.
+  assert.equal(reasoningFor('anthropic/claude-sonnet-4.6:thinking'), null);
+  assert.equal('reasoning' in chatBody({ model: 'anthropic/claude-sonnet-4.6:thinking' }), false);
   // Everything else keeps the minimal-effort floor that mandatory-reasoning
   // endpoints (Google's flash-lite among them) accept.
   for (const id of ['google/gemini-3.5-flash-lite', 'openai/gpt-oss-120b', 'perplexity/sonar']) {
@@ -55,7 +60,7 @@ test('a Claude model is sent no reasoning field, because minimal effort switches
   }
 });
 
-test('the AI SDK path drops the reasoning field for Claude too', async () => {
+test('the AI SDK path tells Claude not to think too', async () => {
   const bodies = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => { bodies.push(JSON.parse(init.body)); throw new Error('stop'); };
@@ -67,7 +72,7 @@ test('the AI SDK path drops the reasoning field for Claude too', async () => {
   } finally {
     globalThis.fetch = realFetch;
   }
-  assert.equal('reasoning' in bodies[0], false);
+  assert.deepEqual(bodies[0].reasoning, { enabled: false });
   assert.deepEqual(bodies[0].provider, NO_RETENTION);
   assert.deepEqual(bodies[1].reasoning, NO_REASONING);
 });

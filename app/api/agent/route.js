@@ -64,7 +64,7 @@ import { attachmentsBlock, sanitiseAttachments } from '@/lib/attachments/extract
 import { contactTelSet, digitsOf, redactUnverifiedNumbers } from '@/lib/contacts';
 import { contactEntries } from '@/lib/contacts-store';
 import { notebookProgress } from '@/lib/agent/notebook-progress.mjs';
-import { createRouter, reasoningFor } from '@/lib/ai/openrouter.mjs';
+import { createRouter, isClaude } from '@/lib/ai/openrouter.mjs';
 import { getModelRoles } from '@/lib/settings';
 import { recordUsage } from '@/lib/ai/usage';
 import { usageCounts } from '@/lib/ai/usage-counts.mjs';
@@ -275,7 +275,7 @@ export async function POST(request) {
   const readValues = async ({ model: id, schema, text, role, phase }) => {
     const began = Date.now();
     try {
-      if (!reasoningFor(id)) throw new Error('structured output skipped for Claude');
+      if (isClaude(id)) throw new Error('structured output skipped for Claude');
       const abortSignal = AbortSignal.any([deadline, AbortSignal.timeout(STRUCTURED_BUDGET_MS)]);
       const out = await generateObject({ model: openrouter(id), schema, temperature: 0, maxOutputTokens: READ_MAX_TOKENS, abortSignal, ...withImages(text) });
       recordUsage({ turnId, role, phase, model: id, usage: out.usage });
