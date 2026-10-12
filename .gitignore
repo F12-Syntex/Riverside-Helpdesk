@@ -39,3 +39,6 @@ scripts/notebook-backup.json
 
 # Brainstorm mockups (local only)
 .superpowers/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
