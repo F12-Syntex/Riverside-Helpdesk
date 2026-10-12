@@ -21,6 +21,7 @@ import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
+import AskIntro from './AskIntro';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
@@ -1695,6 +1696,8 @@ class RiversidePracticeQA extends React.Component {
             refused is the only thing on this page that has to be dealt with
             before anything else can happen. */}
         <PatientDataModal v={v} />
+        {/* The first look, once a session: how to ask (see AskIntro). */}
+        <AskIntro active={v.isEmpty && v.modeReady && !v.isKb && !v.showAdd && !v.contactsOpen} />
       </div>
     );
   }
