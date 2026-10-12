@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.71.3` | 2026-10-13 | perf | `0d55053` | perf: issue independent database reads together on hot routes |
+| `6.71.2` | 2026-10-13 | perf | `e2f3d3d` | perf: check the database schema in one round trip on a cold start |
+| `6.71.1` | 2026-10-13 | docs | `e471abf` | docs: record the rolling AI usage window in versions |
 | `6.71.0` | 2026-10-13 | feat | `bdb43e5` | feat: keep AI usage to the last 100 questions, with the real charge |
 | `6.70.3` | 2026-10-13 | docs | `6dfc774` | docs: record the graft setup in versions |
 | `6.70.2` | 2026-10-13 | chore | `53325b6` | chore: set up graft for Claude Code in this repo |
