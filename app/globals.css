@@ -41,6 +41,26 @@ html { background: #f8fafc; }
   --rv-glass:      rgba(255,255,255,.62);
   --rv-glass-line: rgba(255,255,255,.8);
   --rv-glass-blur: saturate(160%) blur(14px);
+
+  /* The page language's own values (Referrals is the reference), named
+     so every page draws the same divider, highlight and shadow rather
+     than its own near-copy of them. */
+  --rv-divider:   #eef1f3;   /* between rows in a card */
+  --rv-hl:        #f4f7f9;   /* the row the keys or the pointer are on */
+  --rv-chip:      #f1f4f6;   /* a state's icon disc, an icon button under the pointer */
+  --rv-icon-mute: #a3afb7;   /* chevrons: decoration, never text */
+  --rv-line-hi:   #aab6be;   /* a quiet button's hairline under the pointer */
+  --rv-danger:    #d5281b;
+  --rv-danger-ink: #b42318;
+  --rv-danger-bg: #fdecea;
+  --rv-warn-bg:   #fdf6e7;
+  --rv-warn-ink:  #8a5a08;
+  --rv-r-card: 22px;
+  --rv-sh-card: 0 1px 2px rgba(33,43,50,.04), 0 14px 36px -14px rgba(33,43,50,.18);
+  --rv-sh-box: 0 1px 2px rgba(33,43,50,.04), 0 14px 36px -14px rgba(33,43,50,.2);
+  --rv-sh-box-focus: 0 0 0 3px rgba(0,94,184,.12), 0 1px 2px rgba(33,43,50,.04), 0 14px 36px -14px rgba(33,43,50,.22);
+  --rv-sh-pop: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
+  --rv-ease: cubic-bezier(.22,1,.36,1);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1879,4 +1899,121 @@ html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); 
   .riva-dock-center > .riva-dock-inner { transform: none; }
   /* Rows are a thumb's height. */
   .riva-menu-row { min-height: 48px; }
+}
+
+/* ------------------------------------------------------------------ *
+ * The page language, shared.
+ *
+ * Referrals set the look every tool now has — the heading with one
+ * blue word, white cards on the light, pill buttons, a state in the
+ * middle of a card when there is nothing to list — and Contacts copied
+ * it class for class. A page written after that should not be a third
+ * copy, so the parts are here, under rv-: a page uses these and keeps
+ * only what is its own in its own CSS. Values are Referrals' (see the
+ * tokens in :root).
+ * ------------------------------------------------------------------ */
+
+/* The heading: a short phrase with one word in NHS blue. */
+.rv-h1 { margin: 0 0 36px; text-align: center; font-size: 56px; font-weight: 800; letter-spacing: -.04em; line-height: 1.05; color: var(--rv-ink); user-select: none; }
+.rv-h1 em { font-style: normal; color: var(--rv-accent); }
+
+/* A white surface on the light. */
+.rv-card { position: relative; background: #fff; border-radius: var(--rv-r-card); box-shadow: var(--rv-sh-card); }
+
+/* Buttons are pills. One primary to a view; quiet for the alternative;
+   plain for a text-weight action on a card. */
+.rv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 18px; border: none; border-radius: 999px;
+  font: inherit; font-size: 14.5px; font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none;
+  transition: background-color .15s ease, box-shadow .15s ease, color .15s ease, transform .12s ease;
+}
+.rv-btn:active:not(:disabled) { transform: scale(.98); }
+.rv-btn:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 2px; }
+.rv-btn:disabled { cursor: default; }
+.rv-btn--primary { background: var(--rv-accent); color: #fff; }
+.rv-btn--primary:hover:not(:disabled) { background: var(--rv-accent-hi); }
+.rv-btn--primary:disabled { background: rgba(60,70,80,.14); color: var(--rv-ink-4); }
+.rv-btn--quiet { background: #fff; color: var(--rv-ink); box-shadow: inset 0 0 0 1px var(--rv-line); }
+.rv-btn--quiet:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--rv-line-hi); }
+.rv-btn--plain { background: transparent; color: var(--rv-ink-2); }
+.rv-btn--plain:hover:not(:disabled) { background: var(--rv-surface-3); color: var(--rv-ink); }
+.rv-btn--danger { background: transparent; color: var(--rv-danger-ink); }
+.rv-btn--danger:hover:not(:disabled) { background: var(--rv-danger-bg); }
+.rv-btn--quiet:disabled, .rv-btn--plain:disabled, .rv-btn--danger:disabled { opacity: .5; }
+.rv-btn--sm { height: 32px; padding: 0 13px; gap: 6px; font-size: 13px; }
+
+/* A round icon button. */
+.rv-ibtn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; border: none; border-radius: 50%;
+  background: none; color: var(--rv-ink-3); cursor: pointer; text-decoration: none;
+  transition: background-color .15s ease, color .15s ease;
+}
+.rv-ibtn:hover:not(:disabled) { background: var(--rv-chip); color: var(--rv-ink); }
+.rv-ibtn.is-on { background: var(--rv-accent-dim); color: var(--rv-accent); }
+.rv-ibtn:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 1px; }
+.rv-ibtn:disabled { opacity: .45; cursor: default; }
+
+/* A small label. Tones for the few that need to stand out. */
+.rv-chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; background: var(--rv-surface-3); color: var(--rv-ink-2); }
+.rv-chip--accent { background: var(--rv-accent-dim); color: var(--rv-accent); }
+.rv-chip--warn { background: var(--rv-warn-bg); color: var(--rv-warn-ink); }
+.rv-chip--danger { background: var(--rv-danger-bg); color: var(--rv-danger-ink); }
+.rv-chip--ok { background: #e6f4ec; color: var(--rv-green); }
+
+/* Loading: shimmering bars where the rows will be. */
+.rv-skel {
+  display: block; height: 11px; border-radius: 6px;
+  background: linear-gradient(90deg, #eef2f4 0%, #f7f9fa 45%, #eef2f4 90%); background-size: 220% 100%;
+  animation: rvSkel 1.4s ease-in-out infinite;
+}
+@keyframes rvSkel { from { background-position: 100% 0; } to { background-position: -120% 0; } }
+
+/* A state in the middle of a card: nothing yet, nothing found, it went
+   wrong. An icon in a disc, a sentence, a line of help, what to do. */
+.rv-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 34px 24px 30px; }
+.rv-state__ico { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 6px; border-radius: 50%; background: var(--rv-chip); color: var(--rv-ink-3); }
+.rv-state__ico.is-bad { background: var(--rv-danger-bg); color: var(--rv-danger-ink); }
+.rv-state__title { margin: 0; max-width: 42ch; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--rv-ink); overflow-wrap: anywhere; }
+.rv-state__text { margin: 0; max-width: 44ch; font-size: 14.5px; line-height: 1.5; color: var(--rv-ink-2); }
+.rv-state__acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+
+/* A field on a white card: filled, no border, a blue ring when it has
+   the caret. The global yellow input outline is for legacy fields; a
+   field here draws its own ring. */
+.rv-field {
+  width: 100%; height: 42px; padding: 0 14px; border: 1px solid transparent; border-radius: 11px;
+  background: var(--rv-surface-3); font: inherit; font-size: 15px; color: var(--rv-ink);
+  outline: none !important; transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.rv-field::placeholder { color: var(--rv-ink-4); }
+.rv-field:hover { background: #e9eef0; }
+.rv-field:focus, .rv-field:focus-visible { background: #fff; border-color: var(--rv-accent) !important; box-shadow: 0 0 0 3px rgba(0,94,184,.18); }
+/* Wrong, and why, under the field (aria-invalid + aria-describedby). */
+.rv-field.is-bad, .rv-field[aria-invalid="true"] { background: #fff; border-color: var(--rv-danger) !important; box-shadow: 0 0 0 3px rgba(213,40,27,.14); }
+.rv-label { display: block; margin: 0 0 7px; font-size: 13px; font-weight: 600; color: var(--rv-ink-2); }
+.rv-hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--rv-ink-3); }
+.rv-err { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; font-size: 12.5px; font-weight: 550; line-height: 1.45; color: var(--rv-danger-ink); }
+/* A whole form's error, at its foot. */
+.rv-alert { padding: 9px 12px; border-radius: 10px; background: var(--rv-danger-bg); color: #912018; font-size: 13.5px; font-weight: 550; line-height: 1.45; }
+
+/* A message that comes and goes at the foot of the screen. */
+.rv-toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 95;
+  display: inline-flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px);
+  padding: 10px 16px; border-radius: 999px; background: var(--rv-ink); color: #fff;
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 30px -10px rgba(20,28,36,.5);
+  transform: translateX(-50%); pointer-events: none;
+}
+
+/* Screen readers only. */
+.rv-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .rv-h1 { margin-bottom: 24px; font-size: 38px; }
+  .rv-field { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-skel { animation: none; }
 }
