@@ -481,8 +481,12 @@ body { overflow-x: hidden; }
      transform means nothing is laid out again, so the field cannot change
      size on the way between the middle of the page and the foot of it.
      It softens as it goes and comes back up where it lands. */
-  transition: transform .5s cubic-bezier(.2,.7,.3,1), opacity .5s ease;
+  transition: transform .5s cubic-bezier(.2,.7,.3,1), opacity .5s ease, max-width .5s cubic-bezier(.2,.7,.3,1);
 }
+/* On the opening screen the field is the same column as Referrals and
+   Contacts (688px less their 24px gutters); in a conversation it widens to
+   the transcript's 820px. */
+.riva-dock-center > .riva-dock-inner { max-width: 688px; }
 
 /* ------------------------------------------------------------------ *
  * Small motions, shared.
@@ -647,7 +651,9 @@ body { overflow-x: hidden; }
 /* On the opening screen the box is near the top of the page, with the header
    above it, so the menu opens downward into the empty page instead of up
    under the header. It scrolls inside itself if the screen is short. */
+/* Menu is as wide as the opening column's field. */
 .riva-dock-center .riva-modes-list {
+  width: min(640px, calc(100vw - 32px));
   bottom: auto; top: calc(100% + 28px); transform-origin: top left;
   max-height: calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - 59px - 36px - var(--riva-dock-field-h) - 30px);
   overflow-y: auto;
