@@ -1017,41 +1017,54 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 
 /* ---- the theme picker ------------------------------------------- */
 
+/* The swatch in the bar, and a short list under it: each theme a small
+   window onto its colours, its name, and a tick on the one in use. */
 .riva-theme { position: relative; display: flex; }
 .riva-theme-dot {
   width: 18px; height: 18px; border-radius: 50%;
-  box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(33,43,50,.25);
-  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(33,43,50,.1), 0 2px 6px rgba(33,43,50,.18);
+  transition: transform .35s cubic-bezier(.34,1.56,.64,1);
 }
-.riva-theme-btn:hover .riva-theme-dot { transform: scale(1.12) rotate(25deg); }
+.riva-theme-btn:hover .riva-theme-dot, .riva-theme-btn.is-on .riva-theme-dot { transform: scale(1.1) rotate(30deg); }
 .riva-theme-pop {
   position: absolute; right: 0; top: calc(100% + 10px); z-index: 70;
-  width: 272px; padding: 12px 12px 14px;
-  background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
+  width: 268px; padding: 6px;
+  background: #fff; border-radius: 18px;
+  box-shadow: 0 0 0 1px rgba(33,43,50,.06), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -16px rgba(0,48,135,.24);
   transform-origin: top right;
-  animation: rivaPopDown .2s cubic-bezier(.2,.8,.3,1) both;
+  animation: rivaPopDown .22s cubic-bezier(.22,1,.36,1) both;
 }
-.riva-theme-title {
-  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--rv-ink-3); padding: 0 4px 10px;
-}
-.riva-theme-row { display: flex; justify-content: space-between; padding: 4px 6px; }
+.riva-theme-head { padding: 10px 12px 10px; }
+.riva-theme-title { font-size: 14.5px; font-weight: 700; color: var(--rv-ink); }
+.riva-theme-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--rv-ink-3); }
+.riva-theme-list { display: flex; flex-direction: column; gap: 2px; }
 .riva-theme-opt {
-  width: 40px; height: 40px; padding: 0; border: none; border-radius: 50%;
-  background: transparent; cursor: pointer;
-  transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  height: 46px; padding: 0 12px 0 7px; border: none; border-radius: 12px;
+  background: none; font: inherit; text-align: left; cursor: pointer;
+  transition: background-color .14s ease;
+  animation: rivaThemeIn .3s cubic-bezier(.22,1,.36,1) both;
 }
-.riva-theme-opt:hover { transform: translateY(-3px) scale(1.06); }
-.riva-theme-opt.is-on { transform: translateY(-3px) scale(1.12); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--rv-accent), 0 10px 20px -8px rgba(0,48,135,.45); }
-.riva-theme-opt:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 4px; }
-.riva-theme-swatch { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(33,43,50,.08); }
-.riva-theme-name {
-  margin-top: 12px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--rv-ink);
-  animation: rivaThemeName .28s cubic-bezier(.2,.8,.3,1) both;
+@keyframes rivaThemeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.riva-theme-opt:hover { background: #f3f6f8; }
+.riva-theme-opt.is-on { background: var(--rv-accent-dim); }
+.riva-theme-opt:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: -2px; }
+.riva-theme-preview {
+  flex: none; width: 46px; height: 32px; border-radius: 9px;
+  box-shadow: inset 0 0 0 1px rgba(33,43,50,.08);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
 }
-.riva-theme-cur { font-weight: 500; color: var(--rv-ink-3); }
-@keyframes rivaThemeName { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.riva-theme-opt:hover .riva-theme-preview { transform: scale(1.05); }
+.riva-theme-label { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--rv-ink); }
+.riva-theme-opt.is-on .riva-theme-label { color: var(--rv-accent-hi); }
+.riva-theme-check {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--rv-accent); color: #fff;
+  opacity: 0; transform: scale(.5);
+  transition: opacity .18s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.riva-theme-opt.is-on .riva-theme-check { opacity: 1; transform: none; }
 
 /* ---- the page under it ------------------------------------------ */
 
@@ -1214,7 +1227,7 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
   .riva-top-search { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .riva-topnav-pill, .riva-menu, .riva-theme-pop, .riva-theme-name { transition: none; animation: none; }
+  .riva-topnav-pill, .riva-menu, .riva-theme-pop, .riva-theme-opt, .riva-theme-check { transition: none; animation: none; }
 }
 
 /* ---- the open header (redesign; AppShell sets .is-flat per page) ----
@@ -1257,8 +1270,29 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 .is-flat .riva-topnav-item.is-active { color: var(--rv-accent); }
 .is-flat .riva-topnav-item:focus-visible { outline-offset: -2px; }
 .is-flat .riva-topnav-ico { display: none; }
-.is-flat .riva-top-btn { color: var(--rv-ink-3); }
-.is-flat .riva-top-btn:hover, .is-flat .riva-top-btn.is-on { background: rgba(255,255,255,.7); color: var(--rv-ink); box-shadow: none; }
+/* Theme and menu, one pill: the twin of the tools pill in the middle. */
+.riva-top-tools { display: contents; }
+.riva-top-tools-sep { display: none; }
+.is-flat .riva-top-tools {
+  display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 10px 30px -14px rgba(33,43,50,.22);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+}
+/* Both popovers hang from the pill's right edge, so they line up with it. */
+.is-flat .riva-top-tools { position: relative; }
+.is-flat .riva-top-tools .riva-theme, .is-flat .riva-top-tools .riva-top-menuwrap { position: static; }
+.is-flat .riva-top-tools-sep { display: block; width: 1px; height: 18px; margin: 0 2px; background: rgba(33,43,50,.1); }
+.is-flat .riva-top-tools .riva-top-btn {
+  width: 38px; height: 38px; border-radius: 999px; border: none; color: var(--rv-ink-2);
+  transition: background-color .2s ease, box-shadow .2s ease, color .2s ease;
+}
+.is-flat .riva-top-tools .riva-top-btn:hover { background: rgba(255,255,255,.75); color: var(--rv-ink); box-shadow: none; }
+.is-flat .riva-top-tools .riva-top-btn.is-on {
+  background: #fff; color: var(--rv-accent);
+  box-shadow: 0 1px 2px rgba(33,43,50,.08), 0 2px 8px -2px rgba(33,43,50,.1);
+}
+.is-flat .riva-top-tools .riva-top-btn:focus-visible { outline-offset: -2px; }
 
 /* The practice's name gives its room to the tools before they crowd. */
 @media (max-width: 900px) {

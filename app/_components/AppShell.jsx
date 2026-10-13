@@ -389,13 +389,19 @@ export default function AppShell({ children }) {
               <span className="riva-top-search-label">Go to</span>
               <kbd className="riva-kbd">⌘K</kbd>
             </button>
-            <ThemePicker />
-            <div className="riva-top-menuwrap">
-              <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
-                aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
-                <Svg w={18} sw={2}>{Icons.menu}</Svg>
-              </button>
-              {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} />}
+            {/* Theme and menu, held together. On the open header they are one
+                pill, the twin of the tools pill in the middle; elsewhere the
+                wrapper is not drawn (display: contents). */}
+            <div className="riva-top-tools">
+              <ThemePicker />
+              <span className="riva-top-tools-sep" aria-hidden="true" />
+              <div className="riva-top-menuwrap">
+                <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
+                  <Svg w={18} sw={2}>{Icons.menu}</Svg>
+                </button>
+                {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} />}
+              </div>
             </div>
           </div>
         </div>
