@@ -73,13 +73,13 @@ const RF_CSS = `
   font:inherit;font-size:19px;padding:0 14px;color:var(--rv-ink);}
 .rf-input::placeholder{color:var(--rv-ink-4);}
 .rf-clear{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:50%;
-  background:#a3afb7;color:#fff;cursor:pointer;transition:background-color .15s ease;}
+  position:relative;background:var(--rv-ink-3);color:#fff;cursor:pointer;transition:background-color .15s ease;}
 .rf-clear:hover{background:var(--rv-ink-2);}
 .rf-clear:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
 
 /* ---- above the card ---- */
 .rf-cap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:22px;margin:22px 0 8px;padding:0 22px;
-  font-size:13px;font-weight:550;color:var(--rv-ink-3);}
+  font-size:13px;font-weight:550;color:var(--rv-ink-2);}
 .rf-cap__btn{padding:2px 0;border:none;background:none;font:inherit;font-weight:600;color:var(--rv-accent);cursor:pointer;border-radius:4px;}
 .rf-cap__btn:hover{color:var(--rv-accent-hi);text-decoration:underline;text-underline-offset:3px;}
 .rf-cap__btn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
@@ -88,8 +88,11 @@ const RF_CSS = `
 .rf-card{position:relative;flex:0 1 auto;min-height:0;overflow:hidden auto;overscroll-behavior:contain;
   background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.18);
   scrollbar-width:none;}
-/* No scrollbar: one appearing and going as the list grows shifted the rows sideways. */
+/* No scrollbar: one appearing and going as the list grows shifted the rows sideways.
+   So that a list running past the foot of the card does not look finished,
+   the last few pixels fade out while there is more below. */
 .rf-card::-webkit-scrollbar{display:none;}
+.rf-card.is-more{-webkit-mask-image:linear-gradient(#000 calc(100% - 36px),transparent);mask-image:linear-gradient(#000 calc(100% - 36px),transparent);}
 .rf-cardwrap.is-results{margin-top:14px;}
 .rf-list{position:relative;}
 .rf-hl{position:absolute;left:0;right:0;top:0;background:#f4f7f9;pointer-events:none;
@@ -136,7 +139,7 @@ const RF_CSS = `
 /* ---- the chosen referral: a panel at the right, the card's surface ---- */
 .rf-drawer{position:fixed;top:var(--rv-top-h);right:12px;bottom:12px;left:12px;z-index:60;display:flex;flex-direction:column;overflow:hidden;
   background:#fff;outline:none;border-radius:22px;box-shadow:0 1px 2px rgba(33,43,50,.05),0 30px 70px -24px rgba(33,43,50,.35);}
-.rf-scrim{position:fixed;inset:0;z-index:59;background:rgba(33,43,50,.28);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+.rf-scrim{position:fixed;inset:0;z-index:51;background:rgba(20,28,36,.32);-webkit-backdrop-filter:blur(6px) saturate(140%);backdrop-filter:blur(6px) saturate(140%);}
 .rf-drawer__head{flex:none;padding:18px 22px 16px;border-bottom:1px solid #eef1f3;}
 .rf-drawer__top{display:flex;align-items:flex-start;gap:10px;}
 .rf-drawer__scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px 22px 36px;
@@ -170,8 +173,10 @@ const RF_CSS = `
   .rf-drawer__scroll{padding:22px 28px 40px;}
   .rf-back{display:none;}
 }
-@media (max-width:600px){
+@media (max-width:700px){
   .rf{padding:20px 16px 16px;}
+  /* A thumb's worth of target round the small clear button. */
+  .rf-clear::after{content:"";position:absolute;inset:-9px;}
   .rf-h1{font-size:38px;margin-bottom:24px;}
   .rf-box{height:56px;padding-left:18px;}
   .rf-input{font-size:16px;padding:0 10px;}
@@ -240,16 +245,26 @@ function State({ icon, title, text, children }) {
 // room there is, and past that the card scrolls.
 function Card({ className, children }) {
   const inner = React.useRef(null);
+  const outer = React.useRef(null);
   const [h, setH] = React.useState('auto');
+  const [more, setMore] = React.useState(false);
+  // Whether there is more below the fold of the card, for the fade.
+  const measure = React.useCallback(() => {
+    const el = outer.current;
+    if (!el) return;
+    setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 2);
+  }, []);
   React.useLayoutEffect(() => {
     const el = inner.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(() => setH(el.offsetHeight));
+    const ro = new ResizeObserver(() => { setH(el.offsetHeight); measure(); });
     ro.observe(el);
+    if (outer.current) ro.observe(outer.current);
     return () => ro.disconnect();
-  }, []);
+  }, [measure]);
   return (
-    <motion.div className={'rf-card' + (className ? ' ' + className : '')}
+    <motion.div ref={outer} onScroll={measure} onAnimationComplete={measure}
+      className={'rf-card' + (more ? ' is-more' : '') + (className ? ' ' + className : '')}
       initial={false} animate={{ height: h }} transition={{ duration: 0.38, ease: EASE }}>
       <div ref={inner}>{children}</div>
     </motion.div>
@@ -553,6 +568,13 @@ export default function ReferralsPage() {
     }
   };
 
+  // The box has the caret on arrival where there is a keyboard to type
+  // with. On a phone it would raise the keyboard over the list unasked.
+  React.useEffect(() => {
+    const fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+    if (fine && inputRef.current && !readReferralUrl(window.location.search).id) inputRef.current.focus({ preventScroll: true });
+  }, []);
+
   const clear = () => { setQuery(''); if (inputRef.current) inputRef.current.focus(); };
   // One ref callback per row, made once: a ref that changes on every render
   // is detached and re-attached on every render.
@@ -566,6 +588,10 @@ export default function ReferralsPage() {
   };
   const selKey = selIdx >= 0 && flat[selIdx] ? flat[selIdx].key : '';
   const nothing = !!trimmed && answered && !results.length;
+  // The search by meaning failed and no name matches either: say so, rather
+  // than leaving an empty card and no way on.
+  const unavailable = !!trimmed && server.for === trimmed && !server.loading && !answered && !results.length;
+  const empty = book.loaded && !book.failed && !book.rows.length;
   const listed = book.loaded && !book.failed && flat.length > 0;
 
   return (
@@ -588,7 +614,6 @@ export default function ReferralsPage() {
               </span>
               <input
                 ref={inputRef}
-                autoFocus
                 className="rf-input"
                 type="text"
                 value={query}
@@ -612,7 +637,7 @@ export default function ReferralsPage() {
             {/* Nothing typed: say what the card is, and the way to the rest. */}
             {!trimmed ? (
               <motion.div className="rf-cap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.16 }}>
-                {book.loaded && !book.failed ? (
+                {book.loaded && !book.failed && book.rows.length ? (
                   <>
                     <span>{browsingAll ? 'All ' + book.rows.length + ' referrals, A to Z' : 'Most asked for in the last 30 days'}</span>
                     {popular.length ? (
@@ -621,7 +646,7 @@ export default function ReferralsPage() {
                       </button>
                     ) : null}
                   </>
-                ) : <span className="rf-skel" style={{ width: 200, height: 9 }} aria-hidden="true" />}
+                ) : !book.loaded ? <span className="rf-skel" style={{ width: 200, height: 9 }} aria-hidden="true" /> : null}
               </motion.div>
             ) : null}
 
@@ -641,6 +666,13 @@ export default function ReferralsPage() {
                     </State>
                   ) : null}
 
+                  {empty && !trimmed ? (
+                    <State icon={Icons.file} title="No referrals in the Notebook yet."
+                      text="Pages written under Referrals in Practice notes are listed here, and searched by what they are for.">
+                      <Link href="/notebook" className="rf-btn rf-btn--primary"><Svg w={15} sw={2.2}>{Icons.edit}</Svg>Open Practice notes</Link>
+                    </State>
+                  ) : null}
+
                   {listed ? <Highlight target={selKey ? itemRefs.current.get(selKey) || null : null} list={flat} /> : null}
                   {listed ? flat.map((entry, i) => (
                     <Row key={entry.key} row={entry.row} selected={selKey === entry.key} chosen={openId === entry.row.id}
@@ -649,6 +681,15 @@ export default function ReferralsPage() {
                   )) : null}
 
                   {trimmed && !results.length && searching ? <SkeletonRows rows={3} /> : null}
+
+                  {unavailable ? (
+                    <State icon={Icons.alertCircle} title="Search is unavailable right now."
+                      text={'No referral’s name has “' + trimmed + '” in it. Try again in a moment, or ask the question instead.'}>
+                      <Link href={askHref(trimmed)} className="rf-btn rf-btn--primary">
+                        <Svg w={15} sw={2.2}>{Icons.chat}</Svg>Ask a question
+                      </Link>
+                    </State>
+                  ) : null}
 
                   {nothing ? (
                     <State icon={SEARCH_X} title={'No referral matches “' + trimmed + '”.'}

@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.85.1` | 2026-10-13 | style | `3997dc5` | style: share the page language as rv- classes and load every font weight |
 | `6.85.0` | 2026-10-13 | feat | `080be3f` | feat: make the theme a choice of 21st.dev backgrounds, always in Mist |
 | `6.84.2` | 2026-10-13 | docs | `e0a3df8` | docs: record the working-state redo and settings column in versions |
 | `6.84.1` | 2026-10-13 | fix | `ef6ed4d` | fix: drop the right-hand column from settings so the page fits the screen |
