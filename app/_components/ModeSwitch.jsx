@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { s, Hover, Svg, Icons } from './ui';
 import { MODES, MODE_FOLDER, TOP_MODES, FOLDER_MODES } from '../../lib/commands.mjs';
+import { EASE_EXIT } from './chat/motion.mjs';
 
 /* ------------------------------------------------------------------ *
  * Choosing the kind of answer.
@@ -39,6 +41,13 @@ import { MODES, MODE_FOLDER, TOP_MODES, FOLDER_MODES } from '../../lib/commands.
  * header that leads back, so the menu is always one short list. The
  * folder page is what opens whenever one of its modes is armed, so the
  * tick is never behind a closed row.
+ *
+ * IT CLOSES THE WAY IT OPENED. The menu arrives by CSS (rivaModesIn, or
+ * the bottom sheet on a phone) and leaves by motion, settling back toward
+ * the pill it came out of instead of blinking out. The CSS entrance holds
+ * no end state (fill `backwards`, globals.css) — one that did would
+ * override the exit's inline styles and the menu would sit there solid
+ * until it vanished (the lesson of 63bce7b).
  * ------------------------------------------------------------------ */
 
 // The two pages the menu can show, each as the rows the keyboard walks in the
@@ -62,6 +71,11 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
   const current = MODES.find((m) => m.name === mode) || MODES[0];
   const armed = Boolean(current.name) && ready;
   const rows = rowsFor(inFolder);
+
+  // Which way the menu opens: down into the empty page while the field is in
+  // the middle of it, up out of the dock otherwise. Its exit goes back the
+  // way it came.
+  const downward = () => !!(wrapRef.current && wrapRef.current.closest('.riva-dock-center'));
 
   // The trigger, found rather than held: Hover renders the button for us and
   // does not pass a ref through.
@@ -222,20 +236,24 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
         <Svg w={13} sw={2.4} style={s('opacity:.7;transition:transform .18s ease;' + (open ? 'transform:rotate(180deg);' : ''))}>{Icons.chevronDown}</Svg>
       </Hover>
 
-      {open && (
-        <div role="menu" aria-label={inFolder ? MODE_FOLDER.label : 'Kind of answer'} className="riva-modes-list">
-          {!inFolder && <div className="riva-modes-title">Answer mode</div>}
-          {/* Keyed on the page so switching slides the new list in. */}
-          <div key={inFolder ? 'folder' : 'top'} className={'riva-modes-page' + (inFolder ? ' is-folder' : '')}>
-            {rows.map((row, i) => renderRow(row, i))}
-          </div>
-          <div className="riva-modes-foot" aria-hidden="true">
-            <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
-            <span><kbd>Enter</kbd> choose</span>
-            <span><kbd>Esc</kbd> close</span>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div key="menu" role="menu" aria-label={inFolder ? MODE_FOLDER.label : 'Kind of answer'} className="riva-modes-list"
+            initial={false} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: downward() ? -4 : 4, scale: 0.98, transition: { duration: 0.14, ease: EASE_EXIT } }}>
+            {!inFolder && <div className="riva-modes-title">Answer mode</div>}
+            {/* Keyed on the page so switching slides the new list in. */}
+            <div key={inFolder ? 'folder' : 'top'} className={'riva-modes-page' + (inFolder ? ' is-folder' : '')}>
+              {rows.map((row, i) => renderRow(row, i))}
+            </div>
+            <div className="riva-modes-foot" aria-hidden="true">
+              <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+              <span><kbd>Enter</kbd> choose</span>
+              <span><kbd>Esc</kbd> close</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -2,14 +2,17 @@
 
 import React from 'react';
 import { Svg, Icons } from '../ui';
-import TextShimmer from './TextShimmer';
+import RollingLine, { useHeldValue } from './RollingLine';
 
 /* ------------------------------------------------------------------ *
  * What the assistant is doing, while it does it — and only that.
  *
- * Everything on this card is something that actually happened on the
- * server, sent as it happened (app/api/agent/route.js, `progress`):
+ * Everything on this line is something that actually happened, sent as
+ * it happened (app/api/agent/route.js, `progress`):
  *
+ *   - before anything is sent, the message being checked for patient
+ *     details (lib/safety/patient-data.mjs) — the one wait that happens
+ *     in this browser rather than on the server, and said as what it is.
  *   - for a question, the whole Notebook going to the model: "Reading the
  *     Notebook — N pages", N being the real count (lib/agent/
  *     notebook-progress.mjs). Every page is read, so there is no shortlist
@@ -19,16 +22,23 @@ import TextShimmer from './TextShimmer';
  *     found.
  *   - for anything else, the steps the server reported, as they ran.
  *
- * The hairline is stages, not time: a segment fills when its stage is done
- * and the one in hand shimmers. It never moves for a clock.
+ * The line rolls over to each new stage and holds every stage long enough
+ * to be read (RollingLine). The hairline is stages, not time: a segment
+ * fills when its stage is done and the one in hand shimmers. It never moves
+ * for a clock — the seconds beside it are the only clock, and they say only
+ * how long it has been.
  *
- * And the page behind joins in: while this card is up, <html data-busy>
- * is set, and the light (PageBackground) quickens and gathers.
+ * It sits in the answer's own card (AiAnswer), in the place the answer
+ * will be written, so the wait and the answer are the same object.
  * ------------------------------------------------------------------ */
 
-// Holds <html data-busy> for as long as any working card is on screen.
-function useBusyPage() {
+// Holds <html data-busy> while `active`, and the light (PageBackground)
+// quickens and gathers. Used by AiAnswer for as long as the answer is being
+// worked out, not just while this line is up: the check after the last word
+// is written is still work, and the page went quiet over it.
+export function useBusyPage(active = true) {
   React.useEffect(() => {
+    if (!active) return undefined;
     const root = document.documentElement;
     root.__rivaBusy = (root.__rivaBusy || 0) + 1;
     root.dataset.busy = '1';
@@ -36,17 +46,19 @@ function useBusyPage() {
       root.__rivaBusy = Math.max(0, (root.__rivaBusy || 1) - 1);
       if (!root.__rivaBusy) delete root.dataset.busy;
     };
-  }, []);
+  }, [active]);
 }
 
+// Whole seconds since the line appeared. Tenths ticking five times a second
+// read as urgency; a second at a time reads as a clock.
 function useElapsed() {
   const [start] = React.useState(() => Date.now());
   const [now, setNow] = React.useState(start);
   React.useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 200);
+    const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, []);
-  return (now - start) / 1000;
+  return Math.floor((now - start) / 1000);
 }
 
 function Segments({ stages }) {
@@ -60,8 +72,7 @@ function Segments({ stages }) {
   );
 }
 
-export default function WorkingState({ steps = [], statusText = '', progress = null }) {
-  useBusyPage();
+export default function WorkingState({ steps = [], statusText = '', progress = null, screening = false }) {
   const elapsed = useElapsed();
 
   const notes = progress && progress.notes && progress.notes.total ? progress.notes : null;
@@ -87,9 +98,13 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
   // The line that says what is happening now, from what has actually
   // happened — never from the clock.
   let now;
-  if (notes) now = movedOn ? statusText : reading;
+  if (screening) now = 'Checking for patient details';
+  else if (notes) now = movedOn ? statusText : reading;
   else if (docs) now = statusText || 'Reading what the documents say';
   else now = (running && running.label) || statusText || (rows.length ? 'Putting the answer together' : 'Reading the practice documents');
+  // What the screen reader is told: the same line, held the same way, so it
+  // hears each stage once rather than every swap the eye sees.
+  const said = useHeldValue(now);
 
   // Real stages, each done when it is done.
   let stages;
@@ -106,20 +121,20 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
     stages = [{ key: 'start', label: 'Starting', done: false }, { key: 'answer', label: 'Answer ready', done: false }];
   }
 
-  const secs = elapsed < 10 ? elapsed.toFixed(1) : String(Math.round(elapsed));
-
   const meta = [
-    secs + 's',
+    elapsed >= 1 ? elapsed + 's' : '',
     !notes && docs ? docs.matched + ' passages' : '',
     !notes && !docs && rows.length > 0 ? done + '/' + rows.length + ' lookups' : '',
   ].filter(Boolean).join(' · ');
 
   return (
-    <div className="riva-work" role="status" aria-live="polite">
-      {/* Keyed on the line, so a new stage slides in rather than the
-          words changing under the shimmer. */}
-      <div key={now} className="riva-work-title"><TextShimmer>{now}</TextShimmer></div>
-      <div className="riva-work-meta">{meta}</div>
+    <div className="riva-work">
+      <span className="rv-sr" role="status" aria-live="polite">{said}</span>
+      <div className="riva-work-head">
+        <span className="riva-live-dot" aria-hidden="true" />
+        <RollingLine text={now} className="riva-work-title" />
+        <span className="riva-work-meta" aria-hidden="true">{meta}</span>
+      </div>
 
       <Segments stages={stages} />
 

@@ -15,8 +15,8 @@ const CHIP_LABEL = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-spa
 export function SourceChips({ sources }) {
   if (!sources || !sources.length) return null;
   return (
-    <div style={s('margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;')}>
-      <span style={s('font-size:12.5px;color:#768692;font-weight:600;margin-right:2px;')}>Sources</span>
+    <div className="riva-sources" style={s('margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;')}>
+      <span style={s('font-size:12.5px;color:var(--rv-ink-2);font-weight:600;margin-right:2px;')}>Sources</span>
       {sources.map((src, i) => {
         const label = <span style={s(CHIP_LABEL)}>{src.label}</span>;
         if (!src.target) {

@@ -175,14 +175,16 @@ function Block({ b, k }) {
   return <p>{renderInline(b.text, k)}</p>;
 }
 
-export default function Md({ text }) {
+// `className` is the answer's live state (AiAnswer): `is-born-live` for prose
+// watched arriving, `is-streaming` while words are still being added to it.
+export default function Md({ text, className = '' }) {
   // A Notebook answer ends on "Sources: [Page](/notebook/…) · …". That line
   // is shown as citation chips under the text rather than as a paragraph of
   // links; any other link stays inline where it was written.
   const { body, sources } = splitSources(text);
   const blocks = parseBlocks(body);
   return (
-    <div className="riva-md">
+    <div className={'riva-md' + (className.trim() ? ' ' + className.trim() : '')}>
       {blocks.map((b, i) => <Block key={i} b={b} k={'b' + i} />)}
       {sources.length > 0 && <SourceChips sources={sources} />}
     </div>
