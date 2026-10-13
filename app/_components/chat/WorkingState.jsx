@@ -19,16 +19,12 @@ import TextShimmer from './TextShimmer';
  *     found.
  *   - for anything else, the steps the server reported, as they ran.
  *
- * The bar is stages, not time: a segment fills when its stage is done
+ * The hairline is stages, not time: a segment fills when its stage is done
  * and the one in hand shimmers. It never moves for a clock.
  *
  * And the page behind joins in: while this card is up, <html data-busy>
  * is set, and the light (ShaderBackground) quickens and gathers.
  * ------------------------------------------------------------------ */
-
-function OrbLoader() {
-  return <span className="riva-orb" aria-hidden="true" />;
-}
 
 // Holds <html data-busy> for as long as any working card is on screen.
 function useBusyPage() {
@@ -112,34 +108,27 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
 
   const secs = elapsed < 10 ? elapsed.toFixed(1) : String(Math.round(elapsed));
 
+  const meta = [
+    secs + 's',
+    !notes && docs ? docs.matched + ' passages' : '',
+    !notes && !docs && rows.length > 0 ? done + '/' + rows.length + ' lookups' : '',
+  ].filter(Boolean).join(' · ');
+
   return (
     <div className="riva-work" role="status" aria-live="polite">
-      <div className="riva-work-head">
-        <OrbLoader />
-        <div className="riva-work-now">
-          <div className="riva-work-kicker">
-            <span className="riva-work-pulse" />
-            {notes ? 'Notebook' : docs ? 'Practice documents' : 'Working on it'}
-            <span className="riva-work-clock">{secs}s</span>
-            {!notes && docs && <span className="riva-work-count">{docs.matched} passages</span>}
-            {!notes && !docs && rows.length > 0 && <span className="riva-work-count">{done}/{rows.length} lookups</span>}
-          </div>
-          {/* Keyed on the line, so a new stage slides in rather than the
-              words changing under the shimmer. */}
-          <div key={now} className="riva-work-title"><TextShimmer>{now}</TextShimmer></div>
-        </div>
-      </div>
+      {/* Keyed on the line, so a new stage slides in rather than the
+          words changing under the shimmer. */}
+      <div key={now} className="riva-work-title"><TextShimmer>{now}</TextShimmer></div>
+      <div className="riva-work-meta">{meta}</div>
+
+      <Segments stages={stages} />
 
       {notes && (
-        <div className="riva-scan">
-          <div className="riva-scan-note">
-            Every page goes to the model; the answer links the pages it used
-          </div>
-        </div>
+        <div className="riva-scan-note">Every page goes to the model; the answer links the pages it used</div>
       )}
 
       {!notes && docs && docs.matches.length > 0 && (
-        <ol className="riva-scan-list is-docs">
+        <ol className="riva-scan-list">
           {docs.matches.map((d, i) => (
             <li key={d.title} className="riva-scan-item" style={{ animationDelay: (i * 0.09) + 's' }}>
               <span className="riva-scan-doc"><Svg w={13} sw={2}>{Icons.fileLines}</Svg></span>
@@ -149,19 +138,12 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
         </ol>
       )}
 
-      <Segments stages={stages} />
-
       {!notes && rows.length > 0 && (
         <ol className="riva-work-steps">
           {rows.map((r) => (
-            <li key={r.key} className={'riva-work-step' + (r.done ? ' is-done' : ' is-running')}>
-              <span className="riva-work-dot">
-                {r.done ? <Svg w={11} sw={3.2}>{Icons.check}</Svg> : null}
-              </span>
-              <span className="riva-work-text">
-                <span className="riva-work-label">{r.label}</span>
-                {r.detail && <span className="riva-work-detail">{r.detail}</span>}
-              </span>
+            <li key={r.key} className={'riva-work-step' + (r.done ? ' is-done' : '')}>
+              <span className="riva-work-mark">{r.done ? <Svg w={11} sw={3}>{Icons.check}</Svg> : '·'}</span>
+              <span>{r.label}{r.detail && <span className="riva-work-detail"> — {r.detail}</span>}</span>
             </li>
           ))}
         </ol>
