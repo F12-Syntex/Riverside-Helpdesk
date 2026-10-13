@@ -330,11 +330,6 @@ export default function AppShell({ children }) {
   const [slot, setSlot] = React.useState(null);
   const [lead, setLead] = React.useState(null);
   const current = matchHref(pathname);
-  // The redesigned chrome (no bar: the mark at the left, the tools as one
-  // pill in the middle) is rolled out a page at a time, starting with the
-  // front door. Every other page keeps the floating bar its layout was
-  // measured against until it is redesigned too.
-  const flat = pathname === '/';
   const closeMenu = React.useCallback(() => setMenuOpen(false), []);
 
   // ⌘K / Ctrl-K anywhere, except while something is already being typed
@@ -360,7 +355,7 @@ export default function AppShell({ children }) {
   React.useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   return (
-    <div className={'riva-shell' + (flat ? ' is-flat' : '')}>
+    <div className="riva-shell is-flat">
       {/* One glass bar floating on the light: who this is on the left, the
           tools in the middle, and what can be done here on the right. It is
           the same surface as the composer and the menus it opens, so the
@@ -371,14 +366,14 @@ export default function AppShell({ children }) {
             {/* Whose service this is, and the way back to the front door. */}
             <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
               <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
-              <span className="riva-brand-name">{flat ? 'The Riverside Practice' : 'Riverside'}</span>
+              <span className="riva-brand-name">The Riverside Practice</span>
             </Link>
             {/* Which build this is, in plain sight on every page; the commit
                 rides in the tooltip. */}
             <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
           </div>
 
-          <TopNav current={current} short={flat} />
+          <TopNav current={current} short />
 
           <div className="riva-top-right">
             {/* Where a tool's own controls land (see AppHeader). */}

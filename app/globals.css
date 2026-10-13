@@ -1313,8 +1313,22 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
   .is-flat .riva-topnav-item:not(.is-active) .riva-topnav-label { display: none; }
   .is-flat .riva-topnav-ico { display: flex; }
 }
+/* The way back lines up with the brand now that the bar has no inset. */
+.is-flat .riva-crumb-lead { left: 28px; }
+
+/* Moving between tools: the header never remounts, so the pill glides to
+   the next name and the colours hand over with it, while the page under it
+   fades up. Opacity only on the page — a transform would make it the
+   containing block of anything fixed inside it (the composer dock). */
+.is-flat .riva-topnav-item { transition: color .35s ease, background-color .15s ease; }
+@keyframes rivaPageIn { from { opacity: 0; } to { opacity: 1; } }
+.is-flat .riva-shell-body > * { animation: rivaPageIn .45s cubic-bezier(.22,1,.36,1) both; }
+@media (max-width: 600px) {
+  .is-flat .riva-crumb-lead { left: 12px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .is-flat .riva-top { animation: none; }
+  .is-flat .riva-top, .is-flat .riva-shell-body > * { animation: none; }
+  .is-flat .riva-topnav-pill { transition: none; }
 }
 
 /* ---- the working card ------------------------------------------- */
