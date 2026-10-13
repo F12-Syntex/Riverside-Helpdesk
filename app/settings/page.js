@@ -20,7 +20,9 @@
 
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../_components/ui';
+import Link from 'next/link';
 import AppHeader from '../_components/AppHeader';
+import AnimatedGradient from '../_components/ThinkingGradient';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { isModelSlug, splitProviders } from '@/lib/model-id.mjs';
 import { NO_LOG_COOKIE, NO_LOG_STORE_KEY } from '@/lib/questions/opt-out.mjs';
@@ -44,7 +46,36 @@ function rateLine(model) {
   return `${money(inRate)} in / ${money(outRate)} out per 1M tokens`;
 }
 
-const INPUT = 'width:100%;box-sizing:border-box;padding:9px 12px;font:inherit;font-size:15px;border:2px solid #d8dde0;border-radius:8px;background:#fff;color:#212b32;';
+const INPUT = 'width:100%;box-sizing:border-box;height:44px;padding:0 14px;font:inherit;font-size:15px;border:none;border-radius:11px;background:rgba(60,70,80,.08);color:#212b32;';
+
+// The page's own look, the same as Referrals, Contacts and Ask: the animated
+// light behind a centred heading, and white cards of settings.
+const ST_CSS = `
+.st-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
+.st-bg__canvas{display:block;width:100%;height:100%;}
+.st-field{transition:background-color .15s ease,box-shadow .15s ease;}
+.st-field:focus{outline:none;background:#fff !important;box-shadow:0 0 0 3px rgba(0,94,184,.35);}
+.st-h1{margin:0 0 12px;text-align:center;font-size:56px;font-weight:800;letter-spacing:-.04em;line-height:1.05;color:var(--rv-ink);}
+.st-h1 em{font-style:normal;color:var(--rv-accent);}
+.st-lede{margin:0 auto 32px;max-width:52ch;text-align:center;font-size:15.5px;line-height:1.55;color:var(--rv-ink-2);}
+.st-card{background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.18);}
+.st-h2{margin:36px 0 8px;padding:0 22px;font-size:13px;font-weight:600;color:var(--rv-ink-3);}
+.st-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 22px;border:none;border-radius:999px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:background-color .15s ease,transform .12s ease,opacity .15s ease;}
+.st-btn:active:not(:disabled){transform:scale(.98);}
+.st-btn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
+.st-btn--primary{background:var(--rv-accent);color:#fff;}
+.st-btn--primary:hover:not(:disabled){background:#0068c9;}
+.st-btn--primary:disabled{background:rgba(60,70,80,.18);color:#fff;cursor:default;}
+.st-btn--on{background:rgba(0,127,59,.12);color:#006a32;}
+.st-btn--on:hover{background:rgba(0,127,59,.2);}
+.st-btn--off{background:rgba(213,40,27,.1);color:#b81f14;}
+.st-btn--off:hover{background:rgba(213,40,27,.18);}
+.st-more{display:flex;align-items:center;gap:12px;padding:15px 22px;color:var(--rv-ink);text-decoration:none;font-size:16px;transition:background-color .15s ease;}
+.st-more + .st-more{border-top:1px solid #eef1f3;}
+.st-more:hover{background:#f4f7f9;}
+.st-more small{display:block;font-size:13px;color:var(--rv-ink-3);}
+@media (max-width:700px){.st-h1{font-size:38px;}}
+`;
 
 function ModelField({ value, placeholder, models, index, onChange, label }) {
   const [open, setOpen] = React.useState(false);
@@ -102,10 +133,10 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
         onChange={(e) => { onChange(e.target.value.trim()); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        style={s(INPUT + (bad ? 'border-color:#d5281b;' : ''))}
+        className="st-field" style={s(INPUT + (bad ? 'box-shadow:0 0 0 2px #d5281b;' : ''))}
       />
       {open && options.length > 0 && (
-        <div role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #d8dde0;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:4px;')}>
+        <div role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:#fff;border:none;border-radius:16px;box-shadow:0 0 0 .5px rgba(0,0,0,.08),0 12px 40px -8px rgba(33,43,50,.3);padding:6px;')}>
           {options.map((id, i) => {
             // A pinned id is still that model — find it by the plain id, and
             // say where it will be served from.
@@ -114,7 +145,7 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
             return (
               <Hover key={id} tag="button" type="button" role="option" aria-selected={i === cursor}
                 onMouseDown={(e) => e.preventDefault()} onClick={() => take(id)}
-                base={'display:block;width:100%;text-align:left;border:none;border-radius:6px;padding:7px 10px;font:inherit;cursor:pointer;background:' + (i === cursor ? '#e8f1f8' : 'transparent') + ';'}
+                base={'display:block;width:100%;text-align:left;border:none;border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer;background:' + (i === cursor ? '#e8f1f8' : 'transparent') + ';'}
                 hover="background:#e8f1f8;">
                 <span style={s('display:block;font-size:14.5px;color:#212b32;overflow-wrap:anywhere;')}>{id}</span>
                 {model && model.name ? (
@@ -133,7 +164,7 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
 
 function Row({ name, job, rate, used, children }) {
   return (
-    <div style={s('display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:14px 0;border-top:1px solid #eef1f2;')}>
+    <div style={s('display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:16px 0;border-top:1px solid #eef1f3;')}>
       <div style={s('flex:0 0 150px;min-width:0;')}>
         <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>{name}</span>
         <span style={s('display:block;font-size:13px;color:#4c6272;')}>{job}</span>
@@ -305,18 +336,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={s('min-height:100vh;background:#f0f4f5;display:flex;flex-direction:column;')}>
+    <div style={s('position:relative;min-height:100%;display:flex;flex-direction:column;')}>
+      <style data-st="1" dangerouslySetInnerHTML={{ __html: ST_CSS }} />
+      <div className="st-bg" aria-hidden="true"><AnimatedGradient always alpha={[0.12, 0.62, 0.42]} className="st-bg__canvas" /></div>
       <AppHeader subtitle="Settings" />
 
-      <main style={s('flex:1;width:100%;max-width:680px;margin:0 auto;padding:32px 24px 56px;')}>
-        <h1 style={s('font-size:26px;margin:0 0 4px;letter-spacing:-0.02em;')}>Models</h1>
-        <p style={s('font-size:15px;color:#4c6272;margin:0 0 20px;')}>
+      <main style={s('flex:1;width:100%;max-width:688px;margin:0 auto;padding:clamp(20px,9vh,110px) 24px 56px;')}>
+        <h1 className="st-h1">Practice <em>settings</em></h1>
+        <p className="st-lede">
           Type to search, or paste an id. Blank inherits the model above. Add
           {' '}<code>@provider</code> to pin where a model runs — e.g.{' '}
           <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
         </p>
 
-        <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:4px 20px 20px;')}>
+        <h2 className="st-h2" style={{ marginTop: 0 }}>Models</h2>
+        <section className="st-card" style={s('padding:4px 22px 22px;')}>
           <Row name="Reasoning" job="Decides and writes the answer" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
             <ModelField
               label="Reasoning model" value={model} models={models} index={index}
@@ -471,12 +505,9 @@ export default function SettingsPage() {
           )}
 
           <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
-            <Hover tag="button" type="button" disabled={!dirty || !valid || saving} onClick={save}
-              base={'border:none;border-radius:10px;padding:11px 20px;font:inherit;font-size:15.5px;font-weight:600;color:#fff;background:'
-                + (dirty && valid && !saving ? '#007f3b' : '#aab7bd') + ';cursor:' + (dirty && valid && !saving ? 'pointer' : 'default') + ';'}
-              hover={dirty && valid && !saving ? 'background:#00662f;' : ''}>
+            <button type="button" className="st-btn st-btn--primary" disabled={!dirty || !valid || saving} onClick={save}>
               {saving ? 'Saving…' : 'Save'}
-            </Hover>
+            </button>
             {note && (
               <span style={s('display:flex;gap:6px;align-items:center;font-size:15px;color:#007f3b;font-weight:600;')}>
                 <Svg w={16} stroke="#007f3b" sw={2.4}>{Icons.check}</Svg>{note}
@@ -499,12 +530,9 @@ export default function SettingsPage() {
             it is set at, takes effect on the next question, and needs no Save.
             It is a switch rather than a promise: what it turns off is the row
             being written at all. */}
-        <h2 style={s('font-size:22px;margin:34px 0 4px;letter-spacing:-0.02em;')}>This computer</h2>
-        <p style={s('font-size:15px;color:#4c6272;margin:0 0 16px;')}>
-          Applies to this machine only, and takes effect on the next question.
-        </p>
+        <h2 className="st-h2">This computer: applies to this machine only, from the next question</h2>
 
-        <section style={s('background:#fff;border:1px solid #d8e1e5;border-radius:12px;padding:18px 20px;')}>
+        <section className="st-card" style={s('padding:20px 22px;')}>
           <div style={s('display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between;')}>
             <span style={s('flex:1 1 260px;min-width:0;')}>
               <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>Log questions from this computer</span>
@@ -517,14 +545,19 @@ export default function SettingsPage() {
                 The activity log — which pages were opened — is a separate record and is not affected.
               </span>
             </span>
-            <Hover tag="button" type="button" disabled={logging === null}
-              onClick={() => setLoggingHere(logging === false)}
-              base={'flex:none;border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;border:2px solid '
-                + (logging === false ? '#d5281b;color:#d5281b;background:#fff;' : '#007f3b;color:#fff;background:#007f3b;')}
-              hover={logging === false ? 'background:#fdf4f3;' : 'background:#00662f;border-color:#00662f;'}>
+            <button type="button" className={'st-btn ' + (logging === false ? 'st-btn--off' : 'st-btn--on')} style={{ flex: 'none' }} disabled={logging === null}
+              onClick={() => setLoggingHere(logging === false)}>
               {logging === false ? 'Logging off' : 'Logging on'}
-            </Hover>
+            </button>
           </div>
+        </section>
+
+        {/* Pages that used to be in the menu. The header gear comes here, so the
+            two read in a quiet half hour are one click away. */}
+        <h2 className="st-h2">Also here</h2>
+        <section className="st-card" style={s('overflow:hidden;')}>
+          <Link href="/questions" className="st-more"><span style={s('flex:1;min-width:0;')}>Questions<small>What the assistant could not answer</small></span><Svg w={18} sw={2}>{Icons.chevronRight}</Svg></Link>
+          <Link href="/feedback" className="st-more"><span style={s('flex:1;min-width:0;')}>Answer feedback<small>How answers were rated</small></span><Svg w={18} sw={2}>{Icons.chevronRight}</Svg></Link>
         </section>
       </main>
     </div>

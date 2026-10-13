@@ -1259,7 +1259,7 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
    middle of the screen with the one you are on lifted out of it in white,
    and the menu at the right. Nothing floats over the page: they sit on it. */
 .riva-shell.is-flat { --rv-top-h: 80px; }
-.is-flat .riva-top { padding: 0; animation: rivaFlatIn .6s cubic-bezier(.22,1,.36,1) both; }
+.is-flat .riva-top { padding: 0; animation: rivaFlatIn .6s cubic-bezier(.22,1,.36,1) backwards; }
 @keyframes rivaFlatIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .is-flat .riva-bar {
   height: var(--rv-top-h); padding: 0 28px; gap: 16px;
@@ -1895,7 +1895,7 @@ html body .ap-link:hover { text-decoration: underline; text-underline-offset: 3p
 html body .ap-x { flex: none; display: flex; padding: 6px; border: none; border-radius: 50%; background: none; color: var(--rv-ink-3); cursor: pointer; }
 html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay) { align-items: flex-end; padding: 0; }
   html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
     max-width: none !important; width: 100%; max-height: 92vh; border-radius: 22px 22px 0 0;
@@ -1911,4 +1911,48 @@ html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); 
 }
 @media (prefers-reduced-motion: reduce) {
   html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay, .riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) { animation: none; }
+}
+
+/* ---- the header on a phone, and every popup as a bottom sheet -----------
+   Desktop: the tools in a pill, and at the right the theme and a gear that
+   goes to Settings. Phone: the tools row is not drawn at all; the bar is the
+   mark, which tool this is, and the theme and menu, and the menu (every tool
+   by group, Settings, the build) is how you move around. The menu, the theme
+   list and the answer-mode list open as sheets from the foot of the screen,
+   the page dimmed behind them, as the dialogs already do. The dimming is a
+   huge spread shadow on the sheet itself, so there is no extra layer to
+   close and nothing for a transformed ancestor to trap. */
+.riva-top-page { display: none; }
+.riva-top-menuwrap { display: none; }
+.is-flat .riva-top-gear { text-decoration: none; }
+
+@media (max-width: 700px) {
+  .riva-shell.is-flat { --rv-top-h: 60px; }
+  .is-flat .riva-bar { padding: 0 14px; gap: 8px; }
+  .is-flat .riva-topnav { display: none; }
+  .is-flat .riva-top-ver, .is-flat .riva-brand-name { display: none; }
+  .is-flat .riva-top-left { gap: 10px; }
+  .is-flat .riva-top-page { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 700; letter-spacing: -.015em; color: var(--rv-ink); }
+  .is-flat .riva-top-gear { display: none; }
+  .is-flat .riva-top-menuwrap { display: flex; }
+  .is-flat .riva-top-tools { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255, 255, 255, .85); }
+  .riva-crumb-lead { left: 14px; }
+  .is-flat .riva-crumb-lead { left: 14px; }
+
+  .riva-menu, .riva-theme-pop, .riva-modes-list, .riva-dock-center .riva-modes-list {
+    position: fixed; left: 8px; right: 8px; top: auto; bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto; max-width: none; max-height: 82vh; overflow-y: auto; z-index: 90;
+    border: none; border-radius: 22px; background: rgba(255, 255, 255, .96);
+    box-shadow: 0 0 0 100vmax rgba(20, 28, 36, .38), 0 24px 60px rgba(0, 0, 0, .3);
+    transform-origin: bottom center;
+    animation: rivaSheetUp .32s cubic-bezier(.2, .9, .3, 1) backwards;
+  }
+  .riva-menu::before, .riva-theme-pop::before, .riva-modes-list::before {
+    content: ""; display: block; flex: none; width: 36px; height: 5px; margin: 4px auto 8px; border-radius: 999px; background: rgba(60, 70, 80, .22);
+  }
+  /* A transform on the dock would make the fixed sheet relative to it. */
+  .riva-dock-center > .riva-dock-inner { transform: none; }
+  /* Rows are a thumb's height. */
+  .riva-menu-row { min-height: 48px; }
+  .riva-theme-opt { height: 52px; }
 }

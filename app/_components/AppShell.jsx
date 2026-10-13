@@ -370,6 +370,8 @@ export default function AppShell({ children }) {
             </Link>
             {/* Which build this is, in plain sight on every page; the commit
                 rides in the tooltip. */}
+            {/* The phone's one line of orientation: which tool this is. */}
+            {current && <span className="riva-top-page">{current.short || current.label}</span>}
             <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
           </div>
 
@@ -390,6 +392,13 @@ export default function AppShell({ children }) {
             <div className="riva-top-tools">
               <ThemePicker />
               <span className="riva-top-tools-sep" aria-hidden="true" />
+              {/* Desktop: the gear goes straight to Settings. The menu is the
+                  phone's way around (the tools row is not drawn there), so it
+                  only shows at that width. */}
+              <Link href="/settings" className={'riva-top-btn riva-top-gear' + (pathname.startsWith('/settings') ? ' is-on' : '')}
+                aria-label="Settings" title="Settings" aria-current={pathname.startsWith('/settings') ? 'page' : undefined}>
+                <Svg w={18} sw={2}>{Icons.settings}</Svg>
+              </Link>
               <div className="riva-top-menuwrap">
                 <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
                   aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
