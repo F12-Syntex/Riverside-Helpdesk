@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.79.2` | 2026-10-13 | fix | `0e815c2` | fix: open the answer-mode menu downward on the opening ask screen |
+| `6.79.1` | 2026-10-13 | docs | `0a880cc` | docs: record the ask page and popup layering in versions |
 | `6.79.0` | 2026-10-13 | feat | `9127c4b` | feat: standardise the ask page, and keep the header above popups |
 | `6.78.1` | 2026-10-13 | docs | `6a92bd1` | docs: record the popup redesign in versions |
 | `6.78.0` | 2026-10-13 | feat | `a357061` | feat: one Apple-style look for every popup, and a fixed Add a contact form |
