@@ -450,10 +450,10 @@ function ContactForm({ draft, categories, saving, error, onChange, onCancel, onS
   }, [onCancel]);
   return (
     <motion.div className="lk-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
       <motion.form className="lk-form" role="dialog" aria-modal="true" aria-labelledby="lk-form-title"
-        initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.25, ease: EASE }}
+        initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: EASE }}
         onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
         <div className="lk-form__head">
           <h2 id="lk-form-title" className="lk-form__title">{draft.id ? 'Edit contact' : 'New contact'}</h2>

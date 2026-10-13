@@ -1799,7 +1799,7 @@ html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-ove
   z-index: 51; padding: calc(var(--rv-top-h, 64px) + 8px) 24px 24px; overflow-y: auto;
   background: rgba(20, 28, 36, .38);
   -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
-  animation: apFade .22s ease both;
+  animation: apFade .22s ease backwards;
 }
 
 html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
@@ -1808,10 +1808,15 @@ html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
   -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
   border: none; border-radius: 22px; overflow: hidden;
   box-shadow: 0 0 0 .5px rgba(0, 0, 0, .1), 0 2px 8px rgba(0, 0, 0, .06), 0 32px 80px -12px rgba(20, 28, 36, .4);
-  animation: apPop .4s cubic-bezier(.2, 1.15, .3, 1) both;
+  animation: apPop .4s cubic-bezier(.2, 1.15, .3, 1) backwards;
 }
 html body .ap-panel { width: 100%; max-width: 520px; }
 html body .ap-panel--sm { max-width: 400px; }
+
+/* The contact form is animated by motion (it has an exit too). A CSS
+   animation that holds its end state would override motion's inline styles
+   and the exit would never show: the dialog stayed solid, then vanished. */
+html body :is(.lk-scrim, .lk-form) { animation: none; }
 
 /* The head: the title in the middle, the close at the corner. */
 html body :is(.lk-form__head, .rq-modal__head, .nbk-modal__head, .ap-head) {
@@ -1894,7 +1899,7 @@ html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); 
   html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay) { align-items: flex-end; padding: 0; }
   html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
     max-width: none !important; width: 100%; max-height: 92vh; border-radius: 22px 22px 0 0;
-    padding-bottom: env(safe-area-inset-bottom); animation: rivaSheetUp .32s cubic-bezier(.2, .9, .3, 1) both;
+    padding-bottom: env(safe-area-inset-bottom); animation: rivaSheetUp .32s cubic-bezier(.2, .9, .3, 1) backwards;
   }
   /* The grabber. */
   html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel)::before {
