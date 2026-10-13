@@ -47,7 +47,7 @@ import { Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { isModelSlug, modelIdProblem, splitProviders } from '@/lib/model-id.mjs';
-import { NO_LOG_COOKIE, NO_LOG_STORE_KEY } from '@/lib/questions/opt-out.mjs';
+import { setLoggingHere, syncLoggingHere } from '@/lib/questions/opt-out.mjs';
 
 const EASE = [0.22, 1, 0.36, 1];
 const LIST_LIMIT = 40;
@@ -166,7 +166,7 @@ const ST_CSS = `
 .st-group{padding:0 0 6px;}
 .st-group + .st-group{border-top:1px solid var(--rv-divider);}
 .st-group__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 24px 2px;}
-.st-group__title{margin:0;font-size:13px;font-weight:600;color:var(--rv-ink-3);}
+.st-group__title{margin:0;font-size:13px;font-weight:600;color:var(--rv-ink-2);}
 .st-group__note{font-size:12.5px;color:var(--rv-ink-2);text-align:right;}
 .st-row{display:grid;grid-template-columns:186px minmax(0,1fr) 78px;gap:0 18px;align-items:start;padding:8px 24px;}
 .st-row__name{position:relative;min-width:0;padding-top:1px;}
@@ -246,7 +246,8 @@ const ST_CSS = `
 .st-local{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;padding:0 8px;font-size:13.5px;line-height:1.4;color:var(--rv-ink-2);}
 .st-local strong{font-weight:600;color:var(--rv-ink);}
 .st-local__sub::before{content:' · ';}
-.st-switch{position:relative;flex:none;width:44px;height:26px;padding:0;border:none;border-radius:999px;background:var(--rv-ink-4);cursor:pointer;transition:background-color .18s ease;}
+/* Off is ink-3, not ink-4: the track is the control, and needs 3:1 on the light. */
+.st-switch{position:relative;flex:none;width:44px;height:26px;padding:0;border:none;border-radius:999px;background:var(--rv-ink-3);cursor:pointer;transition:background-color .18s ease;}
 .st-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.22,1,.36,1);}
 .st-switch[aria-checked="true"]{background:var(--rv-accent);}
 .st-switch[aria-checked="true"]::after{transform:translateX(18px);}
@@ -420,7 +421,9 @@ function ModelField({ id, name, value, placeholder, models, index, catalogueName
                 const r = rate(m);
                 const meta = m
                   ? [m.name && m.name !== oid ? m.name : '', offerVision && m.vision === false ? 'text only' : '', providers.length ? 'only via ' + providers.join(', ') : ''].filter(Boolean).join(' · ')
-                  : 'Use as typed. Not in ' + catalogueName;
+                  // Not in a list that never loaded says nothing true: the
+                  // id is simply used as typed.
+                  : models.length ? 'Use as typed. Not in ' + catalogueName : 'Use as typed';
                 return (
                   <li key={oid} id={optId(i)} role="option" aria-selected={i === cursor}
                     className={'st-opt' + (i === cursor ? ' is-cursor' : '') + (oid === typed ? ' is-current' : '')}
@@ -503,16 +506,10 @@ export default function SettingsPage() {
   // wrong way round before the cookie has been read.
   const [logging, setLogging] = React.useState(null);
 
-  React.useEffect(() => {
-    const cookie = document.cookie.split('; ').find((row) => row.startsWith(NO_LOG_COOKIE + '='));
-    const fromCookie = cookie ? decodeURIComponent(cookie.slice(NO_LOG_COOKIE.length + 1)) : '';
-    let fromStore = '';
-    try { fromStore = window.localStorage.getItem(NO_LOG_STORE_KEY) || ''; } catch (e) { /* private mode */ }
-    // Either one saying "off" is enough: clearing cookies must not quietly turn
-    // the recording back on for somebody who switched it off.
-    const off = ['1', 'true', 'off'].includes(String(fromCookie || fromStore).trim().toLowerCase());
-    setLogging(!off);
-  }, []);
+  // Read the way the server reads it — the cookie — after putting the cookie
+  // back from its localStorage copy if it has been cleared, so the switch
+  // never says Off while the next question is logged (lib/questions/opt-out.mjs).
+  React.useEffect(() => { setLogging(!syncLoggingHere()); }, []);
 
   const apply = React.useCallback((d) => { setSetting(d); setDraft(storedOf(d)); setTouched({}); }, []);
 
@@ -549,19 +546,6 @@ export default function SettingsPage() {
   // Priced from the catalogue, or — for the decision models it does not list —
   // from the rates the server sent with them.
   const priced = React.useMemo(() => models.concat(checkModels), [models, checkModels]);
-
-  // Written to both places the machine remembers things, for a year, the same
-  // way the machine id is held (lib/audit/client.js).
-  function setLoggingHere(on) {
-    const value = on ? '' : '1';
-    const year = 365 * 24 * 60 * 60;
-    document.cookie = NO_LOG_COOKIE + '=' + value + '; Max-Age=' + (on ? 0 : year) + '; Path=/; SameSite=Lax';
-    try {
-      if (on) window.localStorage.removeItem(NO_LOG_STORE_KEY);
-      else window.localStorage.setItem(NO_LOG_STORE_KEY, '1');
-    } catch (e) { /* private mode — the cookie still carries it */ }
-    setLogging(on);
-  }
 
   const saved = React.useMemo(() => (setting ? storedOf(setting) : null), [setting]);
   const val = (k) => String(draft[k] || '').trim();
@@ -619,16 +603,18 @@ export default function SettingsPage() {
   };
 
   // The line under a field when there is nothing wrong with it. Blank: where
-  // it falls back to (the field itself shows the model, greyed). Set: what
-  // this role measured on that model, from the last questions asked.
+  // it falls back to, and the model that is — the field shows it too, but
+  // only as a pale placeholder, too faint to be the one place it is said.
+  // Set: what this role measured on that model, from the last questions asked.
   const measured = (setting && setting.usage) || { byRole: {} };
   const caption = (row) => {
     const k = row.key;
     const v = val(k);
     if (!v) {
       if (k === 'reasoning') return { node: 'Needs a model: the blank rows fall back to it.' };
-      if (row.from) return { title: resolved[k], node: <>Blank, so it uses <b>{ROLE_NAME[row.from]}</b></> };
-      return { title: resolved[k], node: <>Blank, so it uses <b>its own default</b></> };
+      const id = resolved[k] ? <> · {resolved[k]}</> : null;
+      if (row.from) return { title: resolved[k], node: <>Blank, so it uses <b>{ROLE_NAME[row.from]}</b>{id}</> };
+      return { title: resolved[k], node: <>Blank, so it uses <b>its default</b>{id}</> };
     }
     if (problem(k)) return { node: 'Pick a model from the list, or type the id in full.' };
     const u = ((measured.byRole || {})[k] || {})[resolved[k]];
@@ -647,8 +633,21 @@ export default function SettingsPage() {
   const edit = (k, v) => { setDraft((d) => ({ ...d, [k]: v })); setSaveError(''); setJustSaved(false); };
   const leave = (k) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
 
+  // A button that is disabled or taken away under the keyboard drops focus on
+  // the page, and the next Tab starts again from the top of it. Save and
+  // Discard are disabled while saving and once there is nothing left to
+  // save, so focus is brought back: to Save when a save fails (Enter tries
+  // again, as Contacts' dialog does), and to the first row that changed once
+  // the changes are saved or put back.
+  const saveBtnRef = React.useRef(null);
+  const reloadRef = React.useRef(null);
+  const focusAfter = React.useRef('');
+  const reloading = React.useRef(false);
+  const dropped = () => !document.activeElement || document.activeElement === document.body;
+
   async function save() {
     if (!saved || !dirty || saving) return;
+    const first = changed[0];
     // Not sent: the server would refuse it. Show every reason, and go to the
     // first field that has one.
     if (invalid.length) {
@@ -674,6 +673,7 @@ export default function SettingsPage() {
       });
       apply(await readJson(res));
       setJustSaved(true);
+      focusAfter.current = fieldId(first);
     } catch (e) {
       setSaveError(String((e && e.message) || 'No answer from the server.'));
     } finally {
@@ -683,6 +683,7 @@ export default function SettingsPage() {
 
   function discard() {
     if (!saved) return;
+    if (changed.length) focusAfter.current = fieldId(changed[0]);
     setDraft(saved);
     setTouched({});
     setSaveError('');
@@ -694,24 +695,70 @@ export default function SettingsPage() {
     return () => clearTimeout(t);
   }, [justSaved]);
 
+  React.useEffect(() => {
+    if (!saving && saveError && dropped()) saveBtnRef.current?.focus();
+  }, [saving, saveError]);
+  React.useEffect(() => {
+    const id = focusAfter.current;
+    if (!id || saving) return;
+    focusAfter.current = '';
+    if (dropped()) document.getElementById(id)?.focus();
+  });
+  // Reload takes itself away; focus goes to the first field once the
+  // settings are there, or to the next Reload if they still are not.
+  React.useEffect(() => {
+    if (!reloading.current || (!setting && !loadError)) return;
+    reloading.current = false;
+    if (!dropped()) return;
+    if (setting) document.getElementById(fieldId(ORDER[0]))?.focus();
+    else reloadRef.current?.focus();
+  }, [setting, loadError]);
+
   // ⌘S / Ctrl+S saves, as it would in any editor — rather than offering to
   // save the web page.
-  const saveRef = React.useRef(save);
-  saveRef.current = save;
+  const saveNow = React.useRef(save);
+  saveNow.current = save;
   React.useEffect(() => {
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && String(e.key).toLowerCase() === 's') { e.preventDefault(); saveRef.current(); }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && String(e.key).toLowerCase() === 's') { e.preventDefault(); saveNow.current(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Closing the tab or reloading with changes unsaved asks first.
+  // Closing the tab or reloading with changes unsaved asks first. So does
+  // going to another tool by a link in the bar, which is a change of page
+  // inside the app that the browser does not ask about: caught on its way
+  // down, before the link's own handler, so "Cancel" leaves everything as it
+  // was. A click that opens a new tab leaves this one alone, and is let be.
   React.useEffect(() => {
     if (!dirty) return undefined;
-    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    let leaving = false;
+    const warn = (e) => { if (leaving) return; e.preventDefault(); e.returnValue = ''; };
+    const follow = (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
+      if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+      const to = new URL(a.href, window.location.href);
+      if (to.origin !== window.location.origin || to.pathname === window.location.pathname) return;
+      if (window.confirm('Leave without saving your model changes?')) { leaving = true; return; }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    // The ⌘K palette moves without a link; it asks with a cancellable event.
+    const viaPalette = (e) => {
+      if (leaving) return;
+      if (window.confirm('Leave without saving your model changes?')) { leaving = true; return; }
+      e.preventDefault();
+    };
     window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
+    window.addEventListener('riva-before-navigate', viaPalette);
+    document.addEventListener('click', follow, true);
+    return () => {
+      window.removeEventListener('beforeunload', warn);
+      window.removeEventListener('riva-before-navigate', viaPalette);
+      document.removeEventListener('click', follow, true);
+    };
   }, [dirty]);
 
   // Whether there are rows below the fold of the card, for the fade.
@@ -760,8 +807,11 @@ export default function SettingsPage() {
               <div ref={bodyRef} className={'st-body' + (more ? ' is-more' : '')} onScroll={measure}>
                 <div>
                   {loaded ? GROUPS.map((g, gi) => (
+                    // Measured again as each group settles: while it rises
+                    // into place its offset makes the rows look taller than
+                    // they are, and nothing resizes when it stops.
                     <motion.div key={g.title} className="st-group" role="group" aria-labelledby={'st-group-' + gi}
-                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} onAnimationComplete={measure}
                       transition={{ duration: 0.6, delay: 0.14 + gi * 0.07, ease: EASE }}>
                       <div className="st-group__head">
                         <h2 id={'st-group-' + gi} className="st-group__title">{g.title}</h2>
@@ -804,7 +854,10 @@ export default function SettingsPage() {
                                     {problem(k)}
                                     {/* A cleared Reasoning has one obvious way back. */}
                                     {k === 'reasoning' && !val(k) && saved.reasoning ? (
-                                      <> <button type="button" className="st-fix" onClick={() => edit(k, saved.reasoning)}>Put back {saved.reasoning}</button></>
+                                      <> <button type="button" className="st-fix"
+                                        onClick={() => { edit(k, saved.reasoning); document.getElementById(fieldId(k))?.focus(); }}>
+                                        Put back {saved.reasoning}
+                                      </button></>
                                     ) : null}
                                   </span>
                                 </p>
@@ -827,7 +880,8 @@ export default function SettingsPage() {
                         Reload in a moment. The server said: {loadError.replace(/^Could not read the settings:\s*/i, '')}
                       </p>
                       <div className="rv-state__acts">
-                        <button type="button" className="rv-btn rv-btn--quiet" onClick={() => setAttempt((a) => a + 1)}>
+                        <button ref={reloadRef} type="button" className="rv-btn rv-btn--quiet"
+                          onClick={() => { reloading.current = true; setAttempt((a) => a + 1); }}>
                           <Svg w={15} sw={2.2}>{Icons.refresh}</Svg>Reload
                         </button>
                       </div>
@@ -862,7 +916,7 @@ export default function SettingsPage() {
                     </p>
                     <div className="st-bar__acts">
                       <button type="button" className="rv-btn rv-btn--plain" disabled={!dirty || saving} onClick={discard}>Discard</button>
-                      <button type="button"
+                      <button ref={saveBtnRef} type="button"
                         className={'rv-btn rv-btn--primary' + (blocked && !saving ? ' is-blocked' : '') + (saving ? ' is-busy' : '')}
                         disabled={!dirty || saving} aria-disabled={blocked || undefined} onClick={save}>
                         {saving
@@ -889,7 +943,7 @@ export default function SettingsPage() {
             </span>
             <button type="button" role="switch" className="st-switch" aria-checked={logging !== false}
               aria-labelledby="st-local-label" aria-describedby="st-local-sub" disabled={logging === null}
-              onClick={() => setLoggingHere(logging === false)} />
+              onClick={() => setLogging(!setLoggingHere(logging === false))} />
           </motion.div>
         </main>
 

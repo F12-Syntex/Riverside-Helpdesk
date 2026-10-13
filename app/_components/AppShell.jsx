@@ -247,7 +247,16 @@ function Palette({ onClose }) {
   React.useEffect(() => { inputRef.current?.focus(); }, []);
   React.useEffect(() => { setSel(0); }, [q]);
 
-  const go = React.useCallback((item) => { if (item) { onClose(); router.push(item.href); } }, [onClose, router]);
+  // A page with unsaved work can hold the move: links are caught by its own
+  // click guard, and the palette, which navigates without a link, asks
+  // first with a cancellable riva-before-navigate.
+  const go = React.useCallback((item) => {
+    if (!item) return;
+    const ask = new CustomEvent('riva-before-navigate', { cancelable: true, detail: item.href });
+    if (!window.dispatchEvent(ask)) return;
+    onClose();
+    router.push(item.href);
+  }, [onClose, router]);
 
   function onKeyDown(e) {
     if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }

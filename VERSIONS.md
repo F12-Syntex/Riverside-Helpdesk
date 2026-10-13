@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.2` | 2026-10-13 | fix | `f62dea7` | fix: dial the first number, and close Contacts' keyboard and touch gaps |
 | `6.89.1` | 2026-10-13 | fix | `2faa9c3` | fix: make the shell's small text, sheets and phone header pass review |
 | `6.89.0` | 2026-10-13 | feat | `c8f9d87` | feat: rework the Ask flow into one answer card with calm motion |
 | `6.88.0` | 2026-10-13 | feat | `6b41fdd` | feat: redesign Notes in the shared page language, with validation |
