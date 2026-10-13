@@ -26,6 +26,12 @@ import { themeById, readTheme, hexToRgb } from './theme';
  * goes busy and stops once the fade out has finished, or the tab is
  * hidden. No WebGL, or a lost context: nothing is drawn and the page
  * carries on without it. Reduced motion: one still frame fades in.
+ *
+ * AS A BACKGROUND
+ * ---------------
+ * `always` keeps it running whether or not anything is busy, and `alpha`
+ * sets how much of each theme colour shows: the Referrals page draws it
+ * full-screen, stronger, as the page's own background (`className`).
  * ------------------------------------------------------------------ */
 
 // The swirl, after the component's own parameters (its "Plasma"-like
@@ -150,13 +156,15 @@ function build(gl) {
   };
 }
 
-function setTheme(gl, u, id) {
+function setTheme(gl, u, id, alpha) {
   const theme = themeById(id);
-  theme.colors.forEach((hex, i) => gl.uniform4fv(u.uC[i], [...hexToRgb(hex), ALPHA[i]]));
+  theme.colors.forEach((hex, i) => gl.uniform4fv(u.uC[i], [...hexToRgb(hex), alpha[i]]));
 }
 
-export default function ThinkingGradient() {
+export default function ThinkingGradient({ always = false, alpha = ALPHA, className = 'riva-glow' }) {
   const ref = React.useRef(null);
+  // Read once, when the effect starts: a background does not change its mind.
+  const opts = React.useRef({ always, alpha });
 
   React.useEffect(() => {
     const canvas = ref.current;
@@ -165,6 +173,8 @@ export default function ThinkingGradient() {
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const gl = canvas.getContext('webgl', { antialias: false, depth: false, stencil: false, alpha: true, premultipliedAlpha: true, powerPreference: 'low-power' });
     if (!gl) return undefined;
+    const { always: on, alpha: tint } = opts.current;
+    const showing = () => on || !!root.dataset.busy;
 
     let alive = true;
     let raf = 0;
@@ -200,7 +210,7 @@ export default function ThinkingGradient() {
 
     function loop(now) {
       if (!alive) return;
-      if (!root.dataset.busy && now > stopAt) { raf = 0; return; }
+      if (!showing() && now > stopAt) { raf = 0; return; }
       raf = requestAnimationFrame(loop);
       if (now - last < 33) return;
       time += Math.min(0.1, (now - prev) / 1000) * SPEED;
@@ -217,15 +227,15 @@ export default function ThinkingGradient() {
     }
 
     function onBusy() {
-      if (root.dataset.busy) run();
+      if (showing()) run();
       else stopAt = performance.now() + FADE_MS;
     }
 
     function begin() {
       u = build(gl);
       if (!u) return;
-      setTheme(gl, u, readTheme());
-      if (root.dataset.busy) run();
+      setTheme(gl, u, readTheme(), tint);
+      if (showing()) run();
     }
 
     function onLost(e) {
@@ -236,11 +246,11 @@ export default function ThinkingGradient() {
     }
     function visibility() {
       if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
-      else if (root.dataset.busy) run();
+      else if (showing()) run();
     }
     function onTheme(e) {
       if (!u) return;
-      setTheme(gl, u, e.detail);
+      setTheme(gl, u, e.detail, tint);
       if (!raf) draw();
     }
 
@@ -263,5 +273,5 @@ export default function ThinkingGradient() {
     };
   }, []);
 
-  return <canvas ref={ref} className="riva-glow" aria-hidden="true" />;
+  return <canvas ref={ref} className={className} aria-hidden="true" />;
 }
