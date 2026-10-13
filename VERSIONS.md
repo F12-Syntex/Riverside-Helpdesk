@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.15` | 2026-10-13 | fix | `cf67dbc` | fix: move the lookups into a folder and size the mode menu to the field |
+| `6.89.14` | 2026-10-13 | docs | `302c9ba` | docs: record the answer mode menu restyle in versions |
 | `6.89.13` | 2026-10-13 | style | `6298281` | style: lay the answer mode menu out as aligned columns |
 | `6.89.12` | 2026-10-13 | docs | `0e7b172` | docs: record the answer mode menu simplification in versions |
 | `6.89.11` | 2026-10-13 | fix | `d97c03c` | fix: simplify the Ask page's answer mode menu |
