@@ -741,7 +741,10 @@ body { overflow-x: hidden; }
   /* As wide as the opening screen's (below): the field is the same 688px
      column in a conversation as before one, and a menu wider than it ran
      past the field's right-hand edge, and off a tablet's screen. */
-  width: min(560px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
+  /* One fixed height for both pages, the height of the longer (top) one, so
+     opening the folder neither shrinks the menu nor scrolls it. */
+  height: 326px;
   display: flex; flex-direction: column;
   background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
   box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
@@ -755,10 +758,8 @@ body { overflow-x: hidden; }
    under the header. It scrolls inside itself if the screen is short. */
 /* Menu is as wide as the opening column's field. */
 .riva-dock-center .riva-modes-list {
-  width: min(560px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
   bottom: auto; top: calc(100% + 28px); transform-origin: top left;
-  max-height: calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - 59px - 36px - var(--riva-dock-field-h) - 30px);
-  overflow-y: auto;
   animation-name: rivaModesInDown;
 }
 @keyframes rivaModesInDown {
@@ -781,6 +782,20 @@ body { overflow-x: hidden; }
   letter-spacing: .06em; text-transform: uppercase; color: #768692;
 }
 .riva-modes-group:not(:first-child) { margin-top: 5px; border-top: 1px solid #edf1f3; padding-top: 12px; }
+.riva-modes-rule { height: 1px; margin: 5px 4px; background: #edf1f3; }
+/* The two pages slide: the folder in from the right, the top page back
+   from the left. */
+.riva-modes-page { animation: rivaModesPage .18s ease both; }
+.riva-modes-page.is-folder { animation-name: rivaModesFolder; }
+@keyframes rivaModesPage { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes rivaModesFolder { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+/* The folder row's chevron sits in the tick column, in grey. */
+.riva-mode-folder .riva-mode-check { color: #768692; }
+.riva-mode-folder.is-on .riva-mode-desc { color: #005eb8; font-weight: 600; }
+/* The Back row heads the folder page: a quieter, shorter row with a hairline
+   under it. */
+.riva-mode-back { min-height: 34px; margin-bottom: 4px; border-radius: 9px 9px 0 0; box-shadow: inset 0 -1px 0 #edf1f3; }
+.riva-mode-back .riva-mode-name { grid-column: 2 / 4; font-size: 13px; font-weight: 700; color: #4c6272; }
 
 /* One row, four columns: glyph, name, what it does, tick. The name column is
    a fixed width so every description starts on the same line. */
@@ -823,6 +838,7 @@ body { overflow-x: hidden; }
 /* A phone, where the menu is a sheet from the foot of the screen (the shell's
    700px rule): one column of thumb-high rows. */
 @media (max-width: 700px) {
+  .riva-modes-list, .riva-dock-center .riva-modes-list { height: 444px; }
   /* Too narrow for two text columns: the description drops under the name. */
   .riva-mode { grid-template-columns: 16px minmax(0, 1fr) 14px; grid-template-rows: auto auto; row-gap: 1px; min-height: 52px; }
   .riva-mode-icon { grid-row: 1 / 3; }
