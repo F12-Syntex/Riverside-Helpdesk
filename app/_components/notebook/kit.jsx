@@ -140,7 +140,9 @@ html body .nbk-modal__foot .nbk-btn--success:hover:not(:disabled){background:var
 .nbk-clear::after{content:"";position:absolute;inset:-9px;}
 
 /* ------------------------------- labels ----------------------------- */
-.nbk-label{font-size:13px;font-weight:600;color:var(--rv-ink-3);}
+/* Words people read, so ink-2 and not ink-3: ink-3 on white is 3.75:1,
+   under the 4.5:1 small text needs (globals.css: text never goes below ink-2). */
+.nbk-label{font-size:13px;font-weight:600;color:var(--rv-ink-2);}
 .nbk-chip{flex:none;}
 .nbk-chip__dot{flex:none;width:6px;height:6px;border-radius:50%;}
 
@@ -155,6 +157,9 @@ html body .nbk-modal__foot .nbk-btn--success:hover:not(:disabled){background:var
 .nbk-status__retry{padding:2px 4px;margin:0 -4px;border:none;border-radius:6px;background:none;font:inherit;font-weight:650;color:var(--rv-accent);cursor:pointer;}
 .nbk-status__retry:hover{text-decoration:underline;text-underline-offset:3px;}
 .nbk-status__retry:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
+/* Where focus goes after a Retry (StatusPill): ringed for the keyboard only. */
+.nbk-status:focus{outline:none;}
+.nbk-status:focus-visible{outline:2px solid var(--rv-accent);outline-offset:3px;border-radius:6px;}
 
 /* ------------------------------ banners ----------------------------- */
 /* An inset note inside the card: tinted, rounded, no edge. */
@@ -282,14 +287,23 @@ html body .nbk-modal .ap-field[aria-invalid="true"]{background:#fff;box-shadow:0
   /* No pointer to bring them in: always there, in the row's flow. */
   .nbk-row__actions{position:static;transform:none;opacity:1;pointer-events:auto;padding-left:0;background:none !important;}
   .nbk-row,.nbk-row__btn{min-height:44px;}
+  /* Which leaves a typed card's title some 50px beside its chip on a tablet
+     ("Audio..."), so the chip gives way: the row's icon still says the kind,
+     its spoken name still says the kind and the draft (rowExtras), and the
+     page says both in full when it is opened. */
+  .nbk-row__btn .nbk-chip{display:none;}
 }
 
 /* ------------------------------ toolbar ----------------------------- */
 /* One strip of formatting, a filled pill on the page's card: the button
-   that is on is the white pill with the blue glyph, as the top bar's tab is. */
-.nbk-toolbar{flex:none;display:flex;align-items:center;flex-wrap:nowrap;gap:1px;
-  margin:0 auto;padding:4px;max-width:calc(100% - 24px);overflow-x:auto;
-  background:var(--rv-hl);border-radius:999px;}
+   that is on is the white pill with the blue glyph, as the top bar's tab is.
+   Where the card is narrower than the strip, the strip wraps onto a second
+   line rather than cutting its last buttons off: a mouse has no way to
+   scroll a strip sideways. (19px is a pill at one line's height, and a
+   rounded box at two.) A phone keeps one row that scrolls, below. */
+.nbk-toolbar{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:2px 1px;
+  margin:0 auto;padding:4px;max-width:calc(100% - 24px);
+  background:var(--rv-hl);border-radius:19px;}
 .nbk-tbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;min-width:30px;
   padding:0 7px;border:none;border-radius:999px;background:none;color:var(--rv-ink-2);font:inherit;font-size:12.5px;
   font-weight:650;cursor:pointer;transition:background-color .14s ease,color .14s ease,box-shadow .14s ease;}
@@ -399,18 +413,14 @@ html body .nbk-modal .ap-field[aria-invalid="true"]{background:#fff;box-shadow:0
 .nbk-prose .selectedCell::after{content:"";position:absolute;inset:0;background:rgba(0,94,184,.08);pointer-events:none;}
 .nbk-prose p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:var(--rv-ink-4);float:left;
   height:0;pointer-events:none;white-space:pre-wrap;}
-@media (max-width:1000px){
-  /* Where the strip is wider than the card it scrolls sideways, and fades
-     at its ends so a button cut in half reads as "more this way". */
-  .nbk-toolbar{justify-content:flex-start;
-    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
-    mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);}
-}
 @media (max-width:700px){
   .nbk-prose{padding:4px 18px 120px;font-size:16px;}
-  /* Still one row that scrolls sideways (above), rather than three rows of
-     buttons standing over the first lines of the page; thumb-sized. */
-  .nbk-toolbar{max-width:calc(100% - 16px);}
+  /* A phone: one row that scrolls sideways under a thumb, rather than three
+     rows of buttons standing over the first lines of the page. It fades at
+     its ends, so a button cut in half reads as "more this way". */
+  .nbk-toolbar{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;max-width:calc(100% - 16px);border-radius:999px;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);}
   .nbk-tbtn{position:relative;height:40px;min-width:40px;}
   .nbk-tbtn::after{content:"";position:absolute;inset:-2px 0;}
 }
@@ -456,17 +466,19 @@ const BTN = {
   ghost: 'rv-btn--plain', 'quiet-danger': 'rv-btn--danger', danger: '',
 };
 
-export function Button({ variant = 'secondary', size = 'md', icon, trailing, loading = false, block = false, className = '', children, ...rest }) {
+// It takes a ref, for whatever has to put focus on it (a control that goes
+// as it is pressed hands focus to the one that takes its place).
+export const Button = React.forwardRef(function Button({ variant = 'secondary', size = 'md', icon, trailing, loading = false, block = false, className = '', children, ...rest }, ref) {
   const gl = size === 'sm' ? 14 : 15;
   return (
-    <button type="button" {...rest}
+    <button ref={ref} type="button" {...rest}
       className={cx('rv-btn', BTN[variant], 'nbk-btn', 'nbk-btn--' + variant, size === 'sm' && 'rv-btn--sm', size === 'lg' && 'nbk-btn--lg', block && 'nbk-btn--block', className)}>
       {loading ? <Spinner w={gl} /> : icon ? <Svg w={gl} sw={2.2}>{icon}</Svg> : null}
       {children}
       {trailing && <Svg w={gl - 1} sw={2.2}>{trailing}</Svg>}
     </button>
   );
-}
+});
 
 export function IconButton({ icon, label, tone = '', plain = false, size = 'md', on = false, className = '', ...rest }) {
   return (
@@ -577,18 +589,26 @@ function useNow(every = 30000) {
  */
 export function StatusPill({ state, at, onRetry }) {
   const now = useNow();
+  const self = React.useRef(null);
   const when = at ? ago(at, now) : '';
   const stamp = at ? new Date(at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
   let cls = 'nbk-status--saved';
   let word = 'Saved';
   if (state === 'pending' || state === 'saving') { cls = 'nbk-status--saving'; word = 'Saving…'; }
   if (state === 'error') { cls = 'nbk-status--error'; word = 'Couldn’t save'; }
+  // RETRY HANDS FOCUS TO THE CAPTION. The button goes the moment the save
+  // starts again, which would drop focus to the page's <body>; the caption
+  // stays, and says how the retry went.
+  const retry = () => {
+    if (self.current) self.current.focus({ preventScroll: true });
+    onRetry();
+  };
   return (
-    <span className={cx('nbk-status', cls)} role="status" aria-live="polite" title={stamp ? 'Last saved ' + stamp : undefined}>
+    <span ref={self} tabIndex={-1} className={cx('nbk-status', cls)} role="status" aria-live="polite" title={stamp ? 'Last saved ' + stamp : undefined}>
       <span className="nbk-status__dot" aria-hidden="true" />
       <span>{word}</span>
       {state === 'error' && onRetry ? (
-        <><span aria-hidden="true">·</span><button type="button" className="nbk-status__retry" onClick={onRetry}>Retry</button></>
+        <><span aria-hidden="true">·</span><button type="button" className="nbk-status__retry" onClick={retry}>Retry</button></>
       ) : null}
       {state !== 'error' && state !== 'pending' && state !== 'saving' && when ? (
         <span className="nbk-status__when" aria-hidden="true">· {when}</span>

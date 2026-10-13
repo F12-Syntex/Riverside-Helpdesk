@@ -2,6 +2,8 @@
 
 import React from 'react';
 import NextLink from 'next/link';
+import { usePathname } from 'next/navigation';
+import { flushSync } from 'react-dom';
 import { MotionConfig, motion } from 'motion/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -37,7 +39,7 @@ import {
 } from '@/lib/notebook/kinds.mjs';
 import { notebookHref, noteSegment, resolveNote } from '@/lib/notebook/links.mjs';
 import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
-import { TITLE_MAX, checkTitle, fallbackTitle } from '@/lib/notebook/title-check.mjs';
+import { TITLE_MAX, checkTitle, fallbackTitle, shownTitle } from '@/lib/notebook/title-check.mjs';
 
 /* ------------------------------------------------------------------ *
  * Practice notes - the notes the assistant reads to answer.
@@ -231,6 +233,9 @@ const PAGE_CSS = `
 @media (max-width:1000px){
   .nbk-body{padding:4px 16px 16px;}
   .nbk-sidebar,.nbk-sidebar__inner{width:264px;}
+  /* "Saved" is enough in the bar here: when is in its tooltip, and the room
+     goes to the crumb, which a tablet otherwise squeezes to "How t...". */
+  .nbk-status__when{display:none;}
   .nbk-doc-head,.nbk-card-banner,.nbk-card-wrap,.nbk-card__prose,.nbk-docskel{padding-left:28px;padding-right:28px;}
   .nbk-pages{padding-left:14px;padding-right:14px;}
   .nbk-prose{padding-left:28px;padding-right:28px;}
@@ -238,7 +243,9 @@ const PAGE_CSS = `
 /* A phone: one card at a time - the list, then the page over it, with a
    pill back to the list. Targets are a thumb's size. */
 @media (max-width:700px){
-  .nbk-body{padding:4px 10px 10px;gap:0;}
+  /* 16px in from the screen's edges, as Referrals, Contacts and Settings
+     are, so the card does not change width from one tool to the next. */
+  .nbk-body{padding:4px 16px 16px;gap:0;}
   .nbk-sidebar,.nbk-body.is-collapsed .nbk-sidebar{flex:1;width:auto;margin-right:0;visibility:visible;}
   .nbk-sidebar__inner{width:auto;}
   .nbk-body.is-list .nbk-main{display:none;}
@@ -257,7 +264,6 @@ const PAGE_CSS = `
   .nbk-head{min-height:56px;padding:6px 6px 4px 8px;}
   .nbk-head .rv-ibtn{width:40px;height:40px;}
   .nbk-head .rv-ibtn::after,.nbk-row__actions .rv-ibtn::after,.nbk-attach .rv-ibtn::after{content:"";position:absolute;inset:-4px;}
-  .nbk-status__when{display:none;}
   .nbk-head__actions .nbk-status{margin-right:4px;}
   .nbk-doc-head{padding:14px 18px 8px;}
   .nbk-doc-title{font-size:28px;}
@@ -278,6 +284,7 @@ const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
 const QUIET_MS = 1800; // the autosave waits for this long a pause in the typing
 const MAX_UPLOAD = 20 * 1024 * 1024; // the attachments route's limit, said before the upload rather than after
 const SAVES_HREF = '/notebook/saves';
+const LIST = 'list'; // the last address was the phone's list (/notebook), not a page
 
 const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
 const isPhone = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 700px)').matches;
@@ -592,7 +599,7 @@ function SideRow({ n, depth, ctx }) {
         }}>
         {kids.length > 0 ? (
           <button type="button" className="nbk-row__twist" aria-expanded={open} tabIndex={-1}
-            aria-label={(open ? 'Collapse ' : 'Expand ') + (n.title || 'Untitled')}
+            aria-label={(open ? 'Collapse ' : 'Expand ') + shownTitle(n.title)}
             onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))}>
             <Svg w={13} sw={2.6}>{Icons.chevronRight}</Svg>
           </button>
@@ -603,7 +610,7 @@ function SideRow({ n, depth, ctx }) {
             : isTypedKind(n.kind) ? (Icons[noteKind(n.kind).icon] || Icons.fileLines)
               : Icons.fileLines}</Svg></span>
           <span className="nbk-row__name" id={'nbk-tn-' + n.id}>
-            {n.title || 'Untitled'}<span className="rv-sr">{rowExtras(n, fileCount)}</span>
+            {shownTitle(n.title)}<span className="rv-sr">{rowExtras(n, fileCount)}</span>
           </span>
           {fileCount > 0 && <span className="nbk-row__clip" title={plural(fileCount, 'file')} aria-hidden="true"><Svg w={13} sw={2.2}>{Icons.paperclip}</Svg></span>}
           {/* What this note is, where it is not the ordinary page. A draft says
@@ -613,9 +620,9 @@ function SideRow({ n, depth, ctx }) {
         </button>
         <span className="nbk-row__actions">
           {depth < MAX_DEPTH - 1 && (
-            <IconButton size="sm" icon={Icons.plus} label={'Add a page to ' + (n.title || 'Untitled')} tabIndex={-1} onClick={() => newNote(n.id)} />
+            <IconButton size="sm" icon={Icons.plus} label={'Add a page to ' + shownTitle(n.title)} tabIndex={-1} onClick={() => newNote(n.id)} />
           )}
-          <IconButton size="sm" icon={NBIcons.dots} label={'More for ' + (n.title || 'Untitled')} tabIndex={-1} onClick={(e) => openMenu(e, n.id, true)} />
+          <IconButton size="sm" icon={NBIcons.dots} label={'More for ' + shownTitle(n.title)} tabIndex={-1} onClick={(e) => openMenu(e, n.id, true)} />
         </span>
       </div>
       {open && kids.length > 0 && (
@@ -644,7 +651,7 @@ function PageRow({ p, sub, delay, onOpen }) {
         <Svg w={18} sw={2}>{typed ? (Icons[noteKind(p.kind).icon] || Icons.fileLines) : Icons.fileLines}</Svg>
       </span>
       <span className="nbk-prow__text">
-        <span className="nbk-prow__name">{p.title || 'Untitled'}</span>
+        <span className="nbk-prow__name">{shownTitle(p.title)}</span>
         {/* "Nothing written" is about a page with nothing on it. A card's
             writing is optional - its values are the page - so it is never
             said of one. */}
@@ -684,6 +691,12 @@ export default function NotebookPage() {
     return () => clearTimeout(t);
   }, []);
   const [phoneList, setPhoneList] = React.useState(false);
+  // Whether the address is the notebook's own (/notebook) rather than a
+  // page's. On a phone that opens on the list, so the list is what stands in
+  // the card while the notes load, rather than a page's skeleton swapped for
+  // the list as they arrive. From the router, not window, so the server's
+  // markup and the browser's first render agree; only read while loading.
+  const atNotebook = !noteSegment(usePathname() || '');
   const [search, setSearch] = React.useState('');
   // The autosave, for the caption in the page's bar: '' | 'pending' (edited,
   // waiting for a pause) | 'saving' | 'saved' | 'error'.
@@ -704,6 +717,11 @@ export default function NotebookPage() {
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
   const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections)
   const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page
+  // The formatting strip is one tab stop, as a toolbar is (WAI-ARIA): the
+  // arrows, Home and End move along it, and this is the button that holds it.
+  const [tbAt, setTbAt] = React.useState(0);
+  // The table's actions, open under the strip's table button: { x, y, flipY }.
+  const [tableMenu, setTableMenu] = React.useState(null);
   // The row of the tree that is the tree's one tab stop (the arrows move it).
   const [focusId, setFocusId] = React.useState(null);
   // A new section being named: { name, page, touched, tried, busy, error }.
@@ -803,30 +821,63 @@ export default function NotebookPage() {
   /* ------------------------------ Addresses --------------------------- *
    * Every page has its own URL (lib/notebook/links.mjs). Opening a page
    * pushes its address, so the back button walks the pages read; renaming
-   * one only rewrites the address in place, since it is the same page.   */
+   * one only rewrites the address in place, since it is the same page.
+   *
+   * THE LIST ON A PHONE IS /notebook. A page is still chosen behind it (it
+   * is what a wider screen shows), but the address is the list's own, so a
+   * reload or a shared link opens the list, and Back from a page opened off
+   * it comes back to it rather than to a page nobody opened. A page opened
+   * from the list says so in its history entry (nbFromList), so the way back
+   * to the list from it is Back itself; anywhere else, the list is pushed.  */
   const selTitle = (byId.get(selectedId) || {}).title || '';
   const lastUrlId = React.useRef(null);
   React.useEffect(() => {
     if (status !== 'ready' || selectedId == null) return;
-    const href = notebookHref({ id: selectedId, title: selTitle });
     const here = window.location.pathname;
+    if (phoneList && isPhone()) {
+      // (Already LIST with a page's address: the step Back is on its way.)
+      if (here !== '/notebook' && lastUrlId.current !== LIST) {
+        const open = resolveNote(notesRef.current, noteSegment(here));
+        if (window.history.state && window.history.state.nbFromList) window.history.back();
+        // From a page: a new entry, so Back returns to it. From an address
+        // that names no page (a stale link): put right in place.
+        else window.history[open && open.id === selectedId ? 'pushState' : 'replaceState'](null, '', '/notebook');
+      }
+      lastUrlId.current = LIST;
+      document.title = 'Practice notes';
+      return;
+    }
+    const href = notebookHref({ id: selectedId, title: selTitle });
     if (here !== href) {
+      const fromList = lastUrlId.current === LIST;
       const samePage = lastUrlId.current === selectedId || lastUrlId.current === null;
-      window.history[samePage ? 'replaceState' : 'pushState'](null, '', href + window.location.search);
+      window.history[samePage ? 'replaceState' : 'pushState'](fromList ? { nbFromList: true } : null, '', href + window.location.search);
     }
     lastUrlId.current = selectedId;
-    document.title = (selTitle.trim() || 'Untitled') + ' · Practice notes';
-  }, [status, selectedId, selTitle]);
+    document.title = shownTitle(selTitle) + ' · Practice notes';
+  }, [status, selectedId, selTitle, phoneList]);
+  // Bound once, calling the handler of the latest render (so selectNote sees
+  // the current tree). Re-binding it on every render lost the event: the
+  // router answers a popstate first, which redraws this page, and a listener
+  // swapped while the event is being dispatched is not called for it.
+  const onPop = React.useRef(null);
+  onPop.current = () => {
+    const segment = noteSegment(window.location.pathname);
+    // Back to /notebook: on a phone, that is the list.
+    if (!segment) {
+      if (isPhone()) { lastUrlId.current = LIST; setPhoneList(true); }
+      return;
+    }
+    const hit = resolveNote(notesRef.current, segment);
+    if (!hit) return;
+    lastUrlId.current = hit.id; // arriving here is not a new visit to push
+    selectNote(hit.id, { focus: false });
+  };
   React.useEffect(() => {
-    const onPop = () => {
-      const hit = resolveNote(notesRef.current, noteSegment(window.location.pathname));
-      if (!hit) return;
-      lastUrlId.current = hit.id; // arriving here is not a new visit to push
-      selectNote(hit.id, { focus: false });
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }); // re-bound each render so selectNote sees the current tree
+    const pop = () => onPop.current();
+    window.addEventListener('popstate', pop);
+    return () => window.removeEventListener('popstate', pop);
+  }, []);
 
   const [copied, setCopied] = React.useState(false);
   async function copyLink(id) {
@@ -835,7 +886,7 @@ export default function NotebookPage() {
     const url = window.location.origin + notebookHref(n);
     try { await navigator.clipboard.writeText(url); } catch (e) { window.prompt('Copy this link', url); return; }
     setCopied(true);
-    say('Link to “' + (n.title || 'Untitled') + '” copied.');
+    say('Link to “' + shownTitle(n.title) + '” copied.');
     setTimeout(() => setCopied(false), 1600);
   }
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
@@ -900,10 +951,12 @@ export default function NotebookPage() {
   const shownQs = React.useMemo(() => pageQuestions(qRows, questionAnchorsIn(selectedBody)), [qRows, selectedBody]);
   // Answered, and still marked on the page: what Format with AI can write in.
   const answeredOnPage = shownQs.filter((q) => q.status === 'answered' && !q.detached);
+  // A question picked from the chip's list: its card opens with focus in it
+  // (`focus`), since the reader is not in the words it sits beside.
   function pickQuestion(q, rect) {
     const el = !q.detached && editor ? editor.view.dom.querySelector('[data-q="' + q.anchor + '"]') : null;
-    if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setQOpen({ anchor: q.anchor }); }
-    else setQOpen({ anchor: q.anchor, rect });
+    if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setQOpen({ anchor: q.anchor, focus: true }); }
+    else setQOpen({ anchor: q.anchor, rect, focus: true });
   }
 
   // Ancestor chain of the selection, root first (breadcrumb + auto-expand).
@@ -1121,6 +1174,7 @@ export default function NotebookPage() {
    * place (Notion-style) and undo/redo is the editor's own history.      */
 
   const chain = () => editor.chain().focus();
+  const inTable = !!editor && editor.isActive('table');
   const listKind = () => (editor.isActive('taskItem') ? 'taskItem' : 'listItem');
   // The DOM normalises hex colours to rgb(...) on save, so match either form
   // when deciding whether a swatch is active (and should toggle off).
@@ -1187,7 +1241,7 @@ export default function NotebookPage() {
     const n = byId.get(id);
     if (!canOrganize(n)) return;
     if (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')) return;
-    await selectNote(id, { focus: false }); // the plan is about this section (also flushes edits)
+    await selectNote(id, { focus: false }); // the plan is about this section, read once the edit being left is in
     setAiOrg({ status: 'loading' });
     try {
       const res = await fetch('/api/notebook/organize', {
@@ -1246,14 +1300,20 @@ export default function NotebookPage() {
   /* --------------------------- Note actions --------------------------- */
 
   // Open a note. Edits to the one being left are sent first, whatever their
-  // quiet period. On a phone this is also the move from the list to the page,
-  // and focus goes to the way back (unless the caller is putting it elsewhere).
-  async function selectNote(id, { focus = true } = {}) {
-    await flush({ force: true });
+  // quiet period - sent, and not waited for: the page opens at once, with
+  // "Saving..." in its bar until the save is in. Waiting made a click on a
+  // row, a crumb or a section's page do nothing for as long as the server
+  // took, and for ever if it never answered. The save's promise is returned
+  // for a caller that must not go on until it is in (AI organise).
+  // On a phone this is also the move from the list to the page, and focus
+  // goes to the way back (unless the caller is putting it elsewhere).
+  function selectNote(id, { focus = true } = {}) {
+    const sending = flush({ force: true });
     setUploadErr('');
     setAiFmt(null);
     setAiOrg(null);
     setQOpen(null);
+    setTableMenu(null);
     setPhoneList(false);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
@@ -1263,6 +1323,7 @@ export default function NotebookPage() {
       return next;
     });
     if (focus && isPhone()) requestAnimationFrame(() => { if (backRef.current) backRef.current.focus({ preventScroll: true }); });
+    return sending;
   }
 
   // Back to the list, on a phone: the open page's row has focus there.
@@ -1319,7 +1380,7 @@ export default function NotebookPage() {
   // tree reads sensibly before anybody has typed a word into it.
   async function newNote(parentId, kind = 'note') {
     if (!parentId) { askNewSection(); return; }
-    await flush({ force: true });
+    flush({ force: true }); // on its way, not waited for (see selectNote)
     const def = noteKind(kind);
     const name = isTypedKind(def.id) ? 'New ' + def.label.charAt(0).toLowerCase() + def.label.slice(1) : 'New page';
     try {
@@ -1405,7 +1466,7 @@ export default function NotebookPage() {
     const kids = gone.size - 1;
     const files = attachments.filter((a) => gone.has(a.noteId)).length;
     const sec = !!n && (!n.parentId || !!n.isSection);
-    const name = n ? n.title || 'Untitled' : 'this note';
+    const name = n ? shownTitle(n.title) : 'this note';
     const what = kids
       ? 'The ' + (sec ? 'section' : 'page') + ' and the ' + plural(kids, 'page') + ' inside it are deleted'
       : 'The ' + (sec ? 'section' : 'page') + ' is deleted';
@@ -1423,24 +1484,33 @@ export default function NotebookPage() {
   async function removeNote(id) {
     const n = byId.get(id);
     const gone = descendantIds(id);
+    // Where the keys go if the row they were on goes: the next row down that
+    // is not going with it, else the nearest one above.
+    const at = visible.findIndex((v) => v.id === id);
+    const stays = (v) => !gone.has(v.id);
+    const near = at < 0 ? null : (visible.slice(at + 1).find(stays) || visible.slice(0, at).reverse().find(stays) || {}).id;
     try {
       const res = await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
       if (!res.ok) throw new Error('bad status');
-      setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
-      setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
-      if (gone.has(selectedId)) {
-        // Prefer staying near the deleted note: its parent, else the first section.
-        const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
-        if (parent) setSelectedId(parent);
-        else {
-          const remaining = notes.filter((x) => !gone.has(x.id) && !x.parentId);
-          setSelectedId(remaining.length ? remaining[0].id : null);
+      // Drawn at once, so that whether focus went with the row can be seen.
+      flushSync(() => {
+        setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
+        setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
+        if (gone.has(selectedId)) {
+          // Prefer staying near the deleted note: its parent, else the first section.
+          const parent = n && n.parentId && !gone.has(n.parentId) ? n.parentId : null;
+          if (parent) setSelectedId(parent);
+          else {
+            const remaining = notes.filter((x) => !gone.has(x.id) && !x.parentId);
+            setSelectedId(remaining.length ? remaining[0].id : null);
+          }
         }
-      }
-      say('“' + ((n && n.title) || 'Untitled') + '” was deleted.');
+      });
+      refocusTree(near);
+      say('“' + shownTitle(n && n.title) + '” was deleted.');
     } catch (e) {
       // Kept on screen: it is still in the notebook, and still answered from.
-      say('“' + ((n && n.title) || 'Untitled') + '” could not be deleted. Nothing was changed.');
+      say('“' + shownTitle(n && n.title) + '” could not be deleted. Nothing was changed.');
     }
   }
 
@@ -1564,17 +1634,23 @@ export default function NotebookPage() {
       });
       if (!res.ok) throw new Error('bad status');
       const { note } = await res.json();
-      setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, parentId: note.parentId } : x)));
-      setExpanded((e) => ({ ...e, [parentId]: true }));
-      say('Moved “' + ((n && n.title) || 'Untitled') + '” to “' + ((to && to.title) || 'Untitled') + '”.');
+      // The row is drawn afresh under its new parent, and the old one - which
+      // the keys may have been on - is gone: drawn at once, and focus follows.
+      flushSync(() => {
+        setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, parentId: note.parentId } : x)));
+        setExpanded((e) => ({ ...e, [parentId]: true }));
+      });
+      refocusTree(id);
+      say('Moved “' + shownTitle(n && n.title) + '” to “' + shownTitle(to && to.title) + '”.');
     } catch (e) {
-      say('“' + ((n && n.title) || 'Untitled') + '” could not be moved. It is where it was.');
+      say('“' + shownTitle(n && n.title) + '” could not be moved. It is where it was.');
     }
   }
 
   // Rename = select the note, then put the caret in the header title input.
-  async function renameNote(id) {
-    await selectNote(id, { focus: false });
+  // Not after the save of the page being left: renaming does not need it in.
+  function renameNote(id) {
+    selectNote(id, { focus: false });
     setTimeout(() => { if (titleInput.current) { titleInput.current.focus(); titleInput.current.select(); } }, 0);
   }
 
@@ -1615,7 +1691,7 @@ export default function NotebookPage() {
     if (!isTypedKind(from) || !hasValues(from, n.fields)) { setNoteKindApi(id, kind); return; }
     const label = noteKind(kind).label;
     setConfirm({
-      title: 'Make “' + (n.title || 'Untitled') + '” ' + (/^[aeiou]/i.test(label) ? 'an ' : 'a ') + label + '?',
+      title: 'Make “' + shownTitle(n.title) + '” ' + (/^[aeiou]/i.test(label) ? 'an ' : 'a ') + label + '?',
       message: 'Values that do not fit the new type are removed. The writing on the page is kept.',
       confirmLabel: 'Change type',
       icon: Icons.alertCircle,
@@ -1636,7 +1712,7 @@ export default function NotebookPage() {
       setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, isSection: !!note.isSection } : x)));
       if (val) setExpanded((e) => ({ ...e, [id]: true }));
     } catch (e) {
-      say('“' + ((n && n.title) || 'Untitled') + '” could not be changed. Nothing was changed.');
+      say('“' + shownTitle(n && n.title) + '” could not be changed. Nothing was changed.');
     }
   }
 
@@ -1798,6 +1874,18 @@ export default function NotebookPage() {
       if (el.firstElementChild) el.firstElementChild.scrollIntoView({ block: 'nearest' });
     }
   }
+  // A row the keys were on, gone from under them - deleted, or drawn afresh
+  // under a new parent by a move - drops focus to <body>, and a keyboard or a
+  // screen reader loses its place. It goes back to the tree instead: to `id`'s
+  // row, else to the tree's own stop. Only when it was lost: focus that is
+  // somewhere else (the page's own menu, the writing) is left where it is.
+  function refocusTree(id) {
+    const a = document.activeElement;
+    if (a && a !== document.body) return;
+    if (id != null && document.getElementById('nbk-ti-' + id)) { focusRow(id); return; }
+    const stop = treeBox.current && treeBox.current.querySelector('[role="treeitem"][tabindex="0"]');
+    if (stop) stop.focus({ preventScroll: true });
+  }
   function onTreeKey(e) {
     const item = e.target.closest && e.target.closest('[role="treeitem"]');
     if (!item || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -1869,17 +1957,56 @@ export default function NotebookPage() {
       swatch: c2.hex,
       active: colorActive(c2.hex),
     })),
-    { title: 'Insert table', run: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), icon: TIcons.table },
-    // Table controls appear only while the caret is inside a table.
-    ...(editor && editor.isActive('table') ? [
-      null,
-      { title: 'Add row below', run: () => chain().addRowAfter().run(), label: '+ Row' },
-      { title: 'Add column right', run: () => chain().addColumnAfter().run(), label: '+ Col' },
-      { title: 'Delete row', run: () => chain().deleteRow().run(), label: 'Row off' },
-      { title: 'Delete column', run: () => chain().deleteColumn().run(), label: 'Col off' },
-      { title: 'Delete table', run: () => chain().deleteTable().run(), label: 'Table off' },
-    ] : []),
+    // THE TABLE IS ONE BUTTON. Outside a table it puts one in; with the
+    // caret in one it is on, and opens a menu of what can be done to the
+    // table. The rows and columns used to be five more buttons, added to the
+    // end of the strip as the caret went into a table: the centred strip slid
+    // every button along under the pointer, and pushed the last ones off the
+    // card. Now the strip is the same in a table as out of one.
+    inTable
+      ? { key: 'table', title: 'Table: rows and columns', icon: TIcons.table, active: true, popup: true, run: openTableMenu }
+      : { key: 'table', title: 'Insert table', icon: TIcons.table, run: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
   ];
+  const tbButtons = toolbar.filter(Boolean);
+  const tbStop = Math.min(tbAt, tbButtons.length - 1);
+
+  function openTableMenu(e) {
+    e.stopPropagation(); // keep the window-level close handler from eating the new menu
+    if (tableMenu) { setTableMenu(null); return; }
+    const r = e.currentTarget.getBoundingClientRect();
+    setTableMenu({ x: r.right - 220, y: r.bottom + 6, flipY: r.top - 6 });
+  }
+  // A table action runs in the editor, which has the caret back.
+  const tableAct = (fn) => { setTableMenu(null); fn(chain()).run(); };
+  React.useEffect(() => {
+    if (!tableMenu) return undefined;
+    const close = () => setTableMenu(null);
+    const onKey = (e) => { if (e.key === 'Escape') setTableMenu(null); };
+    window.addEventListener('click', close);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', close);
+    };
+  }, [tableMenu]);
+
+  // ← → Home End along the strip, round at the ends; Tab goes on past it.
+  function onToolbarKey(e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const btns = Array.from(e.currentTarget.querySelectorAll('.nbk-tbtn'));
+    const at = btns.indexOf(document.activeElement);
+    if (at < 0) return;
+    let next = null;
+    if (e.key === 'ArrowRight') next = (at + 1) % btns.length;
+    else if (e.key === 'ArrowLeft') next = (at - 1 + btns.length) % btns.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = btns.length - 1;
+    if (next == null) return;
+    e.preventDefault();
+    btns[next].focus(); // its onFocus makes it the strip's stop
+  }
 
   /* ------------------------------ Render ------------------------------- */
 
@@ -1894,7 +2021,7 @@ export default function NotebookPage() {
     ? notes.filter((n) => n.id !== selected.id && (n.parentId || null) === (selected.parentId || null)).map((n) => n.title || '')
     : [];
   const tcheck = selected ? checkTitle(selected.title || '', siblingTitles) : null;
-  const parentName = ancestors.length ? ancestors[ancestors.length - 1].title || 'Untitled' : '';
+  const parentName = ancestors.length ? shownTitle(ancestors[ancestors.length - 1].title) : '';
   let titleMsg = null;
   if (tcheck && tcheck.empty) {
     titleMsg = { tone: 'bad', icon: Icons.alertCircle, text: isSection
@@ -1917,7 +2044,7 @@ export default function NotebookPage() {
     <div className="nbk-doc-head">
       <div className="nbk-kicker">
         <span>{isSection ? 'Section' : 'Page'}</span>
-        {ancestors.length > 0 && (<><span className="nbk-kicker__dot" /><span>{'In ' + (ancestors[ancestors.length - 1].title || 'Untitled')}</span></>)}
+        {ancestors.length > 0 && (<><span className="nbk-kicker__dot" /><span>{'In ' + shownTitle(ancestors[ancestors.length - 1].title)}</span></>)}
         {isSection && (<><span className="nbk-kicker__dot" /><span>{plural(sectionPages.length, 'page')}</span></>)}
         {!isSection && fileCount > 0 && (<><span className="nbk-kicker__dot" /><span>{plural(fileCount, 'file')}</span></>)}
         {!isSection && <KindChip kind={selected.kind} draft={String(selected.status || 'live') === 'draft'} full />}
@@ -1987,7 +2114,10 @@ export default function NotebookPage() {
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       <AppHeader subtitle="Practice notes" />
 
-      <div className={'nbk-body' + (sideOpen ? '' : ' is-collapsed') + (phoneList ? ' is-list' : '') + (layoutReady ? ' is-ready' : '')}>
+      {/* is-list only says anything on a phone (the 700px rules): the list
+          card, not the page's. While the notes load at /notebook it is the
+          list's skeleton that shows, so nothing is swapped when they come. */}
+      <div className={'nbk-body' + (sideOpen ? '' : ' is-collapsed') + (phoneList || (status === 'loading' && atNotebook) ? ' is-list' : '') + (layoutReady ? ' is-ready' : '')}>
         {/* ------------------- The sections and pages, a card ------------------- */}
         <motion.aside id="nbk-side" className="nbk-sidebar" aria-label="Sections and pages"
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
@@ -2086,11 +2216,11 @@ export default function NotebookPage() {
                     <>
                       {ancestors.map((a) => (
                         <React.Fragment key={a.id}>
-                          <button type="button" className="nbk-crumb" onClick={() => selectNote(a.id)}>{a.title || 'Untitled'}</button>
+                          <button type="button" className="nbk-crumb" onClick={() => selectNote(a.id)}>{shownTitle(a.title)}</button>
                           <span className="nbk-crumb-sep" aria-hidden="true"><Svg w={13} sw={2.2}>{Icons.chevronRight}</Svg></span>
                         </React.Fragment>
                       ))}
-                      <span className="nbk-crumb nbk-crumb--here" aria-current="page">{selected.title || 'Untitled'}</span>
+                      <span className="nbk-crumb nbk-crumb--here" aria-current="page">{shownTitle(selected.title)}</span>
                     </>
                   ) : (
                     <span className="nbk-crumb nbk-crumb--here">Practice notes</span>
@@ -2167,7 +2297,7 @@ export default function NotebookPage() {
                   <div className="nbk-pages">
                     <div className="nbk-pages__list">
                       {recent.map((p, i) => (
-                        <PageRow key={p.id} p={p} sub={'In ' + ((byId.get(p.parentId) || {}).title || 'Untitled')}
+                        <PageRow key={p.id} p={p} sub={'In ' + shownTitle((byId.get(p.parentId) || {}).title)}
                           delay={0.1 + Math.min(i, 8) * 0.03} onOpen={() => selectNote(p.id)} />
                       ))}
                     </div>
@@ -2209,20 +2339,24 @@ export default function NotebookPage() {
               <>
                 <div className="nbk-tools">
                   <div className="nbk-toolbar nbk-hide-scroll" role="toolbar" aria-label="Formatting"
-                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
-                    {toolbar.map((btn, i) => btn === null
-                      ? <span key={'sep' + i} className="nbk-tsep" aria-hidden="true" />
-                      : (
-                        <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
-                          aria-pressed={btn.active ? true : undefined}
-                          onClick={() => { if (!editor) return; btn.run(); }}
+                    onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
+                    onKeyDown={onToolbarKey}>
+                    {toolbar.map((btn, i) => {
+                      if (btn === null) return <span key={'sep' + i} className="nbk-tsep" aria-hidden="true" />;
+                      const at = tbButtons.indexOf(btn);
+                      return (
+                        <button key={btn.key || btn.title} type="button" aria-label={btn.title} title={btn.title} data-tb={btn.key}
+                          tabIndex={at === tbStop ? 0 : -1} onFocus={() => setTbAt(at)}
+                          aria-pressed={btn.active && !btn.popup ? true : undefined}
+                          aria-haspopup={btn.popup ? 'menu' : undefined} aria-expanded={btn.popup ? !!tableMenu : undefined}
+                          onClick={(e) => { if (!editor) return; btn.run(e); }}
                           className={'nbk-tbtn' + (btn.active ? ' nbk-tbtn--on' : '')}>
                           {btn.swatch
                             ? <span className="nbk-swatch" style={{ background: btn.swatch, boxShadow: '0 0 0 1px ' + (btn.active ? T.blue : T.line) }} />
-                            : btn.icon ? <Svg w={16} sw={2}>{btn.icon}</Svg> : null}
-                          {btn.label ? <span>{btn.label}</span> : null}
+                            : <Svg w={16} sw={2}>{btn.icon}</Svg>}
                         </button>
-                      ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -2328,7 +2462,7 @@ export default function NotebookPage() {
             {dragging && selected && !isSection && (
               <div className="nbk-dropzone">
                 <Svg w={28} sw={1.8}>{Icons.paperclip}</Svg>
-                Drop files to attach to &ldquo;{selected.title || 'Untitled'}&rdquo;
+                Drop files to attach to &ldquo;{shownTitle(selected.title)}&rdquo;
               </div>
             )}
           </>)}
@@ -2336,7 +2470,7 @@ export default function NotebookPage() {
       </div>
       {/* ---------------------------- The note menu --------------------------- */}
       {menu && menuNote && (
-        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={200} label={'Actions for ' + (menuNote.title || 'Untitled')}
+        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={200} label={'Actions for ' + shownTitle(menuNote.title)}
           onClose={() => setMenu(null)}>
           {/* One line per action; the lists of kinds and of places sit behind
               a submenu each, so they are never on screen twice. The kind is
@@ -2370,7 +2504,7 @@ export default function NotebookPage() {
             <MenuSub icon={Icons.arrow} label="Move to">
               {moveTargets.map((t) => (
                 <MenuItem key={t.id} icon={Icons.folder} onClick={() => { setMenu(null); moveNoteTo(menu.id, t.id); }}>
-                  {t.title || 'Untitled'}
+                  {shownTitle(t.title)}
                 </MenuItem>
               ))}
             </MenuSub>
@@ -2387,6 +2521,18 @@ export default function NotebookPage() {
 
           <MenuSeparator />
           <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>Delete…</MenuItem>
+        </Menu>
+      )}
+
+      {/* ------------------------- The table's actions ------------------------ */}
+      {tableMenu && inTable && (
+        <Menu x={tableMenu.x} y={tableMenu.y} flipY={tableMenu.flipY} width={220} label="Table" onClose={() => setTableMenu(null)}>
+          <MenuItem icon={Icons.plus} onClick={() => tableAct((c) => c.addRowAfter())}>Add a row below</MenuItem>
+          <MenuItem icon={Icons.plus} onClick={() => tableAct((c) => c.addColumnAfter())}>Add a column to the right</MenuItem>
+          <MenuSeparator />
+          <MenuItem icon={Icons.close} onClick={() => tableAct((c) => c.deleteRow())}>Delete this row</MenuItem>
+          <MenuItem icon={Icons.close} onClick={() => tableAct((c) => c.deleteColumn())}>Delete this column</MenuItem>
+          <MenuItem icon={Icons.trash} tone="danger" onClick={() => tableAct((c) => c.deleteTable())}>Delete the table</MenuItem>
         </Menu>
       )}
 
@@ -2545,7 +2691,7 @@ export default function NotebookPage() {
               <div key={a.noteId} className="nbk-plan__note">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', fontWeight: 650, color: T.ink }}>
                   <Svg w={15} sw={2} style={{ flex: 'none', color: T.dim }}>{Icons.fileLines}</Svg>
-                  {a.noteTitle || 'Untitled'}
+                  {shownTitle(a.noteTitle)}
                 </div>
                 {a.parts.map((p, i) => (
                   <div key={i} className="nbk-plan__part">
@@ -2554,7 +2700,7 @@ export default function NotebookPage() {
                       <div style={{ fontSize: '13.5px', fontWeight: 600, color: T.navy }}>
                         {p.section}{p.isNewSection ? ' (new section)' : ''}
                         <span style={{ color: T.mut, margin: '0 6px' }}>/</span>
-                        {p.page || a.noteTitle || 'Untitled'}{p.isNewPage ? ' (new page)' : ''}
+                        {p.page || shownTitle(a.noteTitle)}{p.isNewPage ? ' (new page)' : ''}
                       </div>
                       {/* A title that names a container rather than a question.
                           Said here because renaming it now costs nothing, and

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TITLE_MAX, checkTitle, fallbackTitle, titleKey } from '../lib/notebook/title-check.mjs';
+import { TITLE_MAX, checkTitle, fallbackTitle, shownTitle, titleKey } from '../lib/notebook/title-check.mjs';
 
 test('a title of nothing but spaces is empty', () => {
   assert.equal(checkTitle('').empty, true);
@@ -33,6 +33,15 @@ test('a title left empty goes back to the last saved one, else a plain default',
   assert.equal(fallbackTitle(''), 'Untitled page');
   assert.equal(fallbackTitle('   ', true), 'Untitled section');
   assert.equal(fallbackTitle(undefined), 'Untitled page');
+});
+
+test('a title of nothing but spaces is shown as Untitled, as an empty one is', () => {
+  assert.equal(shownTitle('Fit notes'), 'Fit notes');
+  assert.equal(shownTitle('  Fit notes '), 'Fit notes');
+  assert.equal(shownTitle('   '), 'Untitled');
+  assert.equal(shownTitle(''), 'Untitled');
+  assert.equal(shownTitle(null), 'Untitled');
+  assert.equal(shownTitle(' \t ', 'this note'), 'this note');
 });
 
 test('titles compare trimmed, collapsed and case-blind', () => {

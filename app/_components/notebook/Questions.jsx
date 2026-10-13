@@ -212,9 +212,12 @@ function cardPlace(rect) {
  * The questions layer of one open page: the marker styles, the button over a
  * highlight, the box to ask in, and the card for a question.
  *
- * `open` is { anchor, rect? } - rect only for a detached question, which has no
- * words on the page to sit beside. `jumpTo` is an anchor to scroll to and open
- * once the page and its questions are loaded (a link from /questions).
+ * `open` is { anchor, rect?, focus? } - rect only for a detached question, which
+ * has no words on the page to sit beside; focus when the card should take the
+ * keyboard as it opens (picked from the chip's list, or arrived at by a link),
+ * rather than leave it in the writing a click on the words came from. `jumpTo`
+ * is an anchor to scroll to and open once the page and its questions are
+ * loaded (a link from /questions).
  */
 export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, jumpTo, onJumped }) {
   const [, redraw] = React.useReducer((x) => x + 1, 0);
@@ -222,6 +225,11 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
   const [asking, setAsking] = React.useState(null); // { from, to, quote, x, y, text, busy, error }
   const cardRef = React.useRef(null);
   const askRef = React.useRef(null);
+  // Focus back in the page's writing, at its selection - where the writer was
+  // before a box or a card took it, rather than on <body>.
+  const backToWriting = React.useCallback(() => {
+    if (editor && !editor.isDestroyed) editor.commands.focus();
+  }, [editor]);
 
   // FROM THE KEYBOARD: Ctrl+Alt+Q (Cmd+Alt+Q) asks about the words selected,
   // which the button over them cannot offer without taking the selection away.
@@ -284,9 +292,16 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
   }, [editor, open, setOpen]);
 
   // Escape, or a press anywhere that is not the card or marked words, closes it.
+  // Escape from the box to ask in goes back into the writing, which is where
+  // it was opened from (an open question's card puts focus back itself).
   React.useEffect(() => {
     if (!open && !asking) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') { setOpen(null); setAsking(null); } };
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (asking) backToWriting();
+      setOpen(null);
+      setAsking(null);
+    };
     const onDown = (e) => {
       if (cardRef.current && cardRef.current.contains(e.target)) return;
       if (e.target.closest && e.target.closest('[data-q],.nbk-qchip,.nbk-menu')) return;
@@ -296,7 +311,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
     window.addEventListener('keydown', onKey);
     window.addEventListener('mousedown', onDown);
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onDown); };
-  }, [open, asking, setOpen]);
+  }, [open, asking, setOpen, backToWriting]);
 
   // A link from /questions: scroll the words into view and open the card.
   React.useEffect(() => {
@@ -305,7 +320,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
     if (!row) return;
     const el = editor.view.dom.querySelector('[data-q="' + jumpTo + '"]');
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    setOpen(el ? { anchor: jumpTo } : { anchor: jumpTo, rect: centreRect() });
+    setOpen(el ? { anchor: jumpTo, focus: true } : { anchor: jumpTo, rect: centreRect(), focus: true });
     onJumped();
   }, [jumpTo, editor, rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -355,9 +370,11 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
       const size = editor.state.doc.content.size;
       const from = Math.min(asking.from, size);
       const to = Math.min(asking.to, size);
-      if (from < to) {
-        editor.chain().setTextSelection({ from, to }).setMark('question', { id: anchor }).setTextSelection(to).run();
-      }
+      // Marked, and the writer back in the writing just after the words: the
+      // box they asked in is going, and focus must not go with it.
+      const next = editor.chain().focus();
+      if (from < to) next.setTextSelection({ from, to }).setMark('question', { id: anchor }).setTextSelection(to);
+      next.run();
       setRows((rs) => [...rs, row]);
       setAsking(null);
     } catch (e) {
@@ -398,7 +415,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
           {asking.error && <div className="nbk-qcard__err" role="alert">{asking.error}</div>}
           <div className="nbk-qcard__row">
             <span className="nbk-qcard__grow" style={{ fontSize: '12.5px', color: T.mut }}>Also listed on Questions.</span>
-            <Button variant="ghost" size="sm" onClick={() => setAsking(null)}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setAsking(null); backToWriting(); }}>Cancel</Button>
             <Button variant="primary" size="sm" loading={asking.busy} disabled={!asking.text.trim() || asking.busy}
               onClick={submitQuestion}>Ask</Button>
           </div>
@@ -407,7 +424,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
 
       {openRow && openRect && (
         <QuestionCard key={openRow.id} cardRef={cardRef} row={openRow} detached={!markerRect(editor, openRow.anchor)}
-          style={placeStyle(cardPlace(openRect))}
+          style={placeStyle(cardPlace(openRect))} takeFocus={!!open.focus} onFocusLost={backToWriting}
           onClose={() => setOpen(null)}
           onSaved={(patch) => setRows((rs) => rs.map((r) => (r.id === openRow.id ? { ...r, ...patch } : r)))}
           onRemoved={() => {
@@ -435,8 +452,15 @@ function centreRect() {
 }
 
 /* One question: what was asked, about which words, and its answer - or a box
-   to write one in. */
-function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemoved }) {
+   to write one in.
+
+   IT KEEPS THE KEYBOARD'S PLACE. Opened with `takeFocus`, focus goes into it
+   (the answer box, else Edit); closed, focus goes back to whatever had it
+   before, or - when that has gone too, as the chip goes with the last
+   question - to the writing (onFocusLost). In between, a control that goes
+   as it is pressed hands focus to the one that takes its place: Save answer
+   and Cancel to Edit, Edit and Reopen to the box, Keep it to Delete... */
+function QuestionCard({ row, detached, style, cardRef, takeFocus = false, onFocusLost, onClose, onSaved, onRemoved }) {
   const answered = row.status === 'answered';
   const [editing, setEditing] = React.useState(!answered);
   const [draft, setDraft] = React.useState(row.answer || '');
@@ -445,7 +469,37 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
   // Delete asks first, in the card (askDel); "Keep it" has focus, so Enter keeps it.
   const [askDel, setAskDel] = React.useState(false);
   const keepRef = React.useRef(null);
-  React.useEffect(() => { if (askDel && keepRef.current) keepRef.current.focus(); }, [askDel]);
+  const delRef = React.useRef(null);
+  const editRef = React.useRef(null);
+  const lostRef = React.useRef(onFocusLost);
+  lostRef.current = onFocusLost;
+
+  React.useEffect(() => {
+    const el = cardRef.current;
+    const before = document.activeElement;
+    if (takeFocus && el) {
+      const to = el.querySelector('textarea') || editRef.current;
+      if (to) to.focus({ preventScroll: true });
+    }
+    return () => {
+      const now = document.activeElement;
+      if (now && now !== document.body && !(el && el.contains(now))) return; // gone somewhere on purpose
+      if (before && before !== document.body && before.isConnected && !(el && el.contains(before))) before.focus({ preventScroll: true });
+      else if (lostRef.current) lostRef.current();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Compared with the last value rather than skipping the first run: React's
+  // strict mode runs a mount's effects twice, and the second is not a change.
+  const was = React.useRef({ editing, askDel });
+  React.useEffect(() => {
+    const prev = was.current;
+    was.current = { editing, askDel };
+    let to = null;
+    if (askDel !== prev.askDel) to = askDel ? keepRef.current : delRef.current;
+    else if (editing !== prev.editing) to = editing ? cardRef.current && cardRef.current.querySelector('textarea') : editRef.current;
+    if (to) to.focus({ preventScroll: true });
+  }, [editing, askDel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(answer) {
     setBusy(answer ? 'save' : 'reopen');
@@ -515,7 +569,7 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && draft.trim()) save(draft); }} />
           {error && <div className="nbk-qcard__err">{error}</div>}
           <div className="nbk-qcard__row">
-            <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => { setError(''); setAskDel(true); }}
+            <Button ref={delRef} variant="ghost" size="sm" disabled={!!busy} onClick={() => { setError(''); setAskDel(true); }}
               title="Delete the question and take its highlight off">Delete…</Button>
             <span className="nbk-qcard__grow" />
             {answered && <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => { setDraft(row.answer || ''); setEditing(false); }}>Cancel</Button>}
@@ -527,12 +581,12 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
         <>
           {error && <div className="nbk-qcard__err">{error}</div>}
           <div className="nbk-qcard__row">
-            <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => { setError(''); setAskDel(true); }}
+            <Button ref={delRef} variant="ghost" size="sm" disabled={!!busy} onClick={() => { setError(''); setAskDel(true); }}
               title="Delete the question and take its highlight off">Delete…</Button>
             <span className="nbk-qcard__grow" />
             <Button variant="ghost" size="sm" loading={busy === 'reopen'} disabled={!!busy} onClick={() => save('')}
               title="Not settled after all: clear the answer and reopen the question">Reopen</Button>
-            <Button variant="secondary" size="sm" icon={Icons.edit} disabled={!!busy} onClick={() => setEditing(true)}>Edit</Button>
+            <Button ref={editRef} variant="secondary" size="sm" icon={Icons.edit} disabled={!!busy} onClick={() => setEditing(true)}>Edit</Button>
           </div>
           <div className="nbk-qcard__note">Format with AI can write this answer into the page.</div>
         </>

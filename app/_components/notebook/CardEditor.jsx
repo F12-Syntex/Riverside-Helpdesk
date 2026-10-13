@@ -27,7 +27,8 @@ import PathologyForm from '../templates/PathologyForm';
 import { noteKind } from '@/lib/notebook/kinds.mjs';
 import { EditBox, EditHint, EditList } from '../templates/edit';
 
-const QUIET = '#768692';
+// The labels over the boxes: ink-2, as words people read are (ink-3 is 3.75:1 on white).
+const QUIET = '#4c6272';
 
 function Head({ children }) {
   return (

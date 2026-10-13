@@ -73,6 +73,13 @@ const PAGE_CSS = `
   font-size:13px;font-weight:550;color:var(--rv-ink-2);}
 .nbs-listwrap > .nbs-list{flex:0 1 auto;min-height:150px;}
 .nbs-list{overflow:hidden auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
+/* So a list running past the foot of the card does not look finished, its
+   last pixels fade out while there is more below - Referrals' and Contacts'
+   veil: white, stuck to the foot of the scroller (a mask would clip the
+   card's shadow). */
+.nbs-list.is-more::after{content:"";position:sticky;bottom:0;display:block;height:36px;margin-top:-36px;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,0),#fff);}
+.nbs-list.is-more .nbs-row{scroll-margin-bottom:40px;}
 .nbs-row{display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 16px 12px 22px;}
 .nbs-row + .nbs-row{border-top:1px solid var(--rv-divider);}
 .nbs-row__main{flex:1;min-width:0;}
@@ -134,6 +141,27 @@ export default function NotebookSavesPage() {
   const [label, setLabel] = React.useState('');
   const [confirm, setConfirm] = React.useState(null);
   const fileInput = React.useRef(null);
+  // Whether there is more of the list below the foot of its card, for the
+  // veil. Never on a phone, where the list does not scroll by itself (the
+  // column does, and its foot is the screen's).
+  const listRef = React.useRef(null);
+  const [more, setMore] = React.useState(false);
+  const measure = React.useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const scrolls = getComputedStyle(el).overflowY !== 'visible';
+    setMore(scrolls && el.scrollTop + el.clientHeight < el.scrollHeight - 2);
+  }, []);
+  React.useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure]);
+  // The rows changing inside a card that has stopped growing resizes nothing;
+  // and a row rising in (below) is lower than it lands until it has.
+  React.useLayoutEffect(measure, [measure, snapshots, status]);
 
   const load = React.useCallback(async () => {
     try {
@@ -325,7 +353,8 @@ export default function NotebookSavesPage() {
               ? <span>{plural(snapshots.length, 'save') + ', newest first'}</span>
               : status === 'loading' ? <span className="rv-skel" style={{ width: 160, height: 9 }} aria-hidden="true" /> : <span />}
           </div>
-          <section className="rv-card nbs-list" aria-label="Saves" aria-busy={status === 'loading' ? 'true' : undefined}>
+          <section ref={listRef} className={'rv-card nbs-list' + (more ? ' is-more' : '')} onScroll={measure}
+            aria-label="Saves" aria-busy={status === 'loading' ? 'true' : undefined}>
             {status === 'loading' && (
               <div aria-hidden="true">
                 {['52%', '38%', '46%', '30%'].map((w, i) => (
@@ -354,7 +383,7 @@ export default function NotebookSavesPage() {
               const kind = KINDS[snap.kind] || KINDS.manual;
               const loadingThis = busy === 'load:' + snap.id;
               return (
-                <motion.div key={snap.id} className="nbs-row"
+                <motion.div key={snap.id} className="nbs-row" onAnimationComplete={measure}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.2 + Math.min(i, 10) * 0.03, ease: EASE }}>
                   <div className="nbs-row__main">
                     <div className="nbs-row__top">
