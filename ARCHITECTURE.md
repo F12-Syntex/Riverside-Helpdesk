@@ -600,8 +600,21 @@ what was typed.
   "All specialities and clinic types"). "Cancer referrals (2WW)" names one and
   stays — it is the procedure for every 2WW referral with no card of its own.
   The rule and its measurements are in `lib/search/referrals.mjs`.
-- **How a search ranks** (`GET /api/referrals?q=`, `lib/search/referrals-search.mjs`).
-  The words that only say "a referral" ("referral", "ref", their typos) are
+- **How a search ranks** (`GET /api/referrals?q=`, `lib/search/referrals-jev.mjs`).
+  **TypeSafe's Jev decides.** One call to the decisions endpoint on the `check`
+  role's model (the answer check's, `typesafe/jev-1.13` by default), with one
+  closed question per referral — "is this the referral the reader is searching
+  for?" — each referral described by its name, where it sits, its other names
+  and the first ~220 characters of its page. What was typed is sent after
+  identifier redaction (`redactIdentifiers`), under the same no-retention and
+  `zdr` provider rule as the answer check; nothing about who is searching.
+  Referrals scoring 0.3 or more are the matches, best first, at most eight; a
+  tie keeps the keyword order below. Scores are remembered per server instance
+  for 15 minutes, keyed by the search and the referrals' text, so a repeated
+  search is not sent again. Usage is recorded as role `check`, phase
+  `referralSearch`. **If Jev does not answer** (no key, an error, nothing
+  within 4 s) the keyword ranking stands.
+- **The keyword ranking** (`lib/search/referrals-search.mjs`). The words that only say "a referral" ("referral", "ref", their typos) are
   dropped. What is left is read as *concepts* (`lib/search/referral-aliases.mjs`):
   each word or phrase in a hand-written alias group stands for the whole group —
   "skin" for Dermatology and Teledermatology, "heart tracing" for the ECG,
@@ -611,8 +624,8 @@ what was typed.
   and aliases), a small bonus when the name has the reader's own words, a share
   of its Postgres full-text rank over its passages (every alias searched), and a
   small bonus for a live e-RS or email card. When no page's name matches, the
-  full-text rank orders the list alone. No provider is called and nothing is
-  stored.
+  full-text rank orders the list alone. No provider is called for it and
+  nothing is stored.
 - **What a row opens to.** The Q&A's own card for that page, built on the server
   exactly as an answer is: `notebookPageAnswer` with `withKindCard` drawing the
   e-RS or email screen from the saved fields. No model is anywhere in the page.
@@ -753,7 +766,7 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes, writes the reason line and booking notes, and says whether the message reports somebody having already dealt with it. | `OPENROUTER_ACCURX_MODEL` → **fast** |
 | **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
 | **images** | `ai_model_images` | Any message with a picture attached — a screenshot of the repeat-medication screen to format for AccurX, a photo of a letter — whichever path it takes: a command or the Q&A answer (which still reads the whole Notebook). | `OPENROUTER_IMAGES_MODEL` → **its own default**, `DEFAULT_IMAGES_MODEL = mistralai/ministral-14b-2512` |
-| **check** ("Answer check") | `ai_model_check` | Scoring each Notebook answer before it is shown — does it answer the question? (§8 step 8). A **decision** model on OpenRouter's `api/alpha/decisions` endpoint, not a chat model; it writes nothing. | **its own default**, `DEFAULT_CHECK_MODEL = typesafe/jev-1.13`; no environment variable. Not in OpenRouter's chat catalogue, so `/settings` offers `DECISION_MODELS` for this row and takes any typed id. The `typesafe/jev-latest` alias was refused by the endpoint on 2026-10-10. |
+| **check** ("Answer check") | `ai_model_check` | Scoring each Notebook answer before it is shown — does it answer the question? (§8 step 8) — and ranking the Referrals page's search, one question per referral. A **decision** model on OpenRouter's `api/alpha/decisions` endpoint, not a chat model; it writes nothing. | **its own default**, `DEFAULT_CHECK_MODEL = typesafe/jev-1.13`; no environment variable. Not in OpenRouter's chat catalogue, so `/settings` offers `DECISION_MODELS` for this row and takes any typed id. The `typesafe/jev-latest` alias was refused by the endpoint on 2026-10-10. |
 
 **The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
 the only two that do, and for opposite reasons. `accurx` falls back to fast so

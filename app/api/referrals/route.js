@@ -4,7 +4,10 @@
 //                               section (hubs left out), A–Z, each with the
 //                               card it opens to, and the ids of the most asked
 //                               for over the last 30 days
-//   GET /api/referrals?q=skin — the same rows for the best matches, best first
+//   GET /api/referrals?q=skin — the same rows for the best matches, best first,
+//                               as TypeSafe's Jev judges them (lib/search/
+//                               referrals-jev.mjs), or by keyword when Jev
+//                               does not answer
 //
 // Pages come from fullNotebookContext() — the live Notebook, memoised until a
 // row changes — so an edit in Practice notes is on this page at the next
@@ -22,9 +25,14 @@ import { noteKind } from '@/lib/notebook/kinds.mjs';
 import { notebookPageAnswer } from '@/lib/templates/notebook.mjs';
 import { withKindCard } from '@/lib/templates/route.mjs';
 import {
-  alphabetical, isLiveCard, popularReferrals, referralPages, shapeResult,
+  MAX_RESULTS, alphabetical, isLiveCard, popularReferrals, referralPages, shapeResult,
 } from '@/lib/search/referrals.mjs';
 import { referralAskCounts, searchReferrals } from '@/lib/search/referrals-search.mjs';
+import { createJevCache, rankByJev, runReferralJev } from '@/lib/search/referrals-jev.mjs';
+import { decide, decisionUsage } from '@/lib/ai/decisions.mjs';
+import { redactIdentifiers } from '@/lib/safety/identifiers.mjs';
+import { getModelRoles } from '@/lib/settings';
+import { recordUsage } from '@/lib/ai/usage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +46,38 @@ function cardFor(page) {
 }
 
 const row = (page) => ({ ...shapeResult(page), card: cardFor(page) });
+
+// Recent searches' scores, per server instance: the same search asked again is
+// not sent to Jev again.
+const jevCache = createJevCache();
+
+// Jev's scores for this search, from memory or from one call. Null when it did
+// not answer, and the keyword ranking stands.
+async function jevScoresFor(q, pages) {
+  const query = redactIdentifiers(q).text;
+  const remembered = jevCache.get(query, pages);
+  if (remembered) return remembered;
+  let model = '';
+  try {
+    model = (await getModelRoles()).check.model;
+  } catch (e) {
+    console.warn('[referrals] jev model: ' + String(e?.message || e).slice(0, 200));
+    return null;
+  }
+  const result = await runReferralJev({
+    decide,
+    model,
+    query,
+    pages,
+    onUsage: (usage, used) => { recordUsage({ role: 'check', phase: 'referralSearch', model: used, usage: decisionUsage(usage) }); },
+  });
+  if (result.error) {
+    console.warn('[referrals] jev on ' + model + ' failed after ' + result.ms + 'ms: ' + result.error);
+    return null;
+  }
+  jevCache.set(query, pages, result.scores);
+  return result.scores;
+}
 
 export async function GET(request) {
   const q = (request.nextUrl.searchParams.get('q') || '').slice(0, 200).trim();
@@ -68,12 +108,21 @@ export async function GET(request) {
     return NextResponse.json({ referrals: alphabetical(pages).map(row), popular }, { headers: NO_STORE });
   }
 
-  try {
-    const ranked = await searchReferrals(q, pages);
-    return NextResponse.json({ q, results: ranked.map(row) }, { headers: NO_STORE });
-  } catch (e) {
-    // The page already shows its own keyword matches and keeps them.
-    console.warn('[referrals] search: ' + String(e?.message || e).slice(0, 200));
-    return NextResponse.json({ q, results: null, error: 'Search is unavailable.' }, { status: 503, headers: NO_STORE });
+  // Both at once: Jev's judgement, and the keyword ranking that breaks its ties
+  // and stands in for it when it does not answer.
+  const [jev, keyword] = await Promise.all([
+    jevScoresFor(q, pages),
+    searchReferrals(q, pages).then((ranked) => ({ ranked }), (error) => ({ error })),
+  ]);
+  if (jev) {
+    const order = keyword.ranked ? keyword.ranked.map((p) => p.docId) : [];
+    const ranked = rankByJev(pages, jev, { order }).slice(0, MAX_RESULTS);
+    return NextResponse.json({ q, by: 'jev', results: ranked.map(row) }, { headers: NO_STORE });
   }
+  if (keyword.ranked) {
+    return NextResponse.json({ q, by: 'keyword', results: keyword.ranked.map(row) }, { headers: NO_STORE });
+  }
+  // The page already shows its own keyword matches and keeps them.
+  console.warn('[referrals] search: ' + String(keyword.error?.message || keyword.error).slice(0, 200));
+  return NextResponse.json({ q, results: null, error: 'Search is unavailable.' }, { status: 503, headers: NO_STORE });
 }
