@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.77.0` | 2026-10-13 | feat | `0066d68` | feat: redesign contacts to match the referrals page |
+| `6.76.1` | 2026-10-13 | docs | `6be7337` | docs: record the one-header change in versions |
 | `6.76.0` | 2026-10-13 | feat | `a6e6ba1` | feat: one header on every page, with a glide between tools |
 | `6.75.1` | 2026-10-13 | docs | `a0fb2c9` | docs: record the Jev search and the header pill in versions |
 | `6.75.0` | 2026-10-13 | feat | `efc804b` | feat: one pill for theme and menu, and a clearer theme picker |
