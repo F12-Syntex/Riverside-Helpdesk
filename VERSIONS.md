@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.82.2` | 2026-10-13 | style | `cb33f40` | style: drop the settings header text and page scroll |
+| `6.82.1` | 2026-10-13 | docs | `97a2f4c` | docs: record the settings redesign in versions |
 | `6.82.0` | 2026-10-13 | feat | `df15775` | feat: redesign the settings page as a model ledger |
 | `6.81.4` | 2026-10-13 | docs | `fd0f1ec` | docs: record the Ask width change in versions |
 | `6.81.3` | 2026-10-13 | style | `578a6de` | style: match the Ask field width to Referrals and Contacts |
