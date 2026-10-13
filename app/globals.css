@@ -636,8 +636,8 @@ body { overflow-x: hidden; }
    darker fill that sinks the label. */
 .riva-modes-open .riva-modes-btn { box-shadow: 0 0 0 3px rgba(0,94,184,.16); }
 .riva-modes-list {
-  position: absolute; left: -4px; bottom: calc(100% + 16px); z-index: 8;
-  width: 340px; max-width: calc(100vw - 32px);
+  position: absolute; left: -14px; bottom: calc(100% + 26px); z-index: 8;
+  width: min(772px, calc(100vw - 32px));
   display: flex; flex-direction: column;
   background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
   box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
@@ -648,7 +648,7 @@ body { overflow-x: hidden; }
    above it, so the menu opens downward into the empty page instead of up
    under the header. It scrolls inside itself if the screen is short. */
 .riva-dock-center .riva-modes-list {
-  bottom: auto; top: calc(100% + 12px); transform-origin: top left;
+  bottom: auto; top: calc(100% + 28px); transform-origin: top left;
   max-height: calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - 59px - 36px - var(--riva-dock-field-h) - 30px);
   overflow-y: auto;
   animation-name: rivaModesInDown;
@@ -665,16 +665,16 @@ body { overflow-x: hidden; }
   padding: 13px 16px 4px; font-size: 11.5px; font-weight: 700;
   letter-spacing: .06em; text-transform: uppercase; color: #768692;
 }
-.riva-modes-page { display: flex; flex-direction: column; gap: 2px; padding: 6px; animation: rivaModesPage .18s ease both; }
+.riva-modes-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 8px; animation: rivaModesPage .18s ease both; }
 .riva-modes-page.is-folder { animation-name: rivaModesFolder; }
 @keyframes rivaModesPage { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @keyframes rivaModesFolder { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
-.riva-modes-sep { display: block; height: 1px; margin: 4px 10px; background: #edf1f3; }
+.riva-modes-sep { display: none; }
 
 /* One row: the name over what it reads, and a trailing mark. */
 .riva-mode {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  padding: 8px 10px; border: none; border-radius: 12px;
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; box-sizing: border-box;
+  padding: 10px 12px; border: none; border-radius: 14px;
   background: transparent; font: inherit; text-align: left; cursor: pointer;
   color: #212b32; transition: background .14s ease;
 }
@@ -688,7 +688,7 @@ body { overflow-x: hidden; }
 .riva-mode.is-on:focus, .riva-mode.is-on:focus-visible { background: #e1ecf8; box-shadow: inset 0 0 0 1px #c9dcef; }
 .riva-mode-tile {
   flex: none; display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 10px;
+  width: 38px; height: 38px; border-radius: 11px;
   background: #eef2f4; color: #4c6272;
   transition: background .14s ease, color .14s ease;
 }
@@ -697,13 +697,13 @@ body { overflow-x: hidden; }
 .riva-mode-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .riva-mode-label { font-size: 14.5px; font-weight: 650; color: #212b32; }
 .riva-mode.is-on .riva-mode-label { color: #005eb8; }
-.riva-mode-summary { font-size: 12.5px; color: #5b7183; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-mode-summary { font-size: 12.5px; line-height: 1.35; color: #5b7183; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .riva-mode-folder.is-on .riva-mode-summary { color: #005eb8; font-weight: 600; }
 .riva-mode-trail { flex: none; display: flex; width: 18px; justify-content: center; color: #768692; }
 .riva-mode-check { color: #005eb8; }
 
 /* The folder page's header: the way back, and where you are. */
-.riva-mode-back { padding: 7px 8px; margin-bottom: 2px; }
+.riva-mode-back { grid-column: 1 / -1; min-height: 0; padding: 8px 10px; margin-bottom: 2px; }
 .riva-mode-backicon { flex: none; display: flex; color: #4c6272; }
 .riva-mode-back:focus .riva-mode-backicon { color: #005eb8; }
 .riva-mode-heading { font-size: 13.5px; font-weight: 700; color: #212b32; }
@@ -721,6 +721,10 @@ body { overflow-x: hidden; }
 }
 @media (max-width: 600px), (pointer: coarse) {
   .riva-modes-foot { display: none; }
+}
+@media (max-width: 600px) {
+  .riva-modes-page { grid-template-columns: 1fr; }
+  .riva-mode { min-height: 56px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .riva-modes-list, .riva-modes-page { animation: none; }
