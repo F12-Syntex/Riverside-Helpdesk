@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import NextLink from 'next/link';
+import { MotionConfig, motion } from 'motion/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -24,9 +26,9 @@ import MapView from '../_components/notebook/MapView';
 import CardEditor from '../_components/notebook/CardEditor';
 import { QuestionLayer, QuestionMark, QuestionsChip, pageQuestions } from '../_components/notebook/Questions';
 import {
-  NotebookStyles, T, NBIcons, Banner, Button, IconButton, Tabs, SearchField, Chip, StatusPill,
-  EmptyState, EmptyMarquee, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuSeparator,
-  MenuSub, MenuChoice, Spinner,
+  NotebookStyles, T, NBIcons, Banner, Button, IconButton, SearchField, Chip, StatusPill,
+  State, SkeletonRows, Modal, ConfirmModal, ProgressModal, Menu, MenuItem, MenuSeparator,
+  MenuSub, MenuChoice, Spinner, Toast,
 } from '../_components/notebook/kit';
 import { lineDiff } from '@/lib/notebook/diff.mjs';
 import { hasQuestionAnchor, questionAnchorsIn, stripQuestionMarks } from '@/lib/notebook/questions.mjs';
@@ -35,200 +37,252 @@ import {
 } from '@/lib/notebook/kinds.mjs';
 import { notebookHref, noteSegment, resolveNote } from '@/lib/notebook/links.mjs';
 import { phaseLabel, readProgress } from '@/lib/notebook/progress.mjs';
+import { TITLE_MAX, checkTitle, fallbackTitle } from '@/lib/notebook/title-check.mjs';
 
 /* ------------------------------------------------------------------ *
- * Notebook - the practice's notes, which the assistant reads to answer.
+ * Practice notes - the notes the assistant reads to answer.
  *
- * The screen is two surfaces on the light, in the shell's language: the
- * tree of sections and pages on a pane of glass at the left, and the page
- * itself on a sheet of white paper beside it - a slim bar of where you
- * are and what you can do, the formatting strip floating over the text,
- * and the page's own title set large at the head of what it says. On a
- * phone the glass becomes a drawer over the sheet. Everything that
- * interrupts - a deletion,
- * a reformat to review, a backup being restored - arrives as the same
- * modal, from the kit next door (kit.jsx), so a dialogue in the Notebook
- * always looks like the last dialogue in the Notebook.
+ * The screen is two white cards on the light, in the page language
+ * Referrals set (globals.css, "The page language, shared"): at the left
+ * the sections and pages, under the heading with its one blue word; at
+ * the right the page itself - a slim bar of where it is and whether it
+ * is saved, one strip of formatting, and the page's own title set large
+ * at the head of what it says. The page draws no background of its own:
+ * it sits on the light behind every page (PageBackground). On a phone it
+ * is one card at a time - the list, then the page, with a pill back.
+ * Everything that interrupts - a deletion, a reformat to review, a backup
+ * being restored - arrives as the app's one dialog, from the kit next
+ * door (kit.jsx), so a dialogue here always looks like the last one.
+ *
+ * NOTHING IS LEFT TO GUESS. Loading, nothing written, nothing found and
+ * could-not-load each have their own state in the card, rather than one
+ * "Nothing written yet" whatever happened. The autosave says what it is
+ * doing (Saving... / Saved / Couldn't save, Retry). A title cannot be
+ * saved empty, is told when it repeats a neighbour's, and stops at the
+ * 200 characters the server keeps. A deletion says what goes with it and
+ * that the assistant stops answering from it. Leaving with an edit not
+ * yet sent sends it first.
+ *
+ * THE TREE IS A TREE to a keyboard and a screen reader as well: one tab
+ * stop, the arrows to move, open and close, Enter to open a page, F2 to
+ * rename, Delete to delete, the context-menu key for the rest.
  *
  * What is stored and how has not moved: notes and their tree live in
  * Postgres (/api/notebook), files in Vercel Blob
  * (/api/notebook/attachments), bodies are markdown plus the small HTML
  * subset TipTap round-trips, and saving is still the quiet-period
- * autosave below. This file is the presentation of all that, rewritten.
+ * autosave below. This file is the presentation of all that.
  * ------------------------------------------------------------------ */
 
+const EASE = [0.22, 1, 0.36, 1];
+
 // Layout and the handful of page-only shapes. Everything reusable - buttons,
-// tabs, modals, menus, rows, the writing surface - is in kit.jsx.
+// modals, menus, rows, the writing surface - is in kit.jsx.
 const PAGE_CSS = `
-.nbk-shell{display:flex;flex-direction:column;height:100vh;min-height:100vh;}
-.nbk-body{position:relative;flex:1;min-height:0;display:flex;gap:var(--rv-gutter,12px);width:100%;padding:var(--rv-gutter,12px);}
+/* The page is the screen under the bar and never scrolls: each card takes
+   what is left, and scrolls inside itself past that. */
+.nbk-shell{position:relative;height:100%;overflow:hidden;display:flex;flex-direction:column;}
+.nbk-body{position:relative;flex:1;min-height:0;display:flex;gap:16px;width:100%;padding:8px 28px 24px;}
 
-/* ---- the tree: glass on the light ---- */
-.nbk-sidebar{flex:none;width:300px;display:flex;flex-direction:column;min-height:0;border-radius:20px;overflow:hidden;
-  animation:nbk-side-in .5s var(--nbk-ease) both;}
-@keyframes nbk-side-in{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:none;}}
-.nbk-sidebar__top{flex:none;display:flex;flex-direction:column;gap:10px;padding:14px 12px 10px;}
-.nbk-brand{display:flex;align-items:center;gap:10px;padding:0 2px 2px;}
-.nbk-brand__name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--nbk-ink);line-height:1.15;}
-.nbk-brand__meta{font-size:12px;font-weight:600;color:var(--nbk-dim);font-variant-numeric:tabular-nums;}
+/* ---- the sections and pages: a white card ---- */
+.nbk-sidebar{flex:none;width:300px;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+  background:#fff;border-radius:22px;box-shadow:var(--rv-sh-card);}
+/* Folded away on a wide screen, it narrows to nothing and the page card
+   widens into the room; then it is hidden, so Tab does not walk into it. */
+.nbk-body.is-ready .nbk-sidebar{transition:width .45s var(--rv-ease),margin-right .45s var(--rv-ease),visibility 0s linear 0s;}
+.nbk-body.is-collapsed .nbk-sidebar{width:0;margin-right:-16px;visibility:hidden;}
+.nbk-body.is-ready.is-collapsed .nbk-sidebar{transition:width .45s var(--rv-ease),margin-right .45s var(--rv-ease),visibility 0s linear .45s;}
+.nbk-sidebar__inner{flex:1;min-height:0;width:300px;display:flex;flex-direction:column;}
+.nbk-sidebar__top{flex:none;display:flex;flex-direction:column;gap:14px;padding:22px 16px 10px 18px;}
+.nbk-h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1;color:var(--rv-ink);user-select:none;}
+.nbk-h1 em{font-style:normal;color:var(--rv-accent);}
+.nbk-meta{display:flex;align-items:center;min-height:18px;margin:6px 0 0;font-size:13px;font-weight:550;color:var(--rv-ink-2);font-variant-numeric:tabular-nums;}
 .nbk-sidebar__row{display:flex;align-items:center;gap:8px;}
-.nbk-tree{flex:1;min-height:0;overflow-y:auto;padding:4px 8px 16px;display:flex;flex-direction:column;gap:1px;}
-.nbk-tree__label{padding:8px 8px 5px;}
-.nbk-tree__empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:18px 12px;font-size:13.5px;line-height:1.5;color:var(--nbk-mut);}
-.nbk-tree__empty img{width:110px;height:110px;user-select:none;animation:nbk-float 5.5s ease-in-out infinite;}
-@keyframes nbk-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
-@media (prefers-reduced-motion:reduce){.nbk-tree__empty img{animation:none;}}
-.nbk-tree__note{padding:10px 8px;font-size:13.5px;line-height:1.55;color:var(--nbk-mut);}
-.nbk-sidebar__foot{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px;border-top:1px solid rgba(33,43,50,.07);}
-.nbk-sidebar__note{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.45;color:var(--nbk-mut);}
-.nbk-foot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
-.nbk-foot-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px 8px;border:1px solid transparent;border-radius:12px;
-  background:rgba(255,255,255,.55);font:inherit;font-size:12px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
-  transition:background-color .15s ease,color .15s ease,box-shadow .15s ease,transform .1s ease;}
-.nbk-foot-btn:hover{background:#fff;color:var(--nbk-blue);box-shadow:var(--nbk-sh-1);}
-.nbk-foot-btn:active{transform:translateY(1px);}
-.nbk-foot-btn:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
+.nbk-sidebar__row .nbk-field{flex:1;min-width:0;}
+.nbk-tree{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 10px 14px;}
+.nbk-tree__inner{position:relative;display:flex;flex-direction:column;gap:1px;}
+.nbk-tree__label{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 6px;}
+.nbk-tree__note{margin:0;padding:10px;font-size:13.5px;line-height:1.55;color:var(--rv-ink-2);}
+.nbk-state--compact{padding:22px 8px 18px;}
+.nbk-state--compact .rv-state__title{font-size:15px;}
+.nbk-state--compact .rv-state__text{font-size:13.5px;}
+.nbk-sidebar__foot{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px 16px 18px;border-top:1px solid var(--rv-divider);}
+.nbk-foot-note{display:flex;align-items:flex-start;gap:7px;margin:0;font-size:13px;line-height:1.45;color:var(--rv-ink-2);}
+.nbk-foot-note svg{flex:none;margin-top:2px;color:var(--rv-ink-3);}
+.nbk-foot-row{display:flex;gap:6px;}
+.nbk-foot-row .rv-btn{flex:1 1 0;min-width:0;padding:0 8px;}
 
-/* The tree sits on the same white paper as the page, so the two read as
-   one surface split in two rather than two different materials. Rows get
-   a tint to hover and select on, since white-on-white shows nothing. */
-.nbk-sidebar .nbk-row:hover{background:#f4f7f9;}
-.nbk-sidebar .nbk-row--on,.nbk-sidebar .nbk-row--on:hover{background:#eef4fa;box-shadow:none;}
-.nbk-sidebar .nbk-foot-btn{background:#f4f7f9;}
-.nbk-sidebar .nbk-foot-btn:hover{background:#eef4fa;box-shadow:none;}
+/* ---- the page: a white card ---- */
+.nbk-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden;
+  background:#fff;border-radius:22px;box-shadow:var(--rv-sh-card);}
+.nbk-head{flex:none;display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 12px 6px 12px;}
+.nbk-head__left{flex:1;min-width:0;display:flex;align-items:center;gap:4px;}
+.nbk-head__crumbs{min-width:0;display:flex;align-items:center;gap:0;overflow:hidden;white-space:nowrap;}
+.nbk-crumb{flex:none;max-width:220px;overflow:hidden;text-overflow:ellipsis;border:none;background:none;padding:6px 9px;font:inherit;font-size:13.5px;font-weight:550;
+  color:var(--rv-ink-2);cursor:pointer;border-radius:999px;transition:background-color .14s ease,color .14s ease;}
+.nbk-crumb:hover{color:var(--rv-accent);background:var(--rv-hl);}
+.nbk-crumb:focus-visible{outline:2px solid var(--rv-accent);outline-offset:-2px;}
+.nbk-crumb--here,.nbk-crumb--here:hover{color:var(--rv-ink);background:none;cursor:default;flex:0 1 auto;}
+.nbk-crumb-sep{flex:none;display:flex;color:var(--rv-icon-mute);}
+.nbk-head__actions{flex:none;display:flex;align-items:center;gap:2px;}
+.nbk-head__actions .nbk-status{margin-right:10px;}
+.nbk-head__actions .rv-btn{margin-right:6px;}
+/* A phone: the page covers the list, so the way back to it is said. */
+.nbk-back{display:none;align-items:center;gap:6px;height:36px;margin-left:-2px;padding:0 12px 0 8px;border:none;border-radius:999px;background:none;
+  font:inherit;font-size:14.5px;font-weight:600;color:var(--rv-accent);cursor:pointer;transition:background-color .15s ease;}
+.nbk-back:hover{background:var(--rv-hl);}
+.nbk-back:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
 
-/* ---- the page: white paper ---- */
-.nbk-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;position:relative;border-radius:22px;overflow:hidden;
-  animation:nbk-paper-in .55s .05s var(--nbk-ease) both;}
-@keyframes nbk-paper-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-.nbk-head{flex:none;display:flex;align-items:center;gap:10px;min-height:58px;padding:10px 14px 10px 12px;}
-.nbk-head__left{flex:1;min-width:0;display:flex;align-items:center;gap:6px;}
-.nbk-head__crumbs{min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;white-space:nowrap;}
-.nbk-crumb{flex:none;max-width:220px;overflow:hidden;text-overflow:ellipsis;border:none;background:none;padding:5px 8px;font:inherit;font-size:13px;font-weight:600;
-  color:var(--nbk-mut);cursor:pointer;border-radius:8px;transition:background-color .14s ease,color .14s ease;}
-.nbk-crumb:hover{color:var(--nbk-blue);background:var(--nbk-soft);}
-.nbk-crumb--here{color:var(--nbk-ink);cursor:default;flex:0 1 auto;}
-.nbk-crumb--here:hover{color:var(--nbk-ink);background:none;}
-.nbk-crumb-sep{flex:none;color:#b6c2c9;display:flex;}
-.nbk-head__actions{flex:none;display:flex;align-items:center;gap:8px;}
-.nbk-side-toggle{display:inline-flex;}
-
-.nbk-tools{flex:none;position:relative;z-index:2;padding:0 0 10px;}
+.nbk-tools{flex:none;position:relative;z-index:2;display:flex;padding:0 0 8px;}
 .nbk-editor-wrap{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;}
-.nbk-qopt{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--nbk-line);border-radius:12px;background:#fffaf0;
-  font-size:14px;line-height:1.5;color:var(--nbk-ink);cursor:pointer;}
-.nbk-qopt input{flex:none;width:17px;height:17px;margin:2px 0 0;accent-color:var(--nbk-blue);cursor:pointer;}
-.nbk-qopt small{display:block;margin-top:4px;font-size:12.5px;color:var(--nbk-mut);}
+.nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;animation:nbk-page-in .32s var(--rv-ease) both;}
+@keyframes nbk-page-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.nbk-qopt{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:14px;background:var(--rv-hl);
+  font-size:14.5px;line-height:1.5;color:var(--rv-ink);cursor:pointer;text-align:left;}
+.nbk-qopt input{flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:var(--rv-accent);cursor:pointer;}
+.nbk-qopt small{display:block;margin-top:4px;font-size:13px;color:var(--rv-ink-2);}
 
-.nbk-editor{flex:1;min-height:0;overflow-y:auto;cursor:text;display:flex;flex-direction:column;}
-
-/* The page's own heading, inside the sheet: where it sits, its name as a
-   title, and what it is - so the title is read as the page's, not the bar's. */
-.nbk-doc-head{width:100%;max-width:780px;margin:0 auto;padding:30px 44px 10px;cursor:auto;animation:nbk-in .4s var(--nbk-ease) both;}
-.nbk-kicker{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:11.5px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--nbk-dim);}
-.nbk-kicker__dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.7;}
-.nbk-kicker .nbk-chip{text-transform:none;letter-spacing:.01em;}
-.nbk-doc-title{display:block;width:calc(100% + 8px);margin:0 0 0 -8px;padding:2px 8px;border:none;outline:none;background:none;border-radius:10px;
+/* The page's own heading, inside the card: what it is and where it sits,
+   then its name set large - the title is the page's, not the bar's, and
+   it scrolls with the text it names. */
+.nbk-doc-head{width:100%;max-width:800px;margin:0 auto;padding:26px 40px 16px;cursor:auto;}
+.nbk-kicker{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-bottom:10px;font-size:13px;font-weight:550;color:var(--rv-ink-2);}
+.nbk-kicker__dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6;}
+.nbk-doc-title{display:block;width:calc(100% + 16px);margin:0 0 0 -8px;padding:2px 8px 4px;border:none;outline:none;background:none;border-radius:12px;
   resize:none;overflow:hidden;field-sizing:content;min-height:0;
-  font:inherit;font-size:34px;font-weight:800;letter-spacing:-.028em;line-height:1.18;color:var(--nbk-ink);
+  font:inherit;font-size:36px;font-weight:800;letter-spacing:-.03em;line-height:1.16;color:var(--rv-ink);
   transition:background-color .15s ease,box-shadow .15s ease;}
-.nbk-doc-title::placeholder{color:#b6c2c9;}
-.nbk-doc-title:hover{background:rgba(33,43,50,.035);}
-.nbk-doc-title:focus{background:transparent !important;box-shadow:inset 0 -2px 0 var(--nbk-blue) !important;border:none !important;}
-.nbk-doc-rule{height:1px;margin:18px 0 0;background:linear-gradient(90deg,var(--nbk-line-soft),transparent);}
+.nbk-doc-title::placeholder{color:var(--rv-ink-4);}
+.nbk-doc-title:hover{background:var(--rv-hl);}
+.nbk-doc-title:focus,.nbk-doc-title:focus-visible{background:transparent !important;outline:none !important;border:none !important;box-shadow:inset 0 -2px 0 var(--rv-accent) !important;}
+.nbk-doc-title[aria-invalid="true"],.nbk-doc-title[aria-invalid="true"]:focus{box-shadow:inset 0 -2px 0 var(--rv-danger) !important;}
+.nbk-title-foot{display:flex;align-items:flex-start;gap:12px;margin-top:8px;}
+.nbk-title-msg{flex:1;min-width:0;display:flex;align-items:flex-start;gap:7px;margin:0;font-size:13.5px;font-weight:550;line-height:1.45;}
+.nbk-title-msg svg{flex:none;margin-top:1px;}
+.nbk-title-msg.is-bad{color:var(--rv-danger-ink);}
+.nbk-title-msg.is-warn{color:var(--rv-warn-ink);}
+.nbk-title-msg.is-hint{color:var(--rv-ink-2);}
+.nbk-title-count{flex:none;margin-left:auto;font-size:12.5px;font-weight:600;color:var(--rv-ink-2);font-variant-numeric:tabular-nums;}
+.nbk-title-count.is-max{color:var(--rv-danger-ink);}
+.nbk-section__lede{margin:12px 0 0;max-width:62ch;font-size:14.5px;line-height:1.55;color:var(--rv-ink-2);}
 
-.nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;
-  border-top:1px solid var(--nbk-line-soft);background:rgba(248,250,251,.9);}
-.nbk-dock__label{margin-right:4px;}
-.nbk-attach{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 4px 4px 10px;
-  background:#fff;border:1px solid var(--nbk-line);border-radius:12px;box-shadow:var(--nbk-sh-1);animation:nbk-in .3s var(--nbk-ease) both;}
-.nbk-attach a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;
-  font-weight:600;color:var(--nbk-ink);text-decoration:none;}
-.nbk-attach a:hover{color:var(--nbk-blue);text-decoration:underline;}
+/* ---- the files on a page, under it ---- */
+.nbk-dock{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px 12px;border-top:1px solid var(--rv-divider);}
+.nbk-dock__label{margin-right:2px;}
+.nbk-attach{display:inline-flex;align-items:center;gap:7px;max-width:300px;height:34px;padding:0 3px 0 12px;background:#fff;border-radius:999px;
+  box-shadow:inset 0 0 0 1px var(--rv-line);color:var(--rv-ink-3);animation:nbk-in .3s var(--rv-ease) both;}
+.nbk-attach a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600;color:var(--rv-ink);text-decoration:none;}
+.nbk-attach a:hover{color:var(--rv-accent);text-decoration:underline;text-underline-offset:2px;}
+.nbk-attach a:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;border-radius:4px;}
+.nbk-dock__busy{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:550;color:var(--rv-ink-2);}
+.nbk-dock__err{flex-basis:100%;display:flex;align-items:flex-start;gap:8px;}
+.nbk-dock__err .rv-alert{flex:1;display:flex;align-items:flex-start;gap:8px;}
 
 .nbk-dropzone{position:absolute;inset:10px;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:12px;border:2px dashed var(--nbk-blue);border-radius:18px;background:rgba(234,242,251,.9);
-  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  font-size:16px;font-weight:700;color:var(--nbk-navy);pointer-events:none;animation:nbk-fade .15s ease;}
+  gap:12px;border:2px dashed var(--rv-accent);border-radius:18px;background:rgba(232,241,248,.92);
+  font-size:16px;font-weight:650;color:var(--rv-accent-hi);pointer-events:none;animation:nbk-fade .15s ease;}
 
-/* ---- a section: its pages as cards ---- */
-.nbk-section{flex:1;min-height:0;overflow-y:auto;padding:0 0 40px;}
-.nbk-section__lede{margin:14px 0 0;max-width:62ch;font-size:14px;line-height:1.6;color:var(--nbk-mut);}
-.nbk-cards{width:100%;max-width:780px;margin:0 auto;padding:8px 44px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
-.nbk-page-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:128px;width:100%;text-align:left;
-  background:#fff;border:1px solid var(--nbk-line-soft);border-radius:16px;padding:14px 14px 13px;
-  box-shadow:0 1px 2px rgba(33,43,50,.05);font:inherit;color:var(--nbk-ink);cursor:pointer;
-  animation:nbk-in .4s var(--nbk-ease) both;
-  transition:border-color .15s ease,box-shadow .2s ease,transform .2s var(--nbk-ease);}
-.nbk-page-card:hover{border-color:#aac7e0;transform:translateY(-1px);box-shadow:0 1px 2px rgba(33,43,50,.06),0 3px 6px -2px rgba(33,43,50,.08);}
-.nbk-page-card:focus-visible{outline:2px solid var(--nbk-blue);outline-offset:2px;}
-.nbk-page-card__title{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.35;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.nbk-page-card__excerpt{font-size:12.5px;line-height:1.5;color:var(--nbk-mut);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.nbk-page-card__empty{font-size:12px;font-weight:650;color:var(--nbk-dim);}
-.nbk-add-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:128px;width:100%;
-  border:1.5px dashed #c9d5dd;border-radius:16px;background:rgba(248,250,251,.6);padding:14px;
-  font:inherit;font-size:14px;font-weight:650;color:var(--nbk-mut);cursor:pointer;
-  transition:border-color .15s ease,color .15s ease,background-color .15s ease;}
-.nbk-add-card:hover{border-color:var(--nbk-blue);color:var(--nbk-blue);background:var(--nbk-tint);}
+/* ---- a section: its pages as rows, as Referrals lists ---- */
+.nbk-section{flex:1;min-height:0;overflow-y:auto;padding:0 0 40px;animation:nbk-page-in .32s var(--rv-ease) both;}
+.nbk-pages{width:100%;max-width:800px;margin:4px auto 0;padding:0 26px;}
+.nbk-pages__list{position:relative;}
+.nbk-glide{position:absolute;left:0;top:0;width:0;height:0;border-radius:14px;background:var(--rv-hl);pointer-events:none;opacity:0;
+  transition:transform .32s var(--rv-ease),height .32s var(--rv-ease),width .32s var(--rv-ease),opacity .15s ease;}
+.nbk-glide.is-on{opacity:1;}
+.nbk-prow{position:relative;display:flex;align-items:center;gap:14px;width:100%;min-height:62px;padding:11px 14px;border:none;background:none;
+  font:inherit;text-align:left;color:inherit;cursor:pointer;border-radius:14px;}
+.nbk-prow + .nbk-prow::before{content:"";position:absolute;left:14px;right:14px;top:0;height:1px;background:var(--rv-divider);}
+.nbk-prow:focus-visible{outline:2px solid var(--rv-accent);outline-offset:-2px;}
+.nbk-prow__icon{flex:none;display:flex;color:var(--rv-ink-3);}
+.nbk-prow__text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.nbk-prow__name{font-size:16px;font-weight:550;line-height:1.35;color:var(--rv-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nbk-prow__sub{font-size:13.5px;line-height:1.45;color:var(--rv-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nbk-prow__chev{flex:none;display:flex;color:var(--rv-icon-mute);transition:transform .2s var(--rv-ease),color .15s ease;}
+.nbk-prow:hover .nbk-prow__chev,.nbk-prow:focus-visible .nbk-prow__chev{transform:translateX(2px);color:var(--rv-ink-2);}
+.nbk-prow--add{min-height:54px;color:var(--rv-accent);font-size:15px;font-weight:600;}
+.nbk-prow--add .nbk-prow__icon{color:var(--rv-accent);}
 
-/* ---- the map, in the same sheet ---- */
-.nbk-map-lede{font-size:13px;color:var(--nbk-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* ---- nothing open: a state, then the pages edited last ---- */
+.nbk-void{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:clamp(24px,9vh,90px) 20px 32px;}
+.nbk-void .nbk-pages{max-width:560px;padding:0;margin-top:4px;}
+.nbk-void__cap{width:100%;max-width:560px;padding:0 14px 6px;}
+.nbk-docskel{width:100%;max-width:800px;margin:0 auto;padding:30px 40px;}
 
 /* The typed card. The screen itself is drawn by the same components the chat
    uses (app/_components/templates), which carry their own styling - there is
    deliberately no second set of card styles here to drift from them. What is
    left is the space the screen sits in and the heading over the page's own
    writing underneath it. */
-.nbk-card-banner,.nbk-card-wrap,.nbk-card__prose{width:100%;max-width:780px;margin:0 auto;padding:0 44px;cursor:auto;}
-.nbk-card-banner{padding-bottom:12px;}
-.nbk-card-wrap{padding-top:6px;}
-.nbk-card__prose{margin-top:22px;margin-bottom:8px;}
-.nbk-card__prose > span{display:block;padding-top:12px;border-top:1px solid var(--nbk-line-soft);
-  font-size:12.5px;font-weight:700;color:var(--nbk-mut);}
+.nbk-card-banner,.nbk-card-wrap,.nbk-card__prose{width:100%;max-width:800px;margin:0 auto;padding:0 40px;cursor:auto;}
+.nbk-card-banner{padding-bottom:14px;}
+.nbk-card-wrap{padding-top:4px;}
+.nbk-card__prose{margin-top:24px;margin-bottom:10px;}
+.nbk-card__prose > span{display:block;padding-top:12px;border-top:1px solid var(--rv-divider);font-size:13px;font-weight:600;color:var(--rv-ink-2);}
 
-.nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--nbk-line-soft);}
+.nbk-plan__note{padding:12px 0 6px;border-top:1px solid var(--rv-divider);text-align:left;}
+.nbk-map-lede{font-size:13px;color:var(--rv-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .nbk-plan__part{display:flex;gap:10px;align-items:flex-start;margin:9px 0 9px 23px;}
 
-.nbk-scrim{display:none;}
-
-/* Closed on a wide screen: the sheet takes the whole width. */
-.nbk-body.is-collapsed .nbk-sidebar{display:none;}
+/* ---- the new-section dialog ---- */
+.nbk-form{display:flex;flex-direction:column;gap:16px;padding:4px 0 2px;text-align:left;}
+.nbk-form .rv-err,.nbk-form .rv-hint{margin-top:7px;}
+.nbk-form .rv-hint.is-warn{color:var(--rv-warn-ink);font-weight:550;}
 
 @media (max-width:1000px){
-  .nbk-sidebar{width:264px;}
-  .nbk-doc-head,.nbk-cards,.nbk-card-banner,.nbk-card-wrap,.nbk-card__prose{padding-left:28px;padding-right:28px;}
+  .nbk-body{padding:4px 16px 16px;}
+  .nbk-sidebar,.nbk-sidebar__inner{width:264px;}
+  .nbk-doc-head,.nbk-card-banner,.nbk-card-wrap,.nbk-card__prose,.nbk-docskel{padding-left:28px;padding-right:28px;}
+  .nbk-pages{padding-left:14px;padding-right:14px;}
+  .nbk-prose{padding-left:28px;padding-right:28px;}
 }
-/* A phone: the tree is a drawer over the page, opened from the sheet. */
-@media (max-width:760px){
-  .nbk-body{gap:0;}
-  .nbk-body.is-collapsed .nbk-sidebar{display:flex;}
-  .nbk-sidebar{position:fixed;z-index:60;left:8px;top:calc(var(--rv-top-h,56px) + var(--rv-gutter,8px));bottom:8px;width:min(320px,calc(100vw - 16px));
-    animation:none;transform:translateX(calc(-100% - 16px));transition:transform .32s var(--nbk-ease);
-    background:rgba(255,255,255,.9);}
-  .nbk-body.is-drawer .nbk-sidebar{transform:none;}
-  .nbk-body.is-drawer .nbk-scrim{display:block;position:fixed;inset:0;z-index:55;background:rgba(20,36,48,.25);animation:nbk-fade .2s ease;}
-  .nbk-main{border-radius:18px;}
-  .nbk-head{padding:8px 10px;min-height:52px;}
-  .nbk-crumb{max-width:120px;}
-  .nbk-doc-head{padding:22px 20px 6px;}
-  .nbk-card-banner,.nbk-card-wrap,.nbk-card__prose{padding-left:20px;padding-right:20px;}
-  .nbk-doc-title{font-size:27px;}
-  .nbk-cards{padding:8px 20px 0;grid-template-columns:1fr;}
-  .nbk-page-card,.nbk-add-card{min-height:0;}
-  .nbk-map-lede{display:none;}
+/* A phone: one card at a time - the list, then the page over it, with a
+   pill back to the list. Targets are a thumb's size. */
+@media (max-width:700px){
+  .nbk-body{padding:4px 10px 10px;gap:0;}
+  .nbk-sidebar,.nbk-body.is-collapsed .nbk-sidebar{flex:1;width:auto;margin-right:0;visibility:visible;}
+  .nbk-sidebar__inner{width:auto;}
+  .nbk-body.is-list .nbk-main{display:none;}
+  .nbk-body:not(.is-list) .nbk-sidebar{display:none;}
+  .nbk-sidebar,.nbk-main{animation:nbk-pane-in .4s var(--rv-ease) both;}
+  .nbk-sidebar__top{padding:18px 14px 10px 16px;}
+  .nbk-h1{font-size:30px;}
+  .nbk-field,.nbk-sidebar__row .rv-btn{height:44px;}
+  .nbk-field input{font-size:16px;}
+  .nbk-tree{padding:2px 8px 12px;}
+  .nbk-row,.nbk-row__btn{min-height:44px;}
+  .nbk-row__actions{position:static;transform:none;opacity:1;pointer-events:auto;padding-left:0;background:none !important;}
+  .nbk-foot-row .rv-btn{height:44px;}
+  .nbk-side-toggle,.nbk-head__crumbs{display:none !important;}
+  .nbk-back{display:inline-flex;height:44px;}
+  .nbk-head{min-height:56px;padding:6px 6px 4px 8px;}
+  .nbk-head .rv-ibtn{width:40px;height:40px;}
+  .nbk-head .rv-ibtn::after,.nbk-row__actions .rv-ibtn::after,.nbk-attach .rv-ibtn::after{content:"";position:absolute;inset:-4px;}
+  .nbk-status__when{display:none;}
+  .nbk-head__actions .nbk-status{margin-right:4px;}
+  .nbk-doc-head{padding:14px 18px 8px;}
+  .nbk-doc-title{font-size:28px;}
+  .nbk-card-banner,.nbk-card-wrap,.nbk-card__prose,.nbk-docskel{padding-left:16px;padding-right:16px;}
+  .nbk-pages{padding:0 6px;}
+  .nbk-prow{min-height:60px;padding:10px 12px;}
+  .nbk-prose{padding-left:18px;padding-right:18px;}
+  .nbk-dock{padding:8px 12px 10px;}
 }
+@keyframes nbk-pane-in{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 @media (prefers-reduced-motion:reduce){
-  .nbk-sidebar,.nbk-main,.nbk-doc-head,.nbk-page-card,.nbk-attach{animation:none;}
-  .nbk-sidebar{transition:none;}
+  .nbk-editor,.nbk-section,.nbk-attach,.nbk-sidebar,.nbk-main{animation:none !important;}
+  .nbk-body.is-ready .nbk-sidebar,.nbk-glide,.nbk-prow__chev{transition:none !important;}
 }
 `;
 
 const MAX_DEPTH = 4; // sections + 3 levels of pages keeps the tree sane
+const QUIET_MS = 1800; // the autosave waits for this long a pause in the typing
+const MAX_UPLOAD = 20 * 1024 * 1024; // the attachments route's limit, said before the upload rather than after
+const SAVES_HREF = '/notebook/saves';
 
-// A line of what a page says, for its card: the markdown and HTML taken out.
+const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+const isPhone = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 700px)').matches;
+
+// A line of what a page says, for its row: the markdown and HTML taken out.
 function excerpt(body, max = 140) {
   const text = String(body || '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
@@ -246,6 +300,81 @@ function fmtSize(n) {
   if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
+
+// Whether a typed card has anything in it that changing its kind would lose:
+// a value other than the one an empty card of that kind starts with.
+function hasValues(kind, fields) {
+  const empty = emptyFields(kind);
+  const f = fields && typeof fields === 'object' ? fields : {};
+  return Object.keys(empty).some((key) => {
+    const v = f[key];
+    if (Array.isArray(v)) return v.some((x) => String(x == null ? '' : x).trim());
+    return typeof v === 'string' && v.trim() !== '' && v.trim() !== String(empty[key] || '').trim();
+  });
+}
+
+/**
+ * One soft shape behind a list's rows that glides to the row under the
+ * pointer, or the one the keys are on - Referrals' highlight. It is moved by
+ * hand rather than by state: the page redraws on every keystroke in the
+ * editor, and a highlight in state would redraw it on every mouse move too.
+ */
+function useGlide(boxRef, hlRef, selector, key = null) {
+  React.useEffect(() => {
+    const box = boxRef.current;
+    const hl = hlRef.current;
+    if (!box || !hl) return undefined;
+    let current = null;
+    const place = (row, jump) => {
+      current = row;
+      if (!row || !box.contains(row)) { hl.classList.remove('is-on'); current = null; return; }
+      const b = box.getBoundingClientRect();
+      const r = row.getBoundingClientRect();
+      const first = !hl.classList.contains('is-on');
+      if (first || jump) hl.style.transition = 'none';
+      hl.style.transform = 'translate(' + (r.left - b.left) + 'px,' + (r.top - b.top) + 'px)';
+      hl.style.width = r.width + 'px';
+      hl.style.height = r.height + 'px';
+      if (first || jump) { void hl.offsetWidth; hl.style.transition = ''; }
+      hl.classList.add('is-on');
+    };
+    const rowOf = (el) => (el && el.closest ? el.closest(selector) : null);
+    // Whether focus is moving by the keys (follow it) or by a click (the
+    // pointer is already saying where it is).
+    let byKeys = false;
+    const onKeyDown = () => { byKeys = true; };
+    const onDown = () => { byKeys = false; };
+    const onMove = (e) => { const row = rowOf(e.target); if (row && row !== current) place(row); };
+    const onLeave = () => {
+      const f = document.activeElement;
+      place(byKeys && box.contains(f) ? rowOf(f) || rowOf(f.firstElementChild) : null);
+    };
+    const onFocus = (e) => {
+      if (!byKeys) return;
+      place(rowOf(e.target) || rowOf(e.target.firstElementChild));
+    };
+    const onBlur = (e) => { if (!box.contains(e.relatedTarget) && !box.matches(':hover')) place(null); };
+    // The list changing under it (a folder opening above) moves the row; follow.
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { if (current) place(current, true); }) : null;
+    if (ro) ro.observe(box);
+    box.addEventListener('keydown', onKeyDown, true);
+    box.addEventListener('pointerdown', onDown, true);
+    box.addEventListener('pointermove', onMove);
+    box.addEventListener('pointerleave', onLeave);
+    box.addEventListener('focusin', onFocus);
+    box.addEventListener('focusout', onBlur);
+    return () => {
+      if (ro) ro.disconnect();
+      box.removeEventListener('keydown', onKeyDown, true);
+      box.removeEventListener('pointerdown', onDown, true);
+      box.removeEventListener('pointermove', onMove);
+      box.removeEventListener('pointerleave', onLeave);
+      box.removeEventListener('focusin', onFocus);
+      box.removeEventListener('focusout', onBlur);
+    };
+  }, [boxRef, hlRef, selector, key]);
+}
+
 // Formatting-toolbar glyphs (the same 24x24 stroke style as the shared set,
 // geometry from Lucide). Local to the notebook: no other page needs them.
 const TIcons = {
@@ -314,8 +443,9 @@ const EXTENSIONS = [
 ];
 
 // Keyed by note id in the parent, so switching pages gets a fresh editor and
-// its own undo history. onChange receives the serialized markdown on every
-// edit and feeds the existing dirty -> interval-save pipeline.
+// its own undo history - and, being a fresh element, the sheet fades the new
+// page in. onChange receives the serialized markdown on every edit and feeds
+// the existing dirty -> interval-save pipeline.
 function PageEditor({ initialBody, onChange, onReady, uploadImage, header = null }) {
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
@@ -327,7 +457,7 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage, header = null
     extensions: EXTENSIONS,
     content: initialBody || '',
     editorProps: {
-      attributes: { class: 'nbk-prose' },
+      attributes: { class: 'nbk-prose', 'aria-label': 'The page', 'aria-multiline': 'true', role: 'textbox' },
       // Pasted pictures: upload to blob storage (tracked as attachments of
       // this note), then insert inline at the caret as an image node.
       handlePaste: (view, event) => {
@@ -365,36 +495,52 @@ function PageEditor({ initialBody, onChange, onReady, uploadImage, header = null
 /**
  * What a note is, as a chip.
  *
- * A swatch and the short name, in the kind's own colour. `full` spells the
- * whole name out - used where there is room; the tree uses the short one so a
- * chip never pushes a page title out of view. A plain note wears nothing:
- * almost every page is one, and a chip on all of them is a chip on none.
+ * The short name in the kind's own colour (the shared rv-chip). `full`
+ * spells the whole name out, with a dot - used where there is room; the
+ * tree uses the short one so a chip never pushes a page title out of view.
+ * A plain note wears nothing: almost every page is one, and a chip on all
+ * of them is a chip on none.
  *
  * A DRAFT SAYS SO. An incomplete card is not served, and the tree is where
  * somebody notices that without opening it.
  */
-function KindChip({ kind, draft = false, full = false }) {
+function KindChip({ kind, draft = false, full = false, hidden = false }) {
   const def = noteKind(kind);
   if (!isTypedKind(def.id)) return null;
-  return (
-    <Chip colour={draft ? { ink: '#8a5a00', tint: '#fff5e0', edge: '#d9a441' } : def.colour} dot={full}
+  const chip = (
+    <Chip colour={draft ? null : def.colour} tone={draft ? 'warn' : ''} dot={full}
       title={draft
         ? def.label + ' - not finished, so the assistant does not answer from it yet.'
         : def.label + ' - the assistant answers from its recorded values.'}>
-      {(full ? def.label : def.short) + (draft ? ' - draft' : '')}
+      {(full ? def.label : def.short) + (draft ? ' · draft' : '')}
     </Chip>
   );
+  return hidden ? <span aria-hidden="true" style={{ display: 'contents' }}>{chip}</span> : chip;
 }
 
+// What a row says to a screen reader beyond its name: its files and kind.
+function rowExtras(n, fileCount) {
+  const bits = [];
+  const def = noteKind(n.kind);
+  if (isTypedKind(def.id)) bits.push(def.label + (String(n.status || 'live') === 'draft' ? ', draft' : ''));
+  if (fileCount) bits.push(plural(fileCount, 'file'));
+  return bits.length ? ', ' + bits.join(', ') : '';
+}
 
 // One tree row; children render recursively inside .nbk-kids, which draws the
-// parent-to-child connector lines. Defined at module level (not inside the page
+// guide line down the left. Defined at module level (not inside the page
 // component) so React keeps the same component identity across renders -
 // defining it inline remounted the whole tree on every state change, which is
 // what made the sidebar blink.
+//
+// A TREE ITEM, to the keyboard. The row is one stop: role=treeitem with its
+// level, whether it is open and whether it is the page on screen; the keys
+// are handled once, on the tree (onTreeKey in the page). The chevron, + and
+// ... inside it are for the pointer, so they are not tab stops of their own -
+// everything they do is a key or a menu item from the row.
 function SideRow({ n, depth, ctx }) {
   const { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu,
-    dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo } = ctx;
+    dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo, tabId, setFocusId, openMenuAt } = ctx;
   const isSel = selectedId === n.id;
   const onPath = ancestors.some((a) => a.id === n.id);
   const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
@@ -410,9 +556,17 @@ function SideRow({ n, depth, ctx }) {
     dragId === n.id ? 'nbk-row--drag' : '',
     dropOk && dropId === n.id ? 'nbk-row--drop' : ''].filter(Boolean).join(' ');
   return (
-    <div>
+    <div role="treeitem" id={'nbk-ti-' + n.id} data-id={n.id} tabIndex={tabId === n.id ? 0 : -1}
+      aria-level={depth + 1} aria-selected={isSel} aria-expanded={kids.length > 0 ? open : undefined}
+      aria-labelledby={'nbk-tn-' + n.id}
+      onFocus={(e) => { if (e.target === e.currentTarget) setFocusId(n.id); }}
+      onContextMenu={(e) => {
+        // From the keyboard (the context-menu key, Shift+F10) the event is on
+        // the row itself, with no pointer to open at: open under the row.
+        if (e.target === e.currentTarget) openMenuAt(e, n.id, e.currentTarget.firstElementChild.getBoundingClientRect());
+        else openMenu(e, n.id);
+      }}>
       <div className={cls}
-        onContextMenu={(e) => openMenu(e, n.id)}
         draggable={draggable}
         onDragStart={draggable ? (e) => {
           e.dataTransfer.setData('application/x-nb-note', String(n.id));
@@ -437,28 +591,31 @@ function SideRow({ n, depth, ctx }) {
           moveNoteTo(dragId, n.id);
         }}>
         {kids.length > 0 ? (
-          <button type="button" className="nbk-row__twist" aria-expanded={open}
+          <button type="button" className="nbk-row__twist" aria-expanded={open} tabIndex={-1}
             aria-label={(open ? 'Collapse ' : 'Expand ') + (n.title || 'Untitled')}
             onClick={() => setExpanded((e) => ({ ...e, [n.id]: !open }))}>
             <Svg w={13} sw={2.6}>{Icons.chevronRight}</Svg>
           </button>
-        ) : (<span style={{ flex: 'none', width: '22px' }} />)}
-        <button type="button" className="nbk-row__btn" onClick={() => selectNote(n.id)} aria-current={isSel ? 'page' : undefined}>
-          <span className="nbk-row__icon"><Svg w={15} sw={2}>{depth === 0 || n.isSection ? Icons.folder
+        ) : (<span style={{ flex: 'none', width: '24px' }} />)}
+        <button type="button" className="nbk-row__btn" tabIndex={-1}
+          onClick={() => { setFocusId(n.id); selectNote(n.id); }} aria-current={isSel ? 'page' : undefined}>
+          <span className="nbk-row__icon" aria-hidden="true"><Svg w={16} sw={2}>{depth === 0 || n.isSection ? Icons.folder
             : isTypedKind(n.kind) ? (Icons[noteKind(n.kind).icon] || Icons.fileLines)
               : Icons.fileLines}</Svg></span>
-          <span className="nbk-row__name">{n.title || 'Untitled'}</span>
-          {fileCount > 0 && <Svg w={13} sw={2.2} style={{ flex: 'none', color: T.dim }}>{Icons.paperclip}</Svg>}
+          <span className="nbk-row__name" id={'nbk-tn-' + n.id}>
+            {n.title || 'Untitled'}<span className="rv-sr">{rowExtras(n, fileCount)}</span>
+          </span>
+          {fileCount > 0 && <span className="nbk-row__clip" title={plural(fileCount, 'file')} aria-hidden="true"><Svg w={13} sw={2.2}>{Icons.paperclip}</Svg></span>}
           {/* What this note is, where it is not the ordinary page. A draft says
               so here, because a card nobody finished is one the assistant is
               not answering from and the tree is where that gets noticed. */}
-          <KindChip kind={n.kind} draft={draft} />
+          <KindChip kind={n.kind} draft={draft} hidden />
         </button>
         <span className="nbk-row__actions">
           {depth < MAX_DEPTH - 1 && (
-            <IconButton plain size="sm" icon={Icons.plus} label="Add page" onClick={() => newNote(n.id)} />
+            <IconButton size="sm" icon={Icons.plus} label={'Add a page to ' + (n.title || 'Untitled')} tabIndex={-1} onClick={() => newNote(n.id)} />
           )}
-          <IconButton plain size="sm" icon={NBIcons.dots} label="More" onClick={(e) => openMenu(e, n.id, true)} />
+          <IconButton size="sm" icon={NBIcons.dots} label={'More for ' + (n.title || 'Untitled')} tabIndex={-1} onClick={(e) => openMenu(e, n.id, true)} />
         </span>
       </div>
       {open && kids.length > 0 && (
@@ -467,13 +624,39 @@ function SideRow({ n, depth, ctx }) {
         // inherited one. A kind is a property of the note, so the folder has no
         // colour to lend and a coloured line here would say something untrue
         // about the pages under it.
-        <div className="nbk-kids">
+        <div className="nbk-kids" role="group">
           {kids.map((k) => <SideRow key={k.id} n={k} depth={depth + 1} ctx={ctx} />)}
         </div>
       )}
     </div>
   );
 }
+
+// A page as a row in a list (a section's pages, the ones edited last):
+// what it is called, a line of what it says, its kind, and where it goes.
+function PageRow({ p, sub, delay, onOpen }) {
+  const typed = isTypedKind(p.kind);
+  const text = sub != null ? sub : excerpt(p.body);
+  return (
+    <motion.button type="button" className="nbk-prow" onClick={onOpen}
+      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay, ease: EASE }}>
+      <span className="nbk-prow__icon" aria-hidden="true">
+        <Svg w={18} sw={2}>{typed ? (Icons[noteKind(p.kind).icon] || Icons.fileLines) : Icons.fileLines}</Svg>
+      </span>
+      <span className="nbk-prow__text">
+        <span className="nbk-prow__name">{p.title || 'Untitled'}</span>
+        {/* "Nothing written" is about a page with nothing on it. A card's
+            writing is optional - its values are the page - so it is never
+            said of one. */}
+        {text ? <span className="nbk-prow__sub">{text}</span>
+          : typed ? null : <span className="nbk-prow__sub">Nothing written yet</span>}
+      </span>
+      <KindChip kind={p.kind} draft={String(p.status || 'live') === 'draft'} />
+      <span className="nbk-prow__chev" aria-hidden="true"><Svg w={18} sw={2}>{Icons.chevronRight}</Svg></span>
+    </motion.button>
+  );
+}
+
 export default function NotebookPage() {
   const [notes, setNotes] = React.useState([]);
   const [attachments, setAttachments] = React.useState([]);
@@ -487,25 +670,24 @@ export default function NotebookPage() {
   React.useEffect(() => {
     try { window.localStorage.setItem('nb-expanded', JSON.stringify(expanded)); } catch (e) { /* ignore */ }
   }, [expanded]);
-  // The tree: open or folded away on a wide screen (remembered), and on a
-  // phone a drawer that is shut until asked for.
+  // The list: open or folded away on a wide screen (remembered), and on a
+  // phone the card shown instead of the page, until a page is picked.
   // Read after mounting rather than in the initial state: the class it sets
   // is on server-rendered markup, and a first render that disagreed with the
-  // server's would keep the server's.
+  // server's would keep the server's. `ready` turns the fold's animation on
+  // only after that, so a remembered fold does not play on arrival.
   const [sideOpen, setSideOpen] = React.useState(true);
+  const [layoutReady, setLayoutReady] = React.useState(false);
   React.useEffect(() => {
     try { if (window.localStorage.getItem('nb-side') === '0') setSideOpen(false); } catch (e) { /* ignore */ }
+    const t = setTimeout(() => setLayoutReady(true), 60);
+    return () => clearTimeout(t);
   }, []);
-  const [drawer, setDrawer] = React.useState(false);
-  const toggleSide = () => {
-    if (window.matchMedia('(max-width: 760px)').matches) { setDrawer((d) => !d); return; }
-    setSideOpen((o) => {
-      try { window.localStorage.setItem('nb-side', o ? '0' : '1'); } catch (e) { /* ignore */ }
-      return !o;
-    });
-  };
+  const [phoneList, setPhoneList] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const [saveState, setSaveState] = React.useState('');     // '' | 'saving' | 'saved' | 'unsaved'
+  // The autosave, for the caption in the page's bar: '' | 'pending' (edited,
+  // waiting for a pause) | 'saving' | 'saved' | 'error'.
+  const [saveState, setSaveState] = React.useState('');
   const [view, setView] = React.useState('pages');           // 'pages' - the editor; 'map' - the treemap
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState('');
@@ -515,13 +697,21 @@ export default function NotebookPage() {
   // notebook and got clicked twice. See /api/notebook/import, which streams.
   const [importing, setImporting] = React.useState(null);
   const [dragging, setDragging] = React.useState(false);
-  const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm }
+  const [confirm, setConfirm] = React.useState(null);       // { title, message, confirmLabel, onConfirm, tone?, icon? }
   const [menu, setMenu] = React.useState(null);              // { id, x, y } - the note menu
   const [dragId, setDragId] = React.useState(null);           // note being dragged in the sidebar
   const [dropId, setDropId] = React.useState(null);           // section row currently hovered as a drop target
   const [aiFmt, setAiFmt] = React.useState(null);            // null | {status:'loading'} | {status:'error',message} | {status:'ready',formatted,diff}
   const [aiOrg, setAiOrg] = React.useState(null);             // AI organise (sections)
   const [editor, setEditor] = React.useState(null);           // TipTap instance of the open page
+  // The row of the tree that is the tree's one tab stop (the arrows move it).
+  const [focusId, setFocusId] = React.useState(null);
+  // A new section being named: { name, page, touched, tried, busy, error }.
+  const [newSec, setNewSec] = React.useState(null);
+  // A title that was left empty and put back: said under it until it is edited.
+  const [titleHint, setTitleHint] = React.useState(null);     // { id, text }
+  // One message at the foot of the screen - a thing that did not work, or did.
+  const [toast, setToast] = React.useState(null);              // { text, at }
   // Questions asked about words on the open page (Questions.jsx): the rows,
   // tagged with the page they were read for; the one whose card is open; and
   // a question to jump to, from a /questions link (?q=<anchor>).
@@ -533,10 +723,31 @@ export default function NotebookPage() {
   const dirty = React.useRef(new Set());   // ids edited since their last save
   const dirtyAt = React.useRef(new Map()); // id -> last edit time (quiet-period debounce)
   const saving = React.useRef(new Set());  // prevent overlapping/out-of-order PATCHes
+  const failCount = React.useRef(0);       // saves failed in a row (the retry backs off)
+  const retryAt = React.useRef(0);         // not before this, after a failure (a Retry ignores it)
   const notesRef = React.useRef([]);
   const fileInput = React.useRef(null);
   const titleInput = React.useRef(null);
+  const searchInput = React.useRef(null);
+  const backRef = React.useRef(null);
+  const treeBox = React.useRef(null);
+  const treeHl = React.useRef(null);
+  const pagesBox = React.useRef(null);
+  const pagesHl = React.useRef(null);
+  const toastTimer = React.useRef(null);
+  const pendingTitle = React.useRef(null); // a page just made: its title gets the caret
+  const nameInput = React.useRef(null);
+  const pageInput = React.useRef(null);
   notesRef.current = notes;
+
+  useGlide(treeBox, treeHl, '.nbk-row');
+
+  const say = React.useCallback((text) => {
+    clearTimeout(toastTimer.current);
+    setToast({ text, at: Date.now() });
+    toastTimer.current = setTimeout(() => setToast(null), 5200);
+  }, []);
+  React.useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   // Re-render on every editor transaction so the toolbar's active states
   // (bold on, "in a table", ...) track the caret.
@@ -577,6 +788,9 @@ export default function NotebookPage() {
           const ids = new Map(list.map((n) => [n.id, n]));
           for (let cur = first; cur && cur.parentId; cur = ids.get(cur.parentId)) open[cur.parentId] = true;
           setExpanded((e) => ({ ...e, ...open }));
+          // A phone that came to the notes rather than to a page: the list
+          // first, as a notes app opens on its list.
+          if (!named && isPhone()) setPhoneList(true);
         }
       } catch (e) {
         setStatus('error');
@@ -601,14 +815,14 @@ export default function NotebookPage() {
       window.history[samePage ? 'replaceState' : 'pushState'](null, '', href + window.location.search);
     }
     lastUrlId.current = selectedId;
-    document.title = (selTitle || 'Untitled') + ' · Notebook';
+    document.title = (selTitle.trim() || 'Untitled') + ' · Practice notes';
   }, [status, selectedId, selTitle]);
   React.useEffect(() => {
     const onPop = () => {
       const hit = resolveNote(notesRef.current, noteSegment(window.location.pathname));
       if (!hit) return;
       lastUrlId.current = hit.id; // arriving here is not a new visit to push
-      selectNote(hit.id);
+      selectNote(hit.id, { focus: false });
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -621,6 +835,7 @@ export default function NotebookPage() {
     const url = window.location.origin + notebookHref(n);
     try { await navigator.clipboard.writeText(url); } catch (e) { window.prompt('Copy this link', url); return; }
     setCopied(true);
+    say('Link to “' + (n.title || 'Untitled') + '” copied.');
     setTimeout(() => setCopied(false), 1600);
   }
   const childrenOf = React.useCallback((id) => notes.filter((n) => n.parentId === id), [notes]);
@@ -753,15 +968,44 @@ export default function NotebookPage() {
   }, [childrenOf, hitIds, q]); // eslint-disable-line react-hooks/exhaustive-deps
   const sections = notes.filter((n) => !n.parentId).filter(treeMatch);
 
+  // The rows the tree shows, top to bottom - what the arrow keys walk. The
+  // same rule for open as SideRow's: remembered open, or open because the
+  // search found something inside.
+  const visible = [];
+  (function walk(list, depth) {
+    for (const n of list) {
+      const kids = q ? childrenOf(n.id).filter(treeMatch) : childrenOf(n.id);
+      const open = !!expanded[n.id] || (!!q && kids.length > 0);
+      visible.push({ id: n.id, depth, parentId: n.parentId, hasKids: kids.length > 0, open });
+      if (open && kids.length) walk(kids, depth + 1);
+    }
+  }(sections, 0));
+  const tabId = visible.some((v) => v.id === focusId) ? focusId
+    : visible.some((v) => v.id === selectedId) ? selectedId
+      : visible.length ? visible[0].id : null;
+
   /* ------------------------------ Saving ------------------------------ *
    * Time-based, not per-keystroke: edits mark the note dirty; after 1.8s quiet
    * the interval diffs it against its last persisted snapshot and PATCHes only
-   * the fields that actually changed - no change, no request.             */
+   * the fields that actually changed - no change, no request.
+   *
+   * `force` skips the quiet period (and the back-off after a failure): it is
+   * how an edit is sent before something that would leave it behind - opening
+   * another page, going to Saves, the tab closing or hiding, the page being
+   * left. `leaving` sends it with keepalive, so it outlives the page.
+   *
+   * A failed save waits before it tries again - 1s, 2s, 4s... up to 30s -
+   * rather than every second; Retry tries now.
+   *
+   * A TITLE OF NOTHING BUT SPACES IS NEVER SENT. The old title stands in the
+   * database, and the box is given it back when it is left (onTitleBlur).  */
 
-  async function flush() {
+  async function flush(opts = {}) {
+    const force = !!opts.force;
+    if (!force && Date.now() < retryAt.current) return;
     for (const id of Array.from(dirty.current)) {
       if (saving.current.has(id)) continue;
-      if (Date.now() - (dirtyAt.current.get(id) || 0) < 1800) continue;
+      if (!force && Date.now() - (dirtyAt.current.get(id) || 0) < QUIET_MS) continue;
       const n = notesRef.current.find((x) => x.id === id);
       if (!n) { dirty.current.delete(id); continue; } // deleted while dirty
       const prev = saved.current.get(id) || {};
@@ -770,45 +1014,81 @@ export default function NotebookPage() {
       // string against one string, with no walk of a shape that differs per
       // kind.
       const fieldsNow = JSON.stringify(n.fields || {});
+      const titleNow = (n.title || '').trim() ? (n.title || '') : (prev.title || '');
       const patch = {};
-      if ((n.title || '') !== (prev.title || '')) patch.title = n.title || '';
+      if (titleNow !== (prev.title || '')) patch.title = titleNow;
       if ((n.body || '') !== (prev.body || '')) patch.body = n.body || '';
       if (fieldsNow !== (prev.fields || '{}')) patch.fields = n.fields || {};
       if (!Object.keys(patch).length) { dirty.current.delete(id); continue; }
-      const sent = { title: n.title || '', body: n.body || '', fields: fieldsNow };
+      const sent = { title: titleNow, body: n.body || '', fields: fieldsNow };
+      const payload = JSON.stringify({ ...patch, id });
       try {
         saving.current.add(id);
         setSaveState('saving');
-        const res = await fetch('/api/notebook', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...patch, id }) });
+        const res = await fetch('/api/notebook', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: payload,
+          // keepalive has a 64 KB budget; a longer page is sent the ordinary way.
+          keepalive: !!opts.leaving && payload.length < 60000,
+        });
         if (!res.ok) throw new Error('bad status');
         const { note: back } = await res.json();
         saved.current.set(id, sent);
+        failCount.current = 0;
+        retryAt.current = 0;
         // WHETHER IT IS SERVABLE IS THE SERVER'S ANSWER, not this page's. The
         // rules that decide live or draft live with the kind, and a browser
         // that worked it out for itself would be a second copy of them.
-        if (back && back.status) {
-          setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, status: back.status } : x)));
-        }
+        const stamp = new Date().toISOString();
+        setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, ...(back && back.status ? { status: back.status } : {}), updatedAt: stamp } : x)));
         const latest = notesRef.current.find((x) => x.id === id);
         if (latest && (latest.title || '') === sent.title && (latest.body || '') === sent.body
           && JSON.stringify(latest.fields || {}) === sent.fields) {
           dirty.current.delete(id);
           dirtyAt.current.delete(id);
         }
-        setSaveState('saved');
-        setTimeout(() => setSaveState((s2) => (s2 === 'saved' ? '' : s2)), 1500);
+        setSaveState(dirty.current.size ? 'pending' : 'saved');
       } catch (e) {
-        setSaveState('unsaved');
+        failCount.current += 1;
+        retryAt.current = Date.now() + Math.min(30000, 1000 * 2 ** (failCount.current - 1));
+        setSaveState('error');
+        break;
       } finally {
         saving.current.delete(id);
       }
     }
+    // An edit that came to nothing (a letter typed and taken out again) has
+    // nothing to send: it is saved as it was, so the caption says so rather
+    // than "Saving..." for ever.
+    if (!dirty.current.size && !saving.current.size) setSaveState((st) => (st === 'pending' ? 'saved' : st));
   }
 
   // flush() reads only refs, so the interval's first-render closure stays valid.
   React.useEffect(() => {
-    const iv = setInterval(flush, 1000);
+    const iv = setInterval(() => flush(), 1000);
     return () => clearInterval(iv);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // LEAVING SENDS WHAT IS NOT SENT YET. The tab hiding or closing, and the
+  // page going away (another tool in the bar), each send the edits still in
+  // their quiet period; closing the tab with one unsent also asks first.
+  React.useEffect(() => {
+    const leave = () => { if (dirty.current.size) flush({ force: true, leaving: true }); };
+    const onHidden = () => { if (document.visibilityState === 'hidden') leave(); };
+    const onBefore = (e) => {
+      if (!dirty.current.size && !saving.current.size) return;
+      leave();
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('pagehide', leave);
+    document.addEventListener('visibilitychange', onHidden);
+    window.addEventListener('beforeunload', onBefore);
+    return () => {
+      window.removeEventListener('pagehide', leave);
+      document.removeEventListener('visibilitychange', onHidden);
+      window.removeEventListener('beforeunload', onBefore);
+      leave();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function editSelected(patch) {
@@ -816,7 +1096,24 @@ export default function NotebookPage() {
     setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, ...patch } : n)));
     dirty.current.add(selectedId);
     dirtyAt.current.set(selectedId, Date.now());
-    setSaveState('saving');
+    // A failure stays said until a save gets through.
+    setSaveState((s) => (s === 'error' ? s : 'pending'));
+    if ('title' in patch) setTitleHint(null);
+  }
+
+  // The title box, left: trimmed, and never left empty - the last saved title
+  // goes back in (or "Untitled page"), and the line under it says why.
+  function onTitleBlur() {
+    if (!selected) return;
+    const now = selected.title || '';
+    const trimmed = now.trim();
+    if (!trimmed) {
+      const back = fallbackTitle((saved.current.get(selected.id) || {}).title, isSection);
+      editSelected({ title: back });
+      setTitleHint({ id: selected.id, text: (isSection ? 'A section' : 'A page') + ' cannot be saved without a title, so “' + back + '” was put back.' });
+    } else if (trimmed !== now) {
+      editSelected({ title: trimmed });
+    }
   }
 
   /* ------------------------ Formatting toolbar ------------------------ *
@@ -852,7 +1149,9 @@ export default function NotebookPage() {
 
   async function runAiFormat(includeQuestions) {
     const original = (selected && selected.body) || '';
-    if (!original.trim() || (aiFmt && aiFmt.status === 'loading')) return;
+    if (aiFmt && aiFmt.status === 'loading') return;
+    // An empty page has nothing to tidy: said, rather than a click that does nothing.
+    if (!original.trim()) { setAiFmt({ status: 'error', message: 'There is nothing on this page to format yet. Write something first.' }); return; }
     const asked = includeQuestions ? answeredOnPage : [];
     setAiFmt({ status: 'loading' });
     try {
@@ -888,7 +1187,7 @@ export default function NotebookPage() {
     const n = byId.get(id);
     if (!canOrganize(n)) return;
     if (aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')) return;
-    await selectNote(id); // the plan is about this section (also flushes edits)
+    await selectNote(id, { focus: false }); // the plan is about this section (also flushes edits)
     setAiOrg({ status: 'loading' });
     try {
       const res = await fetch('/api/notebook/organize', {
@@ -929,7 +1228,7 @@ export default function NotebookPage() {
     else {
       setNotes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, body: aiFmt.formatted } : n)));
       dirty.current.add(selectedId);
-      setSaveState('saving');
+      setSaveState('pending');
     }
     // The answers now in the page's text: say so on their rows. Best-effort -
     // the page is what matters, and it is already applied.
@@ -946,13 +1245,16 @@ export default function NotebookPage() {
   }
   /* --------------------------- Note actions --------------------------- */
 
-  async function selectNote(id) {
-    await flush();
+  // Open a note. Edits to the one being left are sent first, whatever their
+  // quiet period. On a phone this is also the move from the list to the page,
+  // and focus goes to the way back (unless the caller is putting it elsewhere).
+  async function selectNote(id, { focus = true } = {}) {
+    await flush({ force: true });
     setUploadErr('');
     setAiFmt(null);
     setAiOrg(null);
     setQOpen(null);
-    setDrawer(false);
+    setPhoneList(false);
     setSelectedId(id);
     // Open the path to the selection so it is always visible in the tree.
     setExpanded((e) => {
@@ -960,7 +1262,26 @@ export default function NotebookPage() {
       for (let cur = byId.get(id); cur && cur.parentId; cur = byId.get(cur.parentId)) next[cur.parentId] = true;
       return next;
     });
+    if (focus && isPhone()) requestAnimationFrame(() => { if (backRef.current) backRef.current.focus({ preventScroll: true }); });
   }
+
+  // Back to the list, on a phone: the open page's row has focus there.
+  function showList() {
+    setPhoneList(true);
+    requestAnimationFrame(() => {
+      const el = selectedId != null ? document.getElementById('nbk-ti-' + selectedId) : null;
+      if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); }
+    });
+  }
+
+  // Desktop: fold the list away (remembered). Phone: back to the list.
+  const toggleSide = () => {
+    if (isPhone()) { showList(); return; }
+    setSideOpen((o) => {
+      try { window.localStorage.setItem('nb-side', o ? '0' : '1'); } catch (e) { /* ignore */ }
+      return !o;
+    });
+  };
 
   async function createNoteApi(title, parentId, kind = 'note') {
     const res = await fetch('/api/notebook', {
@@ -973,41 +1294,127 @@ export default function NotebookPage() {
     return note;
   }
 
-  // New page under a parent - or, with no parent, a new section. A section is
-  // a name-only container, so it is always created together with its first
-  // page, and the page (the writing surface) is what opens.
+  // A page just made: open it, and put the caret in its title with the
+  // placeholder name selected, so typing names it.
+  function openCreated(id) {
+    pendingTitle.current = id;
+    setPhoneList(false);
+    setSelectedId(id);
+  }
+  React.useEffect(() => {
+    if (pendingTitle.current == null || pendingTitle.current !== selectedId || !titleInput.current) return;
+    pendingTitle.current = null;
+    titleInput.current.focus();
+    titleInput.current.select();
+  });
+
+  // New page under a parent - or, with no parent, a new section, which is
+  // named in a dialog first (askNewSection). A section is a name-only
+  // container, so it is always created together with its first page, and
+  // the page (the writing surface) is what opens.
   //
   // THE KIND IS CHOSEN HERE, at the moment the page is made, which is the
   // whole point: a referral card is a referral card because somebody said so,
   // not because of the folder it landed in. It is named for what it is, so the
   // tree reads sensibly before anybody has typed a word into it.
   async function newNote(parentId, kind = 'note') {
-    await flush();
+    if (!parentId) { askNewSection(); return; }
+    await flush({ force: true });
     const def = noteKind(kind);
     const name = isTypedKind(def.id) ? 'New ' + def.label.charAt(0).toLowerCase() + def.label.slice(1) : 'New page';
     try {
-      if (parentId) {
-        const note = await createNoteApi(name, parentId, def.id);
-        setNotes((ns) => ns.concat([note]));
-        setExpanded((e) => ({ ...e, [parentId]: true }));
-        setSelectedId(note.id);
-      } else {
-        const section = await createNoteApi('New section', null);
-        const page = await createNoteApi(name, section.id, def.id);
-        setNotes((ns) => ns.concat([section, page]));
-        setExpanded((e) => ({ ...e, [section.id]: true }));
-        setSelectedId(page.id);
-      }
-    } catch (e) { /* ignore */ }
+      const note = await createNoteApi(name, parentId, def.id);
+      setNotes((ns) => ns.concat([note]));
+      setExpanded((e) => ({ ...e, [parentId]: true }));
+      openCreated(note.id);
+    } catch (e) {
+      say('The page could not be made. Nothing was saved - try again in a moment.');
+    }
   }
 
+  /* ------------------------- Naming a new section ---------------------- *
+   * A section and its first page, both named before either exists: a
+   * section called "New section" holding a page called "New page" is two
+   * renames nobody remembers to do. Both are required, both stop at the
+   * server's 200 characters, and a section name already in use is said
+   * (not refused - two can share a name, but it is rarely meant).        */
+  function askNewSection() {
+    setNewSec({ name: '', page: '', touched: {}, tried: false, busy: false, error: '' });
+  }
+  const sectionTitles = notes.filter((n) => !n.parentId).map((n) => n.title || '');
+  // A box is checked once it has been left for something else in the dialog
+  // (validate on leaving, as the shared forms do) - not when focus is pulled
+  // away from outside it, which is not the reader moving on.
+  function leftField(e, key) {
+    const panel = e.currentTarget.closest('.nbk-modal');
+    if (!panel || !e.relatedTarget || !panel.contains(e.relatedTarget)) return;
+    setNewSec((s) => (s ? { ...s, touched: { ...s.touched, [key]: true } } : s));
+  }
+  async function createSection(e) {
+    if (e) e.preventDefault();
+    if (!newSec || newSec.busy) return;
+    const name = newSec.name.trim();
+    const page = newSec.page.trim();
+    if (!name || !page) {
+      setNewSec((s) => ({ ...s, tried: true }));
+      const bad = !name ? nameInput.current : pageInput.current;
+      if (bad) bad.focus();
+      return;
+    }
+    setNewSec((s) => ({ ...s, busy: true, error: '' }));
+    await flush({ force: true });
+    let section = null;
+    try {
+      section = await createNoteApi(name, null);
+      const first = await createNoteApi(page, section.id, 'note');
+      setNotes((ns) => ns.concat([section, first]));
+      setExpanded((x) => ({ ...x, [section.id]: true }));
+      setNewSec(null);
+      // The page opens with the caret in its writing: it is already named.
+      pendingBody.current = first.id;
+      setSelectedId(first.id);
+      setPhoneList(false);
+    } catch (err) {
+      if (section) {
+        setNotes((ns) => ns.concat([section]));
+        setExpanded((x) => ({ ...x, [section.id]: true }));
+        setNewSec(null);
+        setSelectedId(section.id);
+        say('“' + name + '” was made, but its first page could not be. Add one with New page.');
+      } else {
+        setNewSec((s) => ({ ...s, busy: false, error: 'The section could not be made. Nothing was saved - try again in a moment.' }));
+      }
+    }
+  }
+  // A page just made in the dialog, already named: the caret goes into its
+  // writing once its own editor is up (not the one of the page it replaced).
+  const pendingBody = React.useRef(null);
+  React.useEffect(() => {
+    if (pendingBody.current == null || pendingBody.current !== selectedId || !editor) return;
+    if (editor.isDestroyed || !editor.view || !editor.view.dom || !editor.view.dom.isConnected) return;
+    pendingBody.current = null;
+    editor.commands.focus('start');
+  }, [editor, selectedId]);
+
+  // DELETING SAYS WHAT GOES. The page by name; the pages under it and the
+  // files on them, counted; and that the assistant stops answering from them,
+  // which is the part that changes what reception is told tomorrow.
   function askRemoveNote(id) {
     const n = byId.get(id);
-    const kids = descendantIds(id).size - 1;
-    const sec = n && !n.parentId;
+    const gone = descendantIds(id);
+    const kids = gone.size - 1;
+    const files = attachments.filter((a) => gone.has(a.noteId)).length;
+    const sec = !!n && (!n.parentId || !!n.isSection);
+    const name = n ? n.title || 'Untitled' : 'this note';
+    const what = kids
+      ? 'The ' + (sec ? 'section' : 'page') + ' and the ' + plural(kids, 'page') + ' inside it are deleted'
+      : 'The ' + (sec ? 'section' : 'page') + ' is deleted';
     setConfirm({
-      title: sec ? 'Delete section' : 'Delete page',
-      message: 'Delete "' + (n ? n.title || 'Untitled' : 'this note') + '"' + (kids ? ' and the ' + kids + ' page(s) inside it' : '') + '? Attached files are deleted too. This cannot be undone.',
+      title: 'Delete “' + name + '”?',
+      message: what
+        + (files ? ', with ' + (files === 1 ? 'the file attached' : 'the ' + files + ' files attached') : '')
+        + ', and the assistant stops answering from ' + (kids ? 'them' : 'it') + '.\n\n'
+        + 'This cannot be undone, except by loading a save taken before now.',
       confirmLabel: sec ? 'Delete section' : 'Delete page',
       onConfirm: () => { setConfirm(null); removeNote(id); },
     });
@@ -1017,7 +1424,8 @@ export default function NotebookPage() {
     const n = byId.get(id);
     const gone = descendantIds(id);
     try {
-      await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
+      const res = await fetch('/api/notebook?id=' + id, { method: 'DELETE' });
+      if (!res.ok) throw new Error('bad status');
       setNotes((ns) => ns.filter((x) => !gone.has(x.id)));
       setAttachments((as) => as.filter((a) => !gone.has(a.noteId)));
       if (gone.has(selectedId)) {
@@ -1029,7 +1437,11 @@ export default function NotebookPage() {
           setSelectedId(remaining.length ? remaining[0].id : null);
         }
       }
-    } catch (e) { /* ignore */ }
+      say('“' + ((n && n.title) || 'Untitled') + '” was deleted.');
+    } catch (e) {
+      // Kept on screen: it is still in the notebook, and still answered from.
+      say('“' + ((n && n.title) || 'Untitled') + '” could not be deleted. Nothing was changed.');
+    }
   }
 
   /* --------------------------- Attachments ---------------------------- */
@@ -1038,7 +1450,11 @@ export default function NotebookPage() {
     if (!selectedId || isSection || !files || !files.length) return;
     setUploading(true);
     setUploadErr('');
+    // Every file that did not go, and why, said together - one failure used to
+    // overwrite the last.
+    const failed = [];
     for (const file of Array.from(files)) {
+      if (file.size > MAX_UPLOAD) { failed.push('“' + file.name + '” is over the 20 MB limit.'); continue; }
       const form = new FormData();
       form.append('noteId', String(selectedId));
       form.append('file', file);
@@ -1048,9 +1464,10 @@ export default function NotebookPage() {
         if (!res.ok) throw new Error(data.error || 'Upload failed.');
         setAttachments((as) => as.concat([data.attachment]));
       } catch (e) {
-        setUploadErr(String(e.message || e));
+        failed.push('“' + file.name + '” was not attached: ' + String(e.message || e));
       }
     }
+    setUploadErr(failed.join(' '));
     setUploading(false);
     if (fileInput.current) fileInput.current.value = '';
   }
@@ -1060,6 +1477,7 @@ export default function NotebookPage() {
   // editor embeds inline.
   async function uploadInlineImage(file) {
     if (!selectedId || isSection || !file) return null;
+    if (file.size > MAX_UPLOAD) { setUploadErr('That picture is over the 20 MB limit, so it was not added.'); return null; }
     setUploading(true);
     setUploadErr('');
     try {
@@ -1081,15 +1499,18 @@ export default function NotebookPage() {
 
   function askRemoveAttachment(a) {
     setConfirm({
-      title: 'Remove file',
-      message: 'Remove "' + a.filename + '" from this page? This cannot be undone.',
+      title: 'Remove “' + a.filename + '”?',
+      message: 'It is taken off this page and deleted. This cannot be undone.',
       confirmLabel: 'Remove file',
       onConfirm: async () => {
         setConfirm(null);
         try {
-          await fetch('/api/notebook/attachments?id=' + a.id, { method: 'DELETE' });
+          const res = await fetch('/api/notebook/attachments?id=' + a.id, { method: 'DELETE' });
+          if (!res.ok) throw new Error('bad status');
           setAttachments((as) => as.filter((x) => x.id !== a.id));
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          say('“' + a.filename + '” could not be removed. It is still attached.');
+        }
       },
     });
   }
@@ -1130,9 +1551,12 @@ export default function NotebookPage() {
   }, [byId, notes, descendantIds]);
 
   // Persist the move, reparent locally and open the target so the note is
-  // visible in its new home.
+  // visible in its new home. The same move is in the note's menu ("Move
+  // to"), for a keyboard, a touch screen, or anybody who would rather not drag.
   async function moveNoteTo(id, parentId) {
     if (!canDropOn(id, parentId)) return;
+    const n = byId.get(id);
+    const to = byId.get(parentId);
     try {
       const res = await fetch('/api/notebook', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1140,14 +1564,17 @@ export default function NotebookPage() {
       });
       if (!res.ok) throw new Error('bad status');
       const { note } = await res.json();
-      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, parentId: note.parentId } : n)));
+      setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, parentId: note.parentId } : x)));
       setExpanded((e) => ({ ...e, [parentId]: true }));
-    } catch (e) { /* ignore - the note simply stays where it was */ }
+      say('Moved “' + ((n && n.title) || 'Untitled') + '” to “' + ((to && to.title) || 'Untitled') + '”.');
+    } catch (e) {
+      say('“' + ((n && n.title) || 'Untitled') + '” could not be moved. It is where it was.');
+    }
   }
 
   // Rename = select the note, then put the caret in the header title input.
   async function renameNote(id) {
-    await selectNote(id);
+    await selectNote(id, { focus: false });
     setTimeout(() => { if (titleInput.current) { titleInput.current.focus(); titleInput.current.select(); } }, 0);
   }
 
@@ -1160,10 +1587,11 @@ export default function NotebookPage() {
    * from the standard process live.
    *
    * What the two kinds share is kept and the rest is dropped, by the server -
-   * see setNoteKind in lib/notebook.js.
+   * see setNoteKind in lib/notebook.js. So a card with values in it asks first
+   * (askSetKind): that is a loss, and it is said before it happens.
    */
   async function setNoteKindApi(id, kind) {
-    await flush();
+    await flush({ force: true });
     try {
       const res = await fetch('/api/notebook', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1175,12 +1603,29 @@ export default function NotebookPage() {
       setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, kind: note.kind, fields: note.fields || {}, status: note.status } : n)));
       setUploadErr('');
     } catch (e) {
-      setUploadErr('Could not change what this page is.');
+      say('Could not change what this page is. Nothing was changed.');
     }
+  }
+
+  function askSetKind(id, kind) {
+    const n = byId.get(id);
+    if (!n) return;
+    const from = String(n.kind || 'note');
+    if (from === kind) return;
+    if (!isTypedKind(from) || !hasValues(from, n.fields)) { setNoteKindApi(id, kind); return; }
+    const label = noteKind(kind).label;
+    setConfirm({
+      title: 'Make “' + (n.title || 'Untitled') + '” ' + (/^[aeiou]/i.test(label) ? 'an ' : 'a ') + label + '?',
+      message: 'Values that do not fit the new type are removed. The writing on the page is kept.',
+      confirmLabel: 'Change type',
+      icon: Icons.alertCircle,
+      onConfirm: () => { setConfirm(null); setNoteKindApi(id, kind); },
+    });
   }
 
   // Promote a note to a section (name-only container for sub-notes) or back.
   async function toggleSection(id, val) {
+    const n = byId.get(id);
     try {
       const res = await fetch('/api/notebook', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1188,9 +1633,11 @@ export default function NotebookPage() {
       });
       if (!res.ok) throw new Error('bad status');
       const { note } = await res.json();
-      setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, isSection: !!note.isSection } : n)));
+      setNotes((ns) => ns.map((x) => (x.id === id ? { ...x, isSection: !!note.isSection } : x)));
       if (val) setExpanded((e) => ({ ...e, [id]: true }));
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      say('“' + ((n && n.title) || 'Untitled') + '” could not be changed. Nothing was changed.');
+    }
   }
 
   /* --------------------------- Backup ---------------------------------- */
@@ -1206,7 +1653,32 @@ export default function NotebookPage() {
       for (const n of list) if (!saved.current.has(n.id)) saved.current.set(n.id, { title: n.title || '', body: n.body || '' });
       setNotes(list);
       setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      say('The notes could not be reloaded. Reload the page to see the latest.');
+    }
+  }
+
+  // Export: every note as a JSON file. Fetched rather than navigated to, so a
+  // failure is said here instead of landing on a page of raw JSON.
+  async function exportAll() {
+    await flush({ force: true });
+    try {
+      const res = await fetch('/api/notebook/export');
+      if (!res.ok) throw new Error('bad status');
+      const blob = await res.blob();
+      const name = (/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || 'notebook-backup.json';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      say('Downloaded ' + name + '.');
+    } catch (e) {
+      say('The notes could not be exported. Nothing was downloaded.');
+    }
   }
 
   function onImportFile(e) {
@@ -1219,12 +1691,12 @@ export default function NotebookPage() {
       try { data = JSON.parse(String(reader.result)); } catch (err) { data = null; }
       const count = data && Array.isArray(data.notes) ? data.notes.length : 0;
       if (!count) {
-        setConfirm({ title: 'Import failed', message: 'That file is not a notebook backup (no notes found).', confirmLabel: 'OK', tone: 'info', soleButton: true, onConfirm: () => setConfirm(null) });
+        setConfirm({ title: 'That is not a backup', message: '“' + file.name + '” has no notes in it, so nothing was imported. A backup is the .json file Export downloads.', confirmLabel: 'OK', tone: 'info', soleButton: true, onConfirm: () => setConfirm(null) });
         return;
       }
       setConfirm({
-        title: 'Import backup',
-        message: 'Import ' + count + ' note(s) from "' + file.name + '"? They are added alongside your existing notes. Nothing is overwritten.',
+        title: 'Import ' + plural(count, 'note') + '?',
+        message: 'From “' + file.name + '”. They are added alongside the notes already here. Nothing is overwritten.',
         confirmLabel: 'Import',
         tone: 'info',
         onConfirm: async () => {
@@ -1270,7 +1742,7 @@ export default function NotebookPage() {
     }
     if (!reloaded) await reloadAll();
     setImporting(null);
-    if (failed) setConfirm({ title: 'Import failed', message: failed, confirmLabel: 'OK', tone: 'danger', soleButton: true, onConfirm: () => setConfirm(null) });
+    if (failed) setConfirm({ title: 'The import did not finish', message: failed, confirmLabel: 'OK', tone: 'danger', icon: Icons.alertCircle, soleButton: true, onConfirm: () => setConfirm(null) });
   }
 
   /* ---------------------------- The note menu -------------------------- */
@@ -1289,6 +1761,12 @@ export default function NotebookPage() {
     }
     setMenu({ id, x: e.clientX, y: e.clientY, flipY: e.clientY });
   }
+  // The same menu from the keyboard, under the row it is about.
+  function openMenuAt(e, id, rect) {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ id, x: rect.left + 28, y: rect.bottom + 4, flipY: rect.top - 4 });
+  }
 
   React.useEffect(() => {
     if (!menu) return;
@@ -1306,9 +1784,59 @@ export default function NotebookPage() {
     };
   }, [menu]);
 
+  /* ------------------------- The tree's keys -------------------------- *
+   * The WAI-ARIA tree: ↑ ↓ to move, → to open a folder (or go into it), ←
+   * to close it (or go up to its parent), Home and End, Enter or Space to
+   * open the page, F2 to rename, Delete to delete. ↑ from the first row
+   * goes back to the search box, as ↓ from the box comes here.           */
+  function focusRow(id) {
+    if (id == null) return;
+    setFocusId(id);
+    const el = document.getElementById('nbk-ti-' + id);
+    if (el) {
+      el.focus({ preventScroll: true });
+      if (el.firstElementChild) el.firstElementChild.scrollIntoView({ block: 'nearest' });
+    }
+  }
+  function onTreeKey(e) {
+    const item = e.target.closest && e.target.closest('[role="treeitem"]');
+    if (!item || e.altKey || e.ctrlKey || e.metaKey) return;
+    // Keys on the row itself (or on its name, after a click). The small
+    // buttons inside a row keep theirs.
+    if (e.target !== item && !(e.target.classList && e.target.classList.contains('nbk-row__btn'))) return;
+    const id = Number(item.getAttribute('data-id'));
+    const at = visible.findIndex((v) => v.id === id);
+    if (at < 0) return;
+    const row = visible[at];
+    const stop = () => { e.preventDefault(); e.stopPropagation(); };
+    switch (e.key) {
+      case 'ArrowDown': stop(); if (visible[at + 1]) focusRow(visible[at + 1].id); break;
+      case 'ArrowUp': stop(); if (at === 0) { if (searchInput.current) searchInput.current.focus(); } else focusRow(visible[at - 1].id); break;
+      case 'Home': stop(); focusRow(visible[0].id); break;
+      case 'End': stop(); focusRow(visible[visible.length - 1].id); break;
+      case 'ArrowRight':
+        stop();
+        if (row.hasKids && !row.open) setExpanded((x) => ({ ...x, [id]: true }));
+        else if (row.hasKids && visible[at + 1]) focusRow(visible[at + 1].id);
+        break;
+      case 'ArrowLeft':
+        stop();
+        if (row.hasKids && row.open && !q) setExpanded((x) => ({ ...x, [id]: false }));
+        else if (row.parentId) focusRow(row.parentId);
+        break;
+      case 'Enter': case ' ': stop(); selectNote(id); break;
+      case 'F2': stop(); renameNote(id); break;
+      case 'Delete': stop(); askRemoveNote(id); break;
+      default: break;
+    }
+  }
+
   const rowCtx = { selectedId, ancestors, expanded, setExpanded, q, childrenOf, treeMatch, attachments, selectNote, newNote, openMenu,
-    dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo };
+    dragId, setDragId, dropId, setDropId, canDropOn, moveNoteTo, tabId, setFocusId, openMenuAt };
   const sectionPages = isSection ? childrenOf(selected.id) : [];
+  // The section's list is drawn only while a section is open: the glide
+  // attaches to each one as it is.
+  useGlide(pagesBox, pagesHl, '.nbk-prow', isSection && sectionPages.length ? selected.id : null);
   /* ---------------------------- Toolbar model -------------------------- */
 
   const toolbar = [
@@ -1358,6 +1886,30 @@ export default function NotebookPage() {
   const pageCount = notes.filter((n) => n.parentId && !n.isSection).length;
   const sectionCount = notes.length - pageCount;
   const fileCount = selected ? attachments.filter((a) => a.noteId === selected.id).length : 0;
+  const ready = status === 'ready';
+  const blank = ready && notes.length === 0;
+  // What the title box says under it: empty (red), put back (plain), the same
+  // as a neighbour's (amber) - one at a time, the most pressing first.
+  const siblingTitles = selected
+    ? notes.filter((n) => n.id !== selected.id && (n.parentId || null) === (selected.parentId || null)).map((n) => n.title || '')
+    : [];
+  const tcheck = selected ? checkTitle(selected.title || '', siblingTitles) : null;
+  const parentName = ancestors.length ? ancestors[ancestors.length - 1].title || 'Untitled' : '';
+  let titleMsg = null;
+  if (tcheck && tcheck.empty) {
+    titleMsg = { tone: 'bad', icon: Icons.alertCircle, text: isSection
+      ? 'A section needs a name - the list and the assistant’s answers go by it.'
+      : 'A page needs a title - search, links and the assistant’s answers go by it.' };
+  } else if (titleHint && selected && titleHint.id === selected.id) {
+    titleMsg = { tone: 'hint', icon: Icons.infoCircle, text: titleHint.text };
+  } else if (tcheck && tcheck.duplicate) {
+    titleMsg = { tone: 'warn', icon: Icons.triangle, text: isSection
+      ? 'Another section is already called this. A link by name cannot tell them apart.'
+      : 'Another page in “' + parentName + '” is already called this. A link by name cannot tell them apart.' };
+  }
+  const titleMsgId = selected ? 'nbk-title-msg-' + selected.id : undefined;
+  const recent = notes.filter((n) => n.parentId && !n.isSection)
+    .slice().sort((a, b) => (Date.parse(b.updatedAt || '') || 0) - (Date.parse(a.updatedAt || '') || 0)).slice(0, 6);
 
   // The head of the sheet: what this is and where it sits, then its name set
   // large - the title belongs to the text under it, so it scrolls with it.
@@ -1366,8 +1918,8 @@ export default function NotebookPage() {
       <div className="nbk-kicker">
         <span>{isSection ? 'Section' : 'Page'}</span>
         {ancestors.length > 0 && (<><span className="nbk-kicker__dot" /><span>{'In ' + (ancestors[ancestors.length - 1].title || 'Untitled')}</span></>)}
-        {isSection && (<><span className="nbk-kicker__dot" /><span>{sectionPages.length + (sectionPages.length === 1 ? ' page' : ' pages')}</span></>)}
-        {!isSection && fileCount > 0 && (<><span className="nbk-kicker__dot" /><span>{fileCount + (fileCount === 1 ? ' file' : ' files')}</span></>)}
+        {isSection && (<><span className="nbk-kicker__dot" /><span>{plural(sectionPages.length, 'page')}</span></>)}
+        {!isSection && fileCount > 0 && (<><span className="nbk-kicker__dot" /><span>{plural(fileCount, 'file')}</span></>)}
         {!isSection && <KindChip kind={selected.kind} draft={String(selected.status || 'live') === 'draft'} full />}
         {!isSection && <QuestionsChip questions={shownQs} onPick={pickQuestion} />}
       </div>
@@ -1378,7 +1930,9 @@ export default function NotebookPage() {
         rows={1}
         className="nbk-doc-title"
         value={selected.title || ''}
+        maxLength={TITLE_MAX}
         onChange={(e) => editSelected({ title: e.target.value.replace(/[\r\n]+/g, ' ') })}
+        onBlur={onTitleBlur}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return;
           e.preventDefault();
@@ -1386,99 +1940,140 @@ export default function NotebookPage() {
         }}
         placeholder={isSection ? 'Section name' : 'Page title'}
         aria-label={isSection ? 'Section name' : 'Page title'}
+        aria-invalid={tcheck && tcheck.empty ? 'true' : undefined}
+        aria-describedby={titleMsg || tcheck.showCount ? titleMsgId : undefined}
         title="Click to rename"
       />
+      {(titleMsg || tcheck.showCount) && (
+        <div className="nbk-title-foot" id={titleMsgId}>
+          {titleMsg ? (
+            <p className={'nbk-title-msg is-' + titleMsg.tone} role={titleMsg.tone === 'bad' ? 'alert' : undefined}>
+              <Svg w={15} sw={2.2}>{titleMsg.icon}</Svg><span>{titleMsg.text}</span>
+            </p>
+          ) : null}
+          {tcheck.showCount && (
+            <span className={'nbk-title-count' + (tcheck.long ? ' is-max' : '')}>
+              {tcheck.length + ' / ' + TITLE_MAX}{tcheck.long ? ' - the limit' : ''}
+            </span>
+          )}
+        </div>
+      )}
       {isSection && (
         <p className="nbk-section__lede">
           Sections only have a name. They organise pages, and the assistant uses this grouping to navigate
           the notebook. Write the content in a page below.
         </p>
       )}
-      <div className="nbk-doc-rule" />
     </div>
   ) : null;
 
   const menuNote = menu ? byId.get(menu.id) : null;
+  // Where the note in the menu can go: the sections a drag would be allowed onto.
+  const moveTargets = menuNote && menuNote.parentId
+    ? notes.filter((n) => (!n.parentId || n.isSection) && canDropOn(menuNote.id, n.id))
+    : [];
+  const nsName = newSec ? newSec.name.trim() : '';
+  const nsPage = newSec ? newSec.page.trim() : '';
+  const nsShowName = newSec && (newSec.tried || newSec.touched.name) && !nsName;
+  const nsShowPage = newSec && (newSec.tried || newSec.touched.page) && !nsPage;
+  const nsDupe = newSec && nsName && checkTitle(nsName, sectionTitles).duplicate;
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="riva-page-fill nbk-shell">
       <NotebookStyles />
       {/* dangerouslySetInnerHTML: a plain text child is HTML-escaped on the
           server and not on the client, which is a hydration mismatch. */}
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
-      <AppHeader subtitle="Notebook" />
+      <AppHeader subtitle="Practice notes" />
 
-      <div className={'nbk-body' + (sideOpen ? '' : ' is-collapsed') + (drawer ? ' is-drawer' : '')}>
-        {/* ----------------------- The tree, on glass ----------------------- */}
-        <aside className="nbk-sidebar nbk-paper" aria-label="Sections and pages">
-          <div className="nbk-sidebar__top">
-            <div className="nbk-brand">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="nbk-brand__name">Notebook</div>
-                <div className="nbk-brand__meta">
-                  {status === 'ready'
-                    ? sectionCount + (sectionCount === 1 ? ' section' : ' sections') + ' · ' + pageCount + (pageCount === 1 ? ' page' : ' pages')
-                    : status === 'error' ? 'Not loaded' : 'Loading...'}
-                </div>
+      <div className={'nbk-body' + (sideOpen ? '' : ' is-collapsed') + (phoneList ? ' is-list' : '') + (layoutReady ? ' is-ready' : '')}>
+        {/* ------------------- The sections and pages, a card ------------------- */}
+        <motion.aside id="nbk-side" className="nbk-sidebar" aria-label="Sections and pages"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+          <div className="nbk-sidebar__inner">
+            <div className="nbk-sidebar__top">
+              <div>
+                <h1 className="nbk-h1">Practice <em>notes</em></h1>
+                <p className="nbk-meta">
+                  {ready
+                    ? (blank ? 'Nothing written yet' : plural(sectionCount, 'section') + ' · ' + plural(pageCount, 'page'))
+                    : status === 'error' ? 'Not loaded' : <span className="rv-skel" style={{ width: 130, height: 9 }} aria-hidden="true" />}
+                </p>
+              </div>
+              {/* The Map (MapView, the treemap) is hidden: `view` stays 'pages'.
+                  Its code is kept so it can come back as a tab. */}
+              <div className="nbk-sidebar__row">
+                <SearchField value={search} onChange={setSearch} placeholder="Search notes" label="Search the notes"
+                  inputRef={searchInput} disabled={!ready || blank}
+                  onEnter={() => { if (hits[0]) selectNote(hits[0].note.id); }}
+                  onArrowDown={() => { if (visible.length) focusRow(visible[0].id); }} />
+                <Button variant="primary" icon={Icons.plus} className="nbk-new" onClick={() => newNote(null)} disabled={!ready}
+                  title="New section, with its first page">New</Button>
+              </div>
+              <span className="rv-sr" role="status">
+                {q && ready ? (hits.length ? plural(hits.length, 'page') + ' match' : 'No page matches') : status === 'loading' ? 'Loading the notes' : ''}
+              </span>
+            </div>
+
+            <div className="nbk-tree nbk-scroll">
+              <div className="nbk-tree__inner" ref={treeBox}>
+                <span className="nbk-tree__hl" ref={treeHl} aria-hidden="true" />
+                {ready && sections.length > 0 && (
+                  <div className="nbk-label nbk-tree__label" aria-hidden="true">
+                    <span>{q ? plural(hits.length, 'page') + ' found' : 'Sections'}</span>
+                  </div>
+                )}
+                {status === 'loading' && <SkeletonRows rows={7} indent />}
+                {status === 'error' && <p className="nbk-tree__note">Nothing to list until the notes load.</p>}
+                {ready && blank && <p className="nbk-tree__note">No sections yet. Start one with New.</p>}
+                {ready && !blank && q && sections.length === 0 && (
+                  <State compact icon={NBIcons.searchX} title={'No page matches “' + search.trim() + '”.'}
+                    text="Try fewer words, or a word from the page itself.">
+                    <Button size="sm" onClick={() => { setSearch(''); if (searchInput.current) searchInput.current.focus(); }}>Clear search</Button>
+                  </State>
+                )}
+                {sections.length > 0 && (
+                  <div role="tree" aria-label="Sections and pages" onKeyDown={onTreeKey}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
+                  </div>
+                )}
               </div>
             </div>
-            {/* The Map (MapView, the treemap) is hidden: `view` stays 'pages'.
-                Its code is kept so it can come back as a tab. */}
-            <div className="nbk-sidebar__row">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <SearchField value={search} onChange={setSearch} placeholder="Search notes"
-                  onEnter={() => { if (hits[0]) { selectNote(hits[0].note.id); setDrawer(false); } }} />
+
+            <div className="nbk-sidebar__foot">
+              <p className="nbk-foot-note"><Svg w={14} sw={2.2}>{Icons.sparkle}</Svg>Notes are used by the assistant automatically.</p>
+              {/* Backup: export downloads every note as JSON; import restores it
+                  alongside what is here. Saves is the whole notebook at a moment. */}
+              <input ref={importInput} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={onImportFile} />
+              <div className="nbk-foot-row">
+                <Button size="sm" icon={NBIcons.download} onClick={exportAll} disabled={!ready || blank}
+                  title="Download all notes as a JSON backup">Export</Button>
+                <Button size="sm" icon={NBIcons.upload} onClick={() => importInput.current && importInput.current.click()} disabled={!ready}
+                  title="Restore notes from a JSON backup (added alongside existing notes)">Import</Button>
+                <NextLink href={SAVES_HREF} className="rv-btn rv-btn--quiet rv-btn--sm" onClick={() => { flush({ force: true }); }}
+                  title="Saves of the whole notebook - take one, or roll back to one">
+                  <Svg w={14} sw={2.2}>{Icons.undo}</Svg>Saves
+                </NextLink>
               </div>
-              <Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}
-                title="New section (with its first page)">New</Button>
             </div>
           </div>
+        </motion.aside>
 
-          <div className="nbk-tree nbk-scroll">
-            {status === 'ready' && sections.length > 0 && (
-              <div className="nbk-label nbk-tree__label">{q ? hits.length + (hits.length === 1 ? ' page' : ' pages') : 'Sections'}</div>
-            )}
-            {status === 'loading' && <div className="nbk-tree__note">Loading...</div>}
-            {status === 'error' && <div className="nbk-tree__note" style={{ color: T.red }}>Could not load notes. Is the database configured?</div>}
-            {status === 'ready' && sections.length === 0 && (
-              <div className="nbk-tree__empty">
-                <img src="/assets/3d/notebook.webp" alt="" aria-hidden="true" draggable={false} />
-                <span>{q ? 'No pages match.' : 'No sections yet. Create one, for example "Instructions", with pages like "How to book appointments".'}</span>
-              </div>
-            )}
-            {sections.map((n) => <SideRow key={n.id} n={n} depth={0} ctx={rowCtx} />)}
-          </div>
-
-          <div className="nbk-sidebar__foot">
-            <span className="nbk-sidebar__note">
-              Notes are used by the assistant automatically.
-            </span>
-            {/* Backup: export downloads every note as JSON; import restores it
-                alongside what is here. Saves is the whole notebook at a moment. */}
-            <input ref={importInput} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={onImportFile} />
-            <div className="nbk-foot-grid">
-              <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/api/notebook/export'; }}
-                title="Download all notes as a JSON backup">
-                <Svg w={16} sw={2}>{NBIcons.download}</Svg>Export
-              </button>
-              <button type="button" className="nbk-foot-btn" onClick={() => importInput.current && importInput.current.click()}
-                title="Restore notes from a JSON backup (added alongside existing notes)">
-                <Svg w={16} sw={2}>{NBIcons.upload}</Svg>Import
-              </button>
-              <button type="button" className="nbk-foot-btn" onClick={() => { window.location.href = '/notebook/saves'; }}
-                title="Saves of the whole notebook - take one, or roll back to one">
-                <Svg w={16} sw={2}>{Icons.undo}</Svg>Saves
-              </button>
-            </div>
-          </div>
-        </aside>
-        <div className="nbk-scrim" onClick={() => setDrawer(false)} aria-hidden="true" />
-
-        {/* ------------------------ The page, on paper ------------------------ */}
-        <main className="nbk-main nbk-paper" {...dropHandlers}>
+        {/* -------------------------- The page, a card ------------------------- */}
+        <motion.main className="nbk-main" {...dropHandlers}
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.07, ease: EASE }}>
           <div className="nbk-head">
             <div className="nbk-head__left">
-              <IconButton plain icon={NBIcons.sidebar} on={sideOpen} className="nbk-side-toggle"
+              {/* Only where there is a list to go back to: loading, failed or
+                  empty, the state in this card is the whole story. */}
+              {ready && !blank && (
+                <button ref={backRef} type="button" className="nbk-back" onClick={showList}>
+                  <Svg w={16} sw={2.2}>{Icons.arrowLeft}</Svg>All notes
+                </button>
+              )}
+              <IconButton icon={NBIcons.sidebar} on={sideOpen} className="nbk-side-toggle" aria-expanded={sideOpen} aria-controls="nbk-side"
                 label={sideOpen ? 'Hide sections and pages' : 'Show sections and pages'} onClick={toggleSide} />
               {view === 'map' ? (
                 <>
@@ -1492,13 +2087,13 @@ export default function NotebookPage() {
                       {ancestors.map((a) => (
                         <React.Fragment key={a.id}>
                           <button type="button" className="nbk-crumb" onClick={() => selectNote(a.id)}>{a.title || 'Untitled'}</button>
-                          <span className="nbk-crumb-sep"><Svg w={12} sw={2.4}>{Icons.chevronRight}</Svg></span>
+                          <span className="nbk-crumb-sep" aria-hidden="true"><Svg w={13} sw={2.2}>{Icons.chevronRight}</Svg></span>
                         </React.Fragment>
                       ))}
                       <span className="nbk-crumb nbk-crumb--here" aria-current="page">{selected.title || 'Untitled'}</span>
                     </>
                   ) : (
-                    <span className="nbk-crumb nbk-crumb--here">Notebook</span>
+                    <span className="nbk-crumb nbk-crumb--here">Practice notes</span>
                   )}
                 </nav>
               )}
@@ -1506,9 +2101,9 @@ export default function NotebookPage() {
 
             {view !== 'map' && (
               <div className="nbk-head__actions">
-                <StatusPill state={saveState} />
+                {selected && <StatusPill state={saveState} at={selected.updatedAt} onRetry={() => flush({ force: true })} />}
                 {selected && canOrganize(selected) && (
-                  <Button variant="soft" icon={Icons.sitemap} onClick={() => runAiOrganize()}
+                  <Button variant="secondary" size="sm" icon={Icons.sitemap} onClick={() => runAiOrganize()}
                     disabled={!!aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying')}
                     title="AI organise: move every page's content in this section to the section it belongs in (you review the plan first)">
                     AI organise
@@ -1525,7 +2120,8 @@ export default function NotebookPage() {
                   <IconButton icon={copied ? Icons.check : Icons.copy} label={copied ? 'Link copied' : 'Copy link to this page'} onClick={() => copyLink(selected.id)} />
                 )}
                 {selected && (
-                  <IconButton icon={NBIcons.dots} label="More actions" onClick={(e) => openMenu(e, selected.id, true)} />
+                  <IconButton icon={NBIcons.dots} label="More actions" aria-haspopup="menu" aria-expanded={!!menu && menu.id === selected.id}
+                    onClick={(e) => openMenu(e, selected.id, true)} />
                 )}
               </div>
             )}
@@ -1536,46 +2132,78 @@ export default function NotebookPage() {
           )}
 
           {view !== 'map' && (<>
-            {!selected && (
-              <EmptyMarquee
-                items={notes.filter((n) => n.parentId && !n.isSection).map((n) => ({ id: n.id, title: n.title, meta: (byId.get(n.parentId) || {}).title || '' }))}
-                onPick={selectNote}
-                title={status === 'loading' ? 'Opening the notebook' : pageCount ? 'Nothing open' : 'Nothing written yet'}
-                body={status === 'loading' ? null : pageCount
-                  ? 'Pick a page as it passes, or one from the tree. Everything written here is what the assistant answers from.'
-                  : 'Create a section to start writing. Everything written here is what the assistant answers from.'}
-                action={status === 'loading' ? null : <Button variant="primary" icon={Icons.plus} onClick={() => newNote(null)}>New section</Button>} />
+            {/* Nothing open: why, in the middle of the card - still loading,
+                could not load, nothing written, or simply nothing picked. */}
+            {!selected && status === 'loading' && (
+              <div className="nbk-docskel" aria-hidden="true">
+                <span className="rv-skel" style={{ width: 140, height: 10 }} />
+                <span className="rv-skel" style={{ width: '58%', height: 26, marginTop: 16, borderRadius: 9 }} />
+                {['92%', '84%', '88%', '64%'].map((w, i) => <span key={i} className="rv-skel" style={{ width: w, marginTop: i ? 14 : 30 }} />)}
+              </div>
             )}
-
-            {/* Section view - name only; content lives in the pages beneath it. */}
-            {selected && isSection && (
-              <div className="nbk-section nbk-scroll">
-                {docHead}
-                <div className="nbk-cards">
-                  {sectionPages.map((p, i) => {
-                    const text = excerpt(p.body);
-                    return (
-                      <button key={p.id} type="button" className="nbk-page-card" onClick={() => selectNote(p.id)}
-                        style={{ animationDelay: Math.min(i, 12) * 30 + 'ms' }}>
-                        <span className="nbk-page-card__title">{p.title || 'Untitled'}</span>
-                        <KindChip kind={p.kind} draft={String(p.status || 'live') === 'draft'} />
-                        {/* "Empty" is about a page with nothing written on it. A
-                            card's writing is optional - its values are the page -
-                            so it is never said of one. */}
-                        {text
-                          ? <span className="nbk-page-card__excerpt">{text}</span>
-                          : isTypedKind(p.kind) ? null : <span className="nbk-page-card__empty">Empty</span>}
-                      </button>
-                    );
-                  })}
-                  <button type="button" className="nbk-add-card" onClick={() => newNote(selected.id)}>
-                    <Svg w={18} sw={2}>{Icons.plus}</Svg>New page
-                  </button>
-                </div>
+            {!selected && status === 'error' && (
+              <div className="nbk-void">
+                <State icon={Icons.alertCircle} title="The notes could not be loaded."
+                  text="Reload the page in a moment. Nothing in the notebook has been changed.">
+                  <Button variant="primary" icon={Icons.refresh} onClick={() => window.location.reload()}>Reload</Button>
+                  <NextLink href="/ask" className="rv-btn rv-btn--quiet"><Svg w={15} sw={2.2}>{Icons.chat}</Svg>Ask a question</NextLink>
+                </State>
+              </div>
+            )}
+            {!selected && blank && (
+              <div className="nbk-void">
+                <State icon={Icons.folder} title="Nothing written yet."
+                  text="Sections hold pages, and every page is something the assistant answers from. Start with a section such as “Reception”.">
+                  <Button variant="primary" icon={Icons.plus} onClick={askNewSection}>New section</Button>
+                  <Button icon={NBIcons.upload} onClick={() => importInput.current && importInput.current.click()}>Import a backup</Button>
+                </State>
+              </div>
+            )}
+            {!selected && ready && !blank && (
+              <div className="nbk-void">
+                <State icon={Icons.fileLines} title="Pick a page to read or edit."
+                  text={recent.length ? 'From the list, or one of the pages edited last:' : 'From the list, or start a new section.'} />
+                {recent.length > 0 && (
+                  <div className="nbk-pages">
+                    <div className="nbk-pages__list">
+                      {recent.map((p, i) => (
+                        <PageRow key={p.id} p={p} sub={'In ' + ((byId.get(p.parentId) || {}).title || 'Untitled')}
+                          delay={0.1 + Math.min(i, 8) * 0.03} onOpen={() => selectNote(p.id)} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Page view - the formatting strip floats over the sheet, and the
+            {/* Section view - name only; content lives in the pages beneath it,
+                listed as rows. */}
+            {selected && isSection && (
+              <div className="nbk-section nbk-scroll" key={'sec' + selected.id}>
+                {docHead}
+                {sectionPages.length === 0 ? (
+                  <State icon={Icons.fileLines} title="Nothing in this section yet."
+                    text="Pages hold the writing. Add the first one, named for the question it answers.">
+                    <Button variant="primary" icon={Icons.plus} onClick={() => newNote(selected.id)}>New page</Button>
+                  </State>
+                ) : (
+                  <div className="nbk-pages">
+                    <div className="nbk-pages__list" ref={pagesBox}>
+                      <span className="nbk-glide" ref={pagesHl} aria-hidden="true" />
+                      {sectionPages.map((p, i) => (
+                        <PageRow key={p.id} p={p} delay={Math.min(i, 10) * 0.03} onOpen={() => selectNote(p.id)} />
+                      ))}
+                      <button type="button" className="nbk-prow nbk-prow--add" onClick={() => newNote(selected.id)}>
+                        <span className="nbk-prow__icon" aria-hidden="true"><Svg w={18} sw={2.2}>{Icons.plus}</Svg></span>
+                        <span className="nbk-prow__text">New page</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Page view - one strip of formatting over the sheet, and the
                 title heads the text it names; files dock underneath. */}
             {selected && !isSection && (
               <>
@@ -1583,7 +2211,7 @@ export default function NotebookPage() {
                   <div className="nbk-toolbar nbk-hide-scroll" role="toolbar" aria-label="Formatting"
                     onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}>
                     {toolbar.map((btn, i) => btn === null
-                      ? <span key={'sep' + i} className="nbk-tsep" />
+                      ? <span key={'sep' + i} className="nbk-tsep" aria-hidden="true" />
                       : (
                         <button key={btn.title} type="button" aria-label={btn.title} title={btn.title}
                           aria-pressed={btn.active ? true : undefined}
@@ -1673,16 +2301,24 @@ export default function NotebookPage() {
                     {selectedFiles.length > 0 && <span className="nbk-label nbk-dock__label">Files</span>}
                     {selectedFiles.map((a) => (
                       <span key={a.id} className="nbk-attach">
-                        <Svg w={14} sw={2} style={{ flex: 'none', color: T.dim }}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
+                        <Svg w={14} sw={2} style={{ flex: 'none' }}>{(a.contentType || '').startsWith('image/') ? Icons.image : Icons.file}</Svg>
                         <a href={a.url} target="_blank" rel="noopener noreferrer" title={a.filename + (a.size ? ' - ' + fmtSize(a.size) : '')}>
                           {a.filename}
                         </a>
-                        <IconButton plain size="sm" tone="danger" icon={Icons.close} label={'Remove ' + a.filename}
+                        <IconButton size="sm" tone="danger" icon={Icons.close} label={'Remove ' + a.filename}
                           onClick={() => askRemoveAttachment(a)} />
                       </span>
                     ))}
-                    {uploading && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: T.mut }}><Spinner w={13} />Uploading...</span>}
-                    {uploadErr && <span style={{ fontSize: '13px', fontWeight: 600, color: T.red }}>{uploadErr}</span>}
+                    {uploading && <span className="nbk-dock__busy" role="status"><Spinner w={13} />Uploading…</span>}
+                    {uploadErr && (
+                      <div className="nbk-dock__err">
+                        <div className="rv-alert" role="alert">
+                          <Svg w={15} sw={2.2} style={{ flex: 'none', marginTop: '2px' }}>{Icons.alertCircle}</Svg>
+                          <span style={{ flex: 1, minWidth: 0 }}>{uploadErr}</span>
+                        </div>
+                        <IconButton size="sm" icon={Icons.close} label="Dismiss" onClick={() => setUploadErr('')} />
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -1696,13 +2332,14 @@ export default function NotebookPage() {
               </div>
             )}
           </>)}
-        </main>
+        </motion.main>
       </div>
       {/* ---------------------------- The note menu --------------------------- */}
       {menu && menuNote && (
-        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={200}>
-          {/* One line per action; the two lists of kinds sit behind a
-              submenu each, so they are never on screen twice. The kind is
+        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={200} label={'Actions for ' + (menuNote.title || 'Untitled')}
+          onClose={() => setMenu(null)}>
+          {/* One line per action; the lists of kinds and of places sit behind
+              a submenu each, so they are never on screen twice. The kind is
               still chosen at the moment a page is made - "Add page" asks
               which - and a page's kind can be changed under "Type", which
               keeps its writing and re-coerces its values. A section has no
@@ -1723,9 +2360,18 @@ export default function NotebookPage() {
               {CREATABLE_KINDS.map((k) => (
                 <MenuChoice key={k.id} colour={k.colour} hollow={k.id === 'note'}
                   selected={String(menuNote.kind || 'note') === k.id}
-                  onClick={() => { setMenu(null); setNoteKindApi(menu.id, k.id); }}>
+                  onClick={() => { setMenu(null); askSetKind(menu.id, k.id); }}>
                   {k.label}
                 </MenuChoice>
+              ))}
+            </MenuSub>
+          ) : null}
+          {moveTargets.length > 0 ? (
+            <MenuSub icon={Icons.arrow} label="Move to">
+              {moveTargets.map((t) => (
+                <MenuItem key={t.id} icon={Icons.folder} onClick={() => { setMenu(null); moveNoteTo(menu.id, t.id); }}>
+                  {t.title || 'Untitled'}
+                </MenuItem>
               ))}
             </MenuSub>
           ) : null}
@@ -1740,13 +2386,57 @@ export default function NotebookPage() {
           )}
 
           <MenuSeparator />
-          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>Delete</MenuItem>
+          <MenuItem icon={Icons.trash} tone="danger" onClick={() => { setMenu(null); askRemoveNote(menu.id); }}>Delete…</MenuItem>
         </Menu>
+      )}
+
+      {/* --------------------------- A new section --------------------------- */}
+      {newSec && (
+        <Modal size="sm" title="New section" subtitle="A section groups pages. It starts with one page to write in."
+          onClose={() => { if (!newSec.busy) setNewSec(null); }}
+          footer={<>
+            <Button variant="ghost" onClick={() => setNewSec(null)} disabled={newSec.busy}>Cancel</Button>
+            <Button variant="primary" type="submit" form="nbk-newsec" loading={newSec.busy} disabled={newSec.busy}>
+              {newSec.busy ? 'Creating…' : 'Create section'}
+            </Button>
+          </>}>
+          <form id="nbk-newsec" className="nbk-form" onSubmit={createSection} noValidate>
+            <div>
+              <label className="ap-label" htmlFor="nbk-ns-name">Section name</label>
+              <input ref={nameInput} id="nbk-ns-name" className="ap-field" data-autofocus="" value={newSec.name} maxLength={TITLE_MAX}
+                placeholder="For example “Reception”" autoComplete="off"
+                aria-invalid={nsShowName ? 'true' : undefined}
+                aria-describedby={nsShowName || nsDupe ? 'nbk-ns-name-msg' : undefined}
+                onChange={(e) => { const v = e.target.value.replace(/[\r\n]+/g, ' '); setNewSec((s) => ({ ...s, name: v })); }}
+                onBlur={(e) => leftField(e, 'name')} />
+              {nsShowName ? (
+                <p className="rv-err" id="nbk-ns-name-msg"><Svg w={14} sw={2.2} style={{ flex: 'none', marginTop: '1px' }}>{Icons.alertCircle}</Svg>Give the section a name.</p>
+              ) : nsDupe ? (
+                <p className="rv-hint is-warn" id="nbk-ns-name-msg">There is already a section called “{nsName}”. Its pages might belong there instead.</p>
+              ) : null}
+            </div>
+            <div>
+              <label className="ap-label" htmlFor="nbk-ns-page">First page</label>
+              <input ref={pageInput} id="nbk-ns-page" className="ap-field" value={newSec.page} maxLength={TITLE_MAX}
+                placeholder="For example “How to book appointments”" autoComplete="off"
+                aria-invalid={nsShowPage ? 'true' : undefined}
+                aria-describedby={'nbk-ns-page-msg'}
+                onChange={(e) => { const v = e.target.value.replace(/[\r\n]+/g, ' '); setNewSec((s) => ({ ...s, page: v })); }}
+                onBlur={(e) => leftField(e, 'page')} />
+              {nsShowPage ? (
+                <p className="rv-err" id="nbk-ns-page-msg"><Svg w={14} sw={2.2} style={{ flex: 'none', marginTop: '1px' }}>{Icons.alertCircle}</Svg>Give its first page a title.</p>
+              ) : (
+                <p className="rv-hint" id="nbk-ns-page-msg">Name it for the question it answers - that is what search and the assistant go by.</p>
+              )}
+            </div>
+            {newSec.error && <div className="rv-alert" role="alert">{newSec.error}</div>}
+          </form>
+        </Modal>
       )}
 
       {/* --------------------------- AI format review -------------------------- */}
       {aiFmt && aiFmt.status === 'loading' && (
-        <Modal size="sm" title="Reformatting the page" dismissable={false}
+        <Modal size="sm" title="Reformatting the page" dismissable={false} center
           subtitle="Restructuring it into headings, lists, tables and highlights. Nothing is saved until you have read it.">
           <div className="nbk-fmt" aria-hidden="true">
             <span className="nbk-fmt__h" />
@@ -1759,8 +2449,8 @@ export default function NotebookPage() {
             <div className="nbk-fmt__tbl">{Array.from({ length: 6 }, (_, i) => <span key={i} className={i < 3 ? 'nbk-fmt__th' : 'nbk-fmt__td'} />)}</div>
             <span className="nbk-fmt__scan" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 0 12px', fontSize: '13px', color: T.mut }}>
-            <Spinner w={13} />Formatting...
+          <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 0 12px', fontSize: '13.5px', color: T.mut }}>
+            <Spinner w={13} />Formatting…
           </div>
         </Modal>
       )}
@@ -1783,7 +2473,7 @@ export default function NotebookPage() {
         </Modal>
       )}
       {aiFmt && aiFmt.status === 'error' && (
-        <Modal size="sm" title="Could not reformat" onClose={() => setAiFmt(null)}
+        <Modal size="sm" title="Could not reformat" onClose={() => setAiFmt(null)} center
           footer={<Button variant="primary" onClick={() => setAiFmt(null)}>Close</Button>}>
           <p style={{ margin: 0 }}>{aiFmt.message}</p>
         </Modal>
@@ -1815,30 +2505,30 @@ export default function NotebookPage() {
 
       {/* --------------------------- AI organise plan -------------------------- */}
       {aiOrg && (aiOrg.status === 'loading' || aiOrg.status === 'applying') && (
-        <Modal size="sm" dismissable={false}
+        <Modal size="sm" dismissable={false} center
           title={aiOrg.status === 'loading' ? 'Reading this section' : 'Moving the content'}
           subtitle={aiOrg.status === 'loading'
             ? 'Every page in it is read and each part is matched to the section it belongs in.'
             : 'Putting each part where the plan says, and moving its files with it.'}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
-            <Spinner />Working...
+          <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '4px 0 12px', color: T.mut }}>
+            <Spinner />Working…
           </div>
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'error' && (
-        <Modal size="sm" title="Could not organise" onClose={() => setAiOrg(null)}
+        <Modal size="sm" title="Could not organise" onClose={() => setAiOrg(null)} center
           footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Close</Button>}>
           <p style={{ margin: 0 }}>{aiOrg.message}</p>
         </Modal>
       )}
       {aiOrg && aiOrg.status === 'done' && (
-        <Modal size="sm" title="Organised" onClose={() => setAiOrg(null)}
+        <Modal size="sm" title="Organised" onClose={() => setAiOrg(null)} center
           footer={<Button variant="primary" onClick={() => setAiOrg(null)}>Done</Button>}>
           <p style={{ margin: 0 }}>
-            {'Moved the content of ' + (aiOrg.applied.moved || 0) + ' page(s)'
-              + ((aiOrg.applied.newSections || 0) ? ', created ' + aiOrg.applied.newSections + ' section(s)' : '')
-              + ((aiOrg.applied.newPages || 0) ? ', created ' + aiOrg.applied.newPages + ' page(s)' : '')
-              + ((aiOrg.applied.removed || 0) ? ', removed ' + aiOrg.applied.removed + ' emptied page(s)' : '') + '.'}
+            {'Moved the content of ' + plural(aiOrg.applied.moved || 0, 'page')
+              + ((aiOrg.applied.newSections || 0) ? ', created ' + plural(aiOrg.applied.newSections, 'section') : '')
+              + ((aiOrg.applied.newPages || 0) ? ', created ' + plural(aiOrg.applied.newPages, 'page') : '')
+              + ((aiOrg.applied.removed || 0) ? ', removed ' + plural(aiOrg.applied.removed, 'emptied page') : '') + '.'}
           </p>
         </Modal>
       )}
@@ -1853,7 +2543,7 @@ export default function NotebookPage() {
           <div>
             {aiOrg.plan.allocations.map((a) => (
               <div key={a.noteId} className="nbk-plan__note">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', fontWeight: 700, color: T.ink }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14.5px', fontWeight: 650, color: T.ink }}>
                   <Svg w={15} sw={2} style={{ flex: 'none', color: T.dim }}>{Icons.fileLines}</Svg>
                   {a.noteTitle || 'Untitled'}
                 </div>
@@ -1863,7 +2553,7 @@ export default function NotebookPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '13.5px', fontWeight: 600, color: T.navy }}>
                         {p.section}{p.isNewSection ? ' (new section)' : ''}
-                        <span style={{ color: T.dim, margin: '0 6px' }}>/</span>
+                        <span style={{ color: T.mut, margin: '0 6px' }}>/</span>
                         {p.page || a.noteTitle || 'Untitled'}{p.isNewPage ? ' (new page)' : ''}
                       </div>
                       {/* A title that names a container rather than a question.
@@ -1871,11 +2561,11 @@ export default function NotebookPage() {
                           renaming it after the page has grown for six months
                           costs a morning. */}
                       {p.isVagueTitle && (
-                        <div style={{ marginTop: '4px', fontSize: '12px', fontWeight: 600, color: '#8a6100' }}>
+                        <div style={{ marginTop: '4px', fontSize: '12.5px', fontWeight: 600, color: '#8a5a08' }}>
                           Vague title - rename it to the question staff would ask, or search will never pick it precisely
                         </div>
                       )}
-                      <div style={{ marginTop: '4px', fontSize: '12.5px', lineHeight: 1.55, color: T.mut, overflow: 'hidden',
+                      <div style={{ marginTop: '4px', fontSize: '13px', lineHeight: 1.55, color: T.mut, overflow: 'hidden',
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {p.markdown.replace(/<[^>]+>/g, '').replace(/[#*>`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 240)}
                       </div>
@@ -1903,9 +2593,12 @@ export default function NotebookPage() {
 
       {confirm && (
         <ConfirmModal title={confirm.title} message={confirm.message} confirmLabel={confirm.confirmLabel}
-          tone={confirm.tone || 'danger'} soleButton={confirm.soleButton} onConfirm={confirm.onConfirm}
+          tone={confirm.tone || 'danger'} icon={confirm.icon} soleButton={confirm.soleButton} onConfirm={confirm.onConfirm}
           onClose={() => setConfirm(null)} />
       )}
+
+      {toast && <Toast key={toast.at} onClose={() => setToast(null)}>{toast.text}</Toast>}
     </div>
+    </MotionConfig>
   );
 }

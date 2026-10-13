@@ -117,47 +117,57 @@ function markerCss(rows, active) {
 }
 
 const LAYER_CSS = `
-/* The button over a highlight: an NHS-blue tooltip with a white "?" and the
+/* The button over a highlight: an NHS-blue pill with a white "?" and the
    words, pointing down at what is selected. */
 .nbk-qask{position:fixed;z-index:120;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px 0 5px;
-  border:none;border-radius:999px;background:#005eb8;color:#fff;font:inherit;font-size:13.5px;font-weight:700;letter-spacing:.005em;
-  box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 20px -6px rgba(0,48,135,.55);cursor:pointer;
-  transform:translate(-50%,-100%);animation:nbk-qin .14s var(--nbk-ease);white-space:nowrap;transition:background-color .15s ease;}
+  border:none;border-radius:999px;background:var(--rv-accent);color:#fff;font:inherit;font-size:13.5px;font-weight:650;
+  box-shadow:0 8px 20px -6px rgba(0,48,135,.55);cursor:pointer;
+  transform:translate(-50%,-100%);animation:nbk-qin .14s var(--rv-ease);white-space:nowrap;transition:background-color .15s ease;}
 .nbk-qask::after{content:"";position:absolute;left:50%;bottom:-4px;width:10px;height:10px;margin-left:-5px;background:inherit;
   transform:rotate(45deg);border-radius:0 0 2px 0;}
-.nbk-qask:hover{background:#0052a3;}
-.nbk-qask:focus-visible{outline:2px solid #ffeb3b;outline-offset:2px;}
+.nbk-qask:hover{background:var(--rv-accent-hi);}
+.nbk-qask:focus-visible{outline:2px solid #fff;outline-offset:-4px;}
 .nbk-qmark{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
-  background:#fff;color:#005eb8;font-size:15px;font-weight:900;line-height:1;}
-.nbk-qcard--ask .nbk-qcard__quote{border-left-color:#9ec5ea;}
-.nbk-qcard--ask .nbk-qmark{width:18px;height:18px;font-size:12px;background:#005eb8;color:#fff;}
+  background:#fff;color:var(--rv-accent);font-size:15px;font-weight:800;line-height:1;}
+.nbk-qcard--ask .nbk-qcard__quote{border-left-color:var(--rv-accent-line);}
+.nbk-qcard--ask .nbk-qmark{width:18px;height:18px;font-size:12px;background:var(--rv-accent);color:#fff;}
 @keyframes nbk-qin{from{opacity:0;margin-top:4px;}to{opacity:1;margin-top:0;}}
-.nbk-qcard{position:fixed;z-index:120;width:340px;max-width:calc(100vw - 24px);padding:14px;border-radius:16px;background:#fff;
-  border:1px solid #e1e8ec;box-shadow:var(--nbk-sh-3);animation:nbk-qin .16s var(--nbk-ease);font-size:14px;color:var(--nbk-ink);}
-.nbk-qcard__top{display:flex;align-items:center;gap:8px;margin:-2px -4px 8px 0;}
-.nbk-qcard__state{flex:1;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;}
-.nbk-qcard__quote{margin:0 0 8px;padding-left:9px;border-left:3px solid #f0c674;font-size:13px;line-height:1.45;color:var(--nbk-mut);
+/* The card beside the words: the menus' surface (white, radius 18, the
+   popover shadow), the page's pill buttons, a filled box to write in. */
+.nbk-qcard{position:fixed;z-index:120;width:344px;max-width:calc(100vw - 24px);padding:16px;border-radius:18px;background:#fff;
+  box-shadow:var(--rv-sh-pop);animation:nbk-qin .16s var(--rv-ease);font-size:14px;color:var(--rv-ink);}
+.nbk-qcard__top{display:flex;align-items:center;gap:8px;margin:-4px -6px 8px 0;}
+.nbk-qcard__state{flex:1;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:650;}
+.nbk-qcard__quote{margin:0 0 8px;padding-left:10px;border-left:3px solid #f0c674;font-size:13.5px;line-height:1.45;color:var(--rv-ink-2);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.nbk-qcard__q{font-size:15px;font-weight:700;line-height:1.4;overflow-wrap:anywhere;}
-.nbk-qcard__meta{margin-top:3px;font-size:12px;color:var(--nbk-dim);}
-.nbk-qcard__answer{margin-top:10px;padding:9px 11px;border-radius:10px;background:#f0f7f2;border:1px solid #cce4d6;
+.nbk-qcard__q{font-size:15.5px;font-weight:650;line-height:1.4;overflow-wrap:anywhere;}
+.nbk-qcard__meta{margin-top:3px;font-size:12.5px;color:var(--rv-ink-2);}
+.nbk-qcard__answer{margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef7f1;
   font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;}
-.nbk-qcard__answer b{display:block;margin-bottom:2px;font-size:11px;letter-spacing:.05em;color:var(--nbk-green);}
-.nbk-qcard__note{margin-top:10px;font-size:12.5px;line-height:1.45;color:var(--nbk-mut);}
-.nbk-qcard textarea{display:block;width:100%;box-sizing:border-box;margin-top:10px;min-height:68px;max-height:220px;padding:8px 10px;
-  border:1px solid var(--nbk-line);border-radius:10px;font:inherit;font-size:14px;line-height:1.45;color:var(--nbk-ink);resize:vertical;outline:none;}
-.nbk-qcard textarea:focus{border-color:var(--nbk-blue);box-shadow:0 0 0 3px rgba(0,94,184,.14);}
-.nbk-qcard__row{display:flex;align-items:center;gap:6px;margin-top:10px;}
+.nbk-qcard__answer b{display:block;margin-bottom:2px;font-size:12.5px;font-weight:650;color:#00612f;}
+.nbk-qcard__note{margin-top:10px;font-size:13px;line-height:1.45;color:var(--rv-ink-2);}
+.nbk-qcard textarea,.nbk-qcard textarea:focus,.nbk-qcard textarea:focus-visible{display:block;width:100%;box-sizing:border-box;margin-top:10px;min-height:72px;max-height:220px;
+  padding:9px 12px;border:1px solid transparent;border-radius:11px;background:var(--rv-surface-3);font:inherit;font-size:14.5px;line-height:1.45;
+  color:var(--rv-ink);resize:vertical;outline:none !important;transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease;}
+.nbk-qcard textarea::placeholder{color:var(--rv-ink-4);}
+.nbk-qcard textarea:focus{background:#fff;border-color:var(--rv-accent) !important;box-shadow:0 0 0 3px rgba(0,94,184,.18);}
+.nbk-qcard__row{display:flex;align-items:center;gap:6px;margin-top:12px;}
 .nbk-qcard__row .nbk-qcard__grow{flex:1;}
-.nbk-qcard__err{margin-top:8px;font-size:12.5px;font-weight:600;color:var(--nbk-red);}
-.nbk-qchip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px 0 6px;border-radius:999px;border:1px solid;
-  font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.01em;text-transform:none;cursor:pointer;}
-.nbk-qchip--open{background:#fff5e0;border-color:#ecc77a;color:#8a5a00;}
-.nbk-qchip--open:hover{background:#ffedc7;}
-.nbk-qchip--done{background:#eaf6ef;border-color:#b4dcc4;color:#00612f;}
-.nbk-qchip--done:hover{background:#dcf0e4;}
+.nbk-qcard__err{display:flex;gap:6px;margin-top:8px;font-size:12.5px;font-weight:550;line-height:1.45;color:var(--rv-danger-ink);}
+/* Deleting a question asks first, inside the card: it takes the highlight
+   off the words, and there is no undo. */
+.nbk-qcard__confirm{margin-top:12px;padding:11px 12px 10px;border-radius:12px;background:var(--rv-danger-bg);
+  font-size:13.5px;font-weight:550;line-height:1.45;color:#912018;}
+.nbk-qcard__confirm .nbk-qcard__row{margin-top:8px;}
+.nbk-qchip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px 0 7px;border-radius:999px;border:none;
+  font:inherit;font-size:12px;font-weight:650;text-transform:none;cursor:pointer;transition:background-color .15s ease;}
+.nbk-qchip--open{background:var(--rv-warn-bg);color:var(--rv-warn-ink);}
+.nbk-qchip--open:hover{background:#fbecc9;}
+.nbk-qchip--done{background:#e6f4ec;color:#00612f;}
+.nbk-qchip--done:hover{background:#d6ede0;}
+.nbk-qchip:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
 .nbk-qlist__q{display:block;font-size:13.5px;font-weight:650;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.nbk-qlist__sub{display:block;margin-top:1px;font-size:12px;font-weight:500;color:var(--nbk-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nbk-qlist__sub{display:block;margin-top:1px;font-size:12.5px;font-weight:500;color:var(--rv-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 @media (prefers-reduced-motion:reduce){.nbk-qask,.nbk-qcard{animation:none;}}
 `;
 
@@ -211,6 +221,23 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
   const [dragging, setDragging] = React.useState(false);
   const [asking, setAsking] = React.useState(null); // { from, to, quote, x, y, text, busy, error }
   const cardRef = React.useRef(null);
+  const askRef = React.useRef(null);
+
+  // FROM THE KEYBOARD: Ctrl+Alt+Q (Cmd+Alt+Q) asks about the words selected,
+  // which the button over them cannot offer without taking the selection away.
+  React.useEffect(() => {
+    if (!editor) return undefined;
+    const dom = editor.view.dom;
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || !e.altKey || e.code !== 'KeyQ') return;
+      const b = askRef.current;
+      if (!b) return;
+      e.preventDefault();
+      setAsking({ ...b, text: '', busy: false, error: '' });
+    };
+    dom.addEventListener('keydown', onKey);
+    return () => dom.removeEventListener('keydown', onKey);
+  }, [editor]);
 
   // Everything here is placed against the window, so a scroll anywhere (the
   // page's own sheet scrolls) moves it.
@@ -313,6 +340,8 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
     }
   }
 
+  askRef.current = askButton;
+
   async function submitQuestion() {
     if (!asking || asking.busy) return;
     const text = asking.text.trim();
@@ -346,6 +375,7 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
       <Floating>
       {askButton && (
         <button type="button" className="nbk-qask" style={{ left: askButton.x + 'px', top: askButton.y + 'px' }}
+          title="Ask a question about the highlighted words (Ctrl+Alt+Q)"
           onMouseDown={(e) => e.preventDefault() /* keep the highlight */}
           onClick={() => setAsking({ ...askButton, text: '', busy: false, error: '' })}>
           <span className="nbk-qmark" aria-hidden="true">?</span>Ask a question
@@ -365,9 +395,9 @@ export function QuestionLayer({ editor, noteId, rows, setRows, open, setOpen, ju
             aria-label="Your question" maxLength={400}
             onChange={(e) => { const text = e.target.value; setAsking((a) => ({ ...a, text })); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }} />
-          {asking.error && <div className="nbk-qcard__err">{asking.error}</div>}
+          {asking.error && <div className="nbk-qcard__err" role="alert">{asking.error}</div>}
           <div className="nbk-qcard__row">
-            <span className="nbk-qcard__grow" style={{ fontSize: '12px', color: T.dim }}>Also listed on Questions.</span>
+            <span className="nbk-qcard__grow" style={{ fontSize: '12.5px', color: T.mut }}>Also listed on Questions.</span>
             <Button variant="ghost" size="sm" onClick={() => setAsking(null)}>Cancel</Button>
             <Button variant="primary" size="sm" loading={asking.busy} disabled={!asking.text.trim() || asking.busy}
               onClick={submitQuestion}>Ask</Button>
@@ -412,6 +442,10 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
   const [draft, setDraft] = React.useState(row.answer || '');
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
+  // Delete asks first, in the card (askDel); "Keep it" has focus, so Enter keeps it.
+  const [askDel, setAskDel] = React.useState(false);
+  const keepRef = React.useRef(null);
+  React.useEffect(() => { if (askDel && keepRef.current) keepRef.current.focus(); }, [askDel]);
 
   async function save(answer) {
     setBusy(answer ? 'save' : 'reopen');
@@ -446,7 +480,7 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
   return (
     <div ref={cardRef} className="nbk-qcard" role="dialog" aria-label="Question" style={style}>
       <div className="nbk-qcard__top">
-        <span className="nbk-qcard__state" style={{ color: answered ? T.green : '#8a5a00' }}>
+        <span className="nbk-qcard__state" style={{ color: answered ? '#00612f' : '#8a5a08' }}>
           <Svg w={13} sw={2.6}>{answered ? Icons.check : Icons.question}</Svg>
           {answered ? 'Answered' : 'Open question'}
         </span>
@@ -461,21 +495,31 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
       )}
 
       {answered && !editing && (
-        <div className="nbk-qcard__answer"><b>ANSWER</b>{row.answer}</div>
+        <div className="nbk-qcard__answer"><b>Answer</b>{row.answer}</div>
       )}
 
-      {editing ? (
+      {askDel ? (
+        <div className="nbk-qcard__confirm" role="alert">
+          Delete this question, and take its highlight off the words? This cannot be undone.
+          {error && <div className="nbk-qcard__err">{error}</div>}
+          <div className="nbk-qcard__row">
+            <span className="nbk-qcard__grow" />
+            <button ref={keepRef} type="button" className="rv-btn rv-btn--plain rv-btn--sm nbk-btn" disabled={!!busy} onClick={() => setAskDel(false)}>Keep it</button>
+            <Button variant="danger" size="sm" loading={busy === 'remove'} disabled={!!busy} onClick={remove}>Delete</Button>
+          </div>
+        </div>
+      ) : editing ? (
         <>
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={4000}
             placeholder="Write the answer..." aria-label="The answer"
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && draft.trim()) save(draft); }} />
           {error && <div className="nbk-qcard__err">{error}</div>}
           <div className="nbk-qcard__row">
-            <Button variant="ghost" size="sm" loading={busy === 'remove'} disabled={!!busy} onClick={remove}
-              title="Delete the question and take its highlight off">Delete</Button>
+            <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => { setError(''); setAskDel(true); }}
+              title="Delete the question and take its highlight off">Delete…</Button>
             <span className="nbk-qcard__grow" />
             {answered && <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => { setDraft(row.answer || ''); setEditing(false); }}>Cancel</Button>}
-            <Button variant="success" size="sm" icon={Icons.check} loading={busy === 'save'} disabled={!draft.trim() || !!busy}
+            <Button variant="primary" size="sm" icon={Icons.check} loading={busy === 'save'} disabled={!draft.trim() || !!busy}
               onClick={() => save(draft)}>Save answer</Button>
           </div>
         </>
@@ -483,12 +527,12 @@ function QuestionCard({ row, detached, style, cardRef, onClose, onSaved, onRemov
         <>
           {error && <div className="nbk-qcard__err">{error}</div>}
           <div className="nbk-qcard__row">
-            <Button variant="ghost" size="sm" loading={busy === 'remove'} disabled={!!busy} onClick={remove}
-              title="Delete the question and take its highlight off">Delete</Button>
+            <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => { setError(''); setAskDel(true); }}
+              title="Delete the question and take its highlight off">Delete…</Button>
             <span className="nbk-qcard__grow" />
             <Button variant="ghost" size="sm" loading={busy === 'reopen'} disabled={!!busy} onClick={() => save('')}
               title="Not settled after all: clear the answer and reopen the question">Reopen</Button>
-            <Button variant="soft" size="sm" icon={Icons.edit} disabled={!!busy} onClick={() => setEditing(true)}>Edit</Button>
+            <Button variant="secondary" size="sm" icon={Icons.edit} disabled={!!busy} onClick={() => setEditing(true)}>Edit</Button>
           </div>
           <div className="nbk-qcard__note">Format with AI can write this answer into the page.</div>
         </>
@@ -530,7 +574,7 @@ export function QuestionsChip({ questions, onPick }) {
       </button>
       {menu && (
         <Floating>
-        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={300}>
+        <Menu x={menu.x} y={menu.y} flipY={menu.flipY} width={300} label="Questions on this page" onClose={() => setMenu(null)}>
           {questions.map((q) => (
             <MenuItem key={q.id} icon={q.status === 'answered' ? Icons.check : Icons.question}
               onClick={() => { setMenu(null); onPick(q, menu.rect); }}>

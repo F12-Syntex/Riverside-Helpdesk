@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.87.1` | 2026-10-13 | fix | `bb50b75` | fix: keep popups above the referral drawer, and close the review's gaps |
 | `6.87.0` | 2026-10-13 | feat | `61f769b` | feat: rebuild Contacts on the shared page language, with form checks |
 | `6.86.0` | 2026-10-13 | feat | `ca310a2` | feat: redo settings in the page language and check model ids |
 | `6.85.2` | 2026-10-13 | fix | `d7e25ea` | fix: give Referrals its missing states, and fix its contrast and focus |

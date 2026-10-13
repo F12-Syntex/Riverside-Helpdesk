@@ -21,7 +21,7 @@
 // rewritten until the reader has said which is right.
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../ui';
-import { CARD, Tile, number, ago } from '../stats/parts';
+import { Tile, number, ago } from '../stats/parts';
 import { layoutTree } from '@/lib/notebook/treemap.mjs';
 import { healthOf } from '@/lib/notebook/rules.mjs';
 import SplitDiff from './SplitDiff';
@@ -220,12 +220,19 @@ function Crumbs({ report, rootId, onRoot }) {
   );
 }
 
-// The kit's button as a style string, so every control in here is the same
-// shape as the buttons in the notebook itself (see notebook/kit.jsx).
-const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;'
-  + 'border:1px solid ' + (bg === '#fff' ? '#dde5e9' : bg) + ';border-radius:9px;background:' + bg + ';color:' + fg
-  + ';font:inherit;font-size:13.5px;font-weight:600;line-height:1;letter-spacing:-.005em;white-space:nowrap;cursor:pointer;'
-  + 'box-shadow:0 1px 2px rgba(20,40,55,.07);transition:background-color .14s ease,border-color .14s ease,color .14s ease;' + extra;
+// The page's pill button as a style string, so every control in here is the
+// same shape as the buttons in the notebook itself (rv-btn, via notebook/kit):
+// a white one is quiet (an inset hairline), a coloured one is solid.
+const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 16px;'
+  + 'border:none;border-radius:999px;background:' + bg + ';color:' + fg + ';'
+  + 'box-shadow:' + (bg === '#fff' ? 'inset 0 0 0 1px #d8dde0' : 'none') + ';'
+  + 'font:inherit;font-size:14px;font-weight:600;line-height:1;white-space:nowrap;cursor:pointer;'
+  + 'transition:background-color .15s ease,box-shadow .15s ease,color .15s ease;' + extra;
+
+// A box inside the page's white card: a hairline ring, radius 16, no lift -
+// the card it sits on is already the lifted surface. Local, rather than the
+// stats pages' CARD, which those pages share and keep.
+const CARD = 'background:#fff;border-radius:16px;box-shadow:inset 0 0 0 1px #e3e8eb;';
 
 function History({ noteId, onChanged, refreshKey }) {
   const [rows, setRows] = React.useState(null);
@@ -245,7 +252,7 @@ function History({ noteId, onChanged, refreshKey }) {
   };
   return (
     <div style={s('margin-top:14px;border-top:1px solid #eef1f2;padding-top:10px;')}>
-      <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + MUTED + ';margin-bottom:6px;')}>History</div>
+      <div style={s('font-size:13px;font-weight:600;color:' + MUTED + ';margin-bottom:6px;')}>History</div>
       {rows.slice(0, 6).map((r) => (
         <div key={r.id} style={s('display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;color:' + MUTED + ';')}>
           <span style={s('flex:1;min-width:0;')}>Before {r.reason === 'revert' ? 'a revert' : r.reason === 'defrag' ? 'a rewrite' : r.reason === 'contradiction' ? 'settling a disagreement' : 'a change'} · {ago(r.createdAt)} · {number(r.chars)} chars</span>
@@ -622,8 +629,24 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
     };
   }, [run, driving, flash]);
 
-  if (error) return <div style={s('padding:28px;color:#8a1509;font-size:14.5px;')}>{error}</div>;
-  if (!report) return <div style={s('padding:28px;color:' + MUTED + ';font-size:14.5px;')}>Reading every page…</div>;
+  // The shared states (rv-state): what went wrong, or that it is still reading.
+  if (error) {
+    return (
+      <div className="rv-state" role="alert">
+        <span className="rv-state__ico" aria-hidden="true"><Svg w={20} sw={2}>{Icons.alertCircle}</Svg></span>
+        <p className="rv-state__title">The map could not be drawn.</p>
+        <p className="rv-state__text">{error}</p>
+      </div>
+    );
+  }
+  if (!report) {
+    return (
+      <div className="rv-state" role="status">
+        <span className="rv-state__ico" aria-hidden="true"><Svg w={20} sw={2} style={{ animation: 'rivaSpin 1s linear infinite' }}>{Icons.spinner}</Svg></span>
+        <p className="rv-state__title">Reading every page…</p>
+      </div>
+    );
+  }
 
   const t = report.totals;
   const selected = selectedId ? report.pages[selectedId] : null;
@@ -663,7 +686,7 @@ export default function MapView({ notes, onOpenPage, onChanged }) {
             {defrag && defrag.status === 'error' && <div style={s('margin-top:10px;font-size:13px;color:' + BAND_INK.red + ';')}>{defrag.message}</div>}
           </div>
           <div style={s(CARD + 'padding:14px 16px 12px;')}>
-            <div style={s('font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + MUTED + ';margin-bottom:8px;')}>Needs attention first</div>
+            <div style={s('font-size:13px;font-weight:600;color:' + MUTED + ';margin-bottom:8px;')}>Needs attention first</div>
             {worst.map((p) => (
               <Hover key={p.id} tag="button" onClick={() => setSelectedId(p.id)}
                 base="display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;padding:6px 0;font:inherit;cursor:pointer;border-top:1px solid #eef1f2;"

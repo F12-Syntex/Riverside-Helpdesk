@@ -16,7 +16,7 @@
 //                     ones that passed cleanly at once.
 import React from 'react';
 import { s, Hover, Svg, Icons } from '../ui';
-import { CARD, number } from '../stats/parts';
+import { number } from '../stats/parts';
 import { mergeWording } from '@/lib/notebook/settle.mjs';
 
 const BAND = { green: '#007f3b', amber: '#a4610a', red: '#d5281b', grey: '#8f9ba3' };
@@ -25,14 +25,21 @@ const BAND_TINT = { green: '#e6f4ec', amber: '#fdf3e7', red: '#fde8e9', grey: '#
 const INK = '#212b32';
 const MUTED = '#4c6272';
 
-// The kit's button as a style string, so every control in here is the same
-// shape as the buttons in the notebook itself (see notebook/kit.jsx).
-const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;'
-  + 'border:1px solid ' + (bg === '#fff' ? '#dde5e9' : bg) + ';border-radius:9px;background:' + bg + ';color:' + fg
-  + ';font:inherit;font-size:13.5px;font-weight:600;line-height:1;letter-spacing:-.005em;white-space:nowrap;cursor:pointer;'
-  + 'box-shadow:0 1px 2px rgba(20,40,55,.07);transition:background-color .14s ease,border-color .14s ease,color .14s ease;' + extra;
+// The page's pill button as a style string, so every control in here is the
+// same shape as the buttons in the notebook itself (rv-btn, via notebook/kit):
+// a white one is quiet (an inset hairline), a coloured one is solid.
+const btn = (bg, fg, extra = '') => 'display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 16px;'
+  + 'border:none;border-radius:999px;background:' + bg + ';color:' + fg + ';'
+  + 'box-shadow:' + (bg === '#fff' ? 'inset 0 0 0 1px #d8dde0' : 'none') + ';'
+  + 'font:inherit;font-size:14px;font-weight:600;line-height:1;white-space:nowrap;cursor:pointer;'
+  + 'transition:background-color .15s ease,box-shadow .15s ease,color .15s ease;' + extra;
 
-const LABEL = 'font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + MUTED + ';';
+// A box inside the page's white card: a hairline ring, radius 16, no lift -
+// the card it sits on is already the lifted surface. Local, rather than the
+// stats pages' CARD, which those pages share and keep.
+const CARD = 'background:#fff;border-radius:16px;box-shadow:inset 0 0 0 1px #e3e8eb;';
+
+const LABEL = 'font-size:13px;font-weight:600;color:' + MUTED + ';';
 
 // A number that travels to its new value rather than jumping, so a count going
 // up is something the reader sees happen.

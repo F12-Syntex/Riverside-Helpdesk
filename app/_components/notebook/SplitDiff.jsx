@@ -63,9 +63,9 @@ export default function SplitDiff({ before, after, pairs = [], verdicts = {}, pr
 
   return (
     <div>
-      <div style={s('display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d8e1e5;border-radius:10px;overflow:hidden;background:#fff;')}>
-        <div style={s('padding:7px 12px;background:#f0f4f5;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + MUTED + ';border-bottom:1px solid #d8e1e5;')}>Now</div>
-        <div style={s('padding:7px 12px;background:#f0f4f5;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:' + MUTED + ';border-bottom:1px solid #d8e1e5;border-left:1px solid #d8e1e5;')}>{editing ? 'Proposed — editing' : 'Proposed'}</div>
+      <div style={s('display:grid;grid-template-columns:1fr 1fr;gap:0;border:none;border-radius:14px;overflow:hidden;background:#fff;box-shadow:inset 0 0 0 1px #e3e8eb;')}>
+        <div style={s('padding:8px 12px;background:#f4f7f9;font-size:13px;font-weight:600;color:' + MUTED + ';border-bottom:1px solid #e3e8eb;')}>Now</div>
+        <div style={s('padding:8px 12px;background:#f4f7f9;font-size:13px;font-weight:600;color:' + MUTED + ';border-bottom:1px solid #e3e8eb;border-left:1px solid #d8e1e5;')}>{editing ? 'Proposed — editing' : 'Proposed'}</div>
         {editing ? (
           <>
             <div style={s('max-height:60vh;overflow:auto;')}>
