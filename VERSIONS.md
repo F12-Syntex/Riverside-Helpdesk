@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.81.1` | 2026-10-13 | style | `518600c` | style: widen the Ask mode menu into a two-column grid with spacing |
+| `6.81.0` | 2026-10-13 | feat | `2308dfb` | feat: redesign settings as a single no-scroll screen |
+| `6.80.1` | 2026-10-13 | docs | `10c84e2` | docs: record the settings and mobile header changes in versions |
 | `6.80.0` | 2026-10-13 | feat | `dfb5ed4` | feat: standardise settings, a settings gear, and a phone header with sheets |
 | `6.79.5` | 2026-10-13 | docs | `79f977a` | docs: record the popup close fix in versions |
 | `6.79.4` | 2026-10-13 | fix | `63bce7b` | fix: stop popups flickering when they close |
