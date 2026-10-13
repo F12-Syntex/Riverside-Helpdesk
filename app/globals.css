@@ -644,6 +644,19 @@ body { overflow-x: hidden; }
   overflow: hidden; transform-origin: bottom left;
   animation: rivaModesIn .2s cubic-bezier(.2,.8,.3,1) both;
 }
+/* On the opening screen the box is near the top of the page, with the header
+   above it, so the menu opens downward into the empty page instead of up
+   under the header. It scrolls inside itself if the screen is short. */
+.riva-dock-center .riva-modes-list {
+  bottom: auto; top: calc(100% + 12px); transform-origin: top left;
+  max-height: calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - 59px - 36px - var(--riva-dock-field-h) - 30px);
+  overflow-y: auto;
+  animation-name: rivaModesInDown;
+}
+@keyframes rivaModesInDown {
+  from { opacity: 0; transform: translateY(-6px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
 @keyframes rivaModesIn {
   from { opacity: 0; transform: translateY(6px) scale(.97); }
   to { opacity: 1; transform: none; }
