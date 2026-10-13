@@ -79,9 +79,13 @@ const LK_CSS = `
 .lk-clear:hover{background:var(--rv-ink-2);}
 .lk-clear:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
 
-/* ---- above the card ---- */
+/* ---- above the card ----
+   The caption and the foot sit on the light itself, not on a card, and on
+   a phone or a tablet the moving backgrounds' calm middle does not reach
+   them everywhere. A white halo keeps them readable on every background. */
 .lk-cap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:22px;margin:22px 0 8px;padding:0 22px;
   font-size:13px;font-weight:550;color:var(--rv-ink-2);}
+.lk-cap,.lk-foot__add,.lk-foot__note{text-shadow:0 0 6px #fff,0 0 2px #fff;}
 .lk-cardwrap.is-results{margin-top:14px;}
 
 /* ---- the card ----
@@ -105,7 +109,7 @@ const LK_CSS = `
    while its rows scroll under it. */
 .lk-sec + .lk-sec{border-top:1px solid var(--rv-divider);}
 .lk-group{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;margin:0;padding:14px 24px 6px;
-  font-size:13px;font-weight:600;line-height:1.4;color:var(--rv-ink-3);background:rgba(255,255,255,.94);
+  font-size:13px;font-weight:600;line-height:1.4;color:var(--rv-ink-2);background:rgba(255,255,255,.94);
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 .lk-group__n{font-variant-numeric:tabular-nums;}
 /* A line of status inside the card, where a whole State would be too much. */
@@ -129,6 +133,10 @@ button.lk-row__main:focus-visible::before{outline:2px solid var(--rv-accent);out
 .lk-row__acts{position:relative;z-index:1;flex:none;display:flex;align-items:center;gap:4px;}
 .lk-row .lk-quiet{opacity:0;transition:opacity .15s ease,background-color .15s ease,color .15s ease;}
 .lk-row:hover .lk-quiet,.lk-row.is-sel .lk-quiet,.lk-row:focus-within .lk-quiet{opacity:1;}
+/* Quiet until pointed at — where there is a pointer that can point. On a
+   touch screen nothing hovers, and an Edit nobody can see is still there
+   to be tapped. */
+@media (hover:none){.lk-row .lk-quiet{opacity:1;}}
 .lk-mark{background:rgba(0,94,184,.1);color:var(--rv-accent);border-radius:3px;}
 
 /* ---- a number: call it, copy it ---- */
@@ -240,15 +248,31 @@ html body .lk-form__foot > .lk-ask{flex:1 0 100%;margin:0 0 2px;text-align:cente
   .lk-cqc{margin:10px 8px;}
   .lk-cqc .lk-row{padding:10px;}
   .lk-src{padding:10px 16px 10px 18px;}
+  .lk-form__alert{margin:6px 18px 0;}
+}
+/* A thumb's worth of target round everything small, the size unchanged —
+   on a phone, and on any touch screen wider than one (a tablet). */
+@media (max-width:700px),(pointer:coarse){
   .lk-foot__add,.lk-foot__note{padding:11px 14px;}
-  /* A thumb's worth of target round everything small, the size unchanged. */
   .lk-clear::after{content:"";position:absolute;inset:-9px;}
   .lk-row .rv-ibtn,.lk-multi__row .rv-ibtn{position:relative;}
   .lk-row .rv-ibtn::after,.lk-multi__row .rv-ibtn::after{content:"";position:absolute;inset:-5px;}
   .lk-num__call::after,.lk-num__copy::after{content:"";position:absolute;inset:-5px 0;}
   .lk-add{position:relative;}
   .lk-add::after{content:"";position:absolute;inset:-7px 0;}
-  .lk-form__alert{margin:6px 18px 0;}
+}
+/* A phone on its side is wider than a phone but nowhere near as tall as
+   a desk: the desktop's room above the heading, the heading and the box
+   left the card no height at all. All three come down, and the card keeps
+   two rows (or all it has, when that is less) — the page scrolls for the
+   rest, rather than the list vanishing. */
+@media (max-height:520px){
+  .lk-page{overflow-y:auto;}
+  .lk{padding-top:12px;}
+  .lk .rv-h1{font-size:34px;margin-bottom:14px;}
+  .lk-box{height:52px;}
+  .lk-cap{margin-top:12px;}
+  .lk > .lk-cardwrap{min-height:min(112px,var(--lk-card-h,0px));}
 }
 @media (prefers-reduced-motion:reduce){
   .lk-box__ico.is-busy,.lk-form .rv-err{animation:none !important;}
@@ -289,7 +313,7 @@ function State({ icon, title, text, children }) {
 // The card grows and shrinks to what it holds rather than jumping, as
 // Referrals' does. Its height follows the list inside it; the column's flex
 // shrinks it to the room there is, and past that the card scrolls.
-function Card({ children }) {
+function Card({ children, onHeight }) {
   const inner = React.useRef(null);
   const outer = React.useRef(null);
   const [h, setH] = React.useState('auto');
@@ -303,11 +327,11 @@ function Card({ children }) {
   React.useLayoutEffect(() => {
     const el = inner.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(() => { setH(el.offsetHeight); measure(); });
+    const ro = new ResizeObserver(() => { setH(el.offsetHeight); onHeight(el.offsetHeight); measure(); });
     ro.observe(el);
     if (outer.current) ro.observe(outer.current);
     return () => ro.disconnect();
-  }, [measure]);
+  }, [measure, onHeight]);
   return (
     <motion.div ref={outer} onScroll={measure} onAnimationComplete={measure}
       className={'lk-card rv-card' + (more ? ' is-more' : '')}
@@ -652,11 +676,49 @@ function ContactForm({ draft, categories, saving, error, onChange, onCancel, onS
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Asking and not asking swap the buttons at the foot; focus goes with them
-  // (to "Keep it", the safe answer), rather than to the page behind.
-  const askedOnce = React.useRef(false);
+  // A half-written contact is not thrown away by leaving the page either: a
+  // reload or a closed tab asks, and so does a link in the bar, which sits
+  // above the dimmed page and stays clickable (caught on its way down,
+  // before the link's own handler, so "Cancel" leaves the dialog as it was).
+  // A dialog on its way out — saved, or closed — no longer asks.
   React.useEffect(() => {
-    if (!askedOnce.current) { askedOnce.current = true; return; }
+    if (!dirty || !present) return undefined;
+    let leaving = false;
+    const warn = (e) => { if (leaving) return; e.preventDefault(); e.returnValue = ''; };
+    const follow = (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
+      if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+      const to = new URL(a.href, window.location.href);
+      if (to.origin !== window.location.origin || to.pathname === window.location.pathname) return;
+      if (window.confirm('Leave without saving this contact?')) { leaving = true; return; }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    // The ⌘K palette moves without a link; it asks with a cancellable event.
+    const viaPalette = (e) => {
+      if (leaving) return;
+      if (window.confirm('Leave without saving this contact?')) { leaving = true; return; }
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    window.addEventListener('riva-before-navigate', viaPalette);
+    document.addEventListener('click', follow, true);
+    return () => {
+      window.removeEventListener('beforeunload', warn);
+      window.removeEventListener('riva-before-navigate', viaPalette);
+      document.removeEventListener('click', follow, true);
+    };
+  }, [dirty, present]);
+
+  // Asking and not asking swap the buttons at the foot; focus goes with them
+  // (to "Keep it", the safe answer), rather than to the page behind. Only on
+  // a change: an effect run twice on mount (React's strict mode) must not
+  // take the caret out of the name and put it on Remove.
+  const wasAsking = React.useRef(asking);
+  React.useEffect(() => {
+    if (wasAsking.current === asking) return;
+    wasAsking.current = asking;
     const to = asking ? keepRef.current : removeRef.current;
     if (to) to.focus();
   }, [asking]);
@@ -718,7 +780,11 @@ function ContactForm({ draft, categories, saving, error, onChange, onCancel, onS
   const name = initial.current.label.trim() || 'this contact';
 
   return (
-    <motion.div className="lk-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget && !dirty && !saving) onCancel(); }}
+    // The press on the dimmed page is not let move focus: closed, focus goes
+    // back to the opener (see `opener`) and must not be taken straight off it
+    // again; left open, it stays in the dialog.
+    <motion.div className="lk-scrim"
+      onMouseDown={(e) => { if (e.target !== e.currentTarget) return; e.preventDefault(); if (!dirty && !saving) onCancel(); }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
       <motion.form ref={panel} className="lk-form" role="dialog" aria-modal="true" aria-labelledby="lk-form-title"
         aria-describedby={draft.from ? 'lk-form-from' : undefined} aria-busy={saving || undefined} noValidate
@@ -815,7 +881,13 @@ export default function Page() {
   // The web fallback is never automatic — it costs a model call, so it runs
   // only when the reader asks, and only for the query they asked on.
   const [web, setWeb] = React.useState({ for: '', contacts: [], results: [], loading: false, reason: '' });
-  const [editor, setEditor] = React.useState(null); // { draft, saving, error }
+  const [editor, setEditor] = React.useState(null); // { draft, saving, error, key }
+  // Each opening of the dialog is a new one. Reopened while the last is still
+  // fading out, the same key would bring that one back — its errors, its
+  // "what it started as", and focus left where it was.
+  const editorKey = React.useRef(0);
+  // How tall the card's list is, for the short-screen floor under it (LK_CSS).
+  const [cardH, setCardH] = React.useState(0);
   const [hl, setHl] = React.useState(null);
   const [, setResized] = React.useState(0);
   const inputRef = React.useRef(null);
@@ -866,6 +938,17 @@ export default function Page() {
   const total = cqc.total ? cqc.total.toLocaleString('en-GB') : '';
 
   React.useEffect(() => { setSelIdx(trimmed ? 0 : -1); setMoved(''); }, [trimmed]);
+
+  // The highlight is on a row by its place in the list, so a row that goes
+  // from under it — the register's box shut, a contact removed — would leave
+  // it pointing past the end (Enter then copying nothing, ↓ jumping from the
+  // foot) or at whatever slid into that place. It goes back to the top.
+  const lastSel = React.useRef('');
+  React.useEffect(() => {
+    const was = lastSel.current;
+    lastSel.current = selKey;
+    if (was && !indexOf.has(was)) { lastSel.current = ''; setSelIdx(trimmed && flat.length ? 0 : -1); }
+  }, [indexOf, selKey, trimmed, flat.length]);
 
   const loadBook = React.useCallback(() => {
     // A retry after a failure shows the skeleton again, not the old error.
@@ -980,7 +1063,7 @@ export default function Page() {
 
   const openEditor = React.useCallback((draft) => {
     opener.current = document.activeElement;
-    setEditor({ draft, saving: false, error: '' });
+    setEditor({ draft, saving: false, error: '', key: ++editorKey.current });
   }, []);
   const onEdit = React.useCallback((entry) => openEditor(draftOf(entry)), [openEditor]);
   const onSave = React.useCallback((entry) => openEditor(draftFromCqc(entry)), [openEditor]);
@@ -1085,9 +1168,15 @@ export default function Page() {
       if (!flat.length) return;
       e.preventDefault();
       // On a row, from the row that has focus — the pointer may have moved
-      // the highlight somewhere else since.
+      // the highlight somewhere else since. On the register's heading, from
+      // where the heading sits: after the practice's rows, before its own.
       const on = inBox ? null : e.target.closest('.lk-row');
-      const cur = on && on.dataset.idx ? Number(on.dataset.idx) : selIdx;
+      const head = !inBox && !on && e.target.closest('.lk-cqc__head');
+      const mineCount = flat.findIndex((f) => !f.key.startsWith('p:'));
+      const cur = on && on.dataset.idx ? Number(on.dataset.idx)
+        : head ? (mineCount < 0 ? flat.length : mineCount) - (e.key === 'ArrowDown' ? 1 : 0)
+          : selIdx;
+      if (head && e.key === 'ArrowDown' && cur >= flat.length - 1) return;
       if (!inBox && e.key === 'ArrowUp' && cur <= 0) { focusBox(); return; }
       const next = e.key === 'ArrowDown'
         ? Math.min((cur < 0 ? -1 : cur) + 1, flat.length - 1)
@@ -1097,7 +1186,11 @@ export default function Page() {
       const el = itemRefs.current.get(flat[next].key);
       if (el) {
         if (!inBox) {
-          const main = el.querySelector('button.lk-row__main');
+          // A row with nothing to copy has no button to land on; its first
+          // action takes focus instead (every such row has one: an address,
+          // the CQC record, Save, the website), or focus would stay on the
+          // row above and ↓ never get past it.
+          const main = el.querySelector('button.lk-row__main') || el.querySelector('.lk-row__acts a[href], .lk-row__acts button');
           if (main) main.focus({ preventScroll: true });
         }
         el.scrollIntoView({ block: 'nearest' });
@@ -1201,9 +1294,9 @@ export default function Page() {
             </motion.div>
           ) : null}
 
-          <motion.div className={'lk-cardwrap' + (trimmed ? ' is-results' : '')}
+          <motion.div className={'lk-cardwrap' + (trimmed ? ' is-results' : '')} style={cardH ? { '--lk-card-h': cardH + 'px' } : undefined}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.14, ease: EASE }}>
-            <Card>
+            <Card onHeight={setCardH}>
               <div className="lk-inner" ref={innerRef}
                 onKeyDown={(e) => { if (e.target !== inputRef.current) onKeyDown(e); }}
                 onMouseLeave={() => { if (!trimmed) setSelIdx(-1); }}>
@@ -1362,9 +1455,10 @@ export default function Page() {
           ) : null}
         </main>
 
-        <AnimatePresence>
+        {/* One dialog at a time: a new one waits for the last to go. */}
+        <AnimatePresence mode="wait">
           {editor ? (
-            <ContactForm key="form" draft={editor.draft} categories={categories} saving={editor.saving} error={editor.error}
+            <ContactForm key={editor.key} draft={editor.draft} categories={categories} saving={editor.saving} error={editor.error}
               onChange={(draft) => setEditor((ed) => ({ ...ed, draft }))} onCancel={closeEditor} onSubmit={submit}
               onRemove={editor.draft.id ? remove : null} />
           ) : null}

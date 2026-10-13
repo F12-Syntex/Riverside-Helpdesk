@@ -9,6 +9,11 @@
 // says it first, under the field it is about, while the person can still see
 // what they typed. Pure, so it can be tested without a page.
 
+// An extension at the end, however it is written: "ext 214", "ext. 214",
+// "extension 214", "x214", "#214" — the same one the server takes off before
+// it makes the Call link (lib/contacts.phone.mjs).
+import { EXTENSION } from '../../../lib/contacts.phone.mjs';
+
 // The server keeps at most this many of each (cleanPhones, cleanEmails), and
 // clips each field to these lengths (clip).
 export const MAX_PHONES = 8;
@@ -17,10 +22,6 @@ export const MAX_LEN = { label: 160, category: 60, phone: 40, email: 120, alias:
 
 // The server's own test for an address, word for word.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// An extension at the end, however it is written: "ext 214", "ext. 214",
-// "extension 214", "x214", "#214".
-const EXTENSION = /\s*[,;]?\s*(?:ext(?:ension)?\.?|x|#)\s*\d{1,6}\s*$/i;
 
 /**
  * What is wrong with a phone number as typed, or '' when nothing is.
