@@ -285,18 +285,27 @@ function Palette({ onClose }) {
 /* The menu at the right-hand end of the bar: every tool by group,
    Settings, and which build this is. On a desktop it is the long form of
    the row; on a phone it is the row. */
-function Menu({ current, pathname, onClose }) {
+function Menu({ current, pathname, onClose, opener }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
-    function onDown(e) { if (ref.current && !ref.current.contains(e.target)) onClose(); }
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    function onDown(e) { if (ref.current && !ref.current.contains(e.target) && !(opener?.current && opener.current.contains(e.target))) onClose(); }
+    // Esc closes it and hands focus back to the button that opened it,
+    // rather than dropping it to the top of the document.
+    function onKey(e) {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      onClose();
+      if (opener?.current) opener.current.focus();
+    }
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
-  }, [onClose]);
+  }, [onClose, opener]);
 
+  // A list of links, so a nav: role="menu" promised menu items and arrow
+  // keys that plain links do not have.
   return (
-    <div ref={ref} className="riva-menu" role="menu" aria-label="All tools">
+    <nav ref={ref} className="riva-menu" aria-label="All tools">
       {GROUPS.map((g) => (
         <div className="riva-menu-group" key={g.label}>
           <div className="riva-menu-grouplabel">{g.label}</div>
@@ -317,7 +326,7 @@ function Menu({ current, pathname, onClose }) {
         <span className="riva-menu-foottext">The Riverside Practice</span>
         <span className="riva-menu-ver">{VERSION_LABEL}</span>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -331,6 +340,7 @@ export default function AppShell({ children }) {
   const [lead, setLead] = React.useState(null);
   const current = matchHref(pathname);
   const closeMenu = React.useCallback(() => setMenuOpen(false), []);
+  const menuBtn = React.useRef(null);
 
   // ⌘K / Ctrl-K anywhere, except while something is already being typed
   // into — the Q&A field is the one thing on the page people are here to
@@ -400,11 +410,11 @@ export default function AppShell({ children }) {
                 <Svg w={18} sw={2}>{Icons.settings}</Svg>
               </Link>
               <div className="riva-top-menuwrap">
-                <button type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
-                  aria-label="All tools" aria-haspopup="menu" aria-expanded={menuOpen ? 'true' : 'false'}>
+                <button ref={menuBtn} type="button" className={'riva-top-btn' + (menuOpen ? ' is-on' : '')} onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="All tools" aria-expanded={menuOpen ? 'true' : 'false'}>
                   <Svg w={18} sw={2}>{Icons.menu}</Svg>
                 </button>
-                {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} />}
+                {menuOpen && <Menu current={current} pathname={pathname} onClose={closeMenu} opener={menuBtn} />}
               </div>
             </div>
           </div>

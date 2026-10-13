@@ -79,7 +79,11 @@ export default function ThemePicker() {
   }
 
   return (
-    <div ref={ref} className="riva-theme">
+    // Tabbing out of the picker closes it, so it never lingers over the
+    // page focus has moved on to. A click on text inside it blurs with no
+    // relatedTarget, and must not.
+    <div ref={ref} className="riva-theme"
+      onBlur={(e) => { if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false); }}>
       <button ref={btnRef} type="button" className={'riva-top-btn riva-theme-btn' + (open ? ' is-on' : '')}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog" aria-expanded={open ? 'true' : 'false'}

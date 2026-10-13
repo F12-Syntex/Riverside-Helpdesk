@@ -1000,7 +1000,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-top-ver {
   flex: none; padding: 2px 8px; border-radius: 999px;
   font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
-  color: var(--rv-ink-3); background: rgba(33,43,50,.05); font-variant-numeric: tabular-nums;
+  color: var(--rv-ink-2); background: rgba(33,43,50,.05); font-variant-numeric: tabular-nums;
 }
 
 /* The way back hangs under the brand, on its own. */
@@ -1088,7 +1088,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-menu-group + .riva-menu-group { border-top: 1px solid #edf1f3; padding-top: 6px; }
 .riva-menu-grouplabel {
   font-size: 11px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--rv-ink-3);
+  text-transform: uppercase; color: var(--rv-ink-2);
   padding: 6px 10px 4px;
 }
 .riva-menu-row {
@@ -1116,7 +1116,7 @@ html[data-bg="still"] .riva-glow { display: none; }
   background: #f8fafb; border-radius: 0 0 18px 18px;
 }
 .riva-menu-foottext { flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.riva-menu-ver { flex: none; font-size: 11px; font-weight: 600; color: var(--rv-ink-3); font-variant-numeric: tabular-nums; }
+.riva-menu-ver { flex: none; font-size: 11px; font-weight: 600; color: var(--rv-ink-2); font-variant-numeric: tabular-nums; }
 
 .riva-kbd {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
@@ -1152,7 +1152,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 }
 .riva-theme-head { padding: 8px 10px 12px; }
 .riva-theme-title { font-size: 14.5px; font-weight: 700; color: var(--rv-ink); }
-.riva-theme-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--rv-ink-3); }
+.riva-theme-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--rv-ink-2); }
 .riva-theme-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .riva-theme-opt {
   display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; min-width: 0;
@@ -1185,7 +1185,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-theme-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 0 4px; }
 .riva-theme-label { font-size: 14px; font-weight: 650; color: var(--rv-ink); }
 .riva-theme-opt.is-on .riva-theme-label { color: var(--rv-accent-hi); }
-.riva-theme-credit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 500; color: var(--rv-ink-3); }
+.riva-theme-credit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 500; color: var(--rv-ink-2); }
 .riva-theme-check {
   position: absolute; right: 7px; top: 7px;
   display: flex; align-items: center; justify-content: center;
@@ -1329,15 +1329,15 @@ html[data-bg="still"] .riva-glow { display: none; }
 }
 .riva-palette-row.is-sel { background: var(--rv-accent-dim); color: var(--rv-accent); }
 .riva-palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.riva-palette-group { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--rv-ink-3); }
+.riva-palette-group { flex: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--rv-ink-2); }
 .riva-palette-empty { padding: 18px 12px; font-size: 13.5px; color: var(--rv-ink-3); text-align: center; }
 
 /* ---- the bar when the room runs out ----------------------------- */
 
-/* Narrower: the build moves to the menu's foot (it is there already), and
-   the tools you are not on drop to their icons. */
+/* Narrower: the tools you are not on drop to their icons. The build stays
+   in the bar: the menu that also carries it only exists at phone width,
+   where the 700px rule below hides this chip. */
 @media (max-width: 1020px) {
-  .riva-top-ver { display: none; }
   .riva-topnav-item:not(.is-active) { padding: 0; width: 38px; }
   .riva-topnav-item:not(.is-active) .riva-topnav-label { display: none; }
 }
@@ -2127,13 +2127,15 @@ html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); 
   .is-flat .riva-top-gear { display: none; }
   .is-flat .riva-top-menuwrap { display: flex; }
   .is-flat .riva-top-tools { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255, 255, 255, .85); }
+  /* The phone's only way around the app: a thumb's worth of target. */
+  .is-flat .riva-top-tools .riva-top-btn { width: 44px; height: 44px; }
   .riva-crumb-lead { left: 14px; }
   .is-flat .riva-crumb-lead { left: 14px; }
 
   .riva-menu, .riva-theme-pop, .riva-modes-list, .riva-dock-center .riva-modes-list {
     position: fixed; left: 8px; right: 8px; top: auto; bottom: calc(8px + env(safe-area-inset-bottom));
     width: auto; max-width: none; max-height: 82vh; overflow-y: auto; z-index: 90;
-    border: none; border-radius: 22px; background: rgba(255, 255, 255, .96);
+    border: none; border-radius: 22px; background: #fff;
     box-shadow: 0 0 0 100vmax rgba(20, 28, 36, .38), 0 24px 60px rgba(0, 0, 0, .3);
     transform-origin: bottom center;
     animation: rivaSheetUp .32s cubic-bezier(.2, .9, .3, 1) backwards;
@@ -2239,7 +2241,7 @@ html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); 
 /* Wrong, and why, under the field (aria-invalid + aria-describedby). */
 .rv-field.is-bad, .rv-field[aria-invalid="true"] { background: #fff; border-color: var(--rv-danger) !important; box-shadow: 0 0 0 3px rgba(213,40,27,.14); }
 .rv-label { display: block; margin: 0 0 7px; font-size: 13px; font-weight: 600; color: var(--rv-ink-2); }
-.rv-hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--rv-ink-3); }
+.rv-hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--rv-ink-2); }
 .rv-err { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; font-size: 12.5px; font-weight: 550; line-height: 1.45; color: var(--rv-danger-ink); }
 /* A whole form's error, at its foot. */
 .rv-alert { padding: 9px 12px; border-radius: 10px; background: var(--rv-danger-bg); color: #912018; font-size: 13.5px; font-weight: 550; line-height: 1.45; }

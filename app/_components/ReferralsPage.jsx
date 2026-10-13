@@ -79,7 +79,7 @@ const RF_CSS = `
 
 /* ---- above the card ---- */
 .rf-cap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:22px;margin:22px 0 8px;padding:0 22px;
-  font-size:13px;font-weight:550;color:var(--rv-ink-2);}
+  font-size:13px;font-weight:550;color:var(--rv-ink-2);text-shadow:0 0 6px #fff,0 0 2px #fff;}
 .rf-cap__btn{padding:2px 0;border:none;background:none;font:inherit;font-weight:600;color:var(--rv-accent);cursor:pointer;border-radius:4px;}
 .rf-cap__btn:hover{color:var(--rv-accent-hi);text-decoration:underline;text-underline-offset:3px;}
 .rf-cap__btn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
@@ -135,7 +135,7 @@ const RF_CSS = `
 .rf-btn--quiet:hover{box-shadow:inset 0 0 0 1px #aab6be;}
 
 .rf-ask{display:flex;justify-content:center;margin-top:14px;}
-.rf-ask a{padding:6px 12px;border-radius:999px;font-size:14px;font-weight:500;color:var(--rv-ink-2);text-decoration:none;transition:color .15s ease,background-color .15s ease;}
+.rf-ask a{padding:6px 12px;border-radius:999px;font-size:14px;font-weight:500;color:var(--rv-ink-2);text-shadow:0 0 6px #fff,0 0 2px #fff;text-decoration:none;transition:color .15s ease,background-color .15s ease;}
 .rf-ask a strong{font-weight:600;color:var(--rv-accent);}
 .rf-ask a:hover{color:var(--rv-ink);background:rgba(255,255,255,.6);}
 .rf-ask a:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
@@ -189,6 +189,15 @@ const RF_CSS = `
   .rf-row__name{white-space:normal;font-size:15.5px;}
   .rf-tag{font-size:14px;}
   .rf-doc__title{font-size:21px;}
+}
+/* A phone on its side is wider than 700px but barely 400 tall: the desktop
+   heading and box would leave the card no room at all. Tighten them, and
+   keep two rows of card in view (the shell scrolls past that). */
+@media (max-height:520px){
+  .rf{padding-top:12px;}
+  .rf-h1{font-size:34px;margin-bottom:14px;}
+  .rf-box{height:52px;}
+  .rf-card{min-height:112px;}
 }
 @media (prefers-reduced-motion:reduce){
   .rf-skel,.rf-box__ico.is-busy{animation:none !important;}
@@ -572,6 +581,18 @@ export default function ReferralsPage() {
     }
   };
 
+  // A phone's box has room for a shorter placeholder; the long one was cut
+  // off mid-word (as on Contacts).
+  const [narrow, setNarrow] = React.useState(false);
+  React.useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 700px)');
+    const on = () => setNarrow(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+
   // The box has the caret on arrival where there is a keyboard to type
   // with. On a phone it would raise the keyboard over the list unasked.
   React.useEffect(() => {
@@ -628,7 +649,7 @@ export default function ReferralsPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder="What is it for? “skin”, “nurse to visit at home”…"
+                placeholder={narrow ? 'What is it for? “skin”…' : 'What is it for? “skin”, “nurse to visit at home”…'}
                 aria-label="Search the practice’s referrals"
               />
               <span role="status" style={SR_ONLY}>{searching ? 'Searching by meaning' : ''}</span>

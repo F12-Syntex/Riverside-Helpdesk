@@ -122,9 +122,13 @@ void main() {
   vec3 col = shade(uv, p, u_time);
 
   // Lighter towards the page, and lighter still through the middle where
-  // the reading is. Busy, the colour comes up a little.
+  // the reading is. On a narrow screen the column is the whole width, so
+  // the reading is everywhere and the whole field is quietened — captions
+  // and links sit straight on this, not on a card, and must keep 4.5:1.
+  // Busy, the colour comes up a little.
   float mid = smoothstep(0.10, 0.66, distance(uv, vec2(0.5, 0.52)));
-  float amt = u_amount * mix(1.0, 0.55 + 0.45 * mid, u_calm) * (1.0 + 0.3 * u_energy);
+  float narrow = 1.0 - smoothstep(700.0, 1100.0, u_css.x);
+  float amt = u_amount * mix(1.0, 0.55 + 0.45 * mid, u_calm) * mix(1.0, 0.6, narrow) * (1.0 + 0.3 * u_energy);
   col = mix(u_base, col, clamp(amt, 0.0, 1.0));
 
   col += (grainHash(gl_FragCoord.xy + u_seed * 17.0) - 0.5) * u_grain;
@@ -308,7 +312,7 @@ export const SHADERS = {
   mesh: { glsl: MESH, speed: 0.32, scale: 1.1, intensity: 0.5, paramA: 0.42, amount: 0.8, calm: 0.5, grain: 0.02, res: 0.4 },
   grain: { glsl: GRAIN, speed: 0.22, scale: 1.1, intensity: 0.35, paramA: 0.28, amount: 0.42, calm: 0.55, grain: 0.03, res: 0.5 },
   waves: { glsl: WAVES, speed: 0.2, scale: 1.26, intensity: 0.3, paramA: 0.12, amount: 0.4, calm: 0.55, grain: 0.02, res: 0.5 },
-  aurora: { glsl: AURORA, speed: 0.12, scale: 1.1, amount: 1, calm: 0.3, grain: 0.02, res: 0.4 },
+  aurora: { glsl: AURORA, speed: 0.12, scale: 1.1, amount: 0.8, calm: 0.6, grain: 0.02, res: 0.4 },
   metaballs: { glsl: METABALLS, speed: 0.09, scale: 1, amount: 1, calm: 0, grain: 0.016, res: 0.34 },
   dots: { glsl: DOTS, speed: 0.35, scale: 1.26, intensity: 0.35, paramA: 0.2, amount: 0.42, calm: 0.7, grain: 0, res: 0.5 },
 };
