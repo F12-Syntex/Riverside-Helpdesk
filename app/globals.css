@@ -115,7 +115,15 @@ html { scrollbar-gutter: stable; }
   --riva-dock-field-h: 118px;
   --riva-dock-h: calc(var(--riva-dock-pad-t) + var(--riva-dock-strip-h) + var(--riva-dock-field-h) + var(--riva-dock-extras) + var(--riva-dock-pad-b));
   --riva-dock-group-h: calc(var(--riva-hero-text-h) + var(--riva-hero-gap) + var(--riva-dock-field-h) + var(--riva-dock-extras));
-  --riva-dock-lift: max(0px, calc(53vh - var(--riva-dock-pad-b) - var(--riva-dock-group-h) / 2));
+  /* The opening screen is laid out as Referrals and Contacts are: the same
+     top margin, the same 56px heading, the same gap, the box right under it.
+     The dock is pinned to the foot, so the lift is whatever carries the box
+     to where those pages put theirs. */
+  --riva-header-h: var(--rv-top-h, 80px);
+  --riva-hero-gap: 36px;
+  --riva-hero-text-h: 59px;
+  --riva-dock-group-h: calc(var(--riva-hero-text-h) + var(--riva-hero-gap) + var(--riva-dock-field-h) + var(--riva-dock-extras));
+  --riva-dock-lift: max(0px, calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - var(--riva-dock-group-h) - var(--riva-dock-pad-b)));
   --riva-hero-clear: calc(var(--riva-dock-lift) + var(--riva-dock-pad-b) + var(--riva-dock-extras) + var(--riva-dock-field-h) + var(--riva-hero-gap));
 }
 @media (max-width: 600px) { .riva-app-shell { --riva-dock-lift: 0px; --riva-dock-field-h: 106px; } }
@@ -300,7 +308,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .riva-grid-label { grid-template-columns: 1fr !important; gap: 4px !important; }
 
   /* Ease the largest hero headings down a notch on phones. */
-  .riva-hero-h1 { font-size: 27px !important; }
+  .riva-hero-h1 { font-size: 38px !important; }
 
   /* Scroll without a visible scrollbar (native-app feel). Scrolling still works. */
   body, #riva-scroll { scrollbar-width: none; -ms-overflow-style: none; }
@@ -1115,14 +1123,12 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 .riva-composer {
   position: relative; display: flex; flex-direction: column;
   height: var(--riva-dock-field-h); width: 100%;
-  background: #fff; border: 2px solid #94aabb; border-radius: 22px;
-  box-shadow: 0 2px 4px rgba(33,43,50,.05), 0 18px 48px rgba(0,48,135,.14);
-  transition: border-color .18s ease, box-shadow .22s ease;
+  background: #fff; border: none; border-radius: 28px;
+  box-shadow: 0 1px 2px rgba(33,43,50,.04), 0 14px 36px -14px rgba(33,43,50,.2);
+  transition: box-shadow .2s ease;
 }
-.riva-composer:hover { border-color: #5f8fb9; }
 .riva-dock-form:focus-within .riva-composer {
-  border-color: #005eb8;
-  box-shadow: 0 0 0 3px rgba(0,94,184,.08), 0 4px 10px rgba(33,43,50,.07), 0 18px 44px rgba(33,43,50,.16);
+  box-shadow: 0 0 0 3px rgba(0,94,184,.12), 0 1px 2px rgba(33,43,50,.04), 0 14px 36px -14px rgba(33,43,50,.22);
 }
 /* No yellow ring here: a text field matches :focus-visible on a mouse
    click too, so it fired on every tap into the box. The blue edge and
@@ -1131,14 +1137,18 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
   flex: 1; min-width: 0; width: 100%;
   border: none !important; background: transparent !important;
   outline: none !important; box-shadow: none !important;
-  font: inherit; font-size: 19.5px; padding: 0 22px; color: #212b32;
+  font: inherit; font-size: 19px; padding: 0 24px; color: var(--rv-ink);
 }
-.riva-composer-input::placeholder { color: #768692; }
+.riva-composer-input::placeholder { color: var(--rv-ink-4); }
 /* The global .riva-input:focus paints a field white; inside the card a
    white, square-cornered field covers the rounded corners of the border
    above it, which read as a cut-off edge. The card is the surface. */
 .riva-composer-input:focus { background: transparent !important; border: none !important; }
-.riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 8px 0 12px; border-top: 1px solid #e6edf2; }
+.riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 10px 0 14px; border-top: 1px solid #eef1f3; }
+.qa-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--rv-page); }
+.qa-bg__canvas { display: block; width: 100%; height: 100%; animation: qa-bg-in 1.2s ease both; }
+@keyframes qa-bg-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .qa-bg__canvas { animation: none; } }
 .riva-composer-bar .riva-dock-send { margin-left: auto; box-shadow: 0 6px 16px rgba(0,94,184,.28); }
 .riva-modes-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
@@ -1771,15 +1781,16 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 
 html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay) {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-  padding: 24px; overflow-y: auto;
-  background: rgba(20, 28, 36, .3);
+  /* Under the bar (z 52) on purpose: the header stays in view, un-dimmed,
+     above the darkened page, and the dialog sits in the room below it. */
+  z-index: 51; padding: calc(var(--rv-top-h, 64px) + 8px) 24px 24px; overflow-y: auto;
+  background: rgba(20, 28, 36, .38);
   -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
   animation: apFade .22s ease both;
 }
-html body .ap-overlay { z-index: 80; }
 
 html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
-  position: relative; display: flex; flex-direction: column; max-height: calc(100vh - 48px);
+  position: relative; display: flex; flex-direction: column; max-height: calc(100vh - var(--rv-top-h, 64px) - 40px);
   background: rgba(255, 255, 255, .88);
   -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
   border: none; border-radius: 22px; overflow: hidden;

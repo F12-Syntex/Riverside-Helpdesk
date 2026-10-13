@@ -125,7 +125,7 @@ export default function ChatView({ v }) {
         // between this text and the field holds on every screen size.
         <div className="riva-hero-block" style={s('text-align:center;animation:rivaAnswerIn .5s cubic-bezier(.2,.7,.3,1) both;')}>
           <h1 className="riva-hero-h1" aria-label="What do you need to find?"
-            style={s('font-size:48px;font-weight:800;letter-spacing:-0.03em;margin:0;line-height:1.08;')}>
+            style={s('font-size:56px;font-weight:800;letter-spacing:-0.04em;margin:0;line-height:1.05;color:var(--rv-ink);')}>
             <span aria-hidden="true">What do you need to <HeroRotator />?</span>
           </h1>
           {/* Only when the host page sets one. The default is nothing: a line
