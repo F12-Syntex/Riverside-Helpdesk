@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.81.3` | 2026-10-13 | style | `578a6de` | style: match the Ask field width to Referrals and Contacts |
+| `6.81.2` | 2026-10-13 | docs | `1693d43` | docs: record the settings and mode menu redesigns in versions |
 | `6.81.1` | 2026-10-13 | style | `518600c` | style: widen the Ask mode menu into a two-column grid with spacing |
 | `6.81.0` | 2026-10-13 | feat | `2308dfb` | feat: redesign settings as a single no-scroll screen |
 | `6.80.1` | 2026-10-13 | docs | `10c84e2` | docs: record the settings and mobile header changes in versions |
