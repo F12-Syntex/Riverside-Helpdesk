@@ -61,11 +61,8 @@ function rate(model) {
 const ST_CSS = `
 .st-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
 .st-bg__canvas{display:block;width:100%;height:100%;}
-.st-root{position:relative;min-height:100%;display:flex;flex-direction:column;}
-.st-main{flex:1;width:100%;max-width:1180px;margin:0 auto;padding:22px 28px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;}
-.st-h1{margin:0;font-size:38px;font-weight:800;letter-spacing:-.035em;line-height:1.05;color:var(--rv-ink);}
-.st-lede{margin:8px 0 0;max-width:62ch;font-size:14.5px;line-height:1.5;color:var(--rv-ink-2);}
-.st-lede code{font-family:Consolas,Menlo,monospace;font-size:.9em;background:var(--rv-surface-3);border-radius:5px;padding:1px 5px;color:var(--rv-ink);}
+.st-root{position:relative;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+.st-main{flex:1;min-height:0;overflow:hidden;width:100%;max-width:1180px;margin:0 auto;padding:22px 28px 24px;box-sizing:border-box;display:flex;flex-direction:column;}
 .st-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start;}
 .st-card{background:var(--rv-surface);border-radius:18px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -16px rgba(33,43,50,.2);}
 
@@ -171,8 +168,7 @@ const ST_CSS = `
 .st-row{grid-template-columns:150px minmax(0,1fr) 130px;}
 }
 @media (max-width:700px){
-.st-main{padding:16px 16px 40px;gap:16px;}
-.st-h1{font-size:30px;}
+.st-main{padding:16px 16px 20px;}
 .st-row{grid-template-columns:1fr;gap:6px;padding:12px 18px;}
 .st-row--child .st-row__name{margin-left:0;}
 .st-row--child .st-row__name::before{display:none;}
@@ -502,15 +498,6 @@ export default function SettingsPage() {
       <AppHeader subtitle="Settings" />
 
       <main className="st-main">
-        <div>
-          <h1 className="st-h1">Settings</h1>
-          <p className="st-lede">
-            Which model does each job. Type to search every model OpenRouter serves, or paste an id.
-            Leave a row blank and it uses the row it falls back to. Add <code>@provider</code> to pin
-            where a model runs, like <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
-          </p>
-        </div>
-
         <div className="st-grid">
           <section className="st-card st-ledger" aria-label="Models">
             <Group title="Answering" note="Blank rows here use Reasoning">
