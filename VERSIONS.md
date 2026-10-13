@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.78.0` | 2026-10-13 | feat | `a357061` | feat: one Apple-style look for every popup, and a fixed Add a contact form |
+| `6.77.1` | 2026-10-13 | docs | `3717780` | docs: record the contacts redesign in versions |
 | `6.77.0` | 2026-10-13 | feat | `0066d68` | feat: redesign contacts to match the referrals page |
 | `6.76.1` | 2026-10-13 | docs | `6be7337` | docs: record the one-header change in versions |
 | `6.76.0` | 2026-10-13 | feat | `a6e6ba1` | feat: one header on every page, with a glide between tools |
