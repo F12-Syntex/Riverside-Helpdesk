@@ -124,18 +124,11 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     if (open && e.key === 'Tab') setOpen(false);
   };
 
-  // Each mode's glyph on a small tile, so the list can be scanned by shape
-  // before it is read; the armed mode's tile turns blue.
-  const tile = (icon, on) => (
-    <span className={'riva-mode-tile' + (on ? ' is-on' : '')} aria-hidden="true">
-      <Svg w={16} sw={2.1}>{Icons[icon] || Icons.search}</Svg>
-    </span>
-  );
-
-  const text = (label, summary) => (
-    <span className="riva-mode-text">
-      <span className="riva-mode-label">{label}</span>
-      <span className="riva-mode-summary">{summary}</span>
+  // Each row is four columns — glyph, name, what it does, tick — so every
+  // name and every description starts on the same line down the list.
+  const glyph = (icon) => (
+    <span className="riva-mode-icon" aria-hidden="true">
+      <Svg w={16} sw={2}>{Icons[icon] || Icons.search}</Svg>
     </span>
   );
 
@@ -153,10 +146,11 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
         <button type="button" role="menuitemradio" aria-checked={on}
           onClick={() => choose(row.name)} onMouseMove={point(i)}
           className={'riva-mode' + (on ? ' is-on' : '')}>
-          {tile(row.icon, on)}
-          {text(row.label, row.summary)}
-          <span className="riva-mode-trail riva-mode-check" aria-hidden="true">
-            {on ? <Svg w={15} sw={2.8}>{Icons.check}</Svg> : null}
+          {glyph(row.icon)}
+          <span className="riva-mode-name">{row.label}</span>
+          <span className="riva-mode-desc">{row.summary}</span>
+          <span className="riva-mode-check" aria-hidden="true">
+            {on ? <Svg w={14} sw={2.8}>{Icons.check}</Svg> : null}
           </span>
         </button>
       </React.Fragment>
@@ -194,7 +188,6 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           <motion.div key="menu" role="menu" aria-label="Answer mode" className="riva-modes-list"
             initial={false} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: downward() ? -4 : 4, scale: 0.98, transition: { duration: 0.14, ease: EASE_EXIT } }}>
-            <div className="riva-modes-title">What do you want to do?</div>
             <div className="riva-modes-page">
               {rows.map((row, i) => renderRow(row, i))}
             </div>
