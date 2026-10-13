@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.4` | 2026-10-13 | fix | `bf78cf1` | fix: keep Notes responsive and keyboard-safe, per the review |
 | `6.89.3` | 2026-10-13 | fix | `eae384b` | fix: read the logging switch as the server does, and keep Settings' focus |
 | `6.89.2` | 2026-10-13 | fix | `f62dea7` | fix: dial the first number, and close Contacts' keyboard and touch gaps |
 | `6.89.1` | 2026-10-13 | fix | `2faa9c3` | fix: make the shell's small text, sheets and phone header pass review |

@@ -44,10 +44,6 @@ const PILL = 'display:inline-flex;align-items:center;gap:8px;height:34px;padding
 const PILL_REST = 'background:#fff;border:1px solid #d8dde0;color:#005eb8;';
 const PILL_ON = 'background:#e8f1f8;border:1px solid #005eb8;color:#003087;';
 const PILL_HOVER = 'background:#e8f1f8;border-color:#005eb8;color:#003087;';
-// The way back is solid where every other pill is white: it is the one
-// control on the bar that undoes something, and it has to be seen first.
-const BACK = 'background:#005eb8;border:1px solid #005eb8;color:#fff;box-shadow:0 6px 18px rgba(0,94,184,.28);';
-const BACK_HOVER = 'background:#003087;border-color:#003087;color:#fff;';
 
 // `onContacts` is still accepted and ignored: the Q&A page passes its opener
 // and nothing had to be edited to stop it. The Contacts pill is off the bar
@@ -74,15 +70,17 @@ export default function AppHeader({ v, subtitle = null, tabs = null, onContacts 
   const lead = React.useContext(HeaderLeadSlot);
   const inShell = React.useContext(ShellPresence);
 
-  // Styled as the other chrome pills are, so the bar reads as one row of
-  // controls rather than a back control that wandered in from elsewhere.
+  // The way back every page has: the text pill Referrals and Notes use for
+  // theirs ("← All referrals", "← All notes") — an arrow and a word in NHS
+  // blue, no surface of its own. It used to be a solid blue button, the one
+  // filled control on the screen, in a shape no other page used. Drawn by
+  // its class (globals.css, .riva-crumb-back), which also sheds the word on a
+  // phone.
   const backControl = back ? (
-    <Hover tag="button" type="button" onClick={back.onClick} className="riva-crumb-back"
-      aria-label={back.label || 'Back'}
-      base={PILL + BACK} hover={BACK_HOVER}>
-      <Svg w={15} sw={2.1}>{Icons.arrowLeft}</Svg>
+    <button type="button" onClick={back.onClick} className="riva-crumb-back" aria-label={back.label || 'Back'}>
+      <Svg w={16} sw={2.2}>{Icons.arrowLeft}</Svg>
       <span className="riva-crumb-back-label">{back.label || 'Back'}</span>
-    </Hover>
+    </button>
   ) : null;
 
   const controls = (

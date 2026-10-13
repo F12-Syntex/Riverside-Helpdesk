@@ -81,12 +81,19 @@ export default function ScrollPill({ turnKey, live }) {
   // A new question starts at its top, and nobody is following anything.
   React.useEffect(() => { follow.current = false; jumping.current = 0; }, [turnKey]);
 
-  const jump = () => {
+  // The pill goes once the page is at its end, and the focus would go with
+  // it, to the top of the document. It is handed to the field instead — the
+  // next thing in the dock, and the next thing to do at the end of an answer.
+  // Not after a tap on a touch screen, where focusing the field opens the
+  // keyboard over the end of the answer that was just jumped to.
+  const jump = (e) => {
     const el = document.getElementById('riva-scroll');
     if (!el) return;
     follow.current = true;
     jumping.current = performance.now() + 700;
     el.scrollTo({ top: el.scrollHeight, behavior: reduce ? 'auto' : 'smooth' });
+    const field = document.querySelector('.riva-composer-input');
+    if (field && (e.detail === 0 || window.matchMedia('(hover: hover)').matches)) field.focus({ preventScroll: true });
   };
 
   return (

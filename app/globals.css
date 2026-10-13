@@ -126,6 +126,7 @@ html { background: #f8fafc; }
     + var(--riva-dock-field-h) + var(--riva-hero-gap)
   );
   --riva-fade-top: 52px;          /* where the page fades in under the header */
+  --riva-fade-hold: 0px;          /* how far down it stays faded out first */
 }
 
 /* The sums again, on the Q&A itself. A custom property is worked out
@@ -156,7 +157,9 @@ html { background: #f8fafc; }
   --riva-dock-lift: max(0px, calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - var(--riva-dock-group-h) - var(--riva-dock-pad-b) - var(--riva-dock-attached)));
   --riva-hero-clear: calc(var(--riva-dock-lift) + var(--riva-dock-pad-b) + var(--riva-dock-extras) + var(--riva-dock-field-h) + var(--riva-hero-gap));
 }
-@media (max-width: 600px) { .riva-app-shell { --riva-dock-lift: 0px; --riva-dock-field-h: 106px; } }
+/* At the width every page takes its phone layout (700px, as the shell's), so
+   the dock stays at the foot exactly where the shell stops lifting it. */
+@media (max-width: 700px) { .riva-app-shell { --riva-dock-lift: 0px; --riva-dock-field-h: 106px; } }
 
 /* A phone's 100vh is the tall viewport, which runs on under the browser's
    own toolbar, while the dock — fixed to the bottom — sits above it. Both
@@ -555,9 +558,16 @@ body { overflow-x: hidden; }
  * column is 688px, as Referrals' is, but this heading's last word turns
  * over and the widest of them ("check") runs the line to 669px of a 640px
  * measure: inside the column it broke onto a second line every time that
- * word came round. The field under it keeps the column. */
+ * word came round. The field under it keeps the column.
+ *
+ * The overhang is the heading's, not the block's. The block is lifted out
+ * of the flow as it leaves (ChatView, popLayout) and pinned where it stood,
+ * and a margin of its own was then counted twice: the heading jumped 40px
+ * to the left the moment it began to fade. Its size is here rather than
+ * inline, so the phone's is one rule (the Q&A on a phone, below). */
+.riva-hero-block > .riva-hero-h1 { margin: 0; font-size: 56px; }
 @media (min-width: 701px) {
-  .riva-hero-block { margin-left: -40px; margin-right: -40px; }
+  .riva-hero-block > .riva-hero-h1 { margin-left: -40px; margin-right: -40px; }
 }
 
 /* Page headings are labels, not content: a stray drag or double-click
@@ -598,14 +608,28 @@ body { overflow-x: hidden; }
 .riva-history-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rv-ink-3); }
 .riva-history-dot.is-working { background: var(--rv-accent); animation: rivaBreath 1.6s ease-in-out infinite; }
 .riva-history-dot.is-failed { background: var(--rv-danger); }
+/* The older questions, folded into one row (ChatView, History): no number of
+   its own, and said as a control rather than as a question. */
+.riva-history-fold .riva-history-q { font-size: 14.5px; font-weight: 600; color: var(--rv-ink-2); }
+.riva-history-fold:hover .riva-history-q { color: var(--rv-ink); }
+.riva-history-fold:hover .riva-history-chev { transform: translateY(2px); }
 
 /* Nothing reads from behind the dock: the page fades out as it reaches
  * it, so a line of an answer is either legible or gone, never half
  * hidden under the field. The masked band matches the dock's height. */
 .riva-scroll-fade {
   --riva-fade-foot: calc(var(--riva-dock-h) + 26px);
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 var(--riva-fade-top), #000 calc(100% - var(--riva-fade-foot)), rgba(0,0,0,0) calc(100% - 36px));
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, #000 var(--riva-fade-top), #000 calc(100% - var(--riva-fade-foot)), rgba(0,0,0,0) calc(100% - 36px));
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) var(--riva-fade-hold), #000 var(--riva-fade-top), #000 calc(100% - var(--riva-fade-foot)), rgba(0,0,0,0) calc(100% - 36px));
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) var(--riva-fade-hold), #000 var(--riva-fade-top), #000 calc(100% - var(--riva-fade-foot)), rgba(0,0,0,0) calc(100% - 36px));
+}
+/* Once something has been asked, the way back hangs under the bar at the
+ * left (.riva-crumb-lead). Below 860px that is over the column itself —
+ * 860 is where the column's text starts at the pill's right-hand end — so
+ * there the page starts below the pill, and anything scrolled up under it
+ * has faded out before it gets there: the pill has no surface of its own
+ * to cover it, as Referrals' and Notes' have none. */
+@media (max-width: 860px) {
+  .riva-scroll-fade.is-asked { --riva-column-pad-t: 64px; --riva-fade-hold: 44px; --riva-fade-top: 64px; }
 }
 /* Sources has no dock to clear, so it only fades where it meets the header. */
 .riva-scroll-fade-top {
@@ -714,7 +738,10 @@ body { overflow-x: hidden; }
 .riva-modes-open .riva-modes-btn { box-shadow: 0 0 0 3px rgba(0,94,184,.16); }
 .riva-modes-list {
   position: absolute; left: -14px; bottom: calc(100% + 26px); z-index: 8;
-  width: min(772px, calc(100vw - 32px));
+  /* As wide as the opening screen's (below): the field is the same 688px
+     column in a conversation as before one, and a menu wider than it ran
+     past the field's right-hand edge, and off a tablet's screen. */
+  width: min(640px, calc(100vw - 32px));
   display: flex; flex-direction: column;
   background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
   box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
@@ -744,7 +771,7 @@ body { overflow-x: hidden; }
 }
 .riva-modes-title {
   padding: 13px 16px 4px; font-size: 11.5px; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase; color: #768692;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--rv-ink-2);
 }
 .riva-modes-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 8px; animation: rivaModesPage .18s ease both; }
 .riva-modes-page.is-folder { animation-name: rivaModesFolder; }
@@ -778,7 +805,7 @@ body { overflow-x: hidden; }
 .riva-mode-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .riva-mode-label { font-size: 14.5px; font-weight: 650; color: #212b32; }
 .riva-mode.is-on .riva-mode-label { color: #005eb8; }
-.riva-mode-summary { font-size: 12.5px; line-height: 1.35; color: #5b7183; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.riva-mode-summary { font-size: 12.5px; line-height: 1.35; color: var(--rv-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .riva-mode-folder.is-on .riva-mode-summary { color: #005eb8; font-weight: 600; }
 .riva-mode-trail { flex: none; display: flex; width: 18px; justify-content: center; color: #768692; }
 .riva-mode-check { color: #005eb8; }
@@ -792,7 +819,7 @@ body { overflow-x: hidden; }
 /* Keys, for the keyboard user; gone where there is no keyboard. */
 .riva-modes-foot {
   display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid #edf1f3;
-  background: #f8fafb; font-size: 11.5px; color: #768692;
+  background: #f8fafb; font-size: 11.5px; color: var(--rv-ink-2);
 }
 .riva-modes-foot span { display: inline-flex; align-items: center; gap: 4px; }
 .riva-modes-foot kbd {
@@ -800,10 +827,12 @@ body { overflow-x: hidden; }
   padding: 0 5px; border: 1px solid #dde4e7; border-bottom-width: 2px; border-radius: 5px;
   background: #fff; font: inherit; font-size: 10.5px; font-weight: 600; color: #4c6272;
 }
-@media (max-width: 600px), (pointer: coarse) {
+@media (max-width: 700px), (pointer: coarse) {
   .riva-modes-foot { display: none; }
 }
-@media (max-width: 600px) {
+/* A phone, where the menu is a sheet from the foot of the screen (the shell's
+   700px rule): one column of thumb-high rows. */
+@media (max-width: 700px) {
   .riva-modes-page { grid-template-columns: 1fr; }
   .riva-mode { min-height: 56px; }
 }
@@ -830,8 +859,14 @@ body { overflow-x: hidden; }
 /* ------------------------------------------------------------------ *
  * The Q&A on a phone. Last in the file on purpose: these override the
  * dock and answer rules above, which carry !important of their own.
+ *
+ * At 700px, where the shell and every other page take their phone layout.
+ * At 600 there was a band between the two in which the shell had already
+ * stopped lifting the dock (it drops to the foot at 700) while the opening
+ * heading was still placed, and sized, for a lifted one: the heading at the
+ * top of the screen, the field 540px under it.
  * ------------------------------------------------------------------ */
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   /* ---------------------------------------------------------------- *
    * The Q&A on a phone.
    *
@@ -863,6 +898,8 @@ body { overflow-x: hidden; }
 
   .riva-column { padding-left: 16px !important; padding-right: 16px !important; }
 
+  /* The opening heading at the size the other pages' take on a phone (rv-h1). */
+  .riva-hero-block > .riva-hero-h1 { font-size: 38px; }
   .riva-turn-q { font-size: 24px !important; }
 
   /* The dock keeps a thumb-sized field but takes the phone's gutters. */
@@ -1009,7 +1046,26 @@ html[data-bg="still"] .riva-glow { display: none; }
   display: flex; align-items: center; gap: 8px;
 }
 .riva-crumb-lead:empty { display: none; }
-.riva-crumb-back { animation: rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both; border-radius: 11px !important; }
+/* The text pill every page's way back is (Referrals' "← All referrals", Notes'
+   "← All notes"): an arrow and a word in NHS blue, with no surface of its
+   own, its arrow under the brand's mark. AppHeader draws it. */
+.riva-crumb-back {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; margin-left: -8px; padding: 0 12px 0 8px; border: none; border-radius: 999px;
+  background: transparent; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap;
+  color: var(--rv-accent); cursor: pointer; transition: background-color .15s ease;
+  animation: rivaAnswerIn .4s cubic-bezier(.2,.7,.3,1) both;
+}
+.riva-crumb-back:hover { background: rgba(255,255,255,.75); }
+.riva-crumb-back:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 1px; }
+/* A phone: the arrow alone, at the width every page takes its phone layout.
+   A thumb's worth of target reaches past the drawn pill rather than growing
+   it, because the page is laid out to start under the pill. */
+@media (max-width: 700px) {
+  .riva-crumb-back { width: 36px; margin-left: -10px; padding: 0; justify-content: center; }
+  .riva-crumb-back-label { display: none; }
+  .riva-crumb-back::after { content: ""; position: absolute; inset: -4px; }
+}
 
 /* The tools: a segmented control. A faint track, and the one you are on
    lifted out of it on a white pill with its icon in NHS blue — the pill
@@ -1345,8 +1401,6 @@ html[data-bg="still"] .riva-glow { display: none; }
    in the tooltip and read out). The bar is the same three parts at the
    same height. */
 @media (max-width: 600px) {
-  .riva-crumb-back { padding: 0 10px !important; }
-  .riva-crumb-back-label { display: none; }
   .riva-brand-name { display: none; }
   .riva-brand { padding: 0 5px; }
   :root { --rv-top-h: 58px; --rv-gutter: 8px; }
@@ -1454,9 +1508,6 @@ html[data-bg="still"] .riva-glow { display: none; }
 .is-flat .riva-topnav-item { transition: color .35s ease, background-color .15s ease; }
 @keyframes rivaPageIn { from { opacity: 0; } to { opacity: 1; } }
 .is-flat .riva-shell-body > * { animation: rivaPageIn .45s cubic-bezier(.22,1,.36,1) backwards; }
-@media (max-width: 600px) {
-  .is-flat .riva-crumb-lead { left: 12px; }
-}
 @media (prefers-reduced-motion: reduce) {
   .is-flat .riva-top, .is-flat .riva-shell-body > * { animation: none; }
   .is-flat .riva-topnav-pill { transition: none; }
@@ -1493,11 +1544,14 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-scan-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-scan-doc { flex: none; display: inline-flex; color: var(--rv-ink-3); }
 .riva-work-steps { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-.riva-work-step { display: flex; align-items: baseline; gap: 8px; font-size: 14px; line-height: 1.4; color: var(--rv-ink-2); }
+/* The lookup under way in ink, the finished ones a step quieter; neither
+   lower than --rv-ink-2, the floor for anything meant to be read (ink-3 is
+   3.75:1 on the card, short of the 4.5 small text needs). */
+.riva-work-step { display: flex; align-items: baseline; gap: 8px; font-size: 14px; line-height: 1.4; color: var(--rv-ink); }
 .riva-work-mark { flex: none; width: 14px; text-align: center; color: var(--rv-ink-3); }
-.riva-work-step.is-done { color: var(--rv-ink-3); }
+.riva-work-step.is-done { color: var(--rv-ink-2); }
 .riva-work-step.is-done .riva-work-mark { color: var(--rv-green); }
-.riva-work-detail { color: var(--rv-ink-3); }
+.riva-work-detail { color: var(--rv-ink-2); }
 
 /* ---- an answer arriving ----------------------------------------- */
 
@@ -1563,8 +1617,11 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-answer-prose { position: relative; }
 .riva-answer-status { display: flex; align-items: center; gap: 9px; margin-top: 16px; font-size: 13.5px; font-weight: 600; }
 .riva-answer-status__text { color: var(--rv-ink-2); }
-/* A state in the card: failed, stopped (rv-state, Referrals' look). */
-.riva-answer-state { padding: 22px 8px 14px; }
+/* A state in the card: failed, stopped (rv-state, Referrals' look). Each of
+   these Ask overrides names the shared class it overrides as well as its own:
+   the rv- rules come later in this file at the same weight, and an override
+   that only matched them lost to them. */
+.rv-state.riva-answer-state { padding: 22px 8px 14px; }
 /* Declined: not an error — a quiet note of who to ask. */
 .riva-answer-declined { display: flex; gap: 13px; align-items: flex-start; }
 .riva-answer-declined__ico { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--rv-chip); color: var(--rv-ink-2); }
@@ -1601,10 +1658,13 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-acts__end { display: flex; align-items: center; margin-left: auto; }
 .riva-acts__group { display: inline-flex; align-items: center; gap: 2px; }
 .riva-acts__label { margin-right: 6px; font-size: 13px; font-weight: 600; color: var(--rv-ink-2); }
-.riva-acts__thumb { width: 32px; height: 32px; color: var(--rv-ink-2); }
+.rv-ibtn.riva-acts__thumb { width: 32px; height: 32px; color: var(--rv-ink-2); }
 .riva-acts__thumb:hover { background: rgba(255,255,255,.8) !important; color: var(--rv-accent) !important; box-shadow: 0 1px 3px rgba(33,43,50,.1); }
-.riva-acts__thumb.is-on { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.1); }
+.rv-ibtn.riva-acts__thumb.is-on { background: #fff; color: var(--rv-accent); box-shadow: 0 1px 3px rgba(33,43,50,.1); }
 .riva-acts__thanks { display: inline-flex; align-items: center; gap: 7px; padding-right: 6px; font-size: 13.5px; font-weight: 550; color: var(--rv-ink-2); }
+/* Given the focus when a verdict is pressed (AiAnswer, Thanks), without a
+   ring: it is where the reader is, not a control. */
+.riva-acts__thanks:focus { outline: none; }
 .riva-acts .rv-btn--plain:hover:not(:disabled) { background: rgba(255,255,255,.8); box-shadow: 0 1px 3px rgba(33,43,50,.1); }
 /* Thumbs down: what was wrong, in place under the row (the Mistral way),
    one press each. */
@@ -1632,7 +1692,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 }
 .riva-turn-note svg { color: #b58500; }
 .riva-turn-docs { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
-.riva-turn-doc { max-width: 100%; height: 26px; padding: 0 11px 0 9px; font-size: 12.5px; background: #fff; box-shadow: inset 0 0 0 1px var(--rv-line-soft); }
+.rv-chip.riva-turn-doc { max-width: 100%; height: 26px; padding: 0 11px 0 9px; font-size: 12.5px; background: #fff; box-shadow: inset 0 0 0 1px var(--rv-line-soft); }
 .riva-turn-doc__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .riva-turn-img { display: block; max-width: 200px; max-height: 160px; border-radius: 14px; background: #fff; box-shadow: var(--rv-sh-card); }
 /* A pasted message, under the short line that names it. */
@@ -1643,7 +1703,7 @@ html[data-bg="still"] .riva-glow { display: none; }
   max-height: 104px; overflow: hidden;
   -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent); mask-image: linear-gradient(to bottom, #000 60%, transparent);
 }
-.riva-pasted__more { margin: 6px 0 0 -10px; color: var(--rv-accent); }
+.rv-btn.riva-pasted__more { margin: 6px 0 0 -10px; color: var(--rv-accent); }
 .riva-latest { align-self: flex-start; }
 
 /* ---- over the field: the way to the end of the page --------------- */
@@ -1691,7 +1751,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 .riva-dock-x:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 1px; }
 .riva-dock-x.is-on-img { position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; background: var(--rv-ink); color: #fff; box-shadow: 0 0 0 2px #fff; }
 .riva-presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
-.riva-preset { color: var(--rv-accent); }
+.rv-btn.riva-preset { color: var(--rv-accent); }
 
 @media (prefers-reduced-motion: reduce) {
   .riva-history, .riva-history-row, .riva-dock-doc { animation: none; }

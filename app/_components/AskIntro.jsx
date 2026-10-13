@@ -158,7 +158,15 @@ export default function AskIntro({ active }) {
     if (!active && step >= 0 && !done) end();
   }, [active, step, done, end]);
 
-  if (step < 0 || done || !rect) return null;
+  // Said as well as shown. The tour never takes the focus — it is not a
+  // dialog, and any key but Escape ends it — so a screen reader hears each
+  // stop from a status line that is there before the first one, rather than
+  // from a caption it would never be moved to.
+  const touring = step >= 0 && !done;
+  const said = touring ? (step + 1) + ' of ' + STEPS.length + '. ' + STEPS[step].title + '. ' + STEPS[step].body : '';
+  const status = <span className="rv-sr" role="status" aria-live="polite">{said}</span>;
+
+  if (!touring || !rect) return status;
 
   const cur = STEPS[step];
   const pad = 6;
@@ -186,19 +194,23 @@ export default function AskIntro({ active }) {
   }
 
   return (
-    <div className="riva-intro" role="dialog" aria-label="How to ask a question" onClick={next}>
-      <div className="riva-intro-hole" style={hole} />
-      <div key={step} ref={capRef} className="riva-intro-cap" style={{ width: capW, ...capPos }}>
-        <div className="riva-modes-title">{step + 1} of {STEPS.length}</div>
-        <div className="riva-intro-text">
-          <div className="riva-mode-label">{cur.title}</div>
-          <div className="riva-intro-body">{cur.body}</div>
-        </div>
-        <div className="riva-modes-foot">
-          <span><kbd>Esc</kbd> next</span>
-          <button type="button" className="riva-intro-skip" onClick={(e) => { e.stopPropagation(); end(); }}>Skip</button>
+    <>
+      {status}
+      <div className="riva-intro" onClick={next}>
+        <div className="riva-intro-hole" style={hole} />
+        <div key={step} ref={capRef} className="riva-intro-cap" style={{ width: capW, ...capPos }}>
+          {/* The words are the status line's, above; these are for the eye. */}
+          <div className="riva-modes-title" aria-hidden="true">{step + 1} of {STEPS.length}</div>
+          <div className="riva-intro-text" aria-hidden="true">
+            <div className="riva-mode-label">{cur.title}</div>
+            <div className="riva-intro-body">{cur.body}</div>
+          </div>
+          <div className="riva-modes-foot">
+            <span><kbd>Esc</kbd> next</span>
+            <button type="button" className="riva-intro-skip" onClick={(e) => { e.stopPropagation(); end(); }}>Skip</button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

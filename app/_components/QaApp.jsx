@@ -322,9 +322,16 @@ class RiversidePracticeQA extends React.Component {
   // and marked as stopped where it stands. What it had written goes with it
   // — a draft is only shown until the check has passed it, and a stopped one
   // never will be.
-  stopAi() {
+  //
+  // `only` is the answers the Stop on screen is for: the question being read
+  // (renderVals, activeLoading). Without it every answer still coming was
+  // ended, the earlier question's too — the one the reader asked, moved on
+  // from, and was still waiting for.
+  stopAi(only = null) {
     const stopping = [];
-    this.state.messages.forEach((m, i) => { if (m.kind === 'ai' && m.status === 'loading') stopping.push(i); });
+    this.state.messages.forEach((m, i) => {
+      if (m.kind === 'ai' && m.status === 'loading' && (!only || only.includes(i))) stopping.push(i);
+    });
     if (!stopping.length) return;
     stopping.forEach((idx) => {
       const ctrl = this.aiAborts.get(idx);
@@ -1028,11 +1035,19 @@ class RiversidePracticeQA extends React.Component {
   // last attempt left on the message goes, not just its status: a stale
   // draft would be on screen the moment the new attempt started, and a
   // verdict pressed under the old answer is not a verdict on the new one.
+  //
+  // The button pressed (Try again, Ask again) goes with the card or the row it
+  // was on, and the focus would fall to the top of the document. It is put on
+  // the question being asked again instead, as it is when a question is
+  // reopened — not in the field, which on a phone would open the keyboard
+  // over the answer the reader is waiting for.
   retryAi(idx) {
     const m = this.state.messages[idx];
     if (!m || m.kind !== 'ai' || m.status === 'loading') return;
     this.updateAi(idx, { status: 'loading', steps: [], statusText: '', draft: '', progress: null, streamed: false, feedbackSent: '', error: '' });
     this.fetchAI(m.question, idx);
+    const heading = document.querySelector('.riva-turn-head > [tabindex="-1"]');
+    if (heading) heading.focus({ preventScroll: true });
   }
 
   // `patch` may be a function of the current message. Streamed tool events can
@@ -1476,6 +1491,13 @@ class RiversidePracticeQA extends React.Component {
     const lastTurn = groups.length - 1;
     const activeTurn = Math.min(this.state.activeTurn == null ? lastTurn : this.state.activeTurn, lastTurn);
     const active = groups[activeTurn] || null;
+    // The answers still being worked out for the question on screen. These,
+    // and only these, are what the field's Stop is for: an earlier question's
+    // answer still coming is on its row in the history, and is left to come.
+    const activeLoading = active ? active.idxs.filter((i) => {
+      const m = this.state.messages[i];
+      return m && m.kind === 'ai' && m.status === 'loading';
+    }) : [];
     // Questions are numbered in the order they were asked — 01, 02 — and the
     // ones not on screen are listed in that order above the one that is.
     // Each row says when its answer is not simply there: still being worked
@@ -1581,9 +1603,9 @@ class RiversidePracticeQA extends React.Component {
       dockAttached: (this.state.pendingDocs.length * 62 + (this.state.pendingImages.length ? 74 : 0)) + 'px',
       isDragging: this.state.dragging,
       onPaste: (e) => self.onPaste(e),
-      // Whether an answer is being worked out, and so whether the button in
-      // the field is the way to stop it.
-      isGenerating: this.state.messages.some((m) => m.status === 'loading'),
+      // Whether the answer on screen is being worked out, and so whether the
+      // button in the field is the way to stop it.
+      isGenerating: activeLoading.length > 0,
       copiedNumber: this.state.copiedNumber,
       hasCopied: !!this.state.copiedNumber,
       onInputKey: (e) => self.onInputKey(e),
@@ -1666,7 +1688,7 @@ class RiversidePracticeQA extends React.Component {
       // empty field used to do nothing at all, with nothing to say so.
       canSend: !this.state.screening && (!!this.state.input.trim() || this.state.pendingImages.length > 0
         || this.state.pendingDocs.some((d) => d.status === 'ready' && d.text)),
-      onStop: () => self.stopAi(),
+      onStop: () => self.stopAi(activeLoading),
       // A starter under the field is asked as typed, no field in between.
       onAskText: (q) => self.ask(q),
       onOpenAdd: () => self.setState({ showAdd: true, draftError: false }),
@@ -1716,8 +1738,10 @@ class RiversidePracticeQA extends React.Component {
 
         {/* The composer floats over this region, so leave room at the foot of
             the conversation for it (the knowledge base has no composer). */}
-        {/* The conversation fades where it meets the header and the dock. */}
-        <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade'}
+        {/* The conversation fades where it meets the header and the dock.
+            Once something has been asked, the way back hangs over the top of
+            it (see .riva-scroll-fade.is-asked). */}
+        <div id="riva-scroll" className={v.isKb ? 'riva-scroll-fade-top' : 'riva-scroll-fade' + (v.isEmpty ? '' : ' is-asked')}
           style={s('position:relative;z-index:1;flex:1;overflow-y:auto;' + (v.isKb ? '' : 'padding-bottom:calc(var(--riva-dock-h) + 50px + var(--riva-dock-attached));'))}>
           {/* Keyed on the view so switching fades the new one in rather than
               swapping it under the reader. */}

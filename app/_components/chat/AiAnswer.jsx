@@ -282,17 +282,39 @@ function CopyButton({ copied, onCopy }) {
 // thing worth knowing about a wrong answer, and it is a button, not a sentence.
 // Pressing one replaces the thumbs with a thank-you; there is nothing further
 // to do and no second chance to get wrong.
-function Verdicts({ v, why, setWhy }) {
+//
+// The thumb or the reason pressed goes as the thank-you comes, so the focus
+// is handed to the thank-you, which says what was logged — left where it
+// was, it fell to the top of the document. Only for a verdict given here: a
+// thank-you already there when an answer is reopened takes nothing.
+function Thanks({ label, take }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!take || !el) return;
+    const at = document.activeElement;
+    const row = el.closest('.riva-acts-wrap');
+    if (!at || at === document.body || (row && row.contains(at))) el.focus({ preventScroll: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <motion.span ref={ref} tabIndex={-1} className="riva-acts__thanks" role="status"
+      initial={{ opacity: 0, filter: 'blur(4px)' }} animate={{ opacity: 1, filter: 'blur(0px)' }}
+      transition={{ duration: 0.24, ease: EASE }}>
+      <Svg w={15} sw={2.6} style={s('flex:none;color:var(--rv-green);')}>{Icons.check}</Svg>
+      Thanks — logged as &ldquo;{label}&rdquo;
+    </motion.span>
+  );
+}
+
+function Verdicts({ v, why, setWhy, downRef }) {
   const good = (v.feedback || []).find((fb) => fb.good);
+  // Whether the row was first drawn still asking, so a thank-you now is for a
+  // verdict pressed while the reader was here.
+  const asked = React.useRef(!v.feedbackSent);
   return (
     <AnimatePresence mode="wait" initial={false}>
       {v.feedbackSent ? (
-        <motion.span key="thanks" className="riva-acts__thanks" role="status"
-          initial={{ opacity: 0, filter: 'blur(4px)' }} animate={{ opacity: 1, filter: 'blur(0px)' }}
-          transition={{ duration: 0.24, ease: EASE }}>
-          <Svg w={15} sw={2.6} style={s('flex:none;color:var(--rv-green);')}>{Icons.check}</Svg>
-          Thanks — logged as &ldquo;{v.feedbackLabel}&rdquo;
-        </motion.span>
+        <Thanks key="thanks" label={v.feedbackLabel} take={asked.current} />
       ) : (
         <motion.span key="ask" className="riva-acts__group"
           exit={{ opacity: 0, transition: { duration: 0.12, ease: EASE_EXIT } }}>
@@ -302,7 +324,7 @@ function Verdicts({ v, why, setWhy }) {
               <Svg w={16} sw={2}>{THUMB_UP}</Svg>
             </button>
           )}
-          <button type="button" className={'rv-ibtn riva-acts__thumb' + (why ? ' is-on' : '')} onClick={() => setWhy(!why)}
+          <button ref={downRef} type="button" className={'rv-ibtn riva-acts__thumb' + (why ? ' is-on' : '')} onClick={() => setWhy(!why)}
             aria-label="No — say what was wrong" aria-expanded={why} title="Not right">
             <Svg w={16} sw={2}>{THUMB_DOWN}</Svg>
           </button>
@@ -317,6 +339,13 @@ function Verdicts({ v, why, setWhy }) {
 // before (21st.dev Streaming Response Actions).
 function ActionRow({ v, delay }) {
   const [why, setWhy] = React.useState(false);
+  // Closing "What was wrong?" with its cross puts the focus back on the thumb
+  // that opened it, rather than letting it go with the panel.
+  const down = React.useRef(null);
+  const closeWhy = () => {
+    setWhy(false);
+    if (down.current) down.current.focus({ preventScroll: true });
+  };
   const hasVerdicts = (v.feedback || []).length > 0 || !!v.feedbackSent;
   const bad = (v.feedback || []).filter((fb) => !fb.good);
   if (!v.canCopy && !v.canRetry && !hasVerdicts) return null;
@@ -338,7 +367,7 @@ function ActionRow({ v, delay }) {
         )}
         {hasVerdicts && (
           <motion.span variants={item} className="riva-acts__end">
-            <Verdicts v={v} why={why && !v.feedbackSent} setWhy={setWhy} />
+            <Verdicts v={v} why={why && !v.feedbackSent} setWhy={setWhy} downRef={down} />
           </motion.span>
         )}
       </motion.div>
@@ -355,7 +384,7 @@ function ActionRow({ v, delay }) {
                   {fb.label}
                 </button>
               ))}
-              <button type="button" className="rv-ibtn riva-why__x" onClick={() => setWhy(false)} aria-label="Close">
+              <button type="button" className="rv-ibtn riva-why__x" onClick={closeWhy} aria-label="Close">
                 <Svg w={14} sw={2.4}>{Icons.close}</Svg>
               </button>
             </div>

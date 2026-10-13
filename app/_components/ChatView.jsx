@@ -6,7 +6,7 @@ import { s, Svg, Icons } from './ui';
 import GuideCard from './chat/GuideCard';
 import SuggestBubble from './chat/SuggestBubble';
 import AiAnswer from './chat/AiAnswer';
-import { EASE, EASE_EXIT } from './chat/motion.mjs';
+import { EASE } from './chat/motion.mjs';
 
 /* ------------------------------------------------------------------ *
  * One question at a time.
@@ -75,6 +75,7 @@ function TurnQuestion({ question, fly, focus }) {
   const long = text.length > HEADING_LIMIT;
   const ref = React.useRef(null);
   const reduce = useReducedMotion();
+  const pastedId = React.useId();
 
   // Measured and started before the first paint, so the heading is never
   // seen in its final place first and then jumping back to the field.
@@ -86,21 +87,34 @@ function TurnQuestion({ question, fly, focus }) {
     let ghost = null;
     let launch = 0;
     let alive = true;
-    if (fly && !long && !reduce) {
+    // Only a heading of one line travels. The field is one line, and the copy
+    // is laid out as the heading is, so a question that wraps at heading size
+    // changed shape in the field the moment it left: two shrunken lines where
+    // one had been. A heading that wraps fades in where it lives instead, as a
+    // long one does.
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const lines = range.getClientRects().length;
+    if (fly && !long && !reduce && lines === 1) {
       // The page is about to be put back at the top for the new question
       // (QaApp.componentDidUpdate, which runs after this); it is done here
       // first so the heading is measured where it will actually be.
       const scroller = document.getElementById('riva-scroll');
       if (scroller) scroller.scrollTop = 0;
       const box = el.getBoundingClientRect();
-      const range = document.createRange();
-      range.selectNodeContents(el);
       const first = range.getClientRects()[0] || box;
       const cs = window.getComputedStyle(el);
       const size = parseFloat(cs.fontSize) || 32;
       const mid = first.top + first.height / 2;
       // The copy: the heading's words in the heading's type, laid over the
       // heading's own box, so where it ends is exactly where the heading is.
+      // It starts where the words were in the field, at the field's size.
+      // One transform rather than x, y and scale: motion hands a whole
+      // transform to the browser's compositor, where the three separate values
+      // are stepped on the main thread — and the main thread is busy for the
+      // first frames, mounting the turn the copy is flying to, so the words
+      // stalled half-way up the page.
+      const from = 'translate(' + (fly.left - first.left) + 'px, ' + (fly.top - mid) + 'px) scale(' + (fly.size / size) + ')';
       ghost = document.createElement('div');
       ghost.className = 'riva-fly';
       ghost.setAttribute('aria-hidden', 'true');
@@ -111,6 +125,10 @@ function TurnQuestion({ question, fly, focus }) {
         // Grown from the start of its first line, which is where the words
         // were sitting in the field.
         transformOrigin: (first.left - box.left) + 'px ' + (mid - box.top) + 'px',
+        // Placed there before it is drawn at all: the animation is only
+        // picked up a frame later, and for that frame the copy stood at the
+        // top of the page already, where it was about to fly to.
+        transform: from,
       });
       document.body.appendChild(ghost);
       el.style.opacity = '0';
@@ -123,11 +141,7 @@ function TurnQuestion({ question, fly, focus }) {
         composer.classList.add('is-launching');
         launch = setTimeout(() => composer.classList.remove('is-launching'), 260);
       }
-      anim = animate(ghost, {
-        x: [fly.left - first.left, 0],
-        y: [fly.top - mid, 0],
-        scale: [fly.size / size, 1],
-      }, { duration: 0.6, ease: EASE });
+      anim = animate(ghost, { transform: [from, 'translate(0px, 0px) scale(1)'] }, { duration: 0.6, ease: EASE });
       anim.then(() => {
         if (!alive) return;
         // Landed: the heading takes over under the copy as the copy goes.
@@ -138,6 +152,10 @@ function TurnQuestion({ question, fly, focus }) {
         ghost = null;
       });
     } else {
+      // Hidden before it is first drawn, as the copy is placed: motion picks
+      // the animation up a frame later, and the heading would otherwise be
+      // drawn whole for that frame and then blink out to fade back in.
+      el.style.opacity = '0';
       anim = animate(el, { opacity: [0, 1], y: [reduce ? 0 : 8, 0] }, { duration: reduce ? 0.12 : 0.32, ease: EASE });
     }
     return () => {
@@ -162,8 +180,9 @@ function TurnQuestion({ question, fly, focus }) {
       <h1 className="riva-turn-q is-long">{opening(text)}</h1>
       <div className="riva-pasted">
         <div className="riva-pasted__label">What was pasted</div>
-        <div className={'riva-pasted__text' + (open ? '' : ' is-folded')}>{text}</div>
-        <button type="button" className="rv-btn rv-btn--plain rv-btn--sm riva-pasted__more" onClick={() => setOpen(!open)}>
+        <div id={pastedId} className={'riva-pasted__text' + (open ? '' : ' is-folded')}>{text}</div>
+        <button type="button" className="rv-btn rv-btn--plain rv-btn--sm riva-pasted__more" onClick={() => setOpen(!open)}
+          aria-expanded={open} aria-controls={pastedId}>
           {open ? 'Show less' : 'Show the whole message'}
         </button>
       </div>
@@ -234,27 +253,92 @@ const HISTORY_STATUS = {
   stopped: 'stopped',
 };
 
+// How many of the earlier questions keep a row of their own. A desk asks a
+// dozen questions in a morning, and a row each pushed every new answer
+// further down the page until it opened under the dock, out of sight. Past
+// this the older ones fold into one row that says how many there are and
+// opens them in place.
+const HISTORY_ROWS = 2;
+
+/**
+ * Minimised history — one numbered row per question, on a card of its own,
+ * the whole row a button. A question still being worked out, or one that
+ * failed, says so on its row, so a reader reading something else can see
+ * the answer they left is not lost — and the fold says so for the rows in
+ * it, so folding never hides that.
+ */
+function History({ rows }) {
+  const [all, setAll] = React.useState(false);
+  const first = React.useRef(null);
+  const opening = React.useRef(false);
+  // A fold standing in for a single row would save nothing.
+  const folded = all || rows.length <= HISTORY_ROWS + 1 ? 0 : rows.length - HISTORY_ROWS;
+  const inFold = rows.slice(0, folded);
+  const foldStatus = ['working', 'failed', 'stopped'].find((st) => inFold.some((t) => t.status === st)) || '';
+  // The fold goes as it opens, and the focus would go with it; it is handed
+  // to the first question the fold was holding.
+  React.useEffect(() => {
+    if (!all || !opening.current) return;
+    opening.current = false;
+    if (first.current) first.current.focus({ preventScroll: true });
+  }, [all]);
+  return (
+    <div className="riva-history rv-card">
+      {folded > 0 && (
+        <button type="button" className="riva-history-row riva-history-fold" onClick={() => { opening.current = true; setAll(true); }}
+          aria-label={'Show ' + folded + ' earlier questions' + (foldStatus ? ' (one ' + HISTORY_STATUS[foldStatus] + ')' : '')}>
+          <span className="riva-history-q">{folded} earlier questions</span>
+          {foldStatus && <span className={'riva-history-dot is-' + foldStatus} title={'One ' + HISTORY_STATUS[foldStatus]} aria-hidden="true" />}
+          <span className="riva-history-chev" aria-hidden="true"><Svg w={16} sw={2.2}>{Icons.chevronDown}</Svg></span>
+        </button>
+      )}
+      {rows.slice(folded).map((t, i) => (
+        <button key={t.key} ref={i === 0 ? first : undefined} type="button" className="riva-history-row" onClick={t.onOpen}
+          aria-label={'Show answer to: ' + t.question + (t.status ? ' (' + HISTORY_STATUS[t.status] + ')' : '')}>
+          <span className="riva-history-num">{t.num}</span>
+          <span className="riva-history-q">{t.question}</span>
+          {t.status && <span className={'riva-history-dot is-' + t.status} title={HISTORY_STATUS[t.status]} aria-hidden="true" />}
+          <span className="riva-history-chev" aria-hidden="true"><Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg></span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ChatView({ v }) {
   const lastAi = v.turn ? v.turn.items.filter((m) => m && m.isAi).pop() : null;
   return (
-    <div className="riva-column" style={s('position:relative;max-width:688px;margin:0 auto;padding:28px 24px 28px;display:flex;flex-direction:column;')}>
+    // The top padding is a variable: it is part of the sum that places the
+    // opening heading, and a narrow screen deepens it under the way back
+    // once something has been asked (globals.css, .riva-scroll-fade.is-asked).
+    <div className="riva-column" style={s('position:relative;max-width:688px;margin:0 auto;padding:var(--riva-column-pad-t) 24px 28px;display:flex;flex-direction:column;')}>
 
       {/* Leaves rather than vanishing when the first question is asked:
           it lifts away into a blur while the question takes the top of the
           page. Taken out of the flow as it goes (popLayout), so it holds
           nothing up while it fades. Its lines arrive by CSS (.riva-hero-block
-          > *), so this element itself only ever animates on the way out. */}
+          > *), so this element itself only ever animates on the way out.
+          The way out is quick and front-loaded: it is nearly gone in a
+          tenth of a second, before the answer's card comes in where it
+          stood. On the exit curve it held most of its weight for most of
+          its time, and the heading, the card and the flying question were
+          read on top of each other. */}
       <AnimatePresence initial={false} mode="popLayout">
         {v.isEmpty && (
           // Sits a fixed margin above the dock, which is centred while nothing
           // has been asked. Where that is on the page is worked out from the
           // dock's own geometry in globals.css (.riva-hero-block), so the gap
-          // between this text and the field holds on every screen size.
+          // between this text and the field holds on every screen size. Its
+          // size and its overhang are there too (.riva-hero-block >
+          // .riva-hero-h1), with the phone's.
           <motion.div key="hero" className="riva-hero-block" style={s('text-align:center;')}
-            exit={{ opacity: 0, y: -14, filter: 'blur(6px)', transition: { duration: 0.22, ease: EASE_EXIT } }}>
+            exit={{ opacity: 0, y: -14, filter: 'blur(6px)', transition: { duration: 0.14, ease: EASE } }}>
             <h1 className="riva-hero-h1" aria-label="What do you need to find?"
-              style={s('font-size:56px;font-weight:800;letter-spacing:-0.04em;margin:0;line-height:1.05;color:var(--rv-ink);')}>
-              <span aria-hidden="true">What do you need to <HeroRotator paused={!!v.input} />?</span>
+              style={s('font-weight:800;letter-spacing:-0.04em;line-height:1.05;color:var(--rv-ink);')}>
+              {/* The turning word and its question mark break as one: the
+                  word is a nowrap box, and the mark after it was free to
+                  wrap onto a line of its own. */}
+              <span aria-hidden="true">What do you need to <span style={s('white-space:nowrap;')}><HeroRotator paused={!!v.input} />?</span></span>
             </h1>
             {/* Only when the host page sets one. The default is nothing: a line
                 explaining what can be asked is read once and then sits there. */}
@@ -263,23 +347,9 @@ export default function ChatView({ v }) {
         )}
       </AnimatePresence>
 
-      {/* Minimised history — one numbered row per question, on a card of its
-          own, the whole row a button. A question still being worked out, or
-          one that failed, says so on its row, so a reader reading something
-          else can see the answer they left is not lost. */}
-      {v.hasHistory && (
-        <div className="riva-history rv-card">
-          {v.history.map((t) => (
-            <button key={t.key} type="button" className="riva-history-row" onClick={t.onOpen}
-              aria-label={'Show answer to: ' + t.question + (t.status ? ' (' + HISTORY_STATUS[t.status] + ')' : '')}>
-              <span className="riva-history-num">{t.num}</span>
-              <span className="riva-history-q">{t.question}</span>
-              {t.status && <span className={'riva-history-dot is-' + t.status} title={HISTORY_STATUS[t.status]} aria-hidden="true" />}
-              <span className="riva-history-chev" aria-hidden="true"><Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg></span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Minimised history. Keyed on the question on screen, so the card is
+          folded again for each new one. */}
+      {v.hasHistory && <History key={'history-' + (v.turn ? v.turn.key : '')} rows={v.history} />}
 
       {/* The active question. Keyed on the turn, so a question opened in its
           place arrives the way a new one does. The one it replaces goes at
@@ -332,11 +402,16 @@ export default function ChatView({ v }) {
             )}
           </div>
 
-          {/* The answer comes in under the question a beat after it, once the
-              heading has mostly landed. */}
+          {/* The answer comes in under the question a beat after it. For a
+              question just sent from the field the beat is the journey: the
+              card waits until the words have all but landed (the copy is
+              nearly all the way up by then, on the house curve), because on
+              its way from the dock the copy passes through where the card
+              will be, and the two were printed over each other. A heading
+              that fades in instead has finished by then too. */}
           {v.turn.items.map((m, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, ease: EASE, delay: 0.12 + i * 0.08 }}>
+              transition={{ duration: 0.45, ease: EASE, delay: (v.turn.flyFrom ? 0.38 : 0.12) + i * 0.08 }}>
               {m.isAnswer && <GuideCard v={m} />}
               {m.isSuggest && <SuggestBubble v={m} />}
               {m.isAi && <AiAnswer v={m} />}
