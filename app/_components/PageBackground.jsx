@@ -116,6 +116,8 @@ export default function PageBackground() {
     // Build the chosen background on this context, replacing whatever was
     // there. Still (no shader) leaves the canvas clear over the CSS light.
     function build(id) {
+      // Lost: nothing can be built now; the restore builds what is wanted.
+      if (gl.isContextLost()) { current = null; return; }
       if (current) { gl.deleteProgram(current.prog); current = null; }
       if (!SHADERS[id]) { stop(); canvas.style.opacity = '0'; return; }
       current = program(gl, id);
@@ -125,12 +127,15 @@ export default function PageBackground() {
       run();
     }
 
+    let buffer = null;
     function begin() {
-      quad(gl);
+      buffer = quad(gl);
       build(wanted);
     }
 
     function onTheme(e) {
+      // The one already drawn, chosen again: nothing to change.
+      if (e.detail === wanted && (current ? current.id === wanted : !SHADERS[wanted])) return;
       wanted = e.detail;
       clearTimeout(swapTimer);
       if (canvas.style.opacity === '0' || reduced) { build(wanted); return; }
@@ -161,6 +166,11 @@ export default function PageBackground() {
       alive = false;
       stop();
       clearTimeout(swapTimer);
+      if (!gl.isContextLost()) {
+        if (current) gl.deleteProgram(current.prog);
+        if (buffer) gl.deleteBuffer(buffer);
+      }
+      current = null;
       canvas.removeEventListener('webglcontextlost', onLost);
       canvas.removeEventListener('webglcontextrestored', begin);
       window.removeEventListener('resize', onResize);

@@ -893,6 +893,8 @@ html[data-bg="still"] .riva-sky-canvas { opacity: 0 !important; }
   mask-composite: intersect;
 }
 html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opacity 1.4s ease, visibility 0s; }
+/* Still means no motion, busy or not. */
+html[data-bg="still"] .riva-glow { display: none; }
 
 .riva-shell {
   position: relative; z-index: 1;
@@ -1086,6 +1088,9 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 .riva-theme-pop {
   position: absolute; right: 0; top: calc(100% + 10px); z-index: 70;
   width: 356px; padding: 8px;
+  /* Never taller than the screen under the bar: on a laptop the last row
+     of tiles would otherwise hang below the fold and scroll the window. */
+  max-height: calc(100dvh - var(--rv-top-h) - 16px); overflow-y: auto; overscroll-behavior: contain;
   background: #fff; border-radius: 22px;
   box-shadow: 0 0 0 1px rgba(33,43,50,.06), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -16px rgba(0,48,135,.24);
   transform-origin: top right;

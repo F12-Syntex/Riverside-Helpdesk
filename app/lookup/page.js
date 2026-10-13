@@ -87,10 +87,13 @@ const LK_CSS = `
 /* ---- the card ----
    No scrollbar (one coming and going shifted the rows sideways); while
    there is more below, the last few pixels fade out instead, so a list
-   running past the foot of the card does not look finished. */
+   running past the foot of the card does not look finished. The fade is a
+   white veil stuck to the foot of the scroller rather than a mask on the
+   card, which would clip the card's own shadow. */
 .lk-card{flex:0 1 auto;min-height:0;overflow:hidden auto;overscroll-behavior:contain;scrollbar-width:none;}
 .lk-card::-webkit-scrollbar{display:none;}
-.lk-card.is-more{-webkit-mask-image:linear-gradient(#000 calc(100% - 36px),transparent);mask-image:linear-gradient(#000 calc(100% - 36px),transparent);}
+.lk-card.is-more::after{content:"";position:sticky;bottom:0;display:block;height:36px;margin-top:-36px;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,0),#fff);}
 .lk-inner{position:relative;}
 /* The highlight: one shape behind the rows, gliding to the row it is on.
    In the register's box it is a white tile, since the box is already tinted. */

@@ -30,6 +30,7 @@ export default function ThemePicker() {
   const [theme, setTheme] = React.useState(DEFAULT_THEME);
   const [stills, setStills] = React.useState({});
   const ref = React.useRef(null);
+  const btnRef = React.useRef(null);
   const listRef = React.useRef(null);
 
   React.useEffect(() => { setTheme(readTheme()); }, []);
@@ -45,7 +46,15 @@ export default function ThemePicker() {
   React.useEffect(() => {
     if (!open) return undefined;
     const away = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    const key = (e) => { if (e.key === 'Escape') setOpen(false); };
+    // Esc closes the picker and nothing else (a referral open under it
+    // stays open: its own Esc handler skips a handled key), and hands
+    // focus back to the swatch rather than to the page's body.
+    const key = (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      setOpen(false);
+      if (btnRef.current) btnRef.current.focus();
+    };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', key);
     // Focus goes to the background in use, so the arrow keys start there.
@@ -71,7 +80,7 @@ export default function ThemePicker() {
 
   return (
     <div ref={ref} className="riva-theme">
-      <button type="button" className={'riva-top-btn riva-theme-btn' + (open ? ' is-on' : '')}
+      <button ref={btnRef} type="button" className={'riva-top-btn riva-theme-btn' + (open ? ' is-on' : '')}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog" aria-expanded={open ? 'true' : 'false'}
         aria-label={'Background: ' + current.label} title={'Background: ' + current.label}>

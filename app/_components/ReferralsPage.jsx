@@ -90,9 +90,13 @@ const RF_CSS = `
   scrollbar-width:none;}
 /* No scrollbar: one appearing and going as the list grows shifted the rows sideways.
    So that a list running past the foot of the card does not look finished,
-   the last few pixels fade out while there is more below. */
+   the last few pixels fade out while there is more below: a white veil stuck
+   to the foot of the scroller (a mask would clip the card's shadow), with
+   the arrow keys stopping a row short of it. */
 .rf-card::-webkit-scrollbar{display:none;}
-.rf-card.is-more{-webkit-mask-image:linear-gradient(#000 calc(100% - 36px),transparent);mask-image:linear-gradient(#000 calc(100% - 36px),transparent);}
+.rf-card.is-more::after{content:"";position:sticky;bottom:0;display:block;height:36px;margin-top:-36px;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,0),#fff);}
+.rf-card.is-more .rf-row{scroll-margin-bottom:40px;}
 .rf-cardwrap.is-results{margin-top:14px;}
 .rf-list{position:relative;}
 .rf-hl{position:absolute;left:0;right:0;top:0;background:#f4f7f9;pointer-events:none;
@@ -131,13 +135,13 @@ const RF_CSS = `
 .rf-btn--quiet:hover{box-shadow:inset 0 0 0 1px #aab6be;}
 
 .rf-ask{display:flex;justify-content:center;margin-top:14px;}
-.rf-ask a{padding:6px 12px;border-radius:999px;font-size:14px;font-weight:500;color:var(--rv-ink-3);text-decoration:none;transition:color .15s ease,background-color .15s ease;}
+.rf-ask a{padding:6px 12px;border-radius:999px;font-size:14px;font-weight:500;color:var(--rv-ink-2);text-decoration:none;transition:color .15s ease,background-color .15s ease;}
 .rf-ask a strong{font-weight:600;color:var(--rv-accent);}
 .rf-ask a:hover{color:var(--rv-ink);background:rgba(255,255,255,.6);}
 .rf-ask a:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
 
 /* ---- the chosen referral: a panel at the right, the card's surface ---- */
-.rf-drawer{position:fixed;top:var(--rv-top-h);right:12px;bottom:12px;left:12px;z-index:60;display:flex;flex-direction:column;overflow:hidden;
+.rf-drawer{position:fixed;top:var(--rv-top-h);right:12px;bottom:12px;left:12px;z-index:51;display:flex;flex-direction:column;overflow:hidden;
   background:#fff;outline:none;border-radius:22px;box-shadow:0 1px 2px rgba(33,43,50,.05),0 30px 70px -24px rgba(33,43,50,.35);}
 .rf-scrim{position:fixed;inset:0;z-index:51;background:rgba(20,28,36,.32);-webkit-backdrop-filter:blur(6px) saturate(140%);backdrop-filter:blur(6px) saturate(140%);}
 .rf-drawer__head{flex:none;padding:18px 22px 16px;border-bottom:1px solid #eef1f3;}
@@ -590,9 +594,14 @@ export default function ReferralsPage() {
   const nothing = !!trimmed && answered && !results.length;
   // The search by meaning failed and no name matches either: say so, rather
   // than leaving an empty card and no way on.
-  const unavailable = !!trimmed && server.for === trimmed && !server.loading && !answered && !results.length;
+  const unavailable = !!trimmed && book.loaded && !book.failed && server.for === trimmed && !server.loading && !answered && !results.length;
   const empty = book.loaded && !book.failed && !book.rows.length;
-  const listed = book.loaded && !book.failed && flat.length > 0;
+  // Whatever is listed is drawn — including the server's matches when the
+  // list itself failed to load. With nothing typed and no list, flat is empty.
+  const listed = flat.length > 0;
+  // The list failed and there is nothing to show in its place: say so,
+  // typed or not (a search that is still out shows its skeleton instead).
+  const failed = book.loaded && book.failed && !results.length && !searching;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -658,7 +667,7 @@ export default function ReferralsPage() {
                   onMouseLeave={() => { if (!trimmed) setSelIdx(-1); }}>
                   {!book.loaded ? <SkeletonRows rows={6} /> : null}
 
-                  {book.loaded && book.failed && !trimmed ? (
+                  {failed ? (
                     <State icon={Icons.alertCircle} title="The referrals could not be loaded."
                       text="Reload the page in a moment, or ask the question instead.">
                       <button type="button" className="rf-btn rf-btn--quiet" onClick={() => window.location.reload()}>Reload</button>
