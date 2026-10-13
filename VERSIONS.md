@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.79.0` | 2026-10-13 | feat | `9127c4b` | feat: standardise the ask page, and keep the header above popups |
+| `6.78.1` | 2026-10-13 | docs | `6a92bd1` | docs: record the popup redesign in versions |
 | `6.78.0` | 2026-10-13 | feat | `a357061` | feat: one Apple-style look for every popup, and a fixed Add a contact form |
 | `6.77.1` | 2026-10-13 | docs | `3717780` | docs: record the contacts redesign in versions |
 | `6.77.0` | 2026-10-13 | feat | `0066d68` | feat: redesign contacts to match the referrals page |
