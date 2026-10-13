@@ -46,7 +46,7 @@ function rateLine(model) {
   return `${money(inRate)} in / ${money(outRate)} out per 1M tokens`;
 }
 
-const INPUT = 'width:100%;box-sizing:border-box;height:44px;padding:0 14px;font:inherit;font-size:15px;border:none;border-radius:11px;background:rgba(60,70,80,.08);color:#212b32;';
+const INPUT = 'width:100%;box-sizing:border-box;height:40px;padding:0 13px;font:inherit;font-size:14.5px;border:none;border-radius:11px;background:rgba(60,70,80,.08);color:#212b32;';
 
 // The page's own look, the same as Referrals, Contacts and Ask: the animated
 // light behind a centred heading, and white cards of settings.
@@ -55,12 +55,22 @@ const ST_CSS = `
 .st-bg__canvas{display:block;width:100%;height:100%;}
 .st-field{transition:background-color .15s ease,box-shadow .15s ease;}
 .st-field:focus{outline:none;background:#fff !important;box-shadow:0 0 0 3px rgba(0,94,184,.35);}
-.st-h1{margin:0 0 12px;text-align:center;font-size:56px;font-weight:800;letter-spacing:-.04em;line-height:1.05;color:var(--rv-ink);}
+.st-root{position:relative;height:100%;display:flex;flex-direction:column;}
+.st-main{flex:1;min-height:0;width:100%;max-width:1240px;margin:0 auto;padding:18px 28px 22px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;}
+.st-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex:none;}
+.st-h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.035em;line-height:1.05;color:var(--rv-ink);}
 .st-h1 em{font-style:normal;color:var(--rv-accent);}
-.st-lede{margin:0 auto 32px;max-width:52ch;text-align:center;font-size:15.5px;line-height:1.55;color:var(--rv-ink-2);}
-.st-card{background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.18);}
-.st-h2{margin:36px 0 8px;padding:0 22px;font-size:13px;font-weight:600;color:var(--rv-ink-3);}
-.st-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 22px;border:none;border-radius:999px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:background-color .15s ease,transform .12s ease,opacity .15s ease;}
+.st-lede{margin:6px 0 0;max-width:68ch;font-size:13.5px;line-height:1.45;color:var(--rv-ink-2);}
+.st-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr);gap:16px;}
+.st-models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:12px;min-height:0;}
+.st-side{display:flex;flex-direction:column;gap:12px;min-height:0;}
+.st-card{background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.18);}
+.st-model{padding:13px 16px 12px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:0;}
+.st-model--wide{grid-column:1 / -1;}
+.st-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--rv-ink-3);}
+.st-save{display:flex;align-items:center;gap:12px;flex:none;}
+.st-msg{margin:0;font-size:13px;font-weight:600;color:#d5281b;text-align:right;max-width:46ch;line-height:1.35;}
+.st-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 20px;border:none;border-radius:999px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:background-color .15s ease,transform .12s ease,opacity .15s ease;}
 .st-btn:active:not(:disabled){transform:scale(.98);}
 .st-btn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
 .st-btn--primary{background:var(--rv-accent);color:#fff;}
@@ -70,11 +80,20 @@ const ST_CSS = `
 .st-btn--on:hover{background:rgba(0,127,59,.2);}
 .st-btn--off{background:rgba(213,40,27,.1);color:#b81f14;}
 .st-btn--off:hover{background:rgba(213,40,27,.18);}
-.st-more{display:flex;align-items:center;gap:12px;padding:15px 22px;color:var(--rv-ink);text-decoration:none;font-size:16px;transition:background-color .15s ease;}
+.st-more{display:flex;align-items:center;gap:10px;padding:11px 16px;color:var(--rv-ink);text-decoration:none;font-size:14.5px;font-weight:600;transition:background-color .15s ease;}
 .st-more + .st-more{border-top:1px solid #eef1f3;}
 .st-more:hover{background:#f4f7f9;}
-.st-more small{display:block;font-size:13px;color:var(--rv-ink-3);}
-@media (max-width:700px){.st-h1{font-size:38px;}}
+.st-more small{display:block;font-size:12px;font-weight:400;color:var(--rv-ink-3);}
+@media (max-width:980px){
+.st-root{height:auto;min-height:100%;}
+.st-main{padding:16px 16px 40px;}
+.st-top{flex-direction:column;align-items:stretch;}
+.st-save{justify-content:space-between;}
+.st-msg{text-align:left;}
+.st-grid{grid-template-columns:1fr;}
+.st-models{grid-template-columns:1fr;grid-auto-rows:auto;}
+.st-h1{font-size:28px;}
+}
 `;
 
 function ModelField({ value, placeholder, models, index, onChange, label }) {
@@ -162,18 +181,19 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
   );
 }
 
-function Row({ name, job, rate, used, children }) {
+function ModelCard({ name, job, rate, used, wide, children }) {
+  const line = [rate, used].filter(Boolean).join(' · ');
   return (
-    <div style={s('display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:16px 0;border-top:1px solid #eef1f3;')}>
-      <div style={s('flex:0 0 150px;min-width:0;')}>
-        <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>{name}</span>
-        <span style={s('display:block;font-size:13px;color:#4c6272;')}>{job}</span>
-      </div>
-      <div style={s('flex:1 1 260px;min-width:0;')}>
+    <div className={'st-card st-model' + (wide ? ' st-model--wide' : '')}>
+      <span style={s('display:flex;flex-wrap:wrap;gap:0 10px;align-items:baseline;min-width:0;')}>
+        <span style={s('font-size:15px;font-weight:700;color:#212b32;')}>{name}</span>
+        <span style={s('font-size:12.5px;color:#4c6272;')}>{job}</span>
+      </span>
+      <div style={s('min-width:0;')}>
         {children}
-        {(rate || used) && (
-          <span style={s('display:block;font-size:12.5px;color:#768692;margin-top:5px;font-variant-numeric:tabular-nums;')}>
-            {[rate, used].filter(Boolean).join(' · ')}
+        {line && (
+          <span title={line} style={s('display:block;font-size:11.5px;color:#768692;margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>
+            {line}
           </span>
         )}
       </div>
@@ -335,230 +355,198 @@ export default function SettingsPage() {
     }
   }
 
+  const HISTORY_ROWS = 4;
+  const shownHistory = history.slice(0, HISTORY_ROWS);
+
   return (
-    <div style={s('position:relative;min-height:100%;display:flex;flex-direction:column;')}>
+    <div className="st-root">
       <style data-st="1" dangerouslySetInnerHTML={{ __html: ST_CSS }} />
       <div className="st-bg" aria-hidden="true"><AnimatedGradient always alpha={[0.12, 0.62, 0.42]} className="st-bg__canvas" /></div>
       <AppHeader subtitle="Settings" />
 
-      <main style={s('flex:1;width:100%;max-width:688px;margin:0 auto;padding:clamp(20px,9vh,110px) 24px 56px;')}>
-        <h1 className="st-h1">Practice <em>settings</em></h1>
-        <p className="st-lede">
-          Type to search, or paste an id. Blank inherits the model above. Add
-          {' '}<code>@provider</code> to pin where a model runs — e.g.{' '}
-          <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
-        </p>
-
-        <h2 className="st-h2" style={{ marginTop: 0 }}>Models</h2>
-        <section className="st-card" style={s('padding:4px 22px 22px;')}>
-          <Row name="Reasoning" job="Decides and writes the answer" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
-            <ModelField
-              label="Reasoning model" value={model} models={models} index={index}
-              placeholder={setting ? setting.defaultModel : 'vendor/model'}
-              onChange={(v) => { setModel(v); setNote(''); }}
-            />
-          </Row>
-          <Row name="Fast" job="Reads, searches, background jobs" rate={rateLine(priceOf(resolved.fast))} used={usedLine('fast')}>
-            <ModelField
-              label="Fast model" value={roleValue('fast')} models={models} index={index}
-              placeholder={model || 'inherit'} onChange={(v) => setRole('fast', v)}
-            />
-          </Row>
-          <Row name="Web search" job="Searches the internet" rate={rateLine(priceOf(resolved.web))} used={usedLine('web')}>
-            <ModelField
-              label="Web search model" value={roleValue('web')} models={models} index={index}
-              placeholder={model || 'inherit'} onChange={(v) => setRole('web', v)}
-            />
-          </Row>
-          {/* The one role that makes a judgement about a patient rather than
-              reading or extracting. It inherits from Fast rather than from the
-              model above, so leaving it blank changes nothing — the row is here
-              so that a practice CAN pay for a better reader on the one decision
-              where it shows. */}
-          <Row name="AccurX routing" job="Reads a pasted /accurx and says where it goes" rate={rateLine(priceOf(resolved.accurx))} used={usedLine('accurx')}>
-            <ModelField
-              label="AccurX routing model" value={roleValue('accurx')} models={models} index={index}
-              placeholder={fastModel || 'inherit'} onChange={(v) => setRole('accurx', v)}
-            />
-          </Row>
-          {/* The only row where the answer is waited for with nothing on the
-              screen yet: this one holds the send while a message is checked for
-              patient details. Set it to the quickest thing on the list — it
-              answers one closed question with one word, and every millisecond
-              is a millisecond somebody spends looking at a message they have
-              already finished typing. It inherits from Fast, not from the model
-              above, so a careful slow model never ends up in front of the
-              keyboard by accident. */}
-          <Row name="Super speed" job="Checks a message for patient details before it is sent" rate={rateLine(priceOf(resolved.superSpeed))} used={usedLine('superSpeed')}>
-            <ModelField
-              label="Super speed model" value={roleValue('superSpeed')} models={models} index={index}
-              placeholder={fastModel || 'inherit'} onChange={(v) => setRole('superSpeed', v)}
-            />
-          </Row>
-          {/* The one row that does not inherit. A message with a picture on it
-              — a screenshot of the repeat-medication screen, a photo of a
-              letter — is read by this model whichever path it takes, because
-              the model above may be text-only. Blank is a small vision model
-              chosen for exactly this, named in the box. */}
-          <Row name="Images" job="Reads any message with a picture attached" rate={rateLine(priceOf(resolved.images))} used={usedLine('images')}>
-            <ModelField
-              label="Images model" value={roleValue('images')} models={models} index={index}
-              placeholder={(setting && setting.defaultImagesModel) || 'vendor/model'} onChange={(v) => setRole('images', v)}
-            />
-          </Row>
-          {/* The one row that is not a chat model. It scores each Notebook
-              answer before it is shown — does it answer what was asked? — and
-              never writes anything. Its list is OpenRouter's decision models,
-              which the chat list above does not carry; any id can still be
-              typed. Blank is TypeSafe's Jev, named in the box. */}
-          <Row name="Answer check" job="Checks each Notebook answer answers the question" rate={rateLine(priceOf(resolved.check))} used={usedLine('check')}>
-            <ModelField
-              label="Answer check model" value={roleValue('check')} models={checkModels} index={checkIndex}
-              placeholder={(setting && setting.defaultCheckModel) || 'vendor/model'} onChange={(v) => setRole('check', v)}
-            />
-          </Row>
-
-          <div style={s('border-top:1px solid #eef1f2;padding:14px 0 2px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;')}>
-            <span style={s('flex:0 0 150px;font-size:15.5px;font-weight:600;color:#212b32;')}>Per question</span>
-            <span style={s('flex:1 1 260px;font-size:15.5px;color:#212b32;font-variant-numeric:tabular-nums;')}>
-              {estimate.measured ? (
-                <>
-                  <strong>{formatCost(estimate.total)}</strong>
-                  <span style={s('font-size:13px;color:#768692;')}>
-                    {' '}— at list prices, measured over the last {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
-                    {estimate.missing.length ? `, excluding ${estimate.missing.join(' and ')} (not run yet)` : ''}
-                    {estimate.unpriced.length ? `, excluding ${estimate.unpriced.join(' and ')} (no published price)` : ''}
-                  </span>
-                </>
-              ) : (
-                <span style={s('font-size:13.5px;color:#768692;')}>
-                  Not measured on these models yet — ask a few questions and the real cost appears here.
-                </span>
-              )}
-            </span>
+      <main className="st-main">
+        <div className="st-top">
+          <div style={s('min-width:0;')}>
+            <h1 className="st-h1">Practice <em>settings</em></h1>
+            <p className="st-lede">
+              Type to search, or paste an id. Blank inherits the Reasoning model. Add{' '}
+              <code>@provider</code> to pin where a model runs, e.g.{' '}
+              <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
+            </p>
           </div>
-
-          {rolling && rolling.turns > 0 && (
-            <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding:14px 0 2px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;')}>
-              <span style={s('flex:0 0 150px;font-size:15.5px;font-weight:600;color:#212b32;')}>
-                Last {rolling.turns.toLocaleString()} question{rolling.turns === 1 ? '' : 's'}
-              </span>
-              <span style={s('flex:1 1 260px;font-size:15.5px;color:#212b32;font-variant-numeric:tabular-nums;line-height:1.5;')}>
-                {rolling.costedTurns > 0 ? (
-                  <>
-                    <strong>{formatCost(rolling.totalCost)}</strong> charged in total, <strong>{formatCost(rolling.avgCost)}</strong> per question on average
-                  </>
-                ) : (
-                  <span style={s('font-size:13.5px;color:#768692;')}>No charges recorded yet — they appear as questions are asked.</span>
-                )}
-                <span style={{ ...s('display:block;font-size:13px;color:#768692;') }}>
-                  {rolling.avgInputTokens.toLocaleString()} tokens in
-                  {rolling.avgCachedTokens != null ? ` (${rolling.avgCachedTokens.toLocaleString()} from cache)` : ''}
-                  {' '}and {rolling.avgOutputTokens.toLocaleString()} out per question
-                  {rolling.costedTurns > 0 && rolling.costedTurns < rolling.turns ? `; charges from ${rolling.costedTurns} of them` : ''}
-                  {rolling.since ? ` · since ${new Date(rolling.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
-                </span>
-              </span>
-            </div>
-          )}
-
-          {history.length > 0 && (
-            <div style={s('border-top:1px solid #eef1f2;margin-top:14px;padding-top:14px;')}>
-              <div style={s('font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#768692;margin-bottom:8px;')}>
-                Cost per question, by model
-              </div>
-              <div style={s('overflow-x:auto;')}>
-                <table style={s('width:100%;border-collapse:collapse;font-size:13.5px;')}>
-                  <thead>
-                    <tr style={s('font-size:11.5px;color:#768692;text-align:right;')}>
-                      <th style={s('padding:0 10px 4px 0;font-weight:600;text-align:left;')}>Model</th>
-                      <th style={s('padding:0 10px 4px 0;font-weight:600;')}>Estimate</th>
-                      <th style={s('padding:0 10px 4px 0;font-weight:600;')}>Charged</th>
-                      <th style={s('padding:0 0 4px;font-weight:600;')}>Questions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map((row) => (
-                      <tr key={row.model}>
-                        <td style={s('padding:5px 10px 5px 0;color:#212b32;overflow-wrap:anywhere;')}>
-                          {row.model}
-                          {row.inUse ? <span style={s('margin-left:7px;font-size:11.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 6px;background:#eef7ee;color:#00532a;')}>IN USE</span> : null}
-                        </td>
-                        <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#212b32;font-variant-numeric:tabular-nums;')}>
-                          {row.priced ? formatCost(row.cost) : 'no published price'}
-                        </td>
-                        <td style={s('padding:5px 10px 5px 0;text-align:right;white-space:nowrap;color:#212b32;font-variant-numeric:tabular-nums;')}>
-                          {row.charged != null ? formatCost(row.charged) : '—'}
-                        </td>
-                        <td style={s('padding:5px 0;text-align:right;white-space:nowrap;color:#768692;font-variant-numeric:tabular-nums;')}>
-                          {row.turns.toLocaleString()} question{row.turns === 1 ? '' : 's'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p style={s('margin:8px 0 0;font-size:12.5px;color:#768692;line-height:1.45;')}>
-                Per model, over the last {measured.window || 100} questions: the estimate at list prices, then what OpenRouter actually charged. Older questions are dropped as new ones come in, so a model shows here only while it has questions in that window.
-              </p>
-            </div>
-          )}
-
-          <div style={s('display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px;')}>
-            <button type="button" className="st-btn st-btn--primary" disabled={!dirty || !valid || saving} onClick={save}>
-              {saving ? 'Saving…' : 'Save'}
-            </button>
+          <div className="st-save">
+            {error && <p className="st-msg">{error}</p>}
+            {!error && !valid && <p className="st-msg">An id looks like vendor/model, with an optional :variant and @provider.</p>}
             {note && (
-              <span style={s('display:flex;gap:6px;align-items:center;font-size:15px;color:#007f3b;font-weight:600;')}>
+              <span style={s('display:flex;gap:6px;align-items:center;font-size:14px;color:#007f3b;font-weight:600;')}>
                 <Svg w={16} stroke="#007f3b" sw={2.4}>{Icons.check}</Svg>{note}
               </span>
             )}
-          </div>
-
-          {!valid && (
-            <p style={s('margin:12px 0 0;font-size:13.5px;color:#d5281b;font-weight:600;')}>
-              An id looks like vendor/model, with an optional :variant and @provider (several separated by commas).
-            </p>
-          )}
-          {error && (
-            <p style={s('margin:12px 0 0;font-size:14px;color:#d5281b;font-weight:600;')}>{error}</p>
-          )}
-        </section>
-
-        {/* THIS COMPUTER, NOT THE PRACTICE. Everything above is saved on the
-            server and applies everywhere; this one is a cookie on the machine
-            it is set at, takes effect on the next question, and needs no Save.
-            It is a switch rather than a promise: what it turns off is the row
-            being written at all. */}
-        <h2 className="st-h2">This computer: applies to this machine only, from the next question</h2>
-
-        <section className="st-card" style={s('padding:20px 22px;')}>
-          <div style={s('display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between;')}>
-            <span style={s('flex:1 1 260px;min-width:0;')}>
-              <span style={s('display:block;font-size:15.5px;font-weight:600;color:#212b32;')}>Log questions from this computer</span>
-              <span style={s('display:block;font-size:13.5px;color:#4c6272;margin-top:3px;line-height:1.45;')}>
-                {logging === false
-                  ? 'Off. Questions asked here are answered as usual but no record of them is kept, so they do not appear in the statistics.'
-                  : 'On. What is asked here, and the answer given, are recorded so they can be read back in the statistics.'}
-              </span>
-              <span style={s('display:block;font-size:12.5px;color:#768692;margin-top:6px;line-height:1.45;')}>
-                The activity log — which pages were opened — is a separate record and is not affected.
-              </span>
-            </span>
-            <button type="button" className={'st-btn ' + (logging === false ? 'st-btn--off' : 'st-btn--on')} style={{ flex: 'none' }} disabled={logging === null}
-              onClick={() => setLoggingHere(logging === false)}>
-              {logging === false ? 'Logging off' : 'Logging on'}
+            <button type="button" className="st-btn st-btn--primary" disabled={!dirty || !valid || saving} onClick={save}>
+              {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
-        </section>
+        </div>
 
-        {/* Pages that used to be in the menu. The header gear comes here, so the
-            two read in a quiet half hour are one click away. */}
-        <h2 className="st-h2">Also here</h2>
-        <section className="st-card" style={s('overflow:hidden;')}>
-          <Link href="/questions" className="st-more"><span style={s('flex:1;min-width:0;')}>Questions<small>What the assistant could not answer</small></span><Svg w={18} sw={2}>{Icons.chevronRight}</Svg></Link>
-          <Link href="/feedback" className="st-more"><span style={s('flex:1;min-width:0;')}>Answer feedback<small>How answers were rated</small></span><Svg w={18} sw={2}>{Icons.chevronRight}</Svg></Link>
-        </section>
+        <div className="st-grid">
+          <section className="st-models" aria-label="Models">
+            <ModelCard wide name="Reasoning" job="Decides and writes the answer" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
+              <ModelField
+                label="Reasoning model" value={model} models={models} index={index}
+                placeholder={setting ? setting.defaultModel : 'vendor/model'}
+                onChange={(v) => { setModel(v); setNote(''); }}
+              />
+            </ModelCard>
+            <ModelCard name="Fast" job="Reads, searches, background jobs" rate={rateLine(priceOf(resolved.fast))} used={usedLine('fast')}>
+              <ModelField
+                label="Fast model" value={roleValue('fast')} models={models} index={index}
+                placeholder={model || 'inherit'} onChange={(v) => setRole('fast', v)}
+              />
+            </ModelCard>
+            <ModelCard name="Web search" job="Searches the internet" rate={rateLine(priceOf(resolved.web))} used={usedLine('web')}>
+              <ModelField
+                label="Web search model" value={roleValue('web')} models={models} index={index}
+                placeholder={model || 'inherit'} onChange={(v) => setRole('web', v)}
+              />
+            </ModelCard>
+            {/* Inherits from Fast rather than from the model above, so leaving
+                it blank changes nothing; it is here so a practice CAN pay for a
+                better reader on the one decision about a patient. */}
+            <ModelCard name="AccurX routing" job="Says where a pasted /accurx goes" rate={rateLine(priceOf(resolved.accurx))} used={usedLine('accurx')}>
+              <ModelField
+                label="AccurX routing model" value={roleValue('accurx')} models={models} index={index}
+                placeholder={fastModel || 'inherit'} onChange={(v) => setRole('accurx', v)}
+              />
+            </ModelCard>
+            {/* The only row waited on with nothing on screen yet: it holds the
+                send while a message is checked for patient details, so it wants
+                the quickest model. Inherits from Fast, not from the model above. */}
+            <ModelCard name="Super speed" job="Checks a message for patient details" rate={rateLine(priceOf(resolved.superSpeed))} used={usedLine('superSpeed')}>
+              <ModelField
+                label="Super speed model" value={roleValue('superSpeed')} models={models} index={index}
+                placeholder={fastModel || 'inherit'} onChange={(v) => setRole('superSpeed', v)}
+              />
+            </ModelCard>
+            {/* Does not inherit: the model above may be text-only, so blank is a
+                small vision model named in the box. */}
+            <ModelCard name="Images" job="Reads any message with a picture" rate={rateLine(priceOf(resolved.images))} used={usedLine('images')}>
+              <ModelField
+                label="Images model" value={roleValue('images')} models={models} index={index}
+                placeholder={(setting && setting.defaultImagesModel) || 'vendor/model'} onChange={(v) => setRole('images', v)}
+              />
+            </ModelCard>
+            {/* Not a chat model: scores each Notebook answer before it is shown.
+                Its list is OpenRouter's decision models; any id can be typed. */}
+            <ModelCard name="Answer check" job="Checks a Notebook answer fits the question" rate={rateLine(priceOf(resolved.check))} used={usedLine('check')}>
+              <ModelField
+                label="Answer check model" value={roleValue('check')} models={checkModels} index={checkIndex}
+                placeholder={(setting && setting.defaultCheckModel) || 'vendor/model'} onChange={(v) => setRole('check', v)}
+              />
+            </ModelCard>
+          </section>
+
+          <aside className="st-side">
+            <section className="st-card" style={s('padding:14px 16px;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;')}>
+              <div className="st-eyebrow">Cost</div>
+              <div style={s('font-variant-numeric:tabular-nums;')}>
+                {estimate.measured ? (
+                  <>
+                    <span style={s('font-size:26px;font-weight:800;letter-spacing:-.02em;color:#212b32;')}>{formatCost(estimate.total)}</span>
+                    <span style={s('font-size:12.5px;color:#4c6272;')}> per question</span>
+                    <span style={s('display:block;font-size:11.5px;color:#768692;margin-top:2px;line-height:1.4;')}>
+                      At list prices, over the last {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
+                      {estimate.missing.length ? `, excluding ${estimate.missing.join(' and ')} (not run yet)` : ''}
+                      {estimate.unpriced.length ? `, excluding ${estimate.unpriced.join(' and ')} (no published price)` : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span style={s('font-size:13px;color:#768692;line-height:1.45;')}>
+                    Not measured on these models yet. Ask a few questions and the real cost appears here.
+                  </span>
+                )}
+              </div>
+
+              {rolling && rolling.turns > 0 && (
+                <div style={s('border-top:1px solid #eef1f3;padding-top:10px;font-size:13px;color:#212b32;line-height:1.45;font-variant-numeric:tabular-nums;')}>
+                  {rolling.costedTurns > 0 ? (
+                    <>
+                      <strong>{formatCost(rolling.totalCost)}</strong> charged over the last {rolling.turns.toLocaleString()} question{rolling.turns === 1 ? '' : 's'}, <strong>{formatCost(rolling.avgCost)}</strong> on average
+                    </>
+                  ) : (
+                    <span style={s('color:#768692;')}>No charges recorded yet.</span>
+                  )}
+                  <span style={s('display:block;font-size:11.5px;color:#768692;')}>
+                    {rolling.avgInputTokens.toLocaleString()} in
+                    {rolling.avgCachedTokens != null ? ` (${rolling.avgCachedTokens.toLocaleString()} cached)` : ''}
+                    {' '}/ {rolling.avgOutputTokens.toLocaleString()} out per question
+                    {rolling.costedTurns > 0 && rolling.costedTurns < rolling.turns ? `; charges from ${rolling.costedTurns}` : ''}
+                    {rolling.since ? ` · since ${new Date(rolling.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                  </span>
+                </div>
+              )}
+
+              {shownHistory.length > 0 && (
+                <div style={s('border-top:1px solid #eef1f3;padding-top:10px;min-height:0;')}>
+                  <table style={s('width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;')}>
+                    <thead>
+                      <tr style={s('font-size:11px;color:#768692;text-align:right;')}>
+                        <th style={s('padding:0 8px 3px 0;font-weight:600;text-align:left;')}>Model</th>
+                        <th style={s('width:62px;padding:0 8px 3px 0;font-weight:600;')} title="Estimate at list prices">Est.</th>
+                        <th style={s('width:62px;padding:0 0 3px;font-weight:600;')} title="What OpenRouter charged">Charged</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shownHistory.map((row) => (
+                        <tr key={row.model} title={`${row.model} · ${row.turns.toLocaleString()} question${row.turns === 1 ? '' : 's'}`}>
+                          <td style={s('padding:3px 8px 3px 0;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>
+                            {row.inUse ? <span style={s('margin-right:6px;font-size:10px;font-weight:700;border-radius:4px;padding:1px 5px;background:#eef7ee;color:#00532a;')}>IN USE</span> : null}
+                            {row.model}
+                          </td>
+                          <td style={s('padding:3px 8px 3px 0;text-align:right;color:#212b32;font-variant-numeric:tabular-nums;')}>
+                            {row.priced ? formatCost(row.cost) : '—'}
+                          </td>
+                          <td style={s('padding:3px 0;text-align:right;color:#212b32;font-variant-numeric:tabular-nums;')}>
+                            {row.charged != null ? formatCost(row.charged) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p style={s('margin:6px 0 0;font-size:11px;color:#768692;line-height:1.4;')}>
+                    {history.length > HISTORY_ROWS ? `Top ${HISTORY_ROWS} of ${history.length} models. ` : ''}Over the last {measured.window || 100} questions.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* THIS COMPUTER, NOT THE PRACTICE. Everything on the left is saved
+                on the server and applies everywhere; this one is a cookie on
+                the machine it is set at, takes effect on the next question,
+                and needs no Save. */}
+            <section className="st-card" style={s('padding:14px 16px;flex:none;')}>
+              <div style={s('display:flex;gap:12px;align-items:center;justify-content:space-between;')}>
+                <span style={s('min-width:0;')}>
+                  <span className="st-eyebrow" style={s('display:block;margin-bottom:3px;')}>This computer only</span>
+                  <span style={s('display:block;font-size:14.5px;font-weight:600;color:#212b32;')}>Log questions asked here</span>
+                  <span style={s('display:block;font-size:12px;color:#4c6272;margin-top:2px;line-height:1.4;')}>
+                    {logging === false
+                      ? 'Off: answered as usual, but no record is kept.'
+                      : 'On: questions and answers appear in the statistics.'}
+                  </span>
+                </span>
+                <button type="button" className={'st-btn ' + (logging === false ? 'st-btn--off' : 'st-btn--on')} style={{ flex: 'none' }} disabled={logging === null}
+                  onClick={() => setLoggingHere(logging === false)}>
+                  {logging === false ? 'Off' : 'On'}
+                </button>
+              </div>
+            </section>
+
+            <section className="st-card" style={s('flex:none;overflow:hidden;')}>
+              <Link href="/questions" className="st-more"><span style={s('flex:1;min-width:0;')}>Questions<small>What the assistant could not answer</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
+              <Link href="/feedback" className="st-more"><span style={s('flex:1;min-width:0;')}>Answer feedback<small>How answers were rated</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
+            </section>
+          </aside>
+        </div>
       </main>
     </div>
   );
