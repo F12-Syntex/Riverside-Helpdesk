@@ -26,18 +26,8 @@ import TextShimmer from './TextShimmer';
  * is set, and the light (ShaderBackground) quickens and gathers.
  * ------------------------------------------------------------------ */
 
-function BoxLoader() {
-  return (
-    <span className="riva-boxes" aria-hidden="true">
-      {[0, 1, 2, 3].map((i) => (
-        <span key={i} className={'riva-box riva-box-' + i}>
-          <span className="riva-box-top" />
-          <span className="riva-box-left" />
-          <span className="riva-box-right" />
-        </span>
-      ))}
-    </span>
-  );
+function OrbLoader() {
+  return <span className="riva-orb" aria-hidden="true" />;
 }
 
 // Holds <html data-busy> for as long as any working card is on screen.
@@ -125,7 +115,7 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
   return (
     <div className="riva-work" role="status" aria-live="polite">
       <div className="riva-work-head">
-        <BoxLoader />
+        <OrbLoader />
         <div className="riva-work-now">
           <div className="riva-work-kicker">
             <span className="riva-work-pulse" />
