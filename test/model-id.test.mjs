@@ -5,6 +5,7 @@ import {
   isModelSlug,
   isModelVariant,
   joinModelId,
+  modelIdProblem,
   splitModelId,
   variantHint,
 } from '../lib/model-id.mjs';
@@ -60,4 +61,34 @@ test('every offered variant produces a valid id and explains itself', () => {
   }
   // Nothing is claimed about a variant we do not know — the field stays usable.
   assert.equal(variantHint('exacto'), '');
+});
+
+// The settings page explains a refused id under its field. The explanation
+// must never disagree with the check the save makes: nothing for a valid id
+// (or a blank one, which the page allows or refuses itself), and a reason for
+// every id isModelSlug refuses — otherwise the field would say "fine" to an id
+// the server then rejects, or block one it would have taken.
+test('a refused id always comes with a reason, and a valid one never does', () => {
+  const ids = [
+    '', '   ', 'openai/gpt-oss-120b', ' openai/gpt-oss-120b ', 'Google/Gemini-3.5-Flash', 'a.b/c_d-e',
+    'openai/gpt-oss-120b:nitro', 'openai/gpt-oss-120b:nitro@groq,cerebras', 'anthropic/claude-haiku-5.5@google-vertex/europe',
+    'son 4', 'claude', 'claude:nitro', 'openai/gpt 4o', 'openai/gpt#4', 'a/b,c', 'a:b/c', '/gpt', 'openai/', 'a/b/c',
+    '-a/b', 'a/-b', 'a/b:', 'a/b:c:d', 'a/b:c/d', 'a/b@', 'a/b@groq,', 'a/b@,groq', 'a/b@groq:nitro', 'a/b@-x',
+    'a/b@x/y/z', 'a/b@@x', 'a/b@x@y', 'a/b:-', 'é/b',
+  ];
+  for (const id of ids) {
+    const valid = !id.trim() || isModelSlug(id);
+    assert.equal(modelIdProblem(id) === '', valid, JSON.stringify(id) + ' -> ' + JSON.stringify(modelIdProblem(id)));
+  }
+});
+
+test('the reason says what to change', () => {
+  assert.match(modelIdProblem('son 4'), /Pick a model from the list/);
+  assert.match(modelIdProblem('openai/gpt 4o'), /no spaces/);
+  assert.match(modelIdProblem('openai/gpt#4'), /“#”/);
+  assert.match(modelIdProblem('openai/'), /after the slash/);
+  assert.match(modelIdProblem('a/b/c'), /Only one slash/);
+  assert.match(modelIdProblem('openai/gpt-oss-120b:'), /after the colon/);
+  assert.match(modelIdProblem('openai/gpt-oss-120b@groq:nitro'), /before the @provider/);
+  assert.match(modelIdProblem('openai/gpt-oss-120b@groq,'), /provider is missing/);
 });
