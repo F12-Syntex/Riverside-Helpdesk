@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.73.0` | 2026-10-13 | feat | `c5aadb4` | feat: put the animated gradient behind the referrals page |
+| `6.72.0` | 2026-10-13 | feat | `9a2c4b0` | feat: redesign the referrals page and its header |
+| `6.71.6` | 2026-10-13 | docs | `15212d3` | docs: record the quicker ask tour in versions |
 | `6.71.5` | 2026-10-13 | fix | `f2015df` | fix: make the ask tour quick and native, Esc moves on a step |
 | `6.71.4` | 2026-10-13 | docs | `52292d4` | docs: record the schema and query speed-ups in versions |
 | `6.71.3` | 2026-10-13 | perf | `0d55053` | perf: issue independent database reads together on hot routes |
