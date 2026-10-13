@@ -1217,6 +1217,72 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
   .riva-topnav-pill, .riva-menu, .riva-theme-pop, .riva-theme-name { transition: none; animation: none; }
 }
 
+/* ---- the open header (redesign; AppShell sets .is-flat per page) ----
+
+   No bar. The NHS mark at the left, the tools as one soft pill in the
+   middle of the screen with the one you are on lifted out of it in white,
+   and the menu at the right. Nothing floats over the page: they sit on it. */
+.riva-shell.is-flat { --rv-top-h: 80px; }
+.is-flat .riva-top { padding: 0; animation: rivaFlatIn .6s cubic-bezier(.22,1,.36,1) both; }
+@keyframes rivaFlatIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.is-flat .riva-bar {
+  height: var(--rv-top-h); padding: 0 28px; gap: 16px;
+  background: none; border: none; border-radius: 0; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.is-flat .riva-top-left { gap: 10px; }
+.is-flat .riva-brand { height: 40px; padding: 0 4px; margin-left: -4px; gap: 11px; border-radius: 8px; }
+.is-flat .riva-brand:hover { background: none; opacity: .85; }
+.is-flat .riva-brand-mark img { height: 26px; border-radius: 2px; }
+.is-flat .riva-brand-name { font-size: 16px; font-weight: 700; letter-spacing: -0.015em; }
+.is-flat .riva-top-ver { background: rgba(255,255,255,.6); box-shadow: inset 0 0 0 1px rgba(33,43,50,.06); }
+.is-flat .riva-top-search { display: none; }
+
+.is-flat .riva-topnav {
+  gap: 0; padding: 4px; border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 10px 30px -14px rgba(33,43,50,.22);
+  -webkit-backdrop-filter: var(--rv-glass-blur); backdrop-filter: var(--rv-glass-blur);
+}
+.is-flat .riva-topnav-pill {
+  top: 4px; bottom: 4px; border-radius: 999px; background: #fff;
+  box-shadow: 0 1px 2px rgba(33,43,50,.08), 0 2px 8px -2px rgba(33,43,50,.1);
+  transition: transform .5s cubic-bezier(.22,1,.36,1), width .5s cubic-bezier(.22,1,.36,1);
+}
+.is-flat .riva-topnav-item {
+  height: 38px; padding: 0 19px; border-radius: 999px;
+  font-size: 15px; font-weight: 550; color: var(--rv-ink-2);
+}
+.is-flat .riva-topnav-item:hover:not(.is-active) { background: none; color: var(--rv-ink); }
+.is-flat .riva-topnav-item.is-active { color: var(--rv-accent); }
+.is-flat .riva-topnav-item:focus-visible { outline-offset: -2px; }
+.is-flat .riva-topnav-ico { display: none; }
+.is-flat .riva-top-btn { color: var(--rv-ink-3); }
+.is-flat .riva-top-btn:hover, .is-flat .riva-top-btn.is-on { background: rgba(255,255,255,.7); color: var(--rv-ink); box-shadow: none; }
+
+/* The practice's name gives its room to the tools before they crowd. */
+@media (max-width: 900px) {
+  .is-flat .riva-brand-name { display: none; }
+}
+/* The short names fit at every width the long ones did not. */
+@media (max-width: 1020px) {
+  .is-flat .riva-topnav-item:not(.is-active) { width: auto; padding: 0 16px; }
+  .is-flat .riva-topnav-item:not(.is-active) .riva-topnav-label { display: inline; }
+}
+@media (max-width: 600px) {
+  .riva-shell.is-flat { --rv-top-h: 64px; }
+  .is-flat .riva-bar { padding: 0 12px; gap: 8px; }
+  .is-flat .riva-brand-mark img { height: 22px; }
+  /* A phone: every tool is its icon, as on the other pages. */
+  .is-flat .riva-topnav-item, .is-flat .riva-topnav-item:not(.is-active) { width: 44px; padding: 0; }
+  .is-flat .riva-topnav-item .riva-topnav-label,
+  .is-flat .riva-topnav-item:not(.is-active) .riva-topnav-label { display: none; }
+  .is-flat .riva-topnav-ico { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-flat .riva-top { animation: none; }
+}
+
 /* ---- the working card ------------------------------------------- */
 
 /* While an answer is worked out: glass, a gradient edge that flows, a box

@@ -68,9 +68,9 @@ const GROUPS = [
   {
     label: 'Ask',
     items: [
-      { href: '/', label: 'Referrals', icon: Icons.sitemap },
-      { href: '/ask', label: 'Ask a question', icon: Icons.chat },
-      { href: '/lookup', label: 'Contact numbers', icon: Icons.phone },
+      { href: '/', label: 'Referrals', short: 'Referrals', icon: Icons.sitemap },
+      { href: '/ask', label: 'Ask a question', short: 'Ask', icon: Icons.chat },
+      { href: '/lookup', label: 'Contact numbers', short: 'Contacts', icon: Icons.phone },
       // The other half of asking: the questions the assistant CANNOT answer,
       // because nothing in the practice's material covers them. It stays in
       // the Ask group because that is where it is understood from — a question
@@ -82,7 +82,7 @@ const GROUPS = [
   {
     label: 'Work',
     items: [
-      { href: '/notebook', label: 'Practice notes', icon: Icons.edit },
+      { href: '/notebook', label: 'Practice notes', short: 'Notes', icon: Icons.edit },
     ],
   },
   {
@@ -170,7 +170,7 @@ function matchHref(rawPath) {
    the screen (see globals.css), so it is measured again on resize. On a
    narrow screen the row stays, as icons, rather than folding into the
    menu: three tools are three taps, not four. */
-function TopNav({ current }) {
+function TopNav({ current, short = false }) {
   const navRef = React.useRef(null);
   const [pill, setPill] = React.useState(null);
   const activeHref = current?.href;
@@ -204,7 +204,7 @@ function TopNav({ current }) {
             className={'riva-topnav-item' + (active ? ' is-active' : '')}
             aria-current={active ? 'page' : undefined} title={item.label}>
             <span className="riva-topnav-ico"><Svg w={15} sw={2}>{item.icon}</Svg></span>
-            <span className="riva-topnav-label">{item.label}</span>
+            <span className="riva-topnav-label">{short && item.short ? item.short : item.label}</span>
           </Link>
         );
       })}
@@ -330,6 +330,11 @@ export default function AppShell({ children }) {
   const [slot, setSlot] = React.useState(null);
   const [lead, setLead] = React.useState(null);
   const current = matchHref(pathname);
+  // The redesigned chrome (no bar: the mark at the left, the tools as one
+  // pill in the middle) is rolled out a page at a time, starting with the
+  // front door. Every other page keeps the floating bar its layout was
+  // measured against until it is redesigned too.
+  const flat = pathname === '/';
   const closeMenu = React.useCallback(() => setMenuOpen(false), []);
 
   // ⌘K / Ctrl-K anywhere, except while something is already being typed
@@ -355,7 +360,7 @@ export default function AppShell({ children }) {
   React.useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   return (
-    <div className="riva-shell">
+    <div className={'riva-shell' + (flat ? ' is-flat' : '')}>
       {/* One glass bar floating on the light: who this is on the left, the
           tools in the middle, and what can be done here on the right. It is
           the same surface as the composer and the menus it opens, so the
@@ -366,14 +371,14 @@ export default function AppShell({ children }) {
             {/* Whose service this is, and the way back to the front door. */}
             <Link href="/" className="riva-brand" aria-label="The Riverside Practice — home">
               <span className="riva-brand-mark"><img src="/assets/nhs-logo.png" alt="NHS" /></span>
-              <span className="riva-brand-name">Riverside</span>
+              <span className="riva-brand-name">{flat ? 'The Riverside Practice' : 'Riverside'}</span>
             </Link>
             {/* Which build this is, in plain sight on every page; the commit
                 rides in the tooltip. */}
             <span className="riva-top-ver" title={BUILD_LABEL} aria-label={'Version ' + VERSION_LABEL}>{VERSION_LABEL}</span>
           </div>
 
-          <TopNav current={current} />
+          <TopNav current={current} short={flat} />
 
           <div className="riva-top-right">
             {/* Where a tool's own controls land (see AppHeader). */}
