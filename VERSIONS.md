@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.6` | 2026-10-13 | docs | `99ec9fd` | docs: record the design language, the lessons, and the research |
 | `6.89.5` | 2026-10-13 | fix | `28abe6f` | fix: settle the Ask page's motion, breakpoints, focus and Stop |
 | `6.89.4` | 2026-10-13 | fix | `bf78cf1` | fix: keep Notes responsive and keyboard-safe, per the review |
 | `6.89.3` | 2026-10-13 | fix | `eae384b` | fix: read the logging switch as the server does, and keep Settings' focus |

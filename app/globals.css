@@ -1208,7 +1208,6 @@ html[data-bg="still"] .riva-glow { display: none; }
 }
 .riva-theme-head { padding: 8px 10px 12px; }
 .riva-theme-title { font-size: 14.5px; font-weight: 700; color: var(--rv-ink); }
-.riva-theme-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--rv-ink-2); }
 .riva-theme-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .riva-theme-opt {
   display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; min-width: 0;

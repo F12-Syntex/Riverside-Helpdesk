@@ -95,7 +95,6 @@ export default function ThemePicker() {
         <div className="riva-theme-pop" role="dialog" aria-label="Background">
           <div className="riva-theme-head">
             <div className="riva-theme-title">Background</div>
-            <div className="riva-theme-sub">From 21st.dev, always in Mist. Buttons and links stay NHS blue.</div>
           </div>
           <div ref={listRef} className="riva-theme-list" role="radiogroup" aria-label="Background" onKeyDown={onListKey}>
             {THEMES.map((t, i) => {
