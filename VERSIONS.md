@@ -18,7 +18,10 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
-| `6.89.6` | 2026-10-13 | docs | `99ec9fd` | docs: record the design language, the lessons, and the research |
+| `6.89.9` | 2026-10-13 | chore | `cede403` | chore: merge main's picker change into the docs branch |
+| `6.89.8` | 2026-10-13 | docs | `99ec9fd` | docs: record the design language, the lessons, and the research |
+| `6.89.7` | 2026-10-13 | docs | `9722934` | docs: record the background picker line removal in versions |
+| `6.89.6` | 2026-10-13 | fix | `469e1fc` | fix: drop the 21st.dev and NHS blue line from the background picker |
 | `6.89.5` | 2026-10-13 | fix | `28abe6f` | fix: settle the Ask page's motion, breakpoints, focus and Stop |
 | `6.89.4` | 2026-10-13 | fix | `bf78cf1` | fix: keep Notes responsive and keyboard-safe, per the review |
 | `6.89.3` | 2026-10-13 | fix | `eae384b` | fix: read the logging switch as the server does, and keep Settings' focus |
