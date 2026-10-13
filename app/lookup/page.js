@@ -4,6 +4,7 @@ import React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { s, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
+import AnimatedGradient from '../_components/ThinkingGradient';
 import { markRegisterWarm, registerIsWarm } from '../_components/contacts/ContactSearchLoader';
 import { highlightRanges } from '../../lib/lookup/fuzzy';
 import { prepareContacts, searchPrepared } from '../../lib/contacts.fuzzy.mjs';
@@ -33,7 +34,9 @@ import { prepareContacts, searchPrepared } from '../../lib/contacts.fuzzy.mjs';
  * ------------------------------------------------------------------ */
 
 const EXAMPLES = ['Homerton', 'district nurse', 'dentist barnsley', 'E5 9BQ'];
-const EASE = [0.2, 0.8, 0.3, 1];
+const EASE = [0.22, 1, 0.36, 1];
+// How much of each theme colour the background shows (as on Referrals).
+const BG_ALPHA = [0.12, 0.62, 0.42];
 
 const SEARCH_X = (<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /><path d="m8.5 8.5 5 5" /><path d="m13.5 8.5-5 5" /></>);
 const MAIL = (<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>);
@@ -41,45 +44,54 @@ const GLOBE = (<><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M
 const REGISTER = (<><path d="M4 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2z" /><path d="M18 8h2v12a2 2 0 0 1-2 2" /><path d="M8 9h6M8 13h6" /></>);
 
 const LK_CSS = `
-/* The same column, heading and field as Ask a question: 820px wide, the
-   heading centred above, the box drawn exactly like the composer. */
-.lk{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;width:100%;max-width:820px;margin:0 auto;padding:28px 24px;}
-.lk-h1{flex:none;margin:8px 0 6px;text-align:center;font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.08;}
+/* The same page as Referrals: the animated light behind everything, one
+   narrow column, a big heading, a pill box, and one white card of results
+   that is as tall as what is in it (and scrolls inside itself past the
+   room the screen leaves). */
+.lk-page{position:relative;height:100%;overflow:hidden;display:flex;flex-direction:column;}
+.lk-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
+.lk-bg__canvas{display:block;width:100%;height:100%;animation:lk-bg-in 1.2s ease both;}
+@keyframes lk-bg-in{from{opacity:0;}to{opacity:1;}}
+.lk{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:688px;margin:0 auto;padding:clamp(20px,11vh,140px) 24px 24px;}
+.lk > *{flex:none;}
+.lk > .lk-cardwrap{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;}
+.lk-h1{margin:0 0 36px;text-align:center;font-size:56px;font-weight:800;letter-spacing:-.04em;line-height:1.05;color:var(--rv-ink);}
+.lk-h1 em{font-style:normal;color:var(--rv-accent);}
 
-/* ONE SIZE, ALWAYS. The list never grows, shrinks or moves with what is in
-   it: it fills what the page leaves and everything in it scrolls. */
-.lk-card{position:relative;flex:1;min-height:280px;display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:22px;
-  box-shadow:0 0 0 1px #dde4e7,0 2px 4px rgba(33,43,50,.04);}
+.lk-cap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:22px;margin:22px 0 8px;padding:0 22px;
+  font-size:13px;font-weight:550;color:var(--rv-ink-3);}
+.lk-cardwrap.is-results{margin-top:14px;}
+.lk-card{position:relative;flex:0 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:22px;
+  box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.18);}
 
-/* ---- the box: the Ask a question composer ---- */
-.lk-box{flex:none;display:flex;align-items:center;gap:4px;height:68px;padding:0 12px 0 22px;
-  background:#fff;border:2px solid #94aabb;border-radius:22px;
-  box-shadow:0 2px 4px rgba(33,43,50,.05),0 18px 48px rgba(0,48,135,.14);transition:border-color .18s ease,box-shadow .22s ease;}
-.lk-box:hover{border-color:#5f8fb9;}
-.lk-box:focus-within{border-color:#005eb8;box-shadow:0 0 0 3px rgba(0,94,184,.08),0 4px 10px rgba(33,43,50,.07),0 18px 44px rgba(33,43,50,.16);}
+/* ---- the box ---- */
+.lk-box{flex:none;display:flex;align-items:center;gap:2px;height:64px;padding:0 14px 0 24px;
+  background:#fff;border:none;border-radius:999px;
+  box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.2);transition:box-shadow .2s ease;}
+.lk-box:focus-within{box-shadow:0 0 0 3px rgba(0,94,184,.12),0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.22);}
 .lk-box__ico{flex:none;display:flex;color:var(--rv-ink-3);transition:color .15s ease;}
 .lk-box:focus-within .lk-box__ico{color:var(--rv-accent);}
 .lk-input{flex:1;min-width:0;height:100%;border:none !important;background:transparent !important;outline:none !important;box-shadow:none !important;
-  font:inherit;font-size:19.5px;padding:0 12px;color:#212b32;}
-.lk-input::placeholder{color:#768692;}
-.lk-iconbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:10px;
+  font:inherit;font-size:19px;padding:0 14px;color:var(--rv-ink);}
+.lk-input::placeholder{color:var(--rv-ink-4);}
+.lk-iconbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:999px;
   background:none;color:var(--rv-ink-3);cursor:pointer;text-decoration:none;transition:background-color .15s ease,color .15s ease,opacity .15s ease;}
 .lk-iconbtn:hover{background:#eef2f5;color:var(--rv-ink);}
 .lk-iconbtn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
-.lk-count{flex:none;margin-right:8px;font-size:12px;font-weight:600;color:#9aa6ae;font-variant-numeric:tabular-nums;}
+.lk-count{flex:none;margin-right:8px;font-size:12.5px;font-weight:600;color:var(--rv-ink-4);font-variant-numeric:tabular-nums;}
 
 /* ---- the list ---- */
-.lk-body{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 8px;
+.lk-body{position:relative;flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 8px 8px;
   scrollbar-width:thin;scrollbar-color:rgba(76,98,114,.25) transparent;}
-.lk-group{display:flex;align-items:center;gap:8px;padding:12px 12px 6px;font-size:11.5px;font-weight:650;color:#9aa6ae;letter-spacing:.02em;}
+.lk-group{display:flex;align-items:center;gap:8px;padding:14px 16px 6px;font-size:13px;font-weight:600;color:var(--rv-ink-3);}
 .lk-group__n{font-variant-numeric:tabular-nums;font-weight:600;color:#b5bfc6;}
 .lk-tag{padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;background:#fdf6e7;color:#8a5a08;}
 .lk-tag--added{background:#f1f5f9;color:#7a8891;font-weight:650;}
 .lk-list{position:relative;}
-.lk-row{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;scroll-margin:8px;cursor:default;}
-.lk-row.is-sel{background:#f1f5f9;}
+.lk-row{position:relative;display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px 10px 16px;border-radius:14px;scroll-margin:8px;cursor:default;transition:background-color .15s ease;}
+.lk-row.is-sel{background:#f4f7f9;}
 .lk-row__text{flex:1;min-width:0;}
-.lk-row__label{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:600;color:var(--rv-ink);line-height:1.35;min-width:0;}
+.lk-row__label{display:flex;align-items:center;gap:7px;font-size:16.5px;font-weight:450;color:var(--rv-ink);line-height:1.35;min-width:0;}
 .lk-row__name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .lk-row__sub{display:block;margin-top:1px;font-size:12.5px;color:#8a979f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 a.lk-row__sub{text-decoration:none;}
@@ -140,12 +152,12 @@ a.lk-row__sub:hover{color:var(--rv-accent);}
 .lk-btn .riva-kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff;}
 
 /* ---- the foot ---- */
-.lk-foot{flex:none;display:flex;align-items:center;gap:14px;padding:10px 20px;border-top:1px solid #eef2f4;font-size:12px;font-weight:550;color:#9aa6ae;}
+.lk-foot{flex:none;display:flex;align-items:center;justify-content:center;gap:18px;margin-top:14px;font-size:13px;font-weight:550;color:var(--rv-ink-3);}
 .lk-foot span{display:inline-flex;align-items:center;gap:5px;}
-.lk-foot__keys{flex:1;min-width:0;gap:14px !important;}
-.lk-foot__add{flex:none;display:inline-flex;align-items:center;gap:6px;margin-right:-8px;padding:5px 10px;border:none;border-radius:8px;background:none;
+.lk-foot__keys{min-width:0;gap:14px !important;}
+.lk-foot__add{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:none;border-radius:999px;background:none;
   font:inherit;font-size:12.5px;font-weight:650;color:#7a8891;cursor:pointer;transition:background-color .15s ease,color .15s ease;}
-.lk-foot__add:hover{background:#f1f5f9;color:var(--rv-accent);}
+.lk-foot__add:hover{background:rgba(255,255,255,.7);color:var(--rv-accent);}
 .lk-foot__add:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
 .lk-foot__note{flex:none;font-size:12px;color:#9aa6ae;}
 
@@ -181,12 +193,13 @@ textarea.lk-text{height:auto;min-height:64px;padding:10px 12px;resize:vertical;l
 .lk-toast__ico{flex:none;display:flex;color:#6fd39b;}
 
 @media (max-width:600px){
-  .lk{padding:16px;gap:12px;}
-  .lk-h1{font-size:30px;margin-top:4px;}
-  .lk-box{height:60px;padding-left:16px;}
+  .lk{padding:20px 16px 16px;}
+  .lk-h1{font-size:38px;margin-bottom:24px;}
+  .lk-cap{padding:0 16px;}
+  .lk-box{height:56px;padding-left:18px;}
   .lk-input{font-size:16px;}
   .lk-count,.lk-foot__keys{display:none !important;}
-  .lk-foot{justify-content:flex-end;padding:8px 14px;}
+  .lk-foot{justify-content:center;}
   .lk-row{flex-wrap:wrap;gap:8px;padding:10px;}
   .lk-row__text{flex:1 1 100%;}
   .lk-row__name{white-space:normal;}
@@ -196,7 +209,7 @@ textarea.lk-text{height:auto;min-height:64px;padding:10px 12px;resize:vertical;l
   .lk-form__body,.lk-form__foot{padding-left:16px;padding-right:16px;}
 }
 @media (prefers-reduced-motion:reduce){
-  .lk,.lk-skel,.lk-cqc__chev{transition:none !important;animation:none !important;}
+  .lk,.lk-skel,.lk-cqc__chev,.lk-bg__canvas{transition:none !important;animation:none !important;}
 }
 `;
 
@@ -667,14 +680,17 @@ export default function Page() {
   );
 
   return (
-    <div className="riva-page-fill" style={s('height:100vh;overflow:hidden;display:flex;flex-direction:column;background:#f0f4f5;')}>
+    <div className="lk-page riva-page-fill">
       <style data-lk="1" dangerouslySetInnerHTML={{ __html: LK_CSS }} />
+      <div className="lk-bg" aria-hidden="true"><AnimatedGradient always alpha={BG_ALPHA} className="lk-bg__canvas" /></div>
       <AppHeader subtitle="Contact numbers" />
 
       <main className="lk">
-        <h1 className="lk-h1 riva-hero-h1">Find a <span style={{ color: 'var(--rv-accent)' }}>number</span></h1>
+        <motion.h1 className="lk-h1" initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+          Find a <em>number</em>
+        </motion.h1>
 
-        <div className="lk-box">
+        <motion.div className="lk-box" initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.07, ease: EASE }}>
           <span className="lk-box__ico" aria-hidden="true"><Svg w={20} sw={2.2}>{Icons.search}</Svg></span>
           <input
             ref={inputRef}
@@ -692,11 +708,16 @@ export default function Page() {
               <Svg w={16} sw={2.4}>{Icons.close}</Svg>
             </button>
           ) : book.entries.length ? <span className="lk-count">{book.entries.length} contacts</span> : null}
-        </div>
+        </motion.div>
 
-        <motion.div className="lk-card"
-          initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: EASE }}>
+        {!trimmed ? (
+          <div className="lk-cap"><span>{book.loaded ? 'Every number the practice keeps, by category' : ''}</span></div>
+        ) : null}
+
+        <motion.div className={'lk-cardwrap' + (trimmed ? ' is-results' : '')}
+          initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.14, ease: EASE }}>
+         <div className="lk-card">
 
           <div className="lk-body">
             {!book.loaded ? <Skeleton /> : null}
@@ -814,6 +835,9 @@ export default function Page() {
             ) : null}
           </div>
 
+         </div>
+        </motion.div>
+
           {/* Adding is here, at the foot, out of the way of finding — which is
               what the page is for. A search that finds nothing offers it too. */}
           <div className="lk-foot">
@@ -831,7 +855,6 @@ export default function Page() {
               ) : <span className="lk-foot__note">Contacts are read-only right now</span>
             ) : null}
           </div>
-        </motion.div>
       </main>
 
       <AnimatePresence>
