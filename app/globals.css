@@ -741,7 +741,7 @@ body { overflow-x: hidden; }
   /* As wide as the opening screen's (below): the field is the same 688px
      column in a conversation as before one, and a menu wider than it ran
      past the field's right-hand edge, and off a tablet's screen. */
-  width: min(640px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   display: flex; flex-direction: column;
   background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
   box-shadow: 0 1px 2px rgba(33,43,50,.05), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -12px rgba(0,48,135,.22);
@@ -755,7 +755,7 @@ body { overflow-x: hidden; }
    under the header. It scrolls inside itself if the screen is short. */
 /* Menu is as wide as the opening column's field. */
 .riva-dock-center .riva-modes-list {
-  width: min(640px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   bottom: auto; top: calc(100% + 28px); transform-origin: top left;
   max-height: calc(100vh - var(--rv-top-h, 80px) - clamp(20px, 11vh, 140px) - 59px - 36px - var(--riva-dock-field-h) - 30px);
   overflow-y: auto;
@@ -773,15 +773,15 @@ body { overflow-x: hidden; }
   padding: 13px 16px 4px; font-size: 11.5px; font-weight: 700;
   letter-spacing: .06em; text-transform: uppercase; color: var(--rv-ink-2);
 }
-.riva-modes-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 8px; animation: rivaModesPage .18s ease both; }
-.riva-modes-page.is-folder { animation-name: rivaModesFolder; }
+.riva-modes-page { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px 10px; }
+.riva-modes-group { padding: 10px 12px 4px; font-size: 12px; font-weight: 700; color: var(--rv-ink-2); }
 @keyframes rivaModesPage { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @keyframes rivaModesFolder { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 .riva-modes-sep { display: none; }
 
 /* One row: the name over what it reads, and a trailing mark. */
 .riva-mode {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; box-sizing: border-box;
   padding: 10px 12px; border: none; border-radius: 14px;
   background: transparent; font: inherit; text-align: left; cursor: pointer;
   color: #212b32; transition: background .14s ease;
@@ -833,7 +833,6 @@ body { overflow-x: hidden; }
 /* A phone, where the menu is a sheet from the foot of the screen (the shell's
    700px rule): one column of thumb-high rows. */
 @media (max-width: 700px) {
-  .riva-modes-page { grid-template-columns: 1fr; }
   .riva-mode { min-height: 56px; }
 }
 @media (prefers-reduced-motion: reduce) {

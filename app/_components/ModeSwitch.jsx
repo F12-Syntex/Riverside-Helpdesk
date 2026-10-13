@@ -3,7 +3,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { s, Hover, Svg, Icons } from './ui';
-import { MODES, MODE_FOLDER, TOP_MODES, FOLDER_MODES } from '../../lib/commands.mjs';
+import { MODES } from '../../lib/commands.mjs';
 import { EASE_EXIT } from './chat/motion.mjs';
 
 /* ------------------------------------------------------------------ *
@@ -34,13 +34,9 @@ import { EASE_EXIT } from './chat/motion.mjs';
  * Escape in the field drops the mode in one key (QaApp.onInputKey), and
  * every message sent under one is labelled "Asked as …" in the transcript.
  *
- * THE LOOKUPS ARE BEHIND A FOLDER. Q&A and the write-up modes are the
- * menu at rest; Referral form, Contract template and Practice documents
- * sit behind one "Documents & lookups" row (MODE_FOLDER in
- * lib/commands.mjs). Opening it REPLACES the list with its modes under a
- * header that leads back, so the menu is always one short list. The
- * folder page is what opens whenever one of its modes is armed, so the
- * tick is never behind a closed row.
+ * ONE LIST, THREE HEADINGS. Ask a question, Help with a task, Look
+ * something up: every mode is visible at once with a plain sentence saying
+ * what it does. There is no sub-page to find and no keyboard legend.
  *
  * IT CLOSES THE WAY IT OPENED. The menu arrives by CSS (rivaModesIn, or
  * the bottom sheet on a phone) and leaves by motion, settling back toward
@@ -50,12 +46,10 @@ import { EASE_EXIT } from './chat/motion.mjs';
  * until it vanished (the lesson of 63bce7b).
  * ------------------------------------------------------------------ */
 
-// The two pages the menu can show, each as the rows the keyboard walks in the
-// order they are drawn. The folder row and the Back row are rows like any
-// other — they take focus, Enter and the arrows.
-const FOLDER_ROW = { name: null, kind: 'folder', label: MODE_FOLDER.label, icon: MODE_FOLDER.icon, summary: MODE_FOLDER.summary };
-const BACK_ROW = { name: null, kind: 'back', label: MODE_FOLDER.label, icon: 'arrowLeft', summary: 'Back to all modes' };
-const rowsFor = (inFolder) => (inFolder ? [BACK_ROW, ...FOLDER_MODES] : [...TOP_MODES, FOLDER_ROW]);
+// One flat list under three plain headings, in the order it is drawn. The
+// headings say what each group is FOR, so nobody has to guess from a name.
+const rows = MODES;
+const groupOf = (m) => (!m.name ? 'Ask a question' : m.folder ? 'Look something up' : 'Help with a task');
 
 // `ready` is the host saying it has read the kept mode back from storage.
 // Until then the pill is drawn blank, so it never flashes the default glyph
@@ -65,12 +59,10 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
   // Which row the keyboard is on. It starts on the armed mode, so the first
   // arrow key moves away from where you already are.
   const [at, setAt] = React.useState(0);
-  const [inFolder, setInFolder] = React.useState(false);
   const wrapRef = React.useRef(null);
 
   const current = MODES.find((m) => m.name === mode) || MODES[0];
   const armed = Boolean(current.name) && ready;
-  const rows = rowsFor(inFolder);
 
   // Which way the menu opens: down into the empty page while the field is in
   // the middle of it, up out of the dock otherwise. Its exit goes back the
@@ -101,12 +93,10 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     if (!open || !wrapRef.current) return;
     const els = wrapRef.current.querySelectorAll('.riva-mode');
     if (els[at]) els[at].focus();
-  }, [open, at, inFolder]);
+  }, [open, at]);
 
   const show = () => {
-    const folded = Boolean(current.folder);
-    setInFolder(folded);
-    setAt(Math.max(0, rowsFor(folded).findIndex((m) => m.name === mode)));
+    setAt(Math.max(0, rows.findIndex((m) => m.name === mode)));
     setOpen(true);
   };
 
@@ -114,11 +104,6 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
     setOpen(false);
     onPick(name);
   };
-
-  // Into the folder: onto its first mode, past the header row. Out of it:
-  // back onto the folder row, the last row of the top page.
-  const enterFolder = () => { setInFolder(true); setAt(1); };
-  const leaveFolder = () => { setInFolder(false); setAt(TOP_MODES.length); };
 
   // Escape closes the menu and leaves the mode alone — the field's own Escape
   // is what drops the mode.
@@ -134,16 +119,6 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
       if (!open) { show(); return; }
       const step = e.key === 'ArrowDown' ? 1 : -1;
       setAt((i) => (i + step + rows.length) % rows.length);
-      return;
-    }
-    if (open && e.key === 'ArrowRight' && !inFolder && rows[at] === FOLDER_ROW) {
-      e.preventDefault();
-      enterFolder();
-      return;
-    }
-    if (open && e.key === 'ArrowLeft' && inFolder) {
-      e.preventDefault();
-      leaveFolder();
       return;
     }
     if (open && e.key === 'Tab') setOpen(false);
@@ -169,44 +144,22 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
   const point = (i) => () => { if (i !== at) setAt(i); };
 
   const renderRow = (row, i) => {
-    if (row.kind === 'back') {
-      return (
-        <button key="back" type="button" role="menuitem" title={row.summary}
-          onClick={leaveFolder} onMouseMove={point(i)} className="riva-mode riva-mode-back">
-          <span className="riva-mode-backicon" aria-hidden="true">
-            <Svg w={15} sw={2.4}>{Icons.arrowLeft}</Svg>
-          </span>
-          <span className="riva-mode-heading">{row.label}</span>
-        </button>
-      );
-    }
-    if (row.kind === 'folder') {
-      const holds = Boolean(current.folder);
-      return (
-        <React.Fragment key="folder">
-          <span className="riva-modes-sep" role="separator" />
-          <button type="button" role="menuitem" title={row.summary}
-            onClick={enterFolder} onMouseMove={point(i)} className={'riva-mode riva-mode-folder' + (holds ? ' is-on' : '')}>
-            {tile(row.icon, false)}
-            {text(row.label, holds ? 'Now: ' + current.label : row.summary)}
-            <span className="riva-mode-trail" aria-hidden="true">
-              <Svg w={16} sw={2.2}>{Icons.chevronRight}</Svg>
-            </span>
-          </button>
-        </React.Fragment>
-      );
-    }
     const on = row.name === mode;
+    const group = groupOf(row);
+    const heading = i === 0 || group !== groupOf(rows[i - 1]);
     return (
-      <button key={row.name || 'qa'} type="button" role="menuitemradio" aria-checked={on}
-        title={row.summary} onClick={() => choose(row.name)} onMouseMove={point(i)}
-        className={'riva-mode' + (on ? ' is-on' : '')}>
-        {tile(row.icon, on)}
-        {text(row.label, row.summary)}
-        <span className="riva-mode-trail riva-mode-check" aria-hidden="true">
-          {on ? <Svg w={15} sw={2.8}>{Icons.check}</Svg> : null}
-        </span>
-      </button>
+      <React.Fragment key={row.name || 'qa'}>
+        {heading && <div className="riva-modes-group" role="presentation">{group}</div>}
+        <button type="button" role="menuitemradio" aria-checked={on}
+          onClick={() => choose(row.name)} onMouseMove={point(i)}
+          className={'riva-mode' + (on ? ' is-on' : '')}>
+          {tile(row.icon, on)}
+          {text(row.label, row.summary)}
+          <span className="riva-mode-trail riva-mode-check" aria-hidden="true">
+            {on ? <Svg w={15} sw={2.8}>{Icons.check}</Svg> : null}
+          </span>
+        </button>
+      </React.Fragment>
     );
   };
 
@@ -217,7 +170,7 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={'Kind of answer: ' + current.label}
+        aria-label={'Answer mode: ' + current.label}
         title={current.summary}
         onClick={() => (open ? setOpen(false) : show())}
         className="riva-modes-btn"
@@ -238,18 +191,12 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
 
       <AnimatePresence>
         {open && (
-          <motion.div key="menu" role="menu" aria-label={inFolder ? MODE_FOLDER.label : 'Kind of answer'} className="riva-modes-list"
+          <motion.div key="menu" role="menu" aria-label="Answer mode" className="riva-modes-list"
             initial={false} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: downward() ? -4 : 4, scale: 0.98, transition: { duration: 0.14, ease: EASE_EXIT } }}>
-            {!inFolder && <div className="riva-modes-title">Answer mode</div>}
-            {/* Keyed on the page so switching slides the new list in. */}
-            <div key={inFolder ? 'folder' : 'top'} className={'riva-modes-page' + (inFolder ? ' is-folder' : '')}>
+            <div className="riva-modes-title">What do you want to do?</div>
+            <div className="riva-modes-page">
               {rows.map((row, i) => renderRow(row, i))}
-            </div>
-            <div className="riva-modes-foot" aria-hidden="true">
-              <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
-              <span><kbd>Enter</kbd> choose</span>
-              <span><kbd>Esc</kbd> close</span>
             </div>
           </motion.div>
         )}
