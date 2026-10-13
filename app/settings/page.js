@@ -63,7 +63,7 @@ const ST_CSS = `
 .st-bg__canvas{display:block;width:100%;height:100%;}
 .st-root{position:relative;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 .st-main{flex:1;min-height:0;overflow:hidden;width:100%;max-width:1180px;margin:0 auto;padding:22px 28px 24px;box-sizing:border-box;display:flex;flex-direction:column;}
-.st-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start;}
+.st-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start;}
 .st-card{background:var(--rv-surface);border-radius:18px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -16px rgba(33,43,50,.2);}
 
 /* The ledger. One card, rows grouped by what a blank falls back to. */
@@ -568,100 +568,6 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <aside className="st-side">
-            <section className="st-card st-cost" aria-label="Cost">
-              <div>
-                <span className="st-cost__label">Cost per question</span>
-                <span className="st-cost__hint">{dirty ? 'with the models above, unsaved' : 'with the models above'}</span>
-              </div>
-              {estimate.measured ? (
-                <>
-                  <div className="st-cost__big">
-                    <span className={'st-cost__num' + (dirty ? ' is-dirty' : '')}>{formatCost(estimate.total)}</span>
-                    <span className="st-cost__unit">at list prices</span>
-                  </div>
-                  <p className="st-cost__foot">
-                    From the tokens the last {n(measured.turns)} question{measured.turns === 1 ? '' : 's'} really used, priced at each row's model.
-                    {estimate.missing.length ? ` Leaves out ${estimate.missing.map((r) => ROLE_NAME[r] || r).join(' and ')}, not run yet.` : ''}
-                    {estimate.unpriced.length ? ` Leaves out ${estimate.unpriced.map((r) => ROLE_NAME[r] || r).join(' and ')}, no published price.` : ''}
-                  </p>
-                </>
-              ) : (
-                <p className="st-cost__empty">
-                  Nothing measured on these models yet. Ask a few questions and the real cost appears here.
-                </p>
-              )}
-
-              {rolling && rolling.turns > 0 && (
-                <div className="st-split">
-                  <div>
-                    <span className="st-split__num">{rolling.costedTurns > 0 ? formatCost(rolling.avgCost) : '—'}</span>
-                    <span className="st-split__lbl">charged on average, last {n(rolling.turns)} question{rolling.turns === 1 ? '' : 's'}</span>
-                  </div>
-                  <div>
-                    <span className="st-split__num">{rolling.costedTurns > 0 ? formatCost(rolling.totalCost) : '—'}</span>
-                    <span className="st-split__lbl">
-                      charged in total{rolling.since ? ` since ${new Date(rolling.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
-                    </span>
-                  </div>
-                  <span className="st-split__lbl" style={s('grid-column:1 / -1;margin-top:0;')}>
-                    {n(rolling.avgInputTokens)} in{rolling.avgCachedTokens != null ? ` (${n(rolling.avgCachedTokens)} cached)` : ''} / {n(rolling.avgOutputTokens)} out per question
-                    {rolling.costedTurns > 0 && rolling.costedTurns < rolling.turns ? `. Charges known for ${n(rolling.costedTurns)} of them.` : ''}
-                  </span>
-                </div>
-              )}
-
-              {shownHistory.length > 0 && (
-                <>
-                  <table className="st-table">
-                    <thead>
-                      <tr>
-                        <th>Model</th>
-                        <th style={{ width: 64 }} title="Estimate at list prices">Est.</th>
-                        <th style={{ width: 64 }} title="What OpenRouter charged">Charged</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shownHistory.map((row) => (
-                        <tr key={row.model} className={row.inUse ? 'is-use' : ''} title={`${row.model}. ${n(row.turns)} question${row.turns === 1 ? '' : 's'}${row.inUse ? '. In use now' : ''}`}>
-                          <td>{row.inUse ? <span className="st-dot" aria-label="In use" /> : null}{row.model}</td>
-                          <td>{row.priced ? formatCost(row.cost) : '—'}</td>
-                          <td>{row.charged != null ? formatCost(row.charged) : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="st-table__foot">
-                    Per question, over the last {n(measured.window || 100)}. A green dot marks a model in use now.
-                    {history.length > HISTORY_ROWS ? ` Showing ${HISTORY_ROWS} of ${history.length} models.` : ''}
-                  </p>
-                </>
-              )}
-            </section>
-
-            {/* THIS COMPUTER, NOT THE PRACTICE. Everything on the left is saved
-                on the server and applies everywhere; this one is a cookie on
-                the machine it is set at, takes effect on the next question,
-                and needs no Save. */}
-            <section className="st-card st-local" aria-label="This computer">
-              <span style={s('min-width:0;')}>
-                <span className="st-local__title">Log questions asked on this computer</span>
-                <span className="st-local__text">
-                  {logging === false
-                    ? 'Off. Answers as usual, but nothing asked here goes into the statistics. Other computers are unaffected.'
-                    : 'On. Questions and answers from here appear in the statistics. Applies to this computer only.'}
-                </span>
-              </span>
-              <button type="button" role="switch" className="st-switch" aria-checked={logging !== false}
-                aria-label="Log questions asked on this computer" disabled={logging === null}
-                onClick={() => setLoggingHere(logging === false)} />
-            </section>
-
-            <nav className="st-card" aria-label="Related pages">
-              <Link href="/questions" className="st-more"><span style={s('flex:1;min-width:0;')}>Unanswered questions<small>What the assistant could not answer</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
-              <Link href="/feedback" className="st-more"><span style={s('flex:1;min-width:0;')}>Answer feedback<small>How answers were rated</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
-            </nav>
-          </aside>
         </div>
       </main>
     </div>
