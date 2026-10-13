@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.11` | 2026-10-13 | fix | `d97c03c` | fix: simplify the Ask page's answer mode menu |
+| `6.89.10` | 2026-10-13 | chore | `146f878` | chore: bring package.json in line with the merged history |
 | `6.89.9` | 2026-10-13 | chore | `cede403` | chore: merge main's picker change into the docs branch |
 | `6.89.8` | 2026-10-13 | docs | `99ec9fd` | docs: record the design language, the lessons, and the research |
 | `6.89.7` | 2026-10-13 | docs | `9722934` | docs: record the background picker line removal in versions |
