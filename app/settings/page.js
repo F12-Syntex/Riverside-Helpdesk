@@ -28,7 +28,6 @@ import React from 'react';
 import { s, Svg, Icons } from '../_components/ui';
 import Link from 'next/link';
 import AppHeader from '../_components/AppHeader';
-import AnimatedGradient from '../_components/ThinkingGradient';
 import { buildIndex, fuzzySearch } from '@/lib/lookup/fuzzy';
 import { isModelSlug, splitProviders } from '@/lib/model-id.mjs';
 import { NO_LOG_COOKIE, NO_LOG_STORE_KEY } from '@/lib/questions/opt-out.mjs';
@@ -59,8 +58,6 @@ function rate(model) {
 
 // Every colour on the page is a token from globals.css; nothing new is named.
 const ST_CSS = `
-.st-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
-.st-bg__canvas{display:block;width:100%;height:100%;}
 .st-root{position:relative;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 .st-main{flex:1;min-height:0;overflow:hidden;width:100%;max-width:1180px;margin:0 auto;padding:22px 28px 24px;box-sizing:border-box;display:flex;flex-direction:column;}
 .st-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start;}
@@ -494,7 +491,6 @@ export default function SettingsPage() {
   return (
     <div className="st-root">
       <style data-st="1" dangerouslySetInnerHTML={{ __html: ST_CSS }} />
-      <div className="st-bg" aria-hidden="true"><AnimatedGradient always alpha={[0.12, 0.62, 0.42]} className="st-bg__canvas" /></div>
       <AppHeader subtitle="Settings" />
 
       <main className="st-main">

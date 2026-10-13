@@ -3,7 +3,7 @@ import { Analytics } from '@vercel/analytics/next';
 import Notifications from './_components/Notifications';
 import AuditTracker from './_components/AuditTracker';
 import AppShell from './_components/AppShell';
-import ShaderBackground from './_components/ShaderBackground';
+import PageBackground from './_components/PageBackground';
 import { THEME_BOOT } from './_components/theme';
 
 export const metadata = {
@@ -19,7 +19,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    // THEME_BOOT sets data-theme on <html> before React hydrates; React
+    // THEME_BOOT sets data-bg on <html> before React hydrates; React
     // does not render that attribute, so the difference is expected.
     <html lang="en-GB" suppressHydrationWarning>
       <head>
@@ -31,12 +31,12 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        {/* The light behind every page (ShaderBackground), then every page
+        {/* The light behind every page (PageBackground), then every page
             inside the shell: the bar across the top, the tools in the middle
             of it, and which build this is at the foot of its menu, the corner
             somebody is asked to read out when they have been told a change
             is live and cannot see it. */}
-        <ShaderBackground />
+        <PageBackground />
         <AppShell>{children}</AppShell>
         <Notifications />
         <AuditTracker />

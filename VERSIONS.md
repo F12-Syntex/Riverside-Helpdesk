@@ -18,6 +18,7 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.84.2` | 2026-10-13 | docs | `e0a3df8` | docs: record the working-state redo and settings column in versions |
 | `6.84.1` | 2026-10-13 | fix | `ef6ed4d` | fix: drop the right-hand column from settings so the page fits the screen |
 | `6.84.0` | 2026-10-13 | feat | `df5e659` | feat: redo the working state as a quiet inline line, no orb or card |
 | `6.83.1` | 2026-10-13 | docs | `60891f4` | docs: record the orb loader in versions |

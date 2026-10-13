@@ -4,7 +4,6 @@ import React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { s, Svg, Icons } from '../_components/ui';
 import AppHeader from '../_components/AppHeader';
-import AnimatedGradient from '../_components/ThinkingGradient';
 import { markRegisterWarm, registerIsWarm } from '../_components/contacts/ContactSearchLoader';
 import { highlightRanges } from '../../lib/lookup/fuzzy';
 import { prepareContacts, searchPrepared } from '../../lib/contacts.fuzzy.mjs';
@@ -35,8 +34,6 @@ import { prepareContacts, searchPrepared } from '../../lib/contacts.fuzzy.mjs';
 
 const EXAMPLES = ['Homerton', 'district nurse', 'dentist barnsley', 'E5 9BQ'];
 const EASE = [0.22, 1, 0.36, 1];
-// How much of each theme colour the background shows (as on Referrals).
-const BG_ALPHA = [0.12, 0.62, 0.42];
 
 const SEARCH_X = (<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /><path d="m8.5 8.5 5 5" /><path d="m13.5 8.5-5 5" /></>);
 const MAIL = (<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>);
@@ -49,9 +46,6 @@ const LK_CSS = `
    that is as tall as what is in it (and scrolls inside itself past the
    room the screen leaves). */
 .lk-page{position:relative;height:100%;overflow:hidden;display:flex;flex-direction:column;}
-.lk-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
-.lk-bg__canvas{display:block;width:100%;height:100%;animation:lk-bg-in 1.2s ease both;}
-@keyframes lk-bg-in{from{opacity:0;}to{opacity:1;}}
 .lk{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:688px;margin:0 auto;padding:clamp(20px,11vh,140px) 24px 24px;}
 .lk > *{flex:none;}
 .lk > .lk-cardwrap{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;}
@@ -212,7 +206,7 @@ textarea.lk-text{height:auto;min-height:64px;padding:10px 12px;resize:vertical;l
   .lk-form__body,.lk-form__foot{padding-left:16px;padding-right:16px;}
 }
 @media (prefers-reduced-motion:reduce){
-  .lk,.lk-skel,.lk-cqc__chev,.lk-bg__canvas{transition:none !important;animation:none !important;}
+  .lk,.lk-skel,.lk-cqc__chev{transition:none !important;animation:none !important;}
 }
 `;
 
@@ -696,7 +690,6 @@ export default function Page() {
   return (
     <div className="lk-page riva-page-fill">
       <style data-lk="1" dangerouslySetInnerHTML={{ __html: LK_CSS }} />
-      <div className="lk-bg" aria-hidden="true"><AnimatedGradient always alpha={BG_ALPHA} className="lk-bg__canvas" /></div>
       <AppHeader subtitle="Contact numbers" />
 
       <main className="lk">

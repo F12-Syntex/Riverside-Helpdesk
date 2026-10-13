@@ -22,7 +22,6 @@ import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
 import AskIntro from './AskIntro';
-import AnimatedGradient from './ThinkingGradient';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
 import PatientDataModal from './PatientDataModal';
@@ -1545,8 +1544,6 @@ class RiversidePracticeQA extends React.Component {
         // Set through the style object rather than s(), which would camel-case
         // the custom property out of existence.
         style={{ ...s('position:relative;display:flex;flex-direction:column;height:100vh;min-height:100vh;'), '--riva-dock-attached': v.dockAttached }}>
-        {/* The same animated light as Referrals and Contacts. */}
-        <div className="qa-bg" aria-hidden="true"><AnimatedGradient always alpha={[0.12, 0.62, 0.42]} className="qa-bg__canvas" /></div>
 
 
 

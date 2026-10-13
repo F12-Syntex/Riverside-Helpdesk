@@ -1,5 +1,10 @@
 html, body { margin: 0; height: 100%; }
-html { scrollbar-gutter: stable; }
+/* No scrollbar gutter on the window. The window never scrolls — the page
+   scrolls inside the shell (.riva-shell-body) — so a reserved gutter was
+   only ever a strip down the right-hand edge where the background could
+   not reach, showing the white of the body behind it. The root is painted
+   the page's own colour too, so nothing at an edge is ever white. */
+html { background: #f8fafc; }
 
 /* ------------------------------------------------------------------ *
  * The scheme, in one place.
@@ -834,14 +839,11 @@ body { overflow-x: hidden; }
 
 /* ---- the light -------------------------------------------------- */
 
-/* The theme's three colours, for everything CSS draws in them. Kept in
-   step with THEMES in app/_components/theme.js, which hands the same
-   colours to the shader. */
-[data-theme="sky"] { --rv-sky-a: #41b6e6; --rv-sky-b: #005eb8; --rv-sky-c: #8fd3f4; }
-[data-theme="aurora"] { --rv-sky-a: #41b6e6; --rv-sky-b: #00a499; --rv-sky-c: #8f78f5; }
-[data-theme="dusk"] { --rv-sky-a: #8f78f5; --rv-sky-b: #f59ac2; --rv-sky-c: #41b6e6; }
-[data-theme="meadow"] { --rv-sky-a: #00a499; --rv-sky-b: #78be20; --rv-sky-c: #41b6e6; }
-:root:not([data-theme]), [data-theme="mist"] { --rv-sky-a: #8fa6b8; --rv-sky-b: #c3d1dc; --rv-sky-c: #7fa7c9; }
+/* Mist's three colours, for everything CSS draws in them. The colours
+   no longer change with the theme — a theme is now which background is
+   drawn (app/_components/theme.js) — so they are set once, in step with
+   MIST there, which hands the same colours to the shaders. */
+:root { --rv-sky-a: #8fa6b8; --rv-sky-b: #c3d1dc; --rv-sky-c: #7fa7c9; }
 
 /* The still light — shown before the shader's first frame, and for good
    where there is no WebGL or less motion is wanted. */
@@ -853,7 +855,9 @@ body { overflow-x: hidden; }
     radial-gradient(50% 50% at 90% 92%, color-mix(in srgb, var(--rv-sky-c) 22%, transparent), transparent 70%),
     #f8fafc;
 }
-.riva-sky-canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .9s ease; }
+.riva-sky-canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .3s ease; }
+/* The Still background is this light alone. */
+html[data-bg="still"] .riva-sky-canvas { opacity: 0 !important; }
 
 /* The swirl of colour that turns over the light while an answer is worked
    out (ThinkingGradient.jsx, after the 21st.dev "Animated gradient"). Gone
@@ -1048,30 +1052,32 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 
 /* ---- the theme picker ------------------------------------------- */
 
-/* The swatch in the bar, and a short list under it: each theme a small
-   window onto its colours, its name, and a tick on the one in use. */
+/* The swatch in the bar, and the backgrounds under it: a grid of tiles,
+   each a still of the background itself (drawn by its own shader, see
+   ThemePicker.jsx), its name and where it came from, with a tick on the
+   one in use. The colours are always Mist. */
 .riva-theme { position: relative; display: flex; }
 .riva-theme-dot {
   width: 18px; height: 18px; border-radius: 50%;
   box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(33,43,50,.1), 0 2px 6px rgba(33,43,50,.18);
   transition: transform .35s cubic-bezier(.34,1.56,.64,1);
 }
-.riva-theme-btn:hover .riva-theme-dot, .riva-theme-btn.is-on .riva-theme-dot { transform: scale(1.1) rotate(30deg); }
+.riva-theme-btn:hover .riva-theme-dot, .riva-theme-btn.is-on .riva-theme-dot { transform: scale(1.1); }
 .riva-theme-pop {
   position: absolute; right: 0; top: calc(100% + 10px); z-index: 70;
-  width: 268px; padding: 6px;
-  background: #fff; border-radius: 18px;
+  width: 356px; padding: 8px;
+  background: #fff; border-radius: 22px;
   box-shadow: 0 0 0 1px rgba(33,43,50,.06), 0 8px 18px -6px rgba(33,43,50,.12), 0 28px 56px -16px rgba(0,48,135,.24);
   transform-origin: top right;
   animation: rivaPopDown .22s cubic-bezier(.22,1,.36,1) both;
 }
-.riva-theme-head { padding: 10px 12px 10px; }
+.riva-theme-head { padding: 8px 10px 12px; }
 .riva-theme-title { font-size: 14.5px; font-weight: 700; color: var(--rv-ink); }
 .riva-theme-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--rv-ink-3); }
-.riva-theme-list { display: flex; flex-direction: column; gap: 2px; }
+.riva-theme-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .riva-theme-opt {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  height: 46px; padding: 0 12px 0 7px; border: none; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; min-width: 0;
+  padding: 6px 6px 9px; border: none; border-radius: 16px;
   background: none; font: inherit; text-align: left; cursor: pointer;
   transition: background-color .14s ease;
   animation: rivaThemeIn .3s cubic-bezier(.22,1,.36,1) both;
@@ -1081,17 +1087,31 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 .riva-theme-opt.is-on { background: var(--rv-accent-dim); }
 .riva-theme-opt:focus-visible { outline: 2px solid var(--rv-accent); outline-offset: -2px; }
 .riva-theme-preview {
-  flex: none; width: 46px; height: 32px; border-radius: 9px;
+  position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 11px;
+  background: center / cover no-repeat #f8fafc;
   box-shadow: inset 0 0 0 1px rgba(33,43,50,.08);
-  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease;
 }
-.riva-theme-opt:hover .riva-theme-preview { transform: scale(1.05); }
-.riva-theme-label { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--rv-ink); }
+/* Still, and every tile before the stills are drawn or without WebGL:
+   the CSS light the Still background is drawn with. */
+.riva-theme-preview.is-css {
+  background:
+    radial-gradient(60% 80% at 10% 18%, color-mix(in srgb, var(--rv-sky-a) 34%, transparent), transparent 70%),
+    radial-gradient(60% 80% at 92% 10%, color-mix(in srgb, var(--rv-sky-b) 40%, transparent), transparent 70%),
+    radial-gradient(70% 80% at 88% 96%, color-mix(in srgb, var(--rv-sky-c) 30%, transparent), transparent 70%),
+    #f8fafc;
+}
+.riva-theme-opt:hover .riva-theme-preview { transform: scale(1.02); }
+.riva-theme-opt.is-on .riva-theme-preview { box-shadow: inset 0 0 0 1px rgba(33,43,50,.08), 0 0 0 2px var(--rv-accent); }
+.riva-theme-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 0 4px; }
+.riva-theme-label { font-size: 14px; font-weight: 650; color: var(--rv-ink); }
 .riva-theme-opt.is-on .riva-theme-label { color: var(--rv-accent-hi); }
+.riva-theme-credit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 500; color: var(--rv-ink-3); }
 .riva-theme-check {
-  flex: none; display: flex; align-items: center; justify-content: center;
+  position: absolute; right: 7px; top: 7px;
+  display: flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 50%;
-  background: var(--rv-accent); color: #fff;
+  background: var(--rv-accent); color: #fff; box-shadow: 0 2px 6px rgba(0,48,135,.3);
   opacity: 0; transform: scale(.5);
   transition: opacity .18s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
 }
@@ -1168,10 +1188,6 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
    above it, which read as a cut-off edge. The card is the surface. */
 .riva-composer-input:focus { background: transparent !important; border: none !important; }
 .riva-composer-bar { flex: none; display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 10px 0 14px; border-top: 1px solid #eef1f3; }
-.qa-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--rv-page); }
-.qa-bg__canvas { display: block; width: 100%; height: 100%; animation: qa-bg-in 1.2s ease both; }
-@keyframes qa-bg-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .qa-bg__canvas { animation: none; } }
 .riva-composer-bar .riva-dock-send { margin-left: auto; box-shadow: 0 6px 16px rgba(0,94,184,.28); }
 .riva-modes-label { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
@@ -1863,5 +1879,4 @@ html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); 
   .riva-dock-center > .riva-dock-inner { transform: none; }
   /* Rows are a thumb's height. */
   .riva-menu-row { min-height: 48px; }
-  .riva-theme-opt { height: 52px; }
 }

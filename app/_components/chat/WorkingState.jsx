@@ -23,7 +23,7 @@ import TextShimmer from './TextShimmer';
  * and the one in hand shimmers. It never moves for a clock.
  *
  * And the page behind joins in: while this card is up, <html data-busy>
- * is set, and the light (ShaderBackground) quickens and gathers.
+ * is set, and the light (PageBackground) quickens and gathers.
  * ------------------------------------------------------------------ */
 
 // Holds <html data-busy> for as long as any working card is on screen.

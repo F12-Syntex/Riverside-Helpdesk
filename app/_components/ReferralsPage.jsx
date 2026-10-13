@@ -6,7 +6,6 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { Svg, Icons } from './ui';
 import AppHeader from './AppHeader';
 import TemplateView from './templates/TemplateView';
-import AnimatedGradient from './ThinkingGradient';
 import { filterReferrals } from '../../lib/search/referrals.mjs';
 import {
   closesOnSearch, findReferral, historyStep, keyAction, readReferralUrl, referralUrl, startHighlight,
@@ -47,21 +46,14 @@ import {
 const EASE = [0.22, 1, 0.36, 1];
 const DEBOUNCE_MS = 250;
 const SEARCH_X = (<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /><path d="m8.5 8.5 5 5" /><path d="m13.5 8.5-5 5" /></>);
-// How much of each theme colour the background shows, light to strong.
-const BG_ALPHA = [0.12, 0.62, 0.42];
 const SR_ONLY = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
 
 const RF_CSS = `
 /* The page is the screen under the bar, and never scrolls: the card takes
    what is left of the column, and scrolls inside itself past that. */
 .rf-page{position:relative;height:100%;overflow:hidden;display:flex;flex-direction:column;}
-/* The page's own background: the animated gradient (21st.dev, tom_ui) in
-   the theme's colours, full-screen and always turning, over the page's
-   near-white. It covers the light the other pages sit on. Behind the bar
-   and the content, inside the shell's stacking context (z-index -1). */
-.rf-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
-.rf-bg__canvas{display:block;width:100%;height:100%;animation:rf-bg-in 1.2s ease both;}
-@keyframes rf-bg-in{from{opacity:0;}to{opacity:1;}}
+/* No background of its own: the page sits on the light behind every page
+   (PageBackground), whichever the theme picker has chosen. */
 .rf-stage{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;--rf-drawer-w:min(560px,44vw);}
 .rf{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:688px;margin:0 auto;padding:clamp(20px,11vh,140px) 24px 24px;}
 .rf > *{flex:none;}
@@ -190,7 +182,7 @@ const RF_CSS = `
   .rf-doc__title{font-size:21px;}
 }
 @media (prefers-reduced-motion:reduce){
-  .rf-skel,.rf-box__ico.is-busy,.rf-bg__canvas{animation:none !important;}
+  .rf-skel,.rf-box__ico.is-busy{animation:none !important;}
   .rf-hl,.rf-stage,.rf-chev{transition:none !important;}
 }
 `;
@@ -580,7 +572,6 @@ export default function ReferralsPage() {
     <MotionConfig reducedMotion="user">
       <div className="rf-page riva-page-fill">
         <style data-rf="1" dangerouslySetInnerHTML={{ __html: RF_CSS }} />
-        <div className="rf-bg" aria-hidden="true"><AnimatedGradient always alpha={BG_ALPHA} className="rf-bg__canvas" /></div>
         <AppHeader subtitle="Referrals" />
 
         <div className={'rf-stage' + (openId ? ' is-open' : '')}>

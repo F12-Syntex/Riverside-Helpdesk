@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { themeById, readTheme, hexToRgb } from './theme';
+import { MIST, hexToRgb } from './theme';
 
 /* ------------------------------------------------------------------ *
  * ThinkingGradient — a soft swirl of colour over the page while an
@@ -9,9 +9,9 @@ import { themeById, readTheme, hexToRgb } from './theme';
  *
  * The 21st.dev "Animated gradient" (tom_ui): a field of noise folded
  * over itself a few times (the swirl), coloured from three stops. Here
- * the stops are the theme's three colours, two of them see-through, so
- * what shows is a faint wash of the theme slowly turning over the light
- * rather than a gradient filling the page.
+ * the stops are Mist's three colours (theme.js), two of them see-through,
+ * so what shows is a faint wash slowly turning over the light rather than
+ * a gradient filling the page.
  *
  * It is meant to be noticed only out of the corner of the eye: slow,
  * pale, and masked almost clear through the middle of the page where
@@ -27,11 +27,12 @@ import { themeById, readTheme, hexToRgb } from './theme';
  * hidden. No WebGL, or a lost context: nothing is drawn and the page
  * carries on without it. Reduced motion: one still frame fades in.
  *
- * AS A BACKGROUND
- * ---------------
- * `always` keeps it running whether or not anything is busy, and `alpha`
- * sets how much of each theme colour shows: the Referrals page draws it
- * full-screen, stronger, as the page's own background (`className`).
+ * THE SAME SHADER IS ALSO A BACKGROUND
+ * -----------------------------------
+ * Drawn full-screen and stronger, it is the Swirl background in the
+ * theme picker (backgrounds.js), which is the one the pages used to draw
+ * for themselves. `always` and `alpha` are what they drew it with; the
+ * overlay here uses neither.
  * ------------------------------------------------------------------ */
 
 // The swirl, after the component's own parameters (its "Plasma"-like
@@ -45,7 +46,7 @@ const SHAPE_SIZE = 0.3;
 const PROPORTION = 0.48;
 const FADE_MS = 2000; // keep drawing this long after the page stops being busy
 
-// How much of each theme colour shows, light to strong.
+// How much of each Mist colour shows, light to strong.
 const ALPHA = [0.0, 0.85, 0.45];
 
 const VERT = `
@@ -156,9 +157,8 @@ function build(gl) {
   };
 }
 
-function setTheme(gl, u, id, alpha) {
-  const theme = themeById(id);
-  theme.colors.forEach((hex, i) => gl.uniform4fv(u.uC[i], [...hexToRgb(hex), alpha[i]]));
+function setColours(gl, u, alpha) {
+  MIST.colors.forEach((hex, i) => gl.uniform4fv(u.uC[i], [...hexToRgb(hex), alpha[i]]));
 }
 
 export default function ThinkingGradient({ always = false, alpha = ALPHA, className = 'riva-glow' }) {
@@ -234,7 +234,7 @@ export default function ThinkingGradient({ always = false, alpha = ALPHA, classN
     function begin() {
       u = build(gl);
       if (!u) return;
-      setTheme(gl, u, readTheme(), tint);
+      setColours(gl, u, tint);
       if (showing()) run();
     }
 
@@ -248,17 +248,11 @@ export default function ThinkingGradient({ always = false, alpha = ALPHA, classN
       if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
       else if (showing()) run();
     }
-    function onTheme(e) {
-      if (!u) return;
-      setTheme(gl, u, e.detail, tint);
-      if (!raf) draw();
-    }
 
     const watch = new MutationObserver(onBusy);
     watch.observe(root, { attributes: true, attributeFilter: ['data-busy'] });
     canvas.addEventListener('webglcontextlost', onLost);
     canvas.addEventListener('webglcontextrestored', begin);
-    window.addEventListener('riva-theme', onTheme);
     document.addEventListener('visibilitychange', visibility);
     begin();
 
@@ -268,7 +262,6 @@ export default function ThinkingGradient({ always = false, alpha = ALPHA, classN
       watch.disconnect();
       canvas.removeEventListener('webglcontextlost', onLost);
       canvas.removeEventListener('webglcontextrestored', begin);
-      window.removeEventListener('riva-theme', onTheme);
       document.removeEventListener('visibilitychange', visibility);
     };
   }, []);
