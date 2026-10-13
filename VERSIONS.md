@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.75.0` | 2026-10-13 | feat | `efc804b` | feat: one pill for theme and menu, and a clearer theme picker |
+| `6.74.0` | 2026-10-13 | feat | `b21e717` | feat: rank the referrals search with TypeSafe's Jev |
+| `6.73.1` | 2026-10-13 | docs | `e823531` | docs: record the referrals redesign in versions |
 | `6.73.0` | 2026-10-13 | feat | `c5aadb4` | feat: put the animated gradient behind the referrals page |
 | `6.72.0` | 2026-10-13 | feat | `9a2c4b0` | feat: redesign the referrals page and its header |
 | `6.71.6` | 2026-10-13 | docs | `15212d3` | docs: record the quicker ask tour in versions |
