@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.84.1` | 2026-10-13 | fix | `ef6ed4d` | fix: drop the right-hand column from settings so the page fits the screen |
+| `6.84.0` | 2026-10-13 | feat | `df5e659` | feat: redo the working state as a quiet inline line, no orb or card |
+| `6.83.1` | 2026-10-13 | docs | `60891f4` | docs: record the orb loader in versions |
 | `6.83.0` | 2026-10-13 | feat | `a4c74f3` | feat: replace the working-state loader with a 21st.dev style orb |
 | `6.82.3` | 2026-10-13 | docs | `4212758` | docs: record the settings header removal in versions |
 | `6.82.2` | 2026-10-13 | style | `cb33f40` | style: drop the settings header text and page scroll |
