@@ -1322,7 +1322,7 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
    containing block of anything fixed inside it (the composer dock). */
 .is-flat .riva-topnav-item { transition: color .35s ease, background-color .15s ease; }
 @keyframes rivaPageIn { from { opacity: 0; } to { opacity: 1; } }
-.is-flat .riva-shell-body > * { animation: rivaPageIn .45s cubic-bezier(.22,1,.36,1) both; }
+.is-flat .riva-shell-body > * { animation: rivaPageIn .45s cubic-bezier(.22,1,.36,1) backwards; }
 @media (max-width: 600px) {
   .is-flat .riva-crumb-lead { left: 12px; }
 }
@@ -1754,4 +1754,132 @@ html[data-busy] .riva-glow { opacity: .32; visibility: visible; transition: opac
 @media (prefers-reduced-motion: reduce) {
   .riva-intro, .riva-intro-cap { animation: none; }
   .riva-intro-hole { transition: none; }
+}
+
+/* ---- popups: one look, after Apple sheets and alerts ------------------
+   Every dialog in the app (the Add a contact form, the guide and rota
+   sheets, the patient-data alert, the Questions and Notebook dialogs) is
+   the same object: a dimmed, blurred page behind; a frosted white panel
+   with a soft deep shadow that springs up from slightly small; the title
+   centred, a small round grey close at the corner; the actions in a row of
+   pills at the foot. Each family keeps its own class names (and its own
+   layout inside), and this one block gives them all the same chrome. On a
+   phone the panel is a bottom sheet with a grabber. `html body` is here to
+   win over the per-page style blocks that each define their own. */
+@keyframes apFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes apPop { from { opacity: 0; transform: scale(.94) translateY(8px); } to { opacity: 1; transform: none; } }
+
+html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay) {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 24px; overflow-y: auto;
+  background: rgba(20, 28, 36, .3);
+  -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
+  animation: apFade .22s ease both;
+}
+html body .ap-overlay { z-index: 80; }
+
+html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
+  position: relative; display: flex; flex-direction: column; max-height: calc(100vh - 48px);
+  background: rgba(255, 255, 255, .88);
+  -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+  border: none; border-radius: 22px; overflow: hidden;
+  box-shadow: 0 0 0 .5px rgba(0, 0, 0, .1), 0 2px 8px rgba(0, 0, 0, .06), 0 32px 80px -12px rgba(20, 28, 36, .4);
+  animation: apPop .4s cubic-bezier(.2, 1.15, .3, 1) both;
+}
+html body .ap-panel { width: 100%; max-width: 520px; }
+html body .ap-panel--sm { max-width: 400px; }
+
+/* The head: the title in the middle, the close at the corner. */
+html body :is(.lk-form__head, .rq-modal__head, .nbk-modal__head, .ap-head) {
+  position: relative; flex: none; display: flex; align-items: center; justify-content: center;
+  gap: 0; padding: 24px 60px 8px; text-align: center; border: none;
+}
+html body :is(.lk-form__title, .rq-modal__head h2, .nbk-modal__title, .ap-title) {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0; padding: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; line-height: 1.3; color: var(--rv-ink);
+}
+html body :is(.rq-modal__head p, .nbk-modal__sub, .ap-sub) {
+  margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--rv-ink-3);
+}
+html body :is(.lk-form__head .lk-iconbtn, .rq-x, .nbk-modal__head button, .ap-close) {
+  position: absolute; top: 14px; right: 14px; margin: 0; width: 30px; height: 30px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; background: rgba(60, 70, 80, .12); color: #5b6770; cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+html body :is(.lk-form__head .lk-iconbtn, .rq-x, .nbk-modal__head button, .ap-close):hover { background: rgba(60, 70, 80, .22); color: var(--rv-ink); }
+html body :is(.lk-form__head .lk-iconbtn, .rq-x, .nbk-modal__head button, .ap-close):focus-visible { outline: 2px solid var(--rv-accent); outline-offset: 2px; }
+
+html body :is(.lk-form__body, .rq-modal__body, .nbk-modal__body, .ap-body) { padding-left: 24px; padding-right: 24px; }
+html body .lk-form__body { flex: 1; min-height: 0; overflow-y: auto; }
+html body .ap-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-top: 8px; padding-bottom: 6px; font-size: 15px; line-height: 1.5; color: var(--rv-ink-2); }
+html body .ap-body p { margin: 0; }
+
+/* The foot: no rule, no tray, just pills in a row. */
+html body :is(.lk-form__foot, .rq-modal__foot, .nbk-modal__foot, .ap-foot) {
+  flex: none; display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px;
+  margin: 0; padding: 16px 24px 24px; border: none; background: none;
+}
+html body :is(.lk-form__foot, .ap-foot, .nbk-modal--sm .nbk-modal__foot) > * { flex: 1 1 0; justify-content: center; }
+html body .lk-form__foot .lk-grow { display: none; }
+html body .lk-form__foot .lk-btn--danger { flex: 0 0 auto; }
+
+/* Buttons in a dialog: tall, rounded, one solid primary. */
+html body :is(.lk-form__foot .lk-btn, .ap-btn, .nbk-modal__foot .nbk-btn) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 44px; padding: 0 20px; border: none; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: background-color .15s ease, transform .12s ease, opacity .15s ease;
+}
+html body :is(.lk-form__foot .lk-btn, .ap-btn, .nbk-modal__foot .nbk-btn):active:not(:disabled) { transform: scale(.98); }
+html body :is(.lk-form__foot .lk-btn--primary, .ap-btn--primary, .nbk-modal__foot .nbk-btn--primary) { background: var(--rv-accent); color: #fff; box-shadow: none; }
+html body :is(.lk-form__foot .lk-btn--primary, .ap-btn--primary, .nbk-modal__foot .nbk-btn--primary):hover:not(:disabled) { background: #0068c9; }
+html body :is(.lk-form__foot .lk-btn--ghost, .ap-btn--quiet, .nbk-modal__foot .nbk-btn--ghost, .nbk-modal__foot .nbk-btn--secondary) { background: rgba(60, 70, 80, .1); color: var(--rv-ink); box-shadow: none; border: none; }
+html body :is(.lk-form__foot .lk-btn--ghost, .ap-btn--quiet, .nbk-modal__foot .nbk-btn--ghost, .nbk-modal__foot .nbk-btn--secondary):hover:not(:disabled) { background: rgba(60, 70, 80, .18); color: var(--rv-ink); }
+html body :is(.ap-btn--danger, .nbk-modal__foot .nbk-btn--danger) { background: #d5281b; color: #fff; box-shadow: none; border: none; }
+html body :is(.ap-btn--danger, .nbk-modal__foot .nbk-btn--danger):hover:not(:disabled) { background: #b81f14; }
+html body .lk-form__foot .lk-btn--danger { background: none; color: #d5281b; }
+html body .lk-form__foot .lk-btn--danger:hover:not(:disabled) { background: rgba(213, 40, 27, .1); }
+html body :is(.ap-btn, .lk-btn):disabled { opacity: .5; cursor: default; }
+
+/* Fields: filled, borderless, a blue ring on focus. */
+html body :is(.lk-text, .ap-field) {
+  width: 100%; height: 44px; padding: 0 14px; border: none; border-radius: 11px;
+  background: rgba(60, 70, 80, .08); font: inherit; font-size: 15.5px; color: var(--rv-ink);
+  transition: background-color .15s ease, box-shadow .15s ease;
+}
+html body :is(textarea.lk-text, textarea.ap-field) { height: auto; min-height: 76px; padding: 11px 14px; resize: vertical; line-height: 1.45; }
+html body :is(.lk-text, .ap-field)::placeholder { color: var(--rv-ink-4); }
+html body :is(.lk-text, .ap-field):focus { outline: none; background: #fff; box-shadow: 0 0 0 3px rgba(0, 94, 184, .35); }
+html body .ap-label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; color: var(--rv-ink-2); }
+html body .ap-hint { font-weight: 500; color: var(--rv-ink-4); }
+html body .lk-field__label { font-size: 13px; font-weight: 600; }
+
+/* A note inside a dialog (a caution, a reason): a tinted rounded block. */
+html body .ap-note { padding: 12px 14px; border-radius: 12px; background: rgba(60, 70, 80, .07); font-size: 14px; line-height: 1.55; color: var(--rv-ink-2); }
+/* An alert: the icon over the title, in the middle (the patient-data stop). */
+html body .ap-alert__ico { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 50%; background: rgba(213, 40, 27, .12); color: #d5281b; }
+html body .ap-steps { display: flex; flex-direction: column; gap: 8px; }
+html body .ap-step { display: flex; align-items: center; gap: 8px; }
+html body .ap-step__n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: rgba(0, 94, 184, .12); color: var(--rv-accent); font-weight: 700; font-size: 13.5px; display: flex; align-items: center; justify-content: center; }
+html body .ap-link { align-self: flex-start; padding: 4px 2px; border: none; background: none; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--rv-accent); cursor: pointer; }
+html body .ap-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+html body .ap-x { flex: none; display: flex; padding: 6px; border: none; border-radius: 50%; background: none; color: var(--rv-ink-3); cursor: pointer; }
+html body .ap-x:hover { background: rgba(60, 70, 80, .1); color: var(--rv-ink); }
+
+@media (max-width: 600px) {
+  html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay) { align-items: flex-end; padding: 0; }
+  html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) {
+    max-width: none !important; width: 100%; max-height: 92vh; border-radius: 22px 22px 0 0;
+    padding-bottom: env(safe-area-inset-bottom); animation: rivaSheetUp .32s cubic-bezier(.2, .9, .3, 1) both;
+  }
+  /* The grabber. */
+  html body :is(.riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel)::before {
+    content: ""; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 999px; background: rgba(60, 70, 80, .22); z-index: 1;
+  }
+  html body :is(.lk-form__head, .rq-modal__head, .nbk-modal__head, .ap-head) { padding-top: 28px; }
+  html body :is(.lk-form__body, .rq-modal__body, .nbk-modal__body, .ap-body) { padding-left: 18px; padding-right: 18px; }
+  html body :is(.lk-form__foot, .rq-modal__foot, .nbk-modal__foot, .ap-foot) { padding: 14px 18px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body :is(.riva-modal-overlay, .lk-scrim, .rq-overlay, .nbk-overlay, .ap-overlay, .riva-sheet, .lk-form, .rq-modal, .nbk-modal, .ap-panel) { animation: none; }
 }

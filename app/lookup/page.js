@@ -184,6 +184,9 @@ textarea.lk-text{height:auto;min-height:64px;padding:10px 12px;resize:vertical;l
 .lk-err{margin:0;padding:9px 12px;border-radius:10px;background:#fdecea;color:#912018;font-size:13.5px;font-weight:550;}
 .lk-form__foot{display:flex;align-items:center;gap:8px;padding:16px 22px 20px;}
 .lk-form__foot .lk-grow{flex:1;}
+.lk-ask{flex:1 0 100%;margin:0 0 2px;text-align:center;font-size:14.5px;line-height:1.45;color:var(--rv-ink-2);}
+.lk-btn--remove{background:#d5281b;color:#fff;}
+.lk-btn--remove:hover:not(:disabled){background:#b81f14;}
 .lk-from{margin:0;padding:9px 12px;border-radius:10px;background:#fdf6e7;color:#6b4a0c;font-size:13px;line-height:1.4;}
 
 /* ---- the copied toast ---- */
@@ -437,6 +440,8 @@ function MultiField({ label, hint, values, onChange, placeholder, type = 'text',
 function ContactForm({ draft, categories, saving, error, onChange, onCancel, onSubmit, onRemove }) {
   const set = (key) => (e) => onChange({ ...draft, [key]: e.target.value });
   const first = React.useRef(null);
+  // Removing asks once, in the dialog itself, rather than in a browser box.
+  const [asking, setAsking] = React.useState(false);
   React.useEffect(() => { if (first.current) first.current.focus(); }, []);
   React.useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onCancel(); };
@@ -451,7 +456,7 @@ function ContactForm({ draft, categories, saving, error, onChange, onCancel, onS
         transition={{ duration: 0.25, ease: EASE }}
         onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
         <div className="lk-form__head">
-          <h2 id="lk-form-title" className="lk-form__title">{draft.id ? 'Edit contact' : 'Add a contact'}</h2>
+          <h2 id="lk-form-title" className="lk-form__title">{draft.id ? 'Edit contact' : 'New contact'}</h2>
           <button type="button" className="lk-iconbtn" onClick={onCancel} aria-label="Close"><Svg w={16} sw={2.4}>{Icons.close}</Svg></button>
         </div>
         <div className="lk-form__body">
@@ -480,14 +485,24 @@ function ContactForm({ draft, categories, saving, error, onChange, onCancel, onS
           {error ? <p className="lk-err" role="alert">{error}</p> : null}
         </div>
         <div className="lk-form__foot">
-          {draft.id && onRemove ? (
-            <button type="button" className="lk-btn lk-btn--danger lk-btn--sm" onClick={onRemove} disabled={saving}>
-              <Svg w={14} sw={2.2}>{Icons.trash}</Svg>Remove
-            </button>
-          ) : null}
-          <span className="lk-grow" />
-          <button type="button" className="lk-btn lk-btn--ghost" onClick={onCancel} disabled={saving}>Cancel</button>
-          <button type="submit" className="lk-btn lk-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save contact'}</button>
+          {asking ? (
+            <>
+              <p className="lk-ask">Remove {draft.label} from the practice’s contacts?</p>
+              <button type="button" className="lk-btn lk-btn--ghost" onClick={() => setAsking(false)} disabled={saving}>Keep it</button>
+              <button type="button" className="lk-btn lk-btn--remove" onClick={onRemove} disabled={saving}>{saving ? 'Removing…' : 'Remove'}</button>
+            </>
+          ) : (
+            <>
+              {draft.id && onRemove ? (
+                <button type="button" className="lk-btn lk-btn--danger lk-btn--sm" onClick={() => setAsking(true)} disabled={saving}>
+                  <Svg w={14} sw={2.2}>{Icons.trash}</Svg>Remove
+                </button>
+              ) : null}
+              <span className="lk-grow" />
+              <button type="button" className="lk-btn lk-btn--ghost" onClick={onCancel} disabled={saving}>Cancel</button>
+              <button type="submit" className="lk-btn lk-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save contact'}</button>
+            </>
+          )}
         </div>
       </motion.form>
     </motion.div>
@@ -631,7 +646,6 @@ export default function Page() {
   const remove = async () => {
     if (!editor || !editor.draft.id) return;
     const d = editor.draft;
-    if (!window.confirm('Remove ' + d.label + ' from the practice’s contacts?')) return;
     setEditor((ed) => ({ ...ed, saving: true, error: '' }));
     try {
       const r = await fetch('/api/contacts?id=' + encodeURIComponent(d.id), { method: 'DELETE' });
