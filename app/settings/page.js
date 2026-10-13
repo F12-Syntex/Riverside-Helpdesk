@@ -3,23 +3,29 @@
 /* ------------------------------------------------------------------ *
  * Settings — which model runs which job.
  *
- * One row per role, one field each. The field is the whole control: type in
- * it and it fuzzy-searches every model OpenRouter serves ("son 4" reaches
- * Claude Sonnet 4.6, "perp" reaches the Perplexity models), or type a full id
- * and use it as typed — including a routing variant like ":nitro", which is
- * part of the id rather than a setting of its own, and a provider pin like
- * "@google-vertex/europe", which serves the model from that provider and no
- * other (see lib/model-id.mjs).
+ * The jobs are not seven equal things, and the page no longer draws them as
+ * seven equal cards. They are a chain of inheritance: Reasoning is the
+ * practice's model; Fast and Web search fall back to it when blank; AccurX
+ * routing and Super speed fall back to Fast; Images and Answer check stand
+ * on their own because nothing above them can do their job. The ledger on
+ * the left draws exactly that — rows grouped by what they fall back to, with
+ * the resolved model written into every blank field — so a blank row never
+ * has to be puzzled over.
  *
- * Blank inherits: only the top row has to be set. The exceptions are Images,
- * which falls back to a vision model of its own rather than to the row above —
- * the row above may not see pictures — and Answer check, which is not a chat
- * model at all. Its field searches the decision models instead (OpenRouter's
- * chat list does not carry them) and still takes any id typed into it.
+ * Each field is the whole control: type in it and it fuzzy-searches every
+ * model OpenRouter serves ("son 4" reaches Claude Sonnet 4.6, "perp" reaches
+ * the Perplexity models), or type a full id and use it as typed — including
+ * a routing variant like ":nitro", which is part of the id, and a provider
+ * pin like "@google-vertex/europe", which serves the model from that provider
+ * and no other (see lib/model-id.mjs). Answer check searches the decision
+ * models instead, which OpenRouter's chat list does not carry.
+ *
+ * The right-hand column is the consequence of what is typed: the cost per
+ * question, re-priced live as the rows change and before anything is saved.
  * ------------------------------------------------------------------ */
 
 import React from 'react';
-import { s, Hover, Svg, Icons } from '../_components/ui';
+import { s, Svg, Icons } from '../_components/ui';
 import Link from 'next/link';
 import AppHeader from '../_components/AppHeader';
 import AnimatedGradient from '../_components/ThinkingGradient';
@@ -34,65 +40,149 @@ const LIST_LIMIT = 40;
 // the model itself, so it is saved as `model` rather than as an override.
 const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed', 'images', 'check'];
 
-// A model's advertised rate. Shown per row because it is the number people
-// compare models on — but it is not what a question costs, which is why the
-// measured estimate sits underneath.
-function rateLine(model) {
-  if (!model) return '';
+// Short names for the roles, used where one role has to be named inside
+// another's caption ("falls back to Fast").
+const ROLE_NAME = {
+  reasoning: 'Reasoning', fast: 'Fast', web: 'Web search', accurx: 'AccurX routing',
+  superSpeed: 'Super speed', images: 'Images', check: 'Answer check',
+};
+
+// A model's advertised rate, split so the two numbers line up down the page.
+function rate(model) {
+  if (!model) return null;
   const inRate = model.promptPerMillion;
   const outRate = model.completionPerMillion;
-  if (inRate == null && outRate == null) return 'price not published';
+  if (inRate == null && outRate == null) return null;
   const money = (v) => (v ? '$' + v : '$0');
-  return `${money(inRate)} in / ${money(outRate)} out per 1M tokens`;
+  return { in: money(inRate), out: money(outRate) };
 }
 
-const INPUT = 'width:100%;box-sizing:border-box;height:40px;padding:0 13px;font:inherit;font-size:14.5px;border:none;border-radius:11px;background:rgba(60,70,80,.08);color:#212b32;';
-
-// The page's own look, the same as Referrals, Contacts and Ask: the animated
-// light behind a centred heading, and white cards of settings.
+// Every colour on the page is a token from globals.css; nothing new is named.
 const ST_CSS = `
 .st-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--rv-page);}
 .st-bg__canvas{display:block;width:100%;height:100%;}
-.st-field{transition:background-color .15s ease,box-shadow .15s ease;}
-.st-field:focus{outline:none;background:#fff !important;box-shadow:0 0 0 3px rgba(0,94,184,.35);}
-.st-root{position:relative;height:100%;display:flex;flex-direction:column;}
-.st-main{flex:1;min-height:0;width:100%;max-width:1240px;margin:0 auto;padding:18px 28px 22px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;}
-.st-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex:none;}
-.st-h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.035em;line-height:1.05;color:var(--rv-ink);}
-.st-h1 em{font-style:normal;color:var(--rv-accent);}
-.st-lede{margin:6px 0 0;max-width:68ch;font-size:13.5px;line-height:1.45;color:var(--rv-ink-2);}
-.st-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr);gap:16px;}
-.st-models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:12px;min-height:0;}
-.st-side{display:flex;flex-direction:column;gap:12px;min-height:0;}
-.st-card{background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -14px rgba(33,43,50,.18);}
-.st-model{padding:13px 16px 12px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:0;}
-.st-model--wide{grid-column:1 / -1;}
-.st-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--rv-ink-3);}
-.st-save{display:flex;align-items:center;gap:12px;flex:none;}
-.st-msg{margin:0;font-size:13px;font-weight:600;color:#d5281b;text-align:right;max-width:46ch;line-height:1.35;}
-.st-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 20px;border:none;border-radius:999px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:background-color .15s ease,transform .12s ease,opacity .15s ease;}
+.st-root{position:relative;min-height:100%;display:flex;flex-direction:column;}
+.st-main{flex:1;width:100%;max-width:1180px;margin:0 auto;padding:22px 28px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;}
+.st-h1{margin:0;font-size:38px;font-weight:800;letter-spacing:-.035em;line-height:1.05;color:var(--rv-ink);}
+.st-lede{margin:8px 0 0;max-width:62ch;font-size:14.5px;line-height:1.5;color:var(--rv-ink-2);}
+.st-lede code{font-family:Consolas,Menlo,monospace;font-size:.9em;background:var(--rv-surface-3);border-radius:5px;padding:1px 5px;color:var(--rv-ink);}
+.st-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start;}
+.st-card{background:var(--rv-surface);border-radius:18px;box-shadow:0 1px 2px rgba(33,43,50,.04),0 14px 36px -16px rgba(33,43,50,.2);}
+
+/* The ledger. One card, rows grouped by what a blank falls back to. */
+.st-ledger{overflow:visible;}
+.st-group{padding:6px 0 10px;}
+.st-group + .st-group{border-top:1px solid var(--rv-line-soft);}
+.st-group__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 22px 4px;}
+.st-group__title{font-size:13px;font-weight:700;color:var(--rv-ink);}
+.st-group__note{font-size:12.5px;color:var(--rv-ink-3);text-align:right;}
+.st-row{display:grid;grid-template-columns:170px minmax(0,1fr) 150px;gap:0 18px;align-items:start;padding:10px 22px;position:relative;}
+.st-row--child{padding-left:22px;}
+.st-row--child .st-row__name::before{content:'';position:absolute;left:-14px;top:9px;width:9px;height:9px;border-left:1.5px solid var(--rv-line);border-bottom:1.5px solid var(--rv-line);border-radius:0 0 0 4px;}
+.st-row--child .st-row__name{margin-left:22px;position:relative;}
+.st-row__name{min-width:0;padding-top:9px;}
+.st-row__title{display:block;font-size:15px;font-weight:700;color:var(--rv-ink);line-height:1.2;}
+.st-row__job{display:block;font-size:12.5px;color:var(--rv-ink-2);line-height:1.4;margin-top:2px;}
+.st-row__field{min-width:0;}
+.st-row__caption{display:block;margin:5px 2px 0;font-size:12px;line-height:1.4;color:var(--rv-ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.st-row__caption b{font-weight:600;color:var(--rv-ink-2);}
+.st-row__rate{text-align:right;padding-top:7px;font-variant-numeric:tabular-nums;font-size:13px;color:var(--rv-ink);line-height:1.35;}
+.st-row__rate small{display:block;font-size:11.5px;color:var(--rv-ink-3);}
+.st-row__rate.is-empty{color:var(--rv-ink-4);font-size:12.5px;}
+
+/* The field. Rest is a filled control; focus is a white one with the NHS ring. */
+.st-field{width:100%;box-sizing:border-box;height:40px;padding:0 13px;font:inherit;font-size:14.5px;border:1px solid transparent;border-radius:10px;background:var(--rv-surface-3);color:var(--rv-ink);transition:background-color .15s ease,box-shadow .15s ease,border-color .15s ease;}
+.st-field::placeholder{color:var(--rv-ink-4);}
+.st-field:hover{background:#e9eef0;}
+.st-field:focus{outline:none;background:#fff;border-color:var(--rv-accent);box-shadow:0 0 0 3px rgba(0,94,184,.2);}
+.st-field.is-set{background:var(--rv-accent-dim);border-color:var(--rv-accent-line);}
+.st-field.is-set:focus{background:#fff;border-color:var(--rv-accent);}
+.st-field.is-bad,.st-field.is-bad:focus{border-color:#d5281b;box-shadow:0 0 0 3px rgba(213,40,27,.18);}
+.st-clear{position:absolute;right:6px;top:6px;width:28px;height:28px;border:none;border-radius:8px;background:transparent;color:var(--rv-ink-3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+.st-clear:hover{background:rgba(60,70,80,.1);color:var(--rv-ink);}
+.st-clear:focus-visible{outline:2px solid var(--rv-accent);outline-offset:1px;}
+.st-list{position:absolute;z-index:20;top:calc(100% + 6px);left:0;right:0;max-height:300px;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 0 0 .5px rgba(0,0,0,.08),0 16px 44px -10px rgba(33,43,50,.32);padding:6px;}
+.st-opt{display:block;width:100%;text-align:left;border:none;border-radius:9px;padding:8px 12px;font:inherit;cursor:pointer;background:transparent;}
+.st-opt.is-cursor,.st-opt:hover{background:var(--rv-accent-dim);}
+.st-opt__id{display:block;font-size:14px;color:var(--rv-ink);overflow-wrap:anywhere;}
+.st-opt__meta{display:block;font-size:12.5px;color:var(--rv-ink-2);overflow-wrap:anywhere;}
+
+/* The save bar: the ledger's footer, which wakes up when something changed. */
+.st-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 22px;border-top:1px solid var(--rv-line-soft);background:var(--rv-surface);border-radius:0 0 18px 18px;}
+.st-foot__msg{margin:0;font-size:13.5px;line-height:1.4;color:var(--rv-ink-2);min-width:0;}
+.st-foot__msg.is-error{color:#b81f14;font-weight:600;}
+.st-foot__msg.is-saved{color:var(--rv-green);font-weight:600;display:inline-flex;align-items:center;gap:6px;}
+.st-foot__actions{display:flex;align-items:center;gap:8px;flex:none;}
+.st-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 18px;border:none;border-radius:999px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;text-decoration:none;transition:background-color .15s ease,transform .12s ease,opacity .15s ease,color .15s ease;}
 .st-btn:active:not(:disabled){transform:scale(.98);}
 .st-btn:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
 .st-btn--primary{background:var(--rv-accent);color:#fff;}
-.st-btn--primary:hover:not(:disabled){background:#0068c9;}
-.st-btn--primary:disabled{background:rgba(60,70,80,.18);color:#fff;cursor:default;}
-.st-btn--on{background:rgba(0,127,59,.12);color:#006a32;}
-.st-btn--on:hover{background:rgba(0,127,59,.2);}
-.st-btn--off{background:rgba(213,40,27,.1);color:#b81f14;}
-.st-btn--off:hover{background:rgba(213,40,27,.18);}
-.st-more{display:flex;align-items:center;gap:10px;padding:11px 16px;color:var(--rv-ink);text-decoration:none;font-size:14.5px;font-weight:600;transition:background-color .15s ease;}
-.st-more + .st-more{border-top:1px solid #eef1f3;}
-.st-more:hover{background:#f4f7f9;}
+.st-btn--primary:hover:not(:disabled){background:var(--rv-accent-hi);}
+.st-btn--primary:disabled{background:rgba(60,70,80,.14);color:var(--rv-ink-4);cursor:default;}
+.st-btn--quiet{background:transparent;color:var(--rv-ink-2);}
+.st-btn--quiet:hover:not(:disabled){background:var(--rv-surface-3);color:var(--rv-ink);}
+.st-btn--quiet:disabled{opacity:0;pointer-events:none;}
+
+/* The right-hand column. */
+.st-side{display:flex;flex-direction:column;gap:14px;position:sticky;top:calc(var(--rv-top-h) + 10px);}
+.st-cost{padding:18px 20px 16px;}
+.st-cost__label{font-size:13px;font-weight:700;color:var(--rv-ink);}
+.st-cost__hint{font-size:12.5px;color:var(--rv-ink-3);margin-left:6px;}
+.st-cost__big{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-variant-numeric:tabular-nums;}
+.st-cost__num{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--rv-ink);transition:color .2s ease;}
+.st-cost__num.is-dirty{color:var(--rv-accent);}
+.st-cost__unit{font-size:13.5px;color:var(--rv-ink-2);}
+.st-cost__foot{margin:8px 0 0;font-size:12.5px;line-height:1.45;color:var(--rv-ink-3);}
+.st-cost__empty{margin:8px 0 0;font-size:13.5px;line-height:1.5;color:var(--rv-ink-2);}
+.st-split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--rv-line-soft);font-variant-numeric:tabular-nums;}
+.st-split__num{display:block;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--rv-ink);line-height:1.1;}
+.st-split__lbl{display:block;margin-top:3px;font-size:12px;line-height:1.4;color:var(--rv-ink-3);}
+.st-table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;margin-top:14px;padding-top:12px;border-top:1px solid var(--rv-line-soft);}
+.st-table thead th{font-size:11.5px;font-weight:600;color:var(--rv-ink-3);text-align:right;padding:12px 0 5px 8px;}
+.st-table thead th:first-child{text-align:left;padding-left:0;}
+.st-table td{padding:4px 0 4px 8px;text-align:right;color:var(--rv-ink);font-variant-numeric:tabular-nums;border-top:1px solid var(--rv-line-soft);}
+.st-table td:first-child{text-align:left;padding-left:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.st-table tr.is-use td{font-weight:600;}
+.st-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--rv-green);margin-right:7px;vertical-align:1px;}
+.st-table__foot{margin:8px 0 0;font-size:11.5px;color:var(--rv-ink-3);line-height:1.4;}
+
+.st-local{padding:16px 20px;display:flex;gap:14px;align-items:center;justify-content:space-between;}
+.st-local__title{display:block;font-size:14.5px;font-weight:700;color:var(--rv-ink);}
+.st-local__text{display:block;font-size:12.5px;color:var(--rv-ink-2);margin-top:3px;line-height:1.45;}
+.st-switch{position:relative;flex:none;width:46px;height:26px;border:none;border-radius:999px;background:var(--rv-line);cursor:pointer;transition:background-color .18s ease;padding:0;}
+.st-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .18s ease;}
+.st-switch[aria-checked="true"]{background:var(--rv-green);}
+.st-switch[aria-checked="true"]::after{transform:translateX(20px);}
+.st-switch:disabled{opacity:.5;cursor:default;}
+.st-switch:focus-visible{outline:2px solid var(--rv-accent);outline-offset:2px;}
+
+.st-more{display:flex;align-items:center;gap:10px;padding:12px 20px;color:var(--rv-ink);text-decoration:none;font-size:14.5px;font-weight:600;transition:background-color .15s ease;}
+.st-more:first-child{border-radius:18px 18px 0 0;}
+.st-more:last-child{border-radius:0 0 18px 18px;}
+.st-more + .st-more{border-top:1px solid var(--rv-line-soft);}
+.st-more:hover{background:var(--rv-surface-2);}
 .st-more small{display:block;font-size:12px;font-weight:400;color:var(--rv-ink-3);}
-@media (max-width:980px){
-.st-root{height:auto;min-height:100%;}
-.st-main{padding:16px 16px 40px;}
-.st-top{flex-direction:column;align-items:stretch;}
-.st-save{justify-content:space-between;}
-.st-msg{text-align:left;}
+.st-more svg{color:var(--rv-ink-3);flex:none;}
+
+@media (prefers-reduced-motion:reduce){.st-field,.st-btn,.st-switch,.st-switch::after,.st-cost__num{transition:none;}}
+@media (max-width:1040px){
 .st-grid{grid-template-columns:1fr;}
-.st-models{grid-template-columns:1fr;grid-auto-rows:auto;}
-.st-h1{font-size:28px;}
+.st-side{position:static;}
+.st-row{grid-template-columns:150px minmax(0,1fr) 130px;}
+}
+@media (max-width:700px){
+.st-main{padding:16px 16px 40px;gap:16px;}
+.st-h1{font-size:30px;}
+.st-row{grid-template-columns:1fr;gap:6px;padding:12px 18px;}
+.st-row--child .st-row__name{margin-left:0;}
+.st-row--child .st-row__name::before{display:none;}
+.st-row__name{padding-top:0;}
+.st-row__rate{text-align:left;padding-top:0;}
+.st-row__rate small{display:inline;margin-left:5px;}
+.st-group__head{padding:12px 18px 2px;flex-direction:column;align-items:flex-start;gap:2px;}
+.st-group__note{text-align:left;}
+.st-foot{flex-direction:column;align-items:stretch;}
+.st-foot__actions{justify-content:flex-end;}
 }
 `;
 
@@ -152,27 +242,33 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
         onChange={(e) => { onChange(e.target.value.trim()); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        className="st-field" style={s(INPUT + (bad ? 'box-shadow:0 0 0 2px #d5281b;' : ''))}
+        className={'st-field' + (typed ? ' is-set' : '') + (bad ? ' is-bad' : '')}
+        style={typed ? { paddingRight: 38 } : undefined}
       />
+      {typed && (
+        <button type="button" className="st-clear" aria-label={'Clear ' + label} title="Clear"
+          onMouseDown={(e) => e.preventDefault()} onClick={() => { onChange(''); setOpen(false); }}>
+          <Svg w={14} sw={2.2}>{Icons.close}</Svg>
+        </button>
+      )}
       {open && options.length > 0 && (
-        <div role="listbox" style={s('position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;background:#fff;border:none;border-radius:16px;box-shadow:0 0 0 .5px rgba(0,0,0,.08),0 12px 40px -8px rgba(33,43,50,.3);padding:6px;')}>
+        <div role="listbox" className="st-list">
           {options.map((id, i) => {
             // A pinned id is still that model — find it by the plain id, and
             // say where it will be served from.
             const { model: plain, providers } = splitProviders(id);
             const model = models.find((m) => m.id === plain) || models.find((m) => m.id === plain.split(':')[0]);
             return (
-              <Hover key={id} tag="button" type="button" role="option" aria-selected={i === cursor}
-                onMouseDown={(e) => e.preventDefault()} onClick={() => take(id)}
-                base={'display:block;width:100%;text-align:left;border:none;border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer;background:' + (i === cursor ? '#e8f1f8' : 'transparent') + ';'}
-                hover="background:#e8f1f8;">
-                <span style={s('display:block;font-size:14.5px;color:#212b32;overflow-wrap:anywhere;')}>{id}</span>
+              <button key={id} type="button" role="option" aria-selected={i === cursor}
+                className={'st-opt' + (i === cursor ? ' is-cursor' : '')}
+                onMouseDown={(e) => e.preventDefault()} onClick={() => take(id)}>
+                <span className="st-opt__id">{id}</span>
                 {model && model.name ? (
-                  <span style={s('display:block;font-size:12.5px;color:#4c6272;overflow-wrap:anywhere;')}>
-                    {model.name}{model.vision ? '' : ' · text only'}{providers.length ? ' · only via ' + providers.join(', ') : ''}
+                  <span className="st-opt__meta">
+                    {model.name}{model.vision ? '' : ', text only'}{providers.length ? ', only via ' + providers.join(', ') : ''}
                   </span>
                 ) : null}
-              </Hover>
+              </button>
             );
           })}
         </div>
@@ -181,22 +277,35 @@ function ModelField({ value, placeholder, models, index, onChange, label }) {
   );
 }
 
-function ModelCard({ name, job, rate, used, wide, children }) {
-  const line = [rate, used].filter(Boolean).join(' · ');
+// One line of the ledger. `caption` says what the field resolves to when it is
+// blank, or what the row measured when it is set; `price` is the resolved
+// model's advertised rate, right-aligned so the column reads down.
+function Row({ child, name, job, caption, price, children }) {
   return (
-    <div className={'st-card st-model' + (wide ? ' st-model--wide' : '')}>
-      <span style={s('display:flex;flex-wrap:wrap;gap:0 10px;align-items:baseline;min-width:0;')}>
-        <span style={s('font-size:15px;font-weight:700;color:#212b32;')}>{name}</span>
-        <span style={s('font-size:12.5px;color:#4c6272;')}>{job}</span>
-      </span>
-      <div style={s('min-width:0;')}>
-        {children}
-        {line && (
-          <span title={line} style={s('display:block;font-size:11.5px;color:#768692;margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>
-            {line}
-          </span>
-        )}
+    <div className={'st-row' + (child ? ' st-row--child' : '')}>
+      <div className="st-row__name">
+        <span className="st-row__title">{name}</span>
+        <span className="st-row__job">{job}</span>
       </div>
+      <div className="st-row__field">
+        {children}
+        {caption && <span className="st-row__caption" title={caption.title || undefined}>{caption.node}</span>}
+      </div>
+      <div className={'st-row__rate' + (price ? '' : ' is-empty')}>
+        {price ? (<>{price.in} in / {price.out} out<small>per 1M tokens</small></>) : 'price not published'}
+      </div>
+    </div>
+  );
+}
+
+function Group({ title, note, children }) {
+  return (
+    <div className="st-group">
+      <div className="st-group__head">
+        <span className="st-group__title">{title}</span>
+        {note && <span className="st-group__note">{note}</span>}
+      </div>
+      {children}
     </div>
   );
 }
@@ -278,14 +387,14 @@ export default function SettingsPage() {
 
   const valid = isModelSlug(model)
     && ROLE_KEYS.every((k) => !roleValue(k) || isModelSlug(roleValue(k)));
-  const dirty = !!setting && (model !== setting.model
-    || ROLE_KEYS.some((k) => roleValue(k) !== String((setting.roleStored || {})[k] || '')));
+  const changed = ROLE_KEYS.filter((k) => roleValue(k) !== String((setting && setting.roleStored || {})[k] || ''));
+  if (setting && model !== setting.model) changed.unshift('reasoning');
+  const dirty = !!setting && changed.length > 0;
 
   // What each role resolves to, and what that model charges. The catalogue is
   // keyed by base id, so a ":nitro" variant is priced as the model it decorates.
-  // AccurX routing inherits from FAST, not from the model above — see
-  // resolveRoles in lib/settings.js. Its placeholder says so, so an empty box
-  // never reads as "the reasoning model".
+  // AccurX routing and Super speed inherit from FAST, not from the model above —
+  // see resolveRoles in lib/settings.js — and the ledger groups them under it.
   const fastModel = roleValue('fast') || model;
   const resolved = {
     reasoning: model,
@@ -324,12 +433,23 @@ export default function SettingsPage() {
   // per model, so switching away does not erase a model's record and switching
   // back brings it straight back.
   const history = summariseModelCosts({ byModel: measured.byModel || {}, prices, roleModels: resolved });
-  const usedLine = (role) => {
-    // Only what this role used ON THE MODEL IT IS SET TO NOW. A model that has
-    // not run this job yet shows nothing rather than the last model's figures.
+
+  // The line under a field. Blank: where it falls back to, by name, and the
+  // model that is. Set: what this role measured on the model it is set to.
+  const caption = (role, inheritsFrom) => {
+    const own = role === 'reasoning' ? model : roleValue(role);
     const u = (measured.byRole[role] || {})[resolved[role]];
-    if (!u) return 'not measured on this model yet';
-    return `${u.inputTokens.toLocaleString()} in / ${u.outputTokens.toLocaleString()} out per question`;
+    const measuredText = u ? `${u.inputTokens.toLocaleString()} in / ${u.outputTokens.toLocaleString()} out per question` : 'not measured on this model yet';
+    if (!own) {
+      const from = inheritsFrom ? ROLE_NAME[inheritsFrom] : 'its own default';
+      return {
+        title: `${resolved[role] || ''}. ${measuredText}`,
+        node: inheritsFrom
+          ? (<>Blank, so it uses <b>{from}</b>{resolved[role] ? <>, {resolved[role]}</> : null}</>)
+          : (<>Blank, so it uses <b>{resolved[role] || 'the default'}</b></>),
+      };
+    }
+    return { title: measuredText, node: measuredText };
   };
 
   async function save() {
@@ -347,7 +467,7 @@ export default function SettingsPage() {
       setSetting(data);
       setModel(data.model);
       setRoles(data.roleStored || {});
-      setNote('Saved.');
+      setNote('Saved. Every page uses the new models from the next question.');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -355,8 +475,25 @@ export default function SettingsPage() {
     }
   }
 
-  const HISTORY_ROWS = 4;
+  function discard() {
+    if (!setting) return;
+    setModel(setting.model);
+    setRoles(setting.roleStored || {});
+    setNote('');
+    setError('');
+  }
+
+  const HISTORY_ROWS = 5;
   const shownHistory = history.slice(0, HISTORY_ROWS);
+  const n = (v) => Number(v || 0).toLocaleString();
+
+  let footMsg = null;
+  if (error) footMsg = <p className="st-foot__msg is-error">{error}</p>;
+  else if (!valid) footMsg = <p className="st-foot__msg is-error">An id looks like vendor/model, with an optional :variant and @provider.</p>;
+  else if (note) footMsg = <p className="st-foot__msg is-saved"><Svg w={16} sw={2.4}>{Icons.check}</Svg>{note}</p>;
+  else if (dirty) footMsg = <p className="st-foot__msg">{changed.length === 1 ? ROLE_NAME[changed[0]] + ' changed' : changed.length + ' models changed'}. Nothing takes effect until you save.</p>;
+  else if (setting) footMsg = <p className="st-foot__msg">Saved for the whole practice. Changes apply from the next question asked on any computer.</p>;
+  else footMsg = <p className="st-foot__msg">Loading the current settings…</p>;
 
   return (
     <div className="st-root">
@@ -365,157 +502,153 @@ export default function SettingsPage() {
       <AppHeader subtitle="Settings" />
 
       <main className="st-main">
-        <div className="st-top">
-          <div style={s('min-width:0;')}>
-            <h1 className="st-h1">Practice <em>settings</em></h1>
-            <p className="st-lede">
-              Type to search, or paste an id. Blank inherits the Reasoning model. Add{' '}
-              <code>@provider</code> to pin where a model runs, e.g.{' '}
-              <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
-            </p>
-          </div>
-          <div className="st-save">
-            {error && <p className="st-msg">{error}</p>}
-            {!error && !valid && <p className="st-msg">An id looks like vendor/model, with an optional :variant and @provider.</p>}
-            {note && (
-              <span style={s('display:flex;gap:6px;align-items:center;font-size:14px;color:#007f3b;font-weight:600;')}>
-                <Svg w={16} stroke="#007f3b" sw={2.4}>{Icons.check}</Svg>{note}
-              </span>
-            )}
-            <button type="button" className="st-btn st-btn--primary" disabled={!dirty || !valid || saving} onClick={save}>
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
+        <div>
+          <h1 className="st-h1">Settings</h1>
+          <p className="st-lede">
+            Which model does each job. Type to search every model OpenRouter serves, or paste an id.
+            Leave a row blank and it uses the row it falls back to. Add <code>@provider</code> to pin
+            where a model runs, like <code>anthropic/claude-haiku-5.5@google-vertex/europe</code>.
+          </p>
         </div>
 
         <div className="st-grid">
-          <section className="st-models" aria-label="Models">
-            <ModelCard wide name="Reasoning" job="Decides and writes the answer" rate={rateLine(priceOf(resolved.reasoning))} used={usedLine('reasoning')}>
-              <ModelField
-                label="Reasoning model" value={model} models={models} index={index}
-                placeholder={setting ? setting.defaultModel : 'vendor/model'}
-                onChange={(v) => { setModel(v); setNote(''); }}
-              />
-            </ModelCard>
-            <ModelCard name="Fast" job="Reads, searches, background jobs" rate={rateLine(priceOf(resolved.fast))} used={usedLine('fast')}>
-              <ModelField
-                label="Fast model" value={roleValue('fast')} models={models} index={index}
-                placeholder={model || 'inherit'} onChange={(v) => setRole('fast', v)}
-              />
-            </ModelCard>
-            <ModelCard name="Web search" job="Searches the internet" rate={rateLine(priceOf(resolved.web))} used={usedLine('web')}>
-              <ModelField
-                label="Web search model" value={roleValue('web')} models={models} index={index}
-                placeholder={model || 'inherit'} onChange={(v) => setRole('web', v)}
-              />
-            </ModelCard>
-            {/* Inherits from Fast rather than from the model above, so leaving
-                it blank changes nothing; it is here so a practice CAN pay for a
-                better reader on the one decision about a patient. */}
-            <ModelCard name="AccurX routing" job="Says where a pasted /accurx goes" rate={rateLine(priceOf(resolved.accurx))} used={usedLine('accurx')}>
-              <ModelField
-                label="AccurX routing model" value={roleValue('accurx')} models={models} index={index}
-                placeholder={fastModel || 'inherit'} onChange={(v) => setRole('accurx', v)}
-              />
-            </ModelCard>
-            {/* The only row waited on with nothing on screen yet: it holds the
-                send while a message is checked for patient details, so it wants
-                the quickest model. Inherits from Fast, not from the model above. */}
-            <ModelCard name="Super speed" job="Checks a message for patient details" rate={rateLine(priceOf(resolved.superSpeed))} used={usedLine('superSpeed')}>
-              <ModelField
-                label="Super speed model" value={roleValue('superSpeed')} models={models} index={index}
-                placeholder={fastModel || 'inherit'} onChange={(v) => setRole('superSpeed', v)}
-              />
-            </ModelCard>
-            {/* Does not inherit: the model above may be text-only, so blank is a
-                small vision model named in the box. */}
-            <ModelCard name="Images" job="Reads any message with a picture" rate={rateLine(priceOf(resolved.images))} used={usedLine('images')}>
-              <ModelField
-                label="Images model" value={roleValue('images')} models={models} index={index}
-                placeholder={(setting && setting.defaultImagesModel) || 'vendor/model'} onChange={(v) => setRole('images', v)}
-              />
-            </ModelCard>
-            {/* Not a chat model: scores each Notebook answer before it is shown.
-                Its list is OpenRouter's decision models; any id can be typed. */}
-            <ModelCard name="Answer check" job="Checks a Notebook answer fits the question" rate={rateLine(priceOf(resolved.check))} used={usedLine('check')}>
-              <ModelField
-                label="Answer check model" value={roleValue('check')} models={checkModels} index={checkIndex}
-                placeholder={(setting && setting.defaultCheckModel) || 'vendor/model'} onChange={(v) => setRole('check', v)}
-              />
-            </ModelCard>
+          <section className="st-card st-ledger" aria-label="Models">
+            <Group title="Answering" note="Blank rows here use Reasoning">
+              <Row name="Reasoning" job="Decides and writes the answer" caption={caption('reasoning', null)} price={rate(priceOf(resolved.reasoning))}>
+                <ModelField
+                  label="Reasoning model" value={model} models={models} index={index}
+                  placeholder={setting ? setting.defaultModel : 'vendor/model'}
+                  onChange={(v) => { setModel(v); setNote(''); }}
+                />
+              </Row>
+              <Row child name="Fast" job="Reads, searches, background jobs" caption={caption('fast', 'reasoning')} price={rate(priceOf(resolved.fast))}>
+                <ModelField
+                  label="Fast model" value={roleValue('fast')} models={models} index={index}
+                  placeholder={model || 'Same as Reasoning'} onChange={(v) => setRole('fast', v)}
+                />
+              </Row>
+              <Row child name="Web search" job="Searches the internet" caption={caption('web', 'reasoning')} price={rate(priceOf(resolved.web))}>
+                <ModelField
+                  label="Web search model" value={roleValue('web')} models={models} index={index}
+                  placeholder={model || 'Same as Reasoning'} onChange={(v) => setRole('web', v)}
+                />
+              </Row>
+            </Group>
+
+            {/* Both inherit from Fast rather than from Reasoning: each is a
+                quick, cheap read of one message, and the only one of the two
+                a person waits on with nothing on screen yet is Super speed. */}
+            <Group title="Messages" note="Blank rows here use Fast">
+              <Row child name="AccurX routing" job="Says where a pasted /accurx goes" caption={caption('accurx', 'fast')} price={rate(priceOf(resolved.accurx))}>
+                <ModelField
+                  label="AccurX routing model" value={roleValue('accurx')} models={models} index={index}
+                  placeholder={fastModel || 'Same as Fast'} onChange={(v) => setRole('accurx', v)}
+                />
+              </Row>
+              <Row child name="Super speed" job="Checks a message for patient details before it is sent" caption={caption('superSpeed', 'fast')} price={rate(priceOf(resolved.superSpeed))}>
+                <ModelField
+                  label="Super speed model" value={roleValue('superSpeed')} models={models} index={index}
+                  placeholder={fastModel || 'Same as Fast'} onChange={(v) => setRole('superSpeed', v)}
+                />
+              </Row>
+            </Group>
+
+            {/* Neither can borrow from above: Reasoning may be text-only, and
+                no chat model can stand in for a decision model. */}
+            <Group title="On their own" note="Blank rows here use a default of their own">
+              <Row name="Images" job="Reads any message with a picture" caption={caption('images', null)} price={rate(priceOf(resolved.images))}>
+                <ModelField
+                  label="Images model" value={roleValue('images')} models={models} index={index}
+                  placeholder={(setting && setting.defaultImagesModel) || 'vendor/model'} onChange={(v) => setRole('images', v)}
+                />
+              </Row>
+              <Row name="Answer check" job="Scores each Notebook answer against the question" caption={caption('check', null)} price={rate(priceOf(resolved.check))}>
+                <ModelField
+                  label="Answer check model" value={roleValue('check')} models={checkModels} index={checkIndex}
+                  placeholder={(setting && setting.defaultCheckModel) || 'vendor/model'} onChange={(v) => setRole('check', v)}
+                />
+              </Row>
+            </Group>
+
+            <div className="st-foot">
+              {footMsg}
+              <div className="st-foot__actions">
+                <button type="button" className="st-btn st-btn--quiet" disabled={!dirty || saving} onClick={discard}>Discard</button>
+                <button type="button" className="st-btn st-btn--primary" disabled={!dirty || !valid || saving} onClick={save}>
+                  {saving ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </div>
           </section>
 
           <aside className="st-side">
-            <section className="st-card" style={s('padding:14px 16px;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;')}>
-              <div className="st-eyebrow">Cost</div>
-              <div style={s('font-variant-numeric:tabular-nums;')}>
-                {estimate.measured ? (
-                  <>
-                    <span style={s('font-size:26px;font-weight:800;letter-spacing:-.02em;color:#212b32;')}>{formatCost(estimate.total)}</span>
-                    <span style={s('font-size:12.5px;color:#4c6272;')}> per question</span>
-                    <span style={s('display:block;font-size:11.5px;color:#768692;margin-top:2px;line-height:1.4;')}>
-                      At list prices, over the last {measured.turns.toLocaleString()} question{measured.turns === 1 ? '' : 's'}
-                      {estimate.missing.length ? `, excluding ${estimate.missing.join(' and ')} (not run yet)` : ''}
-                      {estimate.unpriced.length ? `, excluding ${estimate.unpriced.join(' and ')} (no published price)` : ''}
-                    </span>
-                  </>
-                ) : (
-                  <span style={s('font-size:13px;color:#768692;line-height:1.45;')}>
-                    Not measured on these models yet. Ask a few questions and the real cost appears here.
-                  </span>
-                )}
+            <section className="st-card st-cost" aria-label="Cost">
+              <div>
+                <span className="st-cost__label">Cost per question</span>
+                <span className="st-cost__hint">{dirty ? 'with the models above, unsaved' : 'with the models above'}</span>
               </div>
+              {estimate.measured ? (
+                <>
+                  <div className="st-cost__big">
+                    <span className={'st-cost__num' + (dirty ? ' is-dirty' : '')}>{formatCost(estimate.total)}</span>
+                    <span className="st-cost__unit">at list prices</span>
+                  </div>
+                  <p className="st-cost__foot">
+                    From the tokens the last {n(measured.turns)} question{measured.turns === 1 ? '' : 's'} really used, priced at each row's model.
+                    {estimate.missing.length ? ` Leaves out ${estimate.missing.map((r) => ROLE_NAME[r] || r).join(' and ')}, not run yet.` : ''}
+                    {estimate.unpriced.length ? ` Leaves out ${estimate.unpriced.map((r) => ROLE_NAME[r] || r).join(' and ')}, no published price.` : ''}
+                  </p>
+                </>
+              ) : (
+                <p className="st-cost__empty">
+                  Nothing measured on these models yet. Ask a few questions and the real cost appears here.
+                </p>
+              )}
 
               {rolling && rolling.turns > 0 && (
-                <div style={s('border-top:1px solid #eef1f3;padding-top:10px;font-size:13px;color:#212b32;line-height:1.45;font-variant-numeric:tabular-nums;')}>
-                  {rolling.costedTurns > 0 ? (
-                    <>
-                      <strong>{formatCost(rolling.totalCost)}</strong> charged over the last {rolling.turns.toLocaleString()} question{rolling.turns === 1 ? '' : 's'}, <strong>{formatCost(rolling.avgCost)}</strong> on average
-                    </>
-                  ) : (
-                    <span style={s('color:#768692;')}>No charges recorded yet.</span>
-                  )}
-                  <span style={s('display:block;font-size:11.5px;color:#768692;')}>
-                    {rolling.avgInputTokens.toLocaleString()} in
-                    {rolling.avgCachedTokens != null ? ` (${rolling.avgCachedTokens.toLocaleString()} cached)` : ''}
-                    {' '}/ {rolling.avgOutputTokens.toLocaleString()} out per question
-                    {rolling.costedTurns > 0 && rolling.costedTurns < rolling.turns ? `; charges from ${rolling.costedTurns}` : ''}
-                    {rolling.since ? ` · since ${new Date(rolling.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                <div className="st-split">
+                  <div>
+                    <span className="st-split__num">{rolling.costedTurns > 0 ? formatCost(rolling.avgCost) : '—'}</span>
+                    <span className="st-split__lbl">charged on average, last {n(rolling.turns)} question{rolling.turns === 1 ? '' : 's'}</span>
+                  </div>
+                  <div>
+                    <span className="st-split__num">{rolling.costedTurns > 0 ? formatCost(rolling.totalCost) : '—'}</span>
+                    <span className="st-split__lbl">
+                      charged in total{rolling.since ? ` since ${new Date(rolling.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                    </span>
+                  </div>
+                  <span className="st-split__lbl" style={s('grid-column:1 / -1;margin-top:0;')}>
+                    {n(rolling.avgInputTokens)} in{rolling.avgCachedTokens != null ? ` (${n(rolling.avgCachedTokens)} cached)` : ''} / {n(rolling.avgOutputTokens)} out per question
+                    {rolling.costedTurns > 0 && rolling.costedTurns < rolling.turns ? `. Charges known for ${n(rolling.costedTurns)} of them.` : ''}
                   </span>
                 </div>
               )}
 
               {shownHistory.length > 0 && (
-                <div style={s('border-top:1px solid #eef1f3;padding-top:10px;min-height:0;')}>
-                  <table style={s('width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;')}>
+                <>
+                  <table className="st-table">
                     <thead>
-                      <tr style={s('font-size:11px;color:#768692;text-align:right;')}>
-                        <th style={s('padding:0 8px 3px 0;font-weight:600;text-align:left;')}>Model</th>
-                        <th style={s('width:62px;padding:0 8px 3px 0;font-weight:600;')} title="Estimate at list prices">Est.</th>
-                        <th style={s('width:62px;padding:0 0 3px;font-weight:600;')} title="What OpenRouter charged">Charged</th>
+                      <tr>
+                        <th>Model</th>
+                        <th style={{ width: 64 }} title="Estimate at list prices">Est.</th>
+                        <th style={{ width: 64 }} title="What OpenRouter charged">Charged</th>
                       </tr>
                     </thead>
                     <tbody>
                       {shownHistory.map((row) => (
-                        <tr key={row.model} title={`${row.model} · ${row.turns.toLocaleString()} question${row.turns === 1 ? '' : 's'}`}>
-                          <td style={s('padding:3px 8px 3px 0;color:#212b32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>
-                            {row.inUse ? <span style={s('margin-right:6px;font-size:10px;font-weight:700;border-radius:4px;padding:1px 5px;background:#eef7ee;color:#00532a;')}>IN USE</span> : null}
-                            {row.model}
-                          </td>
-                          <td style={s('padding:3px 8px 3px 0;text-align:right;color:#212b32;font-variant-numeric:tabular-nums;')}>
-                            {row.priced ? formatCost(row.cost) : '—'}
-                          </td>
-                          <td style={s('padding:3px 0;text-align:right;color:#212b32;font-variant-numeric:tabular-nums;')}>
-                            {row.charged != null ? formatCost(row.charged) : '—'}
-                          </td>
+                        <tr key={row.model} className={row.inUse ? 'is-use' : ''} title={`${row.model}. ${n(row.turns)} question${row.turns === 1 ? '' : 's'}${row.inUse ? '. In use now' : ''}`}>
+                          <td>{row.inUse ? <span className="st-dot" aria-label="In use" /> : null}{row.model}</td>
+                          <td>{row.priced ? formatCost(row.cost) : '—'}</td>
+                          <td>{row.charged != null ? formatCost(row.charged) : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <p style={s('margin:6px 0 0;font-size:11px;color:#768692;line-height:1.4;')}>
-                    {history.length > HISTORY_ROWS ? `Top ${HISTORY_ROWS} of ${history.length} models. ` : ''}Over the last {measured.window || 100} questions.
+                  <p className="st-table__foot">
+                    Per question, over the last {n(measured.window || 100)}. A green dot marks a model in use now.
+                    {history.length > HISTORY_ROWS ? ` Showing ${HISTORY_ROWS} of ${history.length} models.` : ''}
                   </p>
-                </div>
+                </>
               )}
             </section>
 
@@ -523,28 +656,24 @@ export default function SettingsPage() {
                 on the server and applies everywhere; this one is a cookie on
                 the machine it is set at, takes effect on the next question,
                 and needs no Save. */}
-            <section className="st-card" style={s('padding:14px 16px;flex:none;')}>
-              <div style={s('display:flex;gap:12px;align-items:center;justify-content:space-between;')}>
-                <span style={s('min-width:0;')}>
-                  <span className="st-eyebrow" style={s('display:block;margin-bottom:3px;')}>This computer only</span>
-                  <span style={s('display:block;font-size:14.5px;font-weight:600;color:#212b32;')}>Log questions asked here</span>
-                  <span style={s('display:block;font-size:12px;color:#4c6272;margin-top:2px;line-height:1.4;')}>
-                    {logging === false
-                      ? 'Off: answered as usual, but no record is kept.'
-                      : 'On: questions and answers appear in the statistics.'}
-                  </span>
+            <section className="st-card st-local" aria-label="This computer">
+              <span style={s('min-width:0;')}>
+                <span className="st-local__title">Log questions asked on this computer</span>
+                <span className="st-local__text">
+                  {logging === false
+                    ? 'Off. Answers as usual, but nothing asked here goes into the statistics. Other computers are unaffected.'
+                    : 'On. Questions and answers from here appear in the statistics. Applies to this computer only.'}
                 </span>
-                <button type="button" className={'st-btn ' + (logging === false ? 'st-btn--off' : 'st-btn--on')} style={{ flex: 'none' }} disabled={logging === null}
-                  onClick={() => setLoggingHere(logging === false)}>
-                  {logging === false ? 'Off' : 'On'}
-                </button>
-              </div>
+              </span>
+              <button type="button" role="switch" className="st-switch" aria-checked={logging !== false}
+                aria-label="Log questions asked on this computer" disabled={logging === null}
+                onClick={() => setLoggingHere(logging === false)} />
             </section>
 
-            <section className="st-card" style={s('flex:none;overflow:hidden;')}>
-              <Link href="/questions" className="st-more"><span style={s('flex:1;min-width:0;')}>Questions<small>What the assistant could not answer</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
+            <nav className="st-card" aria-label="Related pages">
+              <Link href="/questions" className="st-more"><span style={s('flex:1;min-width:0;')}>Unanswered questions<small>What the assistant could not answer</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
               <Link href="/feedback" className="st-more"><span style={s('flex:1;min-width:0;')}>Answer feedback<small>How answers were rated</small></span><Svg w={16} sw={2}>{Icons.chevronRight}</Svg></Link>
-            </section>
+            </nav>
           </aside>
         </div>
       </main>
