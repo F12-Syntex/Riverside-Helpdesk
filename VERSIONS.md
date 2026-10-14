@@ -18,6 +18,9 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.20` | 2026-10-15 | fix | `55b613e` | fix: flatten the notebook page title and its focus underline |
+| `6.89.19` | 2026-10-14 | chore | `827ed1a` | chore: strip the byte-order mark from package.json |
+| `6.89.18` | 2026-10-14 | docs | `725ab1d` | docs: record the patient-details screen removal in versions |
 | `6.89.17` | 2026-10-14 | refactor | `58835f0` | refactor: remove the patient-details screen from the send pipeline |
 | `6.89.16` | 2026-10-13 | docs | `c50776a` | docs: record the mode menu folder in versions |
 | `6.89.15` | 2026-10-13 | fix | `cf67dbc` | fix: move the lookups into a folder and size the mode menu to the field |
