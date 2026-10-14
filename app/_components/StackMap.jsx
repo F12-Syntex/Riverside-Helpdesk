@@ -175,7 +175,6 @@ function Layers() {
 
 const PIPE = [
   { t: 'Message', s: 'typed at /', c: P.dark, tag: '' },
-  { t: 'Patient-data screen', s: 'holds the send', c: P.red, tag: 'super-speed role' },
   { t: 'Redact identifiers', s: 'regex, no model', c: P.grey, tag: 'deterministic' },
   { t: 'Safety scan', s: 'red flags · NG12 · acuity', c: P.orange, tag: '0 model calls' },
   { t: 'Directory', s: 'a contact detail, verbatim', c: P.purple, tag: 'no model' },
@@ -193,7 +192,7 @@ function Turn() {
   });
   return (
     <svg viewBox="0 0 1200 372" width="100%" style={s('display:block;height:auto;')} role="img"
-      aria-label="A turn: message, patient-data screen, redaction, safety scan, directory, whole-Notebook answer, commands, answer check.">
+      aria-label="A turn: message, redaction, safety scan, directory, whole-Notebook answer, commands, answer check.">
       <defs><Arrow id="turnArrow" /></defs>
       {pos.map((p, i) => {
         const n = pos[i + 1]; if (!n) return null;
@@ -244,14 +243,13 @@ const ROLES = [
   { k: 'medication', u: 'Medication Check + web tool', m: 'openai/gpt-4.1-nano', f: 'env default', c: P.orange },
   { k: 'web', u: 'one open-internet search', m: 'inherits', f: 'medication → fast', c: P.light },
   { k: 'accurx', u: 'where a pasted request goes', m: 'inherits', f: 'fast', c: P.purple },
-  { k: 'superSpeed', u: 'the pre-send screen', m: 'inherits', f: 'fast', c: P.red },
 ];
 
 function Roles() {
   const W = 282, H = 104, GX = 18, GY = 16;
   return (
     <svg viewBox="0 0 1200 316" width="100%" style={s('display:block;height:auto;')} role="img"
-      aria-label="Eight model roles, their default models and what each falls back to.">
+      aria-label="Six model roles, their default models and what each falls back to.">
       {ROLES.map((r, i) => {
         const x = 16 + (i % 4) * (W + GX), y = 14 + Math.floor(i / 4) * (H + GY);
         const inherits = r.m === 'inherits';

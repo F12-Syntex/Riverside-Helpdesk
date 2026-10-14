@@ -35,7 +35,7 @@ It provides:
 | Instant lookup | `/lookup` | Finds a telephone number — practice directory, then the CQC register of every registered service in England, then reads web pages for the number. |
 | Signpost an AccurX request | `/signpost` | Reception pastes a patient's online-consultation text; returns who should pick it up and how urgently. **Care navigation only.** |
 | Reason for appointment | `/reason` | Rewrites a patient's own words into clinical shorthand for the clinician. Also available in the assistant as the `/accurx` command, which puts that line, and the booking notes reception needs, on the same card as where the patient goes. |
-| Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. Also available in the assistant as the **Coding** mode (the `/coding` command), which is the one mode the patient-data screen does not run on. |
+| Code a document | `/coding` | Turns a pasted medical document (or a screenshot of one) into a one-line filing title. Also available in the assistant as the **Coding** mode (the `/coding` command), which is the one mode the name-and-address redaction does not run on. |
 | Questions | `/questions` | The questions nobody has an answer for yet: the ones staff ask because the practice has not written the answer down, the ones asked about words on a Notebook page (with a link back to them), and — filed on their own, off the question log — the ones the assistant was asked and could not answer. Opens on the open ones one at a time, each with its context: the Notebook paragraph round the words (`questionContext`, only that paragraph is sent). |
 | Notebook | `/notebook` | The practice's own written procedures, in sections and pages, with file attachments. Read live by the assistant. Highlight words on a page to ask a question about them; the question and its answer are kept beside the words (and on `/questions`), never read by the assistant, until Format with AI writes the answer in. |
 | Medication check | `/medications` | General UK medicines information from public sources, cached. |
@@ -52,7 +52,7 @@ It provides:
 **The route registry is not the whole app.** `lib/routes.js` is what `/index`
 lists and what `lib/dpia.js` enumerates as live processing, and live
 surfaces are absent from it: the page `/feedback`, and the endpoints
-`POST /api/feedback`, `POST /api/screen` and `POST /api/attach`. All four
+`POST /api/feedback` and `POST /api/attach`. All three
 answer. `/api/feedback` is the one that matters for the assessment, because
 it stores question text (§7.1). §9.1 is the inventory taken from the filesystem
 rather than from the registry, and is the one to assess against.
@@ -346,7 +346,7 @@ tables were left in place. Reference data, no personal data.
 
 | Table | Purpose |
 | --- | --- |
-| `app_settings` | `key, value, updated_at`. One row per setting. The model roles: `ai_model` (reasoning), `ai_model_fast`, `ai_model_web`, `ai_model_accurx`, `ai_model_super_speed`, `ai_model_images`. Search has **no settings** — its sizes and windows are constants in `lib/search/`. Rows the removed router stored (`routing_enabled`, `routing_hit_cos`, `routing_ask_cos`, `routing_min_margin`) may still be present on an existing install; nothing reads them. No personal data; anyone who can reach `PUT /api/settings` can change all of them. |
+| `app_settings` | `key, value, updated_at`. One row per setting. The model roles: `ai_model` (reasoning), `ai_model_fast`, `ai_model_web`, `ai_model_accurx`, `ai_model_images`. Search has **no settings** — its sizes and windows are constants in `lib/search/`. Rows the removed router stored (`routing_enabled`, `routing_hit_cos`, `routing_ask_cos`, `routing_min_margin`) may still be present on an existing install; nothing reads them. No personal data; anyone who can reach `PUT /api/settings` can change all of them. |
 
 #### The audit content rule
 
@@ -642,7 +642,6 @@ what was typed.
 
 | Flow | Endpoint | What leaves the practice | Stored |
 | --- | --- | --- | --- |
-| Patient-data screen | `POST /api/screen` | The typed message, ≤4,000 chars, **after the same name-and-address redaction the send itself applies** — so the screen never sees more than `/api/agent` was already about to. Runs on the **Super speed** role before the message is sent. **Not on the Coding mode** (`checked: false` in `lib/commands.mjs`): a discharge summary identifies a patient by definition, so screening it would refuse the one thing that mode is for — the same reason an attached document is not screened either. **The name-and-address redaction does not run on it either**, in the browser or at `/api/agent`: one flag answers for both guards, so a letter pasted into that mode reaches the model as it was pasted. Like the standalone reception helpers, that paste carries the duty to remove identifiers first. | **Nothing.** No question log row, no audit entry, no cache — a screened message is not a turn, and a check that recorded every message somebody thought better of would be a worse record than the one it protects. Token counts only, in `ai_usage`. |
 | Signposting | `POST /api/signpost` | The pasted AccurX consultation text (≤20,000 chars) plus the practice's destinations (`lib/triage/destinations.mjs`), to OpenRouter. | **Nothing.** Not cached. Audit records the size only. |
 | Reason for appointment | `POST /api/reason` | The pasted consultation text (≤20,000 chars) to OpenRouter. | **Nothing.** Audit records the size only. |
 | Document coding | `POST /api/docfile` (and the `/coding` command on `/api/agent`) | Pasted document text or a screenshot, plus the "Document coding" Notebook section. | **Nothing.** Audit records the size only. |
@@ -684,7 +683,6 @@ never its text.
 | Endpoint | Methods | Postgres | OpenRouter | Blob | Open web | Audit content |
 | --- | --- | --- | --- | --- | --- | --- |
 | `/api/agent` | POST | yes — `notes`, `knowledge_*`, `question_log`, `open_questions` (only a turn it could not answer), `ai_usage` | yes — the prose answer over the whole Notebook, the answer check, each command's own call (`/accurx` reading, `/coding`, `/practice`) | no | no | recorded (≤400 chars) |
-| `/api/screen` | POST | yes — `ai_usage` | yes — superSpeed role | no | no | not described |
 | `/api/attach` | POST | no | **no** | no | no | not described |
 | `/api/signpost` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
 | `/api/reason` | POST | yes — `ai_usage` | yes | no | no | **guarded** |
@@ -764,21 +762,14 @@ changed at `/settings`, so it can be changed without a redeploy.
 | **fast** | `ai_model_fast` | Short background jobs nobody reads: claim extraction, summarising, query condensing. | `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **web** | `ai_model_web` | Searching the internet, and reading a page for a number. | `OPENROUTER_WEB_MODEL` → `OPENROUTER_MEDICATION_MODEL` → `OPENROUTER_ANALYSIS_MODEL` → reasoning |
 | **accurx** | `ai_model_accurx` | Reading a pasted `/accurx` request against the practice's own destinations (`lib/triage/destinations.mjs`) and its Notebook: one call, which names where it goes, writes the reason line and booking notes, and says whether the message reports somebody having already dealt with it. | `OPENROUTER_ACCURX_MODEL` → **fast** |
-| **superSpeed** | `ai_model_super_speed` | Checking a message for patient details **before it is sent**, and stopping it if there are any. One yes-or-no per message. | `OPENROUTER_SUPER_SPEED_MODEL` → **fast** |
 | **images** | `ai_model_images` | Any message with a picture attached — a screenshot of the repeat-medication screen to format for AccurX, a photo of a letter — whichever path it takes: a command or the Q&A answer (which still reads the whole Notebook). | `OPENROUTER_IMAGES_MODEL` → **its own default**, `DEFAULT_IMAGES_MODEL = mistralai/ministral-14b-2512` |
 | **check** ("Answer check") | `ai_model_check` | Scoring each Notebook answer before it is shown — does it answer the question? (§8 step 8) — and ranking the Referrals page's search, one question per referral. A **decision** model on OpenRouter's `api/alpha/decisions` endpoint, not a chat model; it writes nothing. | **its own default**, `DEFAULT_CHECK_MODEL = typesafe/jev-1.13`; no environment variable. Not in OpenRouter's chat catalogue, so `/settings` offers `DECISION_MODELS` for this row and takes any typed id. The `typesafe/jev-latest` alias was refused by the endpoint on 2026-10-10. |
 
-**The accurx and superSpeed roles inherit from *fast*, not from reasoning** —
-the only two that do, and for opposite reasons. `accurx` falls back to fast so
-that adding it changed nothing about what `/accurx` costs; the row exists so a
-practice *can* put a better model on the one decision in the app that is a
-judgement about a patient rather than reading or extraction. `superSpeed` does
-it because the reasoning model is the **wrong** default for it: that role holds
-the send while a message is screened, so an install that has chosen a large,
-careful model above would otherwise have put that model in front of every
-message anybody types. It is the only role a reader waits on with nothing on the
-screen yet, and it should be set to the quickest thing on the list rather than
-the cleverest.
+**The accurx role inherits from *fast*, not from reasoning** — the only one
+that does. It falls back to fast so that adding it changed nothing about what
+`/accurx` costs; the row exists so a practice *can* put a better model on the
+one decision in the app that is a judgement about a patient rather than reading
+or extraction.
 
 **The images role is the only one that does not inherit at all.** There
 used to be no vision role — whichever model was answering read pasted images —
@@ -1165,9 +1156,10 @@ should record explicitly:
     withdrawn, and keeps the retention decision as an open measure.
 12. **No automatic screening for patient data** in questions or notes. This is the
     single control that would move the patient-data risks off "High", and it is
-    listed as "to do". Neither guard that does exist — the name-and-address
-    redaction (`lib/safety/identifiers.mjs`) nor the screen (`POST /api/screen`)
-    — runs on the assistant's **Coding** mode, where a pasted letter about a
+    listed as "to do". (A pre-send model check, `POST /api/screen`, existed
+    and was removed.) The guard that does exist — the name-and-address
+    redaction (`lib/safety/identifiers.mjs`) — does not run on the assistant's
+    **Coding** mode, where a pasted letter about a
     patient is the input the mode asks for. That mode is therefore in the same
     position as the standalone reception helpers (`/coding`, `/signpost`,
     `/reason`): what is pasted reaches the provider as pasted, and removing

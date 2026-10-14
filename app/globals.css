@@ -2041,7 +2041,7 @@ html[data-bg="still"] .riva-glow { display: none; }
 
 /* ---- popups: one look, after Apple sheets and alerts ------------------
    Every dialog in the app (the Add a contact form, the guide and rota
-   sheets, the patient-data alert, the Questions and Notebook dialogs) is
+   sheets, the Questions and Notebook dialogs) is
    the same object: a dimmed, blurred page behind; a frosted white panel
    with a soft deep shadow that springs up from slightly small; the title
    centred, a small round grey close at the corner; the actions in a row of
@@ -2145,7 +2145,7 @@ html body .lk-field__label { font-size: 13px; font-weight: 600; }
 
 /* A note inside a dialog (a caution, a reason): a tinted rounded block. */
 html body .ap-note { padding: 12px 14px; border-radius: 12px; background: rgba(60, 70, 80, .07); font-size: 14px; line-height: 1.55; color: var(--rv-ink-2); }
-/* An alert: the icon over the title, in the middle (the patient-data stop). */
+/* An alert: the icon over the title, in the middle (the Notebook's alert dialogs). */
 html body .ap-alert__ico { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 50%; background: rgba(213, 40, 27, .12); color: #d5281b; }
 html body .ap-steps { display: flex; flex-direction: column; gap: 8px; }
 html body .ap-step { display: flex; align-items: center; gap: 8px; }

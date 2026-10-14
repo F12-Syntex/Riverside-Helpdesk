@@ -3,10 +3,10 @@
 /* ------------------------------------------------------------------ *
  * Settings — which model runs which job.
  *
- * The jobs are not seven equal things, and the page does not draw them as
- * seven equal cards. They are a chain of inheritance: Reasoning is the
+ * The jobs are not six equal things, and the page does not draw them as
+ * six equal cards. They are a chain of inheritance: Reasoning is the
  * practice's model; Fast and Web search fall back to it when blank; AccurX
- * routing and Super speed fall back to Fast; Images and Answer check stand
+ * routing falls back to Fast; Images and Answer check stand
  * on their own because nothing above them can do their job. The ledger
  * draws exactly that — rows grouped by what they fall back to, a blank
  * field showing the model it resolves to — so a blank row never has to be
@@ -57,13 +57,13 @@ const SAVED_MS = 4000;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'accurx', 'superSpeed', 'images', 'check'];
+const ROLE_KEYS = ['fast', 'web', 'accurx', 'images', 'check'];
 
 // Short names for the roles, used where one role has to be named inside
 // another's caption ("Blank, so it uses Fast").
 const ROLE_NAME = {
   reasoning: 'Reasoning', fast: 'Fast', web: 'Web search', accurx: 'AccurX routing',
-  superSpeed: 'Super speed', images: 'Images', check: 'Answer check',
+  images: 'Images', check: 'Answer check',
 };
 
 // The ledger, top to bottom. `from` is what a blank row falls back to (none:
@@ -77,14 +77,12 @@ const GROUPS = [
       { key: 'web', name: 'Web search', job: 'Searches the internet', from: 'reasoning', child: true },
     ],
   },
-  // Both inherit from Fast rather than from Reasoning: each is a quick, cheap
-  // read of one message, and the only one of the two a person waits on with
-  // nothing on screen yet is Super speed.
+  // Inherits from Fast rather than from Reasoning: a quick, cheap read of one
+  // message.
   {
     title: 'Messages', note: 'Blank rows here use Fast',
     rows: [
       { key: 'accurx', name: 'AccurX routing', job: 'Says where a pasted /accurx goes', from: 'fast', child: true },
-      { key: 'superSpeed', name: 'Super speed', job: 'Checks a message for patient details before it is sent', from: 'fast', child: true },
     ],
   },
   // Neither can borrow from above: Reasoning may be text-only, and no chat
@@ -562,7 +560,7 @@ export default function SettingsPage() {
   const shownInvalid = invalid.filter((k) => touched[k]);
   const blocked = invalid.length > 0;
 
-  // What each role resolves to. AccurX routing and Super speed inherit from
+  // What each role resolves to. AccurX routing inherits from
   // FAST, not from the model above — see resolveRoles in lib/settings.js — and
   // the ledger groups them under it. A row that holds something that is not an
   // id yet resolves to nothing, so no price or caption is drawn from it.
@@ -574,7 +572,6 @@ export default function SettingsPage() {
     fast: fastModel,
     web: own('web', reasoningModel),
     accurx: own('accurx', fastModel),
-    superSpeed: own('superSpeed', fastModel),
     // Images and Answer check fall back to defaults of their own rather than
     // to any row above. The defaults come from the server, so an empty box
     // shows what it actually resolves to.
@@ -625,7 +622,7 @@ export default function SettingsPage() {
   const placeholder = (k) => {
     if (k === 'reasoning') return 'vendor/model';
     if (k === 'fast' || k === 'web') return resolved.reasoning || 'Same as Reasoning';
-    if (k === 'accurx' || k === 'superSpeed') return resolved.fast || 'Same as Fast';
+    if (k === 'accurx') return resolved.fast || 'Same as Fast';
     if (k === 'images') return (setting && setting.defaultImagesModel) || 'vendor/model';
     return (setting && setting.defaultCheckModel) || 'vendor/model';
   };

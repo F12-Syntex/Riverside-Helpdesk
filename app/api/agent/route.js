@@ -863,9 +863,9 @@ export async function POST(request) {
               // is on the card, and every request the message made is listed
               // there with what happens to it.
               //
-              // THE PRIVACY GUARDS ARE NOT PART OF THIS. Identifier redaction and
-              // the patient-data screen run before anything is sent and are not
-              // clinical judgement: they are about what leaves the building.
+              // THE PRIVACY GUARD IS NOT PART OF THIS. Identifier redaction runs
+              // before anything is sent and is not clinical judgement: it is
+              // about what leaves the building.
               if (reading) scan = { items: [], complaint: '', routed: null, decomposed: false };
 
               // Where it goes comes back on the same values now, so renderCommand

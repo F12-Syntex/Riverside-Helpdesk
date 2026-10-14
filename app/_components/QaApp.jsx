@@ -8,7 +8,6 @@ import { VERDICTS } from '../../lib/feedback.mjs';
 import { commandByName, isMode, modePlaceholder, modePresets, checksPatientData, localCommand } from '../../lib/commands.mjs';
 import { spellAnswer } from '../../lib/spell.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
-import { kindLabel, patientDataMessage } from '../../lib/safety/patient-data.mjs';
 import { machineId } from '../../lib/audit/client';
 import { notebookHref } from '../../lib/notebook/links.mjs';
 import {
@@ -25,7 +24,6 @@ import ModeSwitch from './ModeSwitch';
 import AskIntro from './AskIntro';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
-import PatientDataModal from './PatientDataModal';
 import ContactsSheet from './ContactsSheet';
 import { plainText } from './chat/Rich';
 import { mdPlain } from './chat/Md';
@@ -178,12 +176,6 @@ class RiversidePracticeQA extends React.Component {
       // stays blank until it has (see ModeSwitch).
       modeReady: false,
       copiedNumber: '',
-      // The Super speed screen: `screening` while a message is being checked
-      // (the send is held, so the dock says so rather than looking dead), and
-      // `blocked` holding what was found once a message has been refused. Both
-      // are cleared the moment the reader touches the field again.
-      screening: false,
-      blocked: null,
       customGuides: [],
       // The practice directory, opened from the pill under the box.
       contactsOpen: false,
@@ -343,7 +335,6 @@ class RiversidePracticeQA extends React.Component {
       });
     });
     this.setState((state) => ({
-      screening: false,
       messages: state.messages.map((m, i) => (stopping.includes(i) && m.status === 'loading'
         ? { ...m, status: 'stopped', statusText: '', draft: '', steps: [], progress: null }
         : m)),
@@ -393,8 +384,6 @@ class RiversidePracticeQA extends React.Component {
       input: '',
       pendingImages: [],
       pendingDocs: [],
-      screening: false,
-      blocked: null,
       copiedNumber: '',
       copiedIdx: null,
       viewer: null,
@@ -634,58 +623,7 @@ class RiversidePracticeQA extends React.Component {
     return lines.join('\n');
   }
 
-  /**
-   * THE SCREEN THAT HOLDS THE SEND. See lib/safety/patient-data.mjs.
-   *
-   * The redactor above this takes out what it can recognise AND remove — a name
-   * behind a title, a postcode, a street address. What it cannot do anything
-   * about is what it cannot tell apart from ordinary text: an NHS number is ten
-   * digits and so is an order number, a date of birth is a date. Those are put
-   * to the Super speed model, and a message that has one does not go at all.
-   *
-   * The text handed over is the REDACTED text — what was about to be posted to
-   * /api/agent anyway — so screening a message costs nothing in exposure.
-   *
-   * Never throws and never blocks on its own account. A network that is away, a
-   * screen that is slow, an answer in a shape nobody expected: all of them come
-   * back "not blocked", and the message goes exactly as it did before this
-   * existed. A guard that fails closed is a guard that shuts the desk down.
-   */
-  async screen(text) {
-    const nothing = { blocked: false, kinds: [], message: '' };
-    if (!String(text || '').trim()) return nothing;
-    try {
-      const res = await fetch('/api/screen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) return nothing;
-      const data = await res.json();
-      if (!data || data.blocked !== true) return nothing;
-      // EVERY WORD ON THE BOX IS BUILT HERE, from the fixed list in
-      // lib/safety/patient-data.mjs, out of ids the server already validated
-      // against that same list. Nothing that arrived over the wire is rendered
-      // — which is what makes it impossible for the thing being refused to end
-      // up displayed in the refusal.
-      const ids = (Array.isArray(data.kinds) ? data.kinds : [])
-        .map((id) => String(id || ''))
-        .filter((id) => kindLabel(id));
-      return {
-        blocked: true,
-        kinds: ids.map((id) => ({ id, label: kindLabel(id) })),
-        message: patientDataMessage(ids),
-      };
-    } catch (e) {
-      return nothing;
-    }
-  }
-
   async ask(text) {
-    // A second Enter while the first message is still being screened would send
-    // the same words twice — once past the screen and once around it.
-    if (this.state.screening || this.state.blocked) return;
-
     // The armed mode says which card to render; the template goes up beside
     // the message. Read before a word of the message is edited, because it
     // decides whether the guards below run at all.
@@ -722,14 +660,6 @@ class RiversidePracticeQA extends React.Component {
       .map((d) => ({ name: d.name, text: d.text, truncated: d.truncated }));
     if (!t && !images.length && !attachments.length) return;
 
-    // THE SEND IS HELD HERE, and this is the only place in the app where a
-    // reader waits on a model with nothing on the screen yet. It runs after the
-    // redaction (so it screens what was going to be sent, not what was typed),
-    // and before a single word reaches the transcript — a message that is refused was never asked, so it must not
-    // appear to have been.
-    //
-    // Only the TYPED message is screened. A dropped document is the reader's
-    // own material and is very often a letter about a patient by definition.
     const question = t || (attachments.length
       ? 'Please read the attached ' + (attachments.length === 1 ? 'document' : 'documents') + ' and tell me what to do with it.'
       : 'Please look at the attached image.');
@@ -752,15 +682,6 @@ class RiversidePracticeQA extends React.Component {
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
     // they were reading an earlier one when they asked it.
-    // ON SCREEN FIRST, SENT SECOND.
-    //
-    // The patient-data screen used to be awaited HERE, before this line, so
-    // Enter did nothing at all for as long as that call took: the reader watched
-    // their own message not appear. The screen is still the last thing before
-    // anything leaves the browser — it is the request that waits, not the
-    // interface. What they typed is on screen the moment they press Enter, with
-    // the loading card under it, and a message the screen refuses is taken back
-    // off again below.
     // `mode` IS NOT CLEARED HERE, and it used to be. The kind of answer lasted
     // exactly one message; it now lasts until it is changed, because looking
     // something up is rarely a thing done once — see app/_components/ModeSwitch.jsx
@@ -783,42 +704,8 @@ class RiversidePracticeQA extends React.Component {
         at: Date.now(),
       };
     }
-    // Only the typed message is screened, and only when the mode it was sent
-    // under is checked at all. Marked in the same render that puts the
-    // question on screen, so the answer's working line opens on what is
-    // actually happening ("Checking for patient details") instead of
-    // claiming the documents are being read while they are not yet.
-    const screens = !!(t && checksPatientData(command));
-    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null, screening: screens }, async () => {
+    this.setState({ messages, input: '', pendingImages: [], pendingDocs: [], activeTurn: null }, () => {
       this.save();
-      // The conversation this question belongs to. The patient-data screen
-      // below is awaited, so Back can land in the middle of it; without this
-      // the refusal path would put the abandoned question back in the field.
-      const run = this.runId;
-
-      if (screens) {
-        const verdict = await this.screen(t);
-        if (this.runId !== run) return;
-        this.setState({ screening: false });
-        if (verdict.blocked) {
-          // Nothing was sent and nothing is kept. The two messages come back
-          // off the transcript — a message that was refused was never asked, so
-          // it must not be left looking as though it was — and `input` is put
-          // back holding what they typed, because the next thing they do is
-          // edit it.
-          this.setState((state) => ({
-            messages: state.messages.slice(0, aiIdx - 1),
-            input: t,
-            blocked: verdict,
-          }), () => this.save());
-          return;
-        }
-      }
-
-      if (this.runId !== run) return;
-      // Stopped while it was being screened: nothing goes.
-      const pending = this.state.messages[aiIdx];
-      if (!pending || pending.status !== 'loading') return;
       this.fetchAI(question, aiIdx);
     });
   }
@@ -885,7 +772,7 @@ class RiversidePracticeQA extends React.Component {
     if (isTestQuery(question)) { this.mockAI(idx, isGeneralTestQuery(question)); return; }
     // NOTHING LEAVES FOR A LOCAL MODE. Checked here rather than in ask() so a
     // retry of one is answered the same way, and can never fall through to the
-    // server with text that was not screened.
+    // server with text that was not redacted.
     const asked = this.state.messages[idx];
     const local = this.localAnswer(asked && asked.commandTemplate, question);
     if (local) {
@@ -1302,13 +1189,6 @@ class RiversidePracticeQA extends React.Component {
   renderVals() {
     const self = this;
     const all = this.allGuides();
-    // The answer being screened for patient details right now, if any: the
-    // newest one still being worked out.
-    let screeningIdx = -1;
-    if (this.state.screening) {
-      this.state.messages.forEach((m, i) => { if (m.kind === 'ai' && m.status === 'loading') screeningIdx = i; });
-    }
-
     const messages = this.state.messages.map((m, idx) => {
       if (m.role === 'user') {
         return {
@@ -1377,10 +1257,6 @@ class RiversidePracticeQA extends React.Component {
           aiDeclined: m.status === 'declined',
           aiDone: m.status === 'done',
           status: m.status || '',
-          // Held before anything is sent, while the message is checked for
-          // patient details: the working line says so rather than claiming
-          // the documents are already being read.
-          screening: idx === screeningIdx,
           // What went wrong, in the server's words where it gave any.
           errorText: m.error || '',
           question: m.question,
@@ -1668,16 +1544,6 @@ class RiversidePracticeQA extends React.Component {
       draft: this.state.draft,
       draftSteps,
       draftError: this.state.draftError,
-      // The message that did not go, and the wait while one is being checked.
-      // `blocked` carries only kind ids turned into labels — never the words
-      // that caused it. See PatientDataModal.
-      blocked: this.state.blocked,
-      isScreening: this.state.screening,
-      onCloseBlocked: () => self.setState({ blocked: null }, () => {
-        // Straight back to the field with the message still in it: the whole
-        // point of the box is that the next thing to happen is an edit.
-        if (self.inputRef.current) self.inputRef.current.focus();
-      }),
       viewerOpen: !!this.state.viewer,
       viewer: this.buildViewerVM(),
       onCloseViewer: () => self.closeViewer(),
@@ -1686,8 +1552,8 @@ class RiversidePracticeQA extends React.Component {
       // Something to send: words, or a document that has been read, or a
       // picture. The arrow is dimmed and inert until there is — Enter on an
       // empty field used to do nothing at all, with nothing to say so.
-      canSend: !this.state.screening && (!!this.state.input.trim() || this.state.pendingImages.length > 0
-        || this.state.pendingDocs.some((d) => d.status === 'ready' && d.text)),
+      canSend: !!this.state.input.trim() || this.state.pendingImages.length > 0
+        || this.state.pendingDocs.some((d) => d.status === 'ready' && d.text),
       onStop: () => self.stopAi(activeLoading),
       // A starter under the field is asked as typed, no field in between.
       onAskText: (q) => self.ask(q),
@@ -1826,15 +1692,11 @@ class RiversidePracticeQA extends React.Component {
                   on its top row and a toolbar under it — the kind of answer as
                   a labelled pill (see ModeSwitch) and the ask button. Enter still asks; a picture can still be
                   pasted into the box, and a document dropped anywhere on the
-                  page. The pill also carries the one moment the field is busy
-                  on its own account — the message being checked for patient
-                  details before it goes anywhere (lib/safety/patient-data.mjs)
-                  — as a spinner, because a field that looked dead for even
-                  half a second would have somebody pressing Enter again. */}
+                  page. */}
               <div className={'riva-composer' + (v.isGenerating ? ' riva-dock-live' : '')}>
-                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} aria-busy={v.isScreening ? 'true' : 'false'} placeholder={v.isScreening ? 'Checking for patient details…' : modePlaceholder(v.mode)} aria-label="Ask a question" />
+                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder={modePlaceholder(v.mode)} aria-label="Ask a question" />
                 <div className="riva-composer-bar">
-                  <ModeSwitch mode={v.mode} onPick={v.onPickMode} busy={v.isScreening} ready={v.modeReady} />
+                  <ModeSwitch mode={v.mode} onPick={v.onPickMode} ready={v.modeReady} />
                   <SendButton stop={v.isGenerating && !v.canSend} canSend={v.canSend} onStop={v.onStop} />
                 </div>
               </div>
@@ -1861,10 +1723,6 @@ class RiversidePracticeQA extends React.Component {
 
         {v.showAdd && <AddGuideModal v={v} />}
         {v.contactsOpen && <ContactsSheet onClose={v.onCloseContacts} />}
-        {/* Above everything, including the guide modal: a message that was
-            refused is the only thing on this page that has to be dealt with
-            before anything else can happen. */}
-        <PatientDataModal v={v} />
         {/* The first look, once a session: how to ask (see AskIntro). */}
         <AskIntro active={v.isEmpty && v.modeReady && !v.isKb && !v.showAdd && !v.contactsOpen} />
       </div>

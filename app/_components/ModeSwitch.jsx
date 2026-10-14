@@ -63,7 +63,7 @@ const groupOf = (m) => (m.kind ? m.kind : !m.name ? 'Ask a question' : 'Help wit
 // `ready` is the host saying it has read the kept mode back from storage.
 // Until then the pill is drawn blank, so it never flashes the default glyph
 // and then swaps to whatever was kept.
-export default function ModeSwitch({ mode, onPick, busy = false, ready = true }) {
+export default function ModeSwitch({ mode, onPick, ready = true }) {
   const [open, setOpen] = React.useState(false);
   // Which row the keyboard is on. It starts on the armed mode, so the first
   // arrow key moves away from where you already are.
@@ -226,11 +226,8 @@ export default function ModeSwitch({ mode, onPick, busy = false, ready = true })
           + (armed ? 'background:#005eb8;color:#fff;' : 'background:#eef2f4;color:#4c6272;')
           + (ready ? '' : 'opacity:0;')}
         hover={armed ? 'background:#0068c9;' : 'background:#e1e8ec;color:#005eb8;'}>
-        {/* The mode's own glyph beside its name, swapped for the spinner
-            while a message is being screened. */}
-        {busy
-          ? <Svg w={16} sw={2.2} style={s('animation:rivaSpin .9s linear infinite;')}>{Icons.spinner}</Svg>
-          : <Svg w={15} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>}
+        {/* The mode's own glyph beside its name. */}
+        <Svg w={15} sw={2.2}>{Icons[current.icon] || Icons.search}</Svg>
         <span className="riva-modes-label">{current.label}</span>
         <Svg w={13} sw={2.4} style={s('opacity:.7;transition:transform .18s ease;' + (open ? 'transform:rotate(180deg);' : ''))}>{Icons.chevronDown}</Svg>
       </Hover>

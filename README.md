@@ -87,40 +87,27 @@ clickable sources they can open in-browser.
     Ahmed in" and "the number for Alison Wade" are the job. **It does not run on
     the Coding mode**, in the browser or at the endpoint — see the two
     paragraphs below.
-  - **What cannot be redacted is refused instead** (`lib/safety/patient-data.mjs`,
-    `POST /api/screen`). The local check catches the shapes it knows, and it
-    knows them because they can be recognised *and removed*. An NHS number is
-    ten digits and so is an order number; a date of birth is a date; "reg no
-    4471982" is a hospital number at one trust and a stock code at another. No
-    word list separates those, and a rule loose enough to try eats every
-    ordinary question with a number in it. So those go to a model on the
-    **Super speed** role — the one role a reader waits on with nothing on
-    screen, which is why it is a role of its own and should be set to the
-    quickest model rather than the cleverest — and a message it flags **is not
-    sent at all**: no request, no transcript line, nothing saved, and a popup
-    naming the *kind* to take out. The kind, never the detail: everything on
-    that box is assembled in code from a fixed list, so the thing being refused
-    can never end up displayed in the refusal. It screens the text **after** the
-    local redaction, so it sees exactly what was already about to be sent and
-    not a character more. And it **fails open** — no key, a timeout, an
-    unreadable answer, and the message goes as it always did. A guard that fails
-    closed is a guard that shuts the desk down when OpenRouter has a bad
-    minute, with a patient standing at it.
+  - **What cannot be redacted still goes.** The local check catches the
+    shapes it knows, and it knows them because they can be recognised *and
+    removed*. An NHS number is ten digits and so is an order number; a date of
+    birth is a date; "reg no 4471982" is a hospital number at one trust and a
+    stock code at another. No word list separates those, so nothing stops them:
+    there was a pre-send model check for them, and it was removed. Staff are
+    told not to type them, and that instruction is the control.
   - **Nothing checks the Coding mode, and that is the whole of the exception**
-    (`checked: false` in `lib/commands.mjs`). Both guards above are off there —
-    the redaction and the screen — in the browser and at the endpoint, so a
+    (`checked: false` in `lib/commands.mjs`). The redaction above is off
+    there, in the browser and at the endpoint, so a
     letter pasted into that mode reaches the model exactly as it was pasted.
     Coding is handed a document about a patient; that is its input, not an
     accident of one. A discharge summary carries a name, a date of birth and a
-    hospital number because that is what a discharge summary is, so the screen
-    refused the exact thing being asked for and the redactor ate the words the
-    answer is built from — the site and the department are proper nouns, and a
+    hospital number because that is what a discharge summary is, and the
+    redactor ate the words the answer is built from — the site and the department are proper nouns, and a
     letter filed under `[name removed]` is filed nowhere. The same reasoning
-    already exempted an *attached* document from both; a letter pasted into the
-    box is the same letter, and was treated differently only because of how it
-    arrived. **One flag answers for both guards** so that neither can be
-    switched off alone: half a guard edits the reader's letter without being any
-    use against what the letter was always going to carry. What still holds is
+    already exempted an *attached* document; a letter pasted into the box is
+    the same letter, and was treated differently only because of how it
+    arrived. **One flag answers for both sides of the wire** so that neither
+    can be switched off alone: half a guard edits the reader's letter without
+    being any use against what the letter was always going to carry. What still holds is
     the answer itself — the filing title never carries a name, an NHS number or
     a date of birth, because the filing rules say so. Like the standalone helpers at `/coding`, `/signpost` and
     `/reason`, which have never redacted what is pasted into them, **it is the
@@ -252,9 +239,7 @@ clickable sources they can open in-browser.
   pressed. It is the same size as the ask button opposite, so the field is a box
   with a control at each end. The disc **fills blue with a white glass whenever
   anything other than Q&A is armed**, so a field about to answer out of the
-  referral list cannot look like a field about to answer a question, and the
-  spinner shown while a message is screened for patient details takes the glass's
-  place inside it. Arrow keys walk the list, Enter takes a mode, Escape closes it.
+  referral list cannot look like a field about to answer a question. Arrow keys walk the list, Enter takes a mode, Escape closes it.
   Two earlier controls are gone: a row of pills under the field, which was four
   buttons hanging off the dock for a choice left alone almost every time and had
   to appear and disappear with the cursor to stay out of the way, and before that
@@ -540,8 +525,8 @@ clickable sources they can open in-browser.
   saved as a contact). They are the `knowledge_entries` rows of kind
   `contact` that the bundled sheet is synced into; a save sets
   `data.backendOverride`, which the sync leaves alone, and an added one carries
-  `data.source = 'manual'`. The chat's directory card and the patient-data
-  guard's list of names read the same list, so a number added at the desk is
+  `data.source = 'manual'`. The chat's directory card and the identifier
+  redaction's list of names read the same list, so a number added at the desk is
   answerable at once. Without a database the bundled sheet stands in,
   read-only.
 - **`lib/lookup/`** + **`/lookup`** — the **CQC register** half of the page:

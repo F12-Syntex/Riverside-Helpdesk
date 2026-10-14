@@ -467,7 +467,7 @@ export default function AiAnswer({ v }) {
               <AnimatePresence mode="popLayout" initial={false}>
                 {phase === 'work' && (
                   <motion.div key="work" {...swap}>
-                    <WorkingState steps={v.steps} statusText={v.statusText} progress={v.progress} screening={v.screening} />
+                    <WorkingState steps={v.steps} statusText={v.statusText} progress={v.progress} />
                   </motion.div>
                 )}
                 {phase === 'prose' && (

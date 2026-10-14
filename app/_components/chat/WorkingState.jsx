@@ -10,9 +10,6 @@ import RollingLine, { useHeldValue } from './RollingLine';
  * Everything on this line is something that actually happened, sent as
  * it happened (app/api/agent/route.js, `progress`):
  *
- *   - before anything is sent, the message being checked for patient
- *     details (lib/safety/patient-data.mjs) — the one wait that happens
- *     in this browser rather than on the server, and said as what it is.
  *   - for a question, the whole Notebook going to the model: "Reading the
  *     Notebook — N pages", N being the real count (lib/agent/
  *     notebook-progress.mjs). Every page is read, so there is no shortlist
@@ -72,7 +69,7 @@ function Segments({ stages }) {
   );
 }
 
-export default function WorkingState({ steps = [], statusText = '', progress = null, screening = false }) {
+export default function WorkingState({ steps = [], statusText = '', progress = null }) {
   const elapsed = useElapsed();
 
   const notes = progress && progress.notes && progress.notes.total ? progress.notes : null;
@@ -98,8 +95,7 @@ export default function WorkingState({ steps = [], statusText = '', progress = n
   // The line that says what is happening now, from what has actually
   // happened — never from the clock.
   let now;
-  if (screening) now = 'Checking for patient details';
-  else if (notes) now = movedOn ? statusText : reading;
+  if (notes) now = movedOn ? statusText : reading;
   else if (docs) now = statusText || 'Reading what the documents say';
   else now = (running && running.label) || statusText || (rows.length ? 'Putting the answer together' : 'Reading the practice documents');
   // What the screen reader is told: the same line, held the same way, so it
