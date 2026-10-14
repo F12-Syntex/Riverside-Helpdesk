@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.89.17` | 2026-10-14 | refactor | `58835f0` | refactor: remove the patient-details screen from the send pipeline |
+| `6.89.16` | 2026-10-13 | docs | `c50776a` | docs: record the mode menu folder in versions |
 | `6.89.15` | 2026-10-13 | fix | `cf67dbc` | fix: move the lookups into a folder and size the mode menu to the field |
 | `6.89.14` | 2026-10-13 | docs | `302c9ba` | docs: record the answer mode menu restyle in versions |
 | `6.89.13` | 2026-10-13 | style | `6298281` | style: lay the answer mode menu out as aligned columns |
