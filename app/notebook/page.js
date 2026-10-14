@@ -150,14 +150,14 @@ const PAGE_CSS = `
 .nbk-doc-head{width:100%;max-width:800px;margin:0 auto;padding:26px 40px 16px;cursor:auto;}
 .nbk-kicker{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-bottom:10px;font-size:13px;font-weight:550;color:var(--rv-ink-2);}
 .nbk-kicker__dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6;}
-.nbk-doc-title{display:block;width:calc(100% + 16px);margin:0 0 0 -8px;padding:2px 8px 4px;border:none;outline:none;background:none;border-radius:12px;
+.nbk-doc-title{display:block;width:calc(100% + 16px);margin:0 0 0 -8px;padding:2px 8px 4px;border:none;outline:none;background:none;border-radius:4px;
   resize:none;overflow:hidden;field-sizing:content;min-height:0;
-  font:inherit;font-size:36px;font-weight:800;letter-spacing:-.03em;line-height:1.16;color:var(--rv-ink);
+  font:inherit;font-size:34px;font-weight:650;letter-spacing:-.015em;line-height:1.2;color:var(--rv-ink);
   transition:background-color .15s ease,box-shadow .15s ease;}
 .nbk-doc-title::placeholder{color:var(--rv-ink-4);}
 .nbk-doc-title:hover{background:var(--rv-hl);}
-.nbk-doc-title:focus,.nbk-doc-title:focus-visible{background:transparent !important;outline:none !important;border:none !important;box-shadow:inset 0 -2px 0 var(--rv-accent) !important;}
-.nbk-doc-title[aria-invalid="true"],.nbk-doc-title[aria-invalid="true"]:focus{box-shadow:inset 0 -2px 0 var(--rv-danger) !important;}
+.nbk-doc-title:focus,.nbk-doc-title:focus-visible{background:transparent !important;outline:none !important;border:none !important;box-shadow:none !important;background:linear-gradient(var(--rv-accent),var(--rv-accent)) 8px 100%/calc(100% - 16px) 1px no-repeat !important;}
+.nbk-doc-title[aria-invalid="true"],.nbk-doc-title[aria-invalid="true"]:focus{background:linear-gradient(var(--rv-danger),var(--rv-danger)) 8px 100%/calc(100% - 16px) 1px no-repeat !important;}
 .nbk-title-foot{display:flex;align-items:flex-start;gap:12px;margin-top:8px;}
 .nbk-title-msg{flex:1;min-width:0;display:flex;align-items:flex-start;gap:7px;margin:0;font-size:13.5px;font-weight:550;line-height:1.45;}
 .nbk-title-msg svg{flex:none;margin-top:1px;}
