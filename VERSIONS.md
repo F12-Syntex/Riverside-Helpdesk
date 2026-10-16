@@ -18,6 +18,11 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.93.0` | 2026-10-16 | feat | `c564dfc` | feat: give the Ask page tasks to start from and pages to go to next |
+| `6.92.0` | 2026-10-16 | feat | `4f05a8a` | feat: suggest Notebook pages, contacts and modes as you type |
+| `6.91.0` | 2026-10-16 | feat | `ae34c0a` | feat: add Fast, Think and Deep beside the send button |
+| `6.90.0` | 2026-10-16 | feat | `cc77dac` | feat: add a reception route so admin stops becoming a doctor task |
+| `6.89.21` | 2026-10-15 | docs | `88d2988` | docs: record the notebook title restyle in versions |
 | `6.89.20` | 2026-10-15 | fix | `55b613e` | fix: flatten the notebook page title and its focus underline |
 | `6.89.19` | 2026-10-14 | chore | `827ed1a` | chore: strip the byte-order mark from package.json |
 | `6.89.18` | 2026-10-14 | docs | `725ab1d` | docs: record the patient-details screen removal in versions |
