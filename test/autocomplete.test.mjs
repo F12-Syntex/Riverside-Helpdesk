@@ -1,7 +1,7 @@
 // SUGGESTIONS AS YOU TYPE — from what the page already holds, nothing sent.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSuggestions, completionFor, suggest, SUGGEST_MAX_INPUT } from '../lib/autocomplete.mjs';
+import { buildSuggestions, completionFor, related, suggest, SUGGEST_MAX_INPUT } from '../lib/autocomplete.mjs';
 
 const all = buildSuggestions({
   notes: [
@@ -76,4 +76,26 @@ test('the faint completion is only ever the rest of what was typed', () => {
   assert.equal(completionFor('dermotology', suggest(all, 'dermotology')[0]), '');
   assert.equal(completionFor('/acc', suggest(all, '/acc')[0]), '');
   assert.equal(completionFor('', top), '');
+});
+
+test('related pages: a meaningful shared word is enough, and filler is not', () => {
+  const hits = related(all, 'How do I refer a patient for an ECG?');
+  assert.deepEqual(hits.map((h) => h.label), ['ECG', 'ECG for a child']);
+  assert.deepEqual(related(all, 'how do I get the patient to do it please'), []);
+  assert.ok(related(all, 'what about the fit notes').every((h) => h.kind === 'page'));
+});
+
+test('related pages leave out what the answer already linked', () => {
+  const hits = related(all, 'ECG for a child', { exclude: ['ECG'] });
+  assert.deepEqual(hits.map((h) => h.label), []);
+  assert.deepEqual(related(all, 'ecg referral', { exclude: ['ECG'] }).map((h) => h.label), ['ECG for a child']);
+});
+
+test('a word most titles share does not make pages related', () => {
+  const many = buildSuggestions({
+    notes: ['Asthma referral', 'Rheumatology referral', 'Paediatric referrals', 'Gym referral', 'ECG', 'Echo', 'Fit notes', 'Smears', 'Travel jabs', 'Flu clinic', 'Registration', 'Home visits']
+      .map((title, i) => ({ id: i, title })),
+  });
+  assert.deepEqual(related(many, 'How do I refer for an ECG?').map((h) => h.label), ['ECG']);
+  assert.deepEqual(related(many, 'asthma referral form').map((h) => h.label), ['Asthma referral']);
 });

@@ -174,6 +174,15 @@ A theme is **which background**, never a colour. Palette = Mist
   ↑↓ choose, Enter asks, Tab fills in, Esc closes the list only. The rest of the
   top suggestion is drawn faintly after the typed words (`.riva-ghost`).
   Q&A only, or after a "/"; nothing typed is sent or stored to suggest.
+  **Start with a task** (`QuickStart`, `.riva-quick`): six glass tiles under the
+  centred field on the opening screen — AccurX, Consultation, Repeat medication,
+  Referral form (each arms its mode, never asks), Phone numbers (opens the
+  directory sheet) and the Notebook (a link). Absolute, so the opening geometry
+  is untouched; three columns, two under 900px, hidden under 700px and while
+  typing. "/" anywhere focuses the field. Under a finished answer, **Related in
+  the Notebook** chips (`.riva-related`, quiet small buttons) offer up to three
+  pages sharing a distinctive word with the question that the answer did not
+  already name.
 - **Notes**: two white cards (tree + page) with a 28px gutter; one pane at a
   time on a phone (list → page, "All notes" back pill). The page's reading width
   is ~720px. Honest save caption (Saving… / Saved · time / Couldn't save ·

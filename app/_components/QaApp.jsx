@@ -6,7 +6,7 @@ import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
 import { commandByName, isMode, modePlaceholder, modePresets, checksPatientData, localCommand, MODES } from '../../lib/commands.mjs';
-import { buildSuggestions, completionFor, suggest } from '../../lib/autocomplete.mjs';
+import { buildSuggestions, completionFor, related, suggest } from '../../lib/autocomplete.mjs';
 import { spellAnswer } from '../../lib/spell.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -24,6 +24,7 @@ import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
 import ThinkingSwitch from './ThinkingSwitch';
 import SuggestList, { SUGGEST_LIST_ID, optionId } from './SuggestList';
+import QuickStart from './QuickStart';
 import { DEFAULT_THINKING, isThinkingMode, normaliseThinking, thinkingMode } from '../../lib/thinking.mjs';
 import AskIntro from './AskIntro';
 import DocumentViewer from './DocumentViewer';
@@ -308,9 +309,24 @@ class RiversidePracticeQA extends React.Component {
     // Load the document library up front so "Browse by area" can surface the
     // full knowledge base, not just the curated guides.
     this.loadKb();
+    // "/" anywhere on the page puts the cursor in the field — the shortcut
+    // every search box people already use has. Not while typing somewhere
+    // else, and not with a modifier held.
+    this.onSlash = (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      const t = e.target;
+      const tag = t && t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+      const field = this.inputRef.current;
+      if (!field) return;
+      e.preventDefault();
+      field.focus();
+    };
+    window.addEventListener('keydown', this.onSlash);
   }
 
   componentWillUnmount() {
+    if (this.onSlash) window.removeEventListener('keydown', this.onSlash);
     clearTimeout(this.copyTimer);
     this.cancelRun();
   }
@@ -1530,6 +1546,22 @@ class RiversidePracticeQA extends React.Component {
     // not travel from a field it left a minute ago.
     const fresh = (x) => !!x && x.key === activeTurn && Date.now() - x.at < 1500;
 
+    // WHERE TO GO NEXT: Notebook pages that share a meaningful word with the
+    // question on screen, once its answer is in — and not the ones the answer
+    // already names, which are on the card. Worked out from the titles the
+    // page already holds (lib/autocomplete.mjs); nothing is asked to find them.
+    const relatedPages = (() => {
+      if (!active) return [];
+      const ai = active.idxs.map((i) => this.state.messages[i]).filter((m) => m && m.kind === 'ai').pop();
+      if (!ai || ai.status !== 'done' || ai.local) return [];
+      const said = (this.answerSections(ai).map((sec) => sec.markdown || '').join(' ')
+        + ' ' + JSON.stringify(ai.template || '')).toLowerCase();
+      return related(this.suggestPool(), active.question)
+        .filter((p) => !said.includes(p.label.toLowerCase()))
+        .slice(0, 3)
+        .map((p) => ({ key: p.label, label: p.label, onAsk: () => self.ask(p.value) }));
+    })();
+
     const draftSteps = this.state.draft.steps.map((v, i) => ({
       num: i + 1, value: v,
       onChange: (e) => self.setDraftStep(i, e.target.value),
@@ -1664,6 +1696,7 @@ class RiversidePracticeQA extends React.Component {
         redactedNote: active.redactedNote || '',
         askedAs: active.askedAs || '',
         thought: active.thought || '',
+        related: relatedPages,
         items: active.idxs.map((i) => messages[i]),
         flyFrom: fresh(this.fly) ? this.fly : null,
         focusOnMount: fresh(this.focusTurn),
@@ -1857,6 +1890,12 @@ class RiversidePracticeQA extends React.Component {
               <SuggestList items={v.suggestions} at={v.suggestAt} typed={v.input} down={v.isEmpty}
                 onPick={v.onPickSuggestion} onHover={v.onHoverSuggestion} />
             </form>
+
+            {/* The jobs people come to do, under the field on the opening
+                screen only, and put away while somebody is typing. */}
+            <AnimatePresence>
+              {v.isEmpty && !v.input && <QuickStart key="quick" onPickMode={v.onPickMode} onOpenContacts={v.onOpenContacts} />}
+            </AnimatePresence>
 
           </div>
         </div>

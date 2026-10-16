@@ -421,6 +421,23 @@ export default function ChatView({ v }) {
             </motion.div>
           ))}
 
+          {/* Somewhere to go next: Notebook pages near this question that the
+              answer did not already name. One tap asks the page. */}
+          {v.turn.related && v.turn.related.length > 0 && (
+            <motion.nav className="riva-related" aria-label="Related in the Notebook"
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE, delay: 0.3 }}>
+              <span className="riva-related__head">Related in the Notebook</span>
+              <div className="riva-related__list">
+                {v.turn.related.map((r) => (
+                  <button key={r.key} type="button" className="rv-btn rv-btn--quiet rv-btn--sm riva-related__chip" onClick={r.onAsk}>
+                    <Svg w={13} sw={2.2}>{Icons.book}</Svg>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </motion.nav>
+          )}
+
           {v.isViewingHistory && (
             <button type="button" className="rv-btn rv-btn--quiet rv-btn--sm riva-latest" onClick={v.onLatest}>
               <Svg w={14} sw={2.4}>{Icons.chevronDown}</Svg>
