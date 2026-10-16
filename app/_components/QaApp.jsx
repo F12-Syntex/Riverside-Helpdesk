@@ -5,7 +5,8 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { SEED_GUIDES, CATEGORIES } from '../../lib/guides';
 import { askAgent } from '../../lib/ai/agent-client';
 import { VERDICTS } from '../../lib/feedback.mjs';
-import { commandByName, isMode, modePlaceholder, modePresets, checksPatientData, localCommand } from '../../lib/commands.mjs';
+import { commandByName, isMode, modePlaceholder, modePresets, checksPatientData, localCommand, MODES } from '../../lib/commands.mjs';
+import { buildSuggestions, completionFor, suggest } from '../../lib/autocomplete.mjs';
 import { spellAnswer } from '../../lib/spell.mjs';
 import { identifierNote, identifierWarning, redactIdentifiers } from '../../lib/safety/identifiers.mjs';
 import { machineId } from '../../lib/audit/client';
@@ -22,6 +23,7 @@ import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
 import ThinkingSwitch from './ThinkingSwitch';
+import SuggestList, { SUGGEST_LIST_ID, optionId } from './SuggestList';
 import { DEFAULT_THINKING, isThinkingMode, normaliseThinking, thinkingMode } from '../../lib/thinking.mjs';
 import AskIntro from './AskIntro';
 import DocumentViewer from './DocumentViewer';
@@ -185,6 +187,11 @@ class RiversidePracticeQA extends React.Component {
       // How hard to think — which model answers (lib/thinking.mjs). Restored
       // in componentDidMount with the mode, for the same hydration reason.
       thinking: DEFAULT_THINKING,
+      // Suggestions under the field (lib/autocomplete.mjs): which row the
+      // arrows are on (-1: none yet), and whether Escape has put the list
+      // away until the next keystroke.
+      suggestAt: -1,
+      suggestClosed: false,
       copiedNumber: '',
       customGuides: [],
       // The practice directory, opened from the pill under the box.
@@ -410,7 +417,61 @@ class RiversidePracticeQA extends React.Component {
   }
 
   onInput(value) {
-    this.setState({ input: value });
+    this.setState({ input: value, suggestAt: -1, suggestClosed: false });
+  }
+
+  /* ------------------------- Suggestions -------------------------- *
+   * Worked out from what the page already holds — the Notebook's titles,
+   * the directory, the guides and this page's own questions — and nothing
+   * typed is sent or kept to do it (lib/autocomplete.mjs). The pool is
+   * rebuilt only when one of those changes, not on every keystroke.
+   * ---------------------------------------------------------------- */
+  suggestPool() {
+    const asked = this.state.messages.filter((m) => m.role === 'user' && m.text);
+    const key = [this.state.notes.length, this.state.directory.length, (this.state.customGuides || []).length, asked.length].join(':');
+    if (this.pool && this.poolKey === key) return this.pool;
+    const recent = [];
+    for (let i = asked.length - 1; i >= 0; i--) if (asked[i].text.length <= 120) recent.push(asked[i].text);
+    this.pool = buildSuggestions({
+      notes: this.state.notes,
+      guides: this.allGuides(),
+      contacts: this.state.directory,
+      modes: MODES,
+      recent,
+    });
+    this.poolKey = key;
+    return this.pool;
+  }
+
+  // What the list shows now. Only in Q&A, or after a slash: in a mode the field
+  // is for a pasted message or a form's name, and a list of Notebook pages over
+  // it would only be in the way.
+  currentSuggestions() {
+    const input = this.state.input;
+    if (this.state.suggestClosed) return [];
+    if (this.state.mode && !input.trim().startsWith('/')) return [];
+    return suggest(this.suggestPool(), input);
+  }
+
+  // Enter or a press on a row: a mode is armed, anything else is asked as it
+  // stands — the directory answers a contact with no model at all.
+  pickSuggestion(sug) {
+    if (!sug) return;
+    if (sug.kind === 'mode') {
+      this.setState({ input: '', suggestAt: -1 }, () => this.pickMode(sug.mode));
+      return;
+    }
+    this.setState({ suggestAt: -1 }, () => this.ask(sug.value));
+  }
+
+  // Tab: into the field to be added to, not asked.
+  fillSuggestion(sug) {
+    if (!sug || sug.kind === 'mode') { if (sug) this.pickSuggestion(sug); return; }
+    const text = sug.value;
+    this.setState({ input: text, suggestAt: -1, suggestClosed: true }, () => {
+      const field = this.inputRef.current;
+      if (field) field.setSelectionRange(text.length, text.length);
+    });
   }
 
   // One number onto the clipboard, and the row and the dock both say so. The
@@ -463,6 +524,40 @@ class RiversidePracticeQA extends React.Component {
 
   // Escape backs out of a mode without reaching for the mouse.
   onInputKey(e) {
+    // The suggestions get the keys first, while there are any.
+    const list = this.currentSuggestions();
+    const at = this.state.suggestAt;
+    if (list.length && !(e.nativeEvent && e.nativeEvent.isComposing)) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        const next = at < 0 ? (step > 0 ? 0 : list.length - 1) : (at + step + list.length) % list.length;
+        this.setState({ suggestAt: next });
+        return;
+      }
+      if (e.key === 'Enter' && at >= 0 && list[at]) {
+        e.preventDefault();
+        this.pickSuggestion(list[at]);
+        return;
+      }
+      if (e.key === 'Tab' && !e.shiftKey) {
+        const chosen = at >= 0 ? list[at] : (completionFor(this.state.input, list[0]) ? list[0] : null);
+        if (chosen) { e.preventDefault(); this.fillSuggestion(chosen); return; }
+      }
+      if (e.key === 'ArrowRight' && at < 0) {
+        const field = e.currentTarget;
+        if (field.selectionStart === field.value.length && completionFor(this.state.input, list[0])) {
+          e.preventDefault();
+          this.fillSuggestion(list[0]);
+          return;
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.setState({ suggestClosed: true, suggestAt: -1 });
+        return;
+      }
+    }
     if (e.key === 'Escape' && this.state.mode) {
       e.preventDefault();
       this.pickMode('');
@@ -1219,6 +1314,7 @@ class RiversidePracticeQA extends React.Component {
 
   renderVals() {
     const self = this;
+    const suggestions = this.state.view === 'kb' ? [] : this.currentSuggestions();
     const all = this.allGuides();
     const messages = this.state.messages.map((m, idx) => {
       if (m.role === 'user') {
@@ -1526,6 +1622,15 @@ class RiversidePracticeQA extends React.Component {
       presets: modePresets(this.state.mode),
       onPickMode: (name) => self.pickMode(name),
       thinking: this.state.thinking,
+      // Suggestions under the field, and the rest of the top one drawn faintly
+      // after what has been typed.
+      suggestions,
+      suggestAt: this.state.suggestAt,
+      completion: suggestions.length && this.state.suggestAt < 0 ? completionFor(this.state.input, suggestions[0]) : '',
+      onPickSuggestion: (i) => self.pickSuggestion(suggestions[i]),
+      onHoverSuggestion: (i) => self.setState({ suggestAt: i }),
+      onInputBlur: () => self.setState({ suggestClosed: true, suggestAt: -1 }),
+      onInputFocus: () => self.setState({ suggestClosed: false }),
       onPickThinking: (id) => self.pickThinking(id),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
@@ -1729,13 +1834,28 @@ class RiversidePracticeQA extends React.Component {
                   pasted into the box, and a document dropped anywhere on the
                   page. */}
               <div className={'riva-composer' + (v.isGenerating ? ' riva-dock-live' : '')}>
-                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder={modePlaceholder(v.mode)} aria-label="Ask a question" />
+                <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder={modePlaceholder(v.mode)} aria-label="Ask a question"
+                  onBlur={v.onInputBlur} onFocus={v.onInputFocus}
+                  role="combobox" aria-autocomplete="both" aria-expanded={v.suggestions.length > 0}
+                  aria-controls={SUGGEST_LIST_ID} aria-activedescendant={v.suggestAt >= 0 ? optionId(v.suggestAt) : undefined}
+                  autoComplete="off" />
+                {/* The rest of the top suggestion, faintly, after the words typed:
+                    Tab or the right arrow takes it. The typed part is drawn
+                    invisibly so the rest lands exactly where the caret is. */}
+                {v.completion ? (
+                  <div className="riva-ghost" aria-hidden="true">
+                    <span className="riva-ghost__typed">{v.input}</span><span className="riva-ghost__rest">{v.completion}</span>
+                    <kbd className="riva-ghost__key">Tab</kbd>
+                  </div>
+                ) : null}
                 <div className="riva-composer-bar">
                   <ModeSwitch mode={v.mode} onPick={v.onPickMode} ready={v.modeReady} />
                   <ThinkingSwitch value={v.thinking} onPick={v.onPickThinking} ready={v.modeReady} />
                   <SendButton stop={v.isGenerating && !v.canSend} canSend={v.canSend} onStop={v.onStop} />
                 </div>
               </div>
+              <SuggestList items={v.suggestions} at={v.suggestAt} typed={v.input} down={v.isEmpty}
+                onPick={v.onPickSuggestion} onHover={v.onHoverSuggestion} />
             </form>
 
           </div>

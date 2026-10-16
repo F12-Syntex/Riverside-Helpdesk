@@ -166,6 +166,14 @@ A theme is **which background**, never a colour. Palette = Mist
   the chosen segment a white tab in the accent, one Tab stop, arrows choose,
   44px segments under 700px. It is only ever a model switch (`lib/thinking.mjs`);
   a question asked on Think or Deep carries an "Asked on …" chip.
+  **Suggestions as you type** (`SuggestList`, `.riva-suggest`,
+  `lib/autocomplete.mjs`): the mode menu's surface, as wide as the field, up out
+  of the dock or down into the empty page. Rows are a 30px icon tile, the label
+  with the matched words bold, and a kind tag (Notebook, Contact, EMIS guide,
+  Asked earlier, Mode). The field is the combobox (`aria-activedescendant`);
+  ↑↓ choose, Enter asks, Tab fills in, Esc closes the list only. The rest of the
+  top suggestion is drawn faintly after the typed words (`.riva-ghost`).
+  Q&A only, or after a "/"; nothing typed is sent or stored to suggest.
 - **Notes**: two white cards (tree + page) with a 28px gutter; one pane at a
   time on a phone (list → page, "All notes" back pill). The page's reading width
   is ~720px. Honest save caption (Saving… / Saved · time / Couldn't save ·

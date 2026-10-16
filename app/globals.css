@@ -1357,6 +1357,59 @@ html[data-bg="still"] .riva-glow { display: none; }
 }
 .riva-think__opt:focus-visible { outline: none !important; box-shadow: 0 0 0 3px rgba(0,94,184,.28) !important; }
 .riva-think.is-pending .riva-think__opt { color: transparent; }
+
+/* Suggestions as you type (SuggestList). The mode menu's surface and
+   entrance, as wide as the field; up out of the dock, down into the empty
+   page while the field is in the middle of it. */
+.riva-suggest {
+  position: absolute; left: 0; right: 0; z-index: 9;
+  background: #fff; border: 1px solid #e1e8ec; border-radius: 18px;
+  box-shadow: var(--rv-sh-pop); overflow: hidden;
+  animation: rivaModesIn .16s cubic-bezier(.2,.8,.3,1) backwards;
+}
+.riva-suggest.is-up { bottom: calc(100% + 10px); transform-origin: bottom center; }
+.riva-suggest.is-down { top: calc(100% + 10px); transform-origin: top center; animation-name: rivaModesInDown; }
+.riva-suggest__list { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+.riva-suggest__row {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  min-height: 46px; padding: 6px 12px 6px 8px; border-radius: 12px; cursor: pointer;
+}
+.riva-suggest__row.is-at { background: var(--rv-hl); }
+.riva-suggest__ico {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--rv-chip); color: var(--rv-ink-2);
+}
+.riva-suggest__ico.is-page, .riva-suggest__ico.is-mode { background: var(--rv-accent-dim); color: var(--rv-accent); }
+.riva-suggest__ico.is-contact { background: var(--rv-chip); color: var(--rv-green); }
+.riva-suggest__text { min-width: 0; display: flex; flex-direction: column; }
+.riva-suggest__label { font-size: 15.5px; color: var(--rv-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-suggest__label b { font-weight: 700; }
+.riva-suggest__sub { font-size: 13px; color: var(--rv-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riva-suggest__tag { font-size: 12.5px; font-weight: 600; color: var(--rv-ink-2); }
+.riva-suggest__foot {
+  display: flex; gap: 16px; padding: 8px 16px; border-top: 1px solid var(--rv-divider);
+  font-size: 12.5px; color: var(--rv-ink-2); background: var(--rv-page);
+}
+.riva-suggest__foot kbd, .riva-ghost__key {
+  display: inline-block; min-width: 20px; padding: 1px 5px; margin-right: 3px; border-radius: 5px;
+  border: 1px solid var(--rv-line); border-bottom-width: 2px; background: #fff;
+  font: inherit; font-size: 11.5px; font-weight: 600; color: var(--rv-ink-2); text-align: center;
+}
+/* The rest of the top suggestion, drawn after the typed words. Same box,
+   font and padding as the field, so it lands where the caret is. */
+.riva-ghost {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 55px;
+  display: flex; align-items: center; padding: 0 24px;
+  font-size: 19px; white-space: pre; overflow: hidden; pointer-events: none;
+}
+.riva-ghost__typed { color: transparent; }
+.riva-ghost__rest { color: var(--rv-ink-4); }
+.riva-ghost__key { margin-left: 10px; }
+@media (max-width: 700px) {
+  .riva-ghost { font-size: 17px; padding: 0 16px; }
+  .riva-ghost__key, .riva-suggest__foot { display: none; }
+  .riva-suggest__row { min-height: 52px; }
+}
 @media (max-width: 700px) {
   .riva-think__opt { height: 44px; padding: 0 10px; font-size: 13px; }
   .riva-think { padding: 0; }
