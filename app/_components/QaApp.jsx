@@ -24,7 +24,6 @@ import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
 import ThinkingSwitch from './ThinkingSwitch';
 import SuggestList, { SUGGEST_LIST_ID, optionId } from './SuggestList';
-import QuickStart from './QuickStart';
 import { DEFAULT_THINKING, isThinkingMode, normaliseThinking, thinkingMode } from '../../lib/thinking.mjs';
 import AskIntro from './AskIntro';
 import DocumentViewer from './DocumentViewer';
@@ -1890,12 +1889,6 @@ class RiversidePracticeQA extends React.Component {
               <SuggestList items={v.suggestions} at={v.suggestAt} typed={v.input} down={v.isEmpty}
                 onPick={v.onPickSuggestion} onHover={v.onHoverSuggestion} />
             </form>
-
-            {/* The jobs people come to do, under the field on the opening
-                screen only, and put away while somebody is typing. */}
-            <AnimatePresence>
-              {v.isEmpty && !v.input && <QuickStart key="quick" onPickMode={v.onPickMode} onOpenContacts={v.onOpenContacts} />}
-            </AnimatePresence>
 
           </div>
         </div>
