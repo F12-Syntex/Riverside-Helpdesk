@@ -57,13 +57,13 @@ const SAVED_MS = 4000;
 
 // Kept in step with ROLE_SETTING_KEY in lib/settings.js. The reasoning role is
 // the model itself, so it is saved as `model` rather than as an override.
-const ROLE_KEYS = ['fast', 'web', 'accurx', 'images', 'check'];
+const ROLE_KEYS = ['fast', 'web', 'accurx', 'images', 'check', 'think', 'deep'];
 
 // Short names for the roles, used where one role has to be named inside
 // another's caption ("Blank, so it uses Fast").
 const ROLE_NAME = {
   reasoning: 'Reasoning', fast: 'Fast', web: 'Web search', accurx: 'AccurX routing',
-  images: 'Images', check: 'Answer check',
+  images: 'Images', check: 'Answer check', think: 'Think', deep: 'Deep',
 };
 
 // The ledger, top to bottom. `from` is what a blank row falls back to (none:
@@ -92,6 +92,16 @@ const GROUPS = [
     rows: [
       { key: 'images', name: 'Images', job: 'Reads any message with a picture' },
       { key: 'check', name: 'Answer check', job: 'Scores each Notebook answer against the question' },
+    ],
+  },
+  // The Ask page's Fast · Think · Deep. Fast is the Fast row above; these
+  // two are what the other buttons run on (lib/thinking.mjs). Their own
+  // defaults, so the three buttons never quietly run the same model.
+  {
+    title: 'Thinking modes', note: 'Chosen beside the send button. Fast uses the Fast row',
+    rows: [
+      { key: 'think', name: 'Think', job: 'A stronger model, when somebody asks for it' },
+      { key: 'deep', name: 'Deep', job: 'The strongest, for the hard ones' },
     ],
   },
 ];
@@ -577,6 +587,8 @@ export default function SettingsPage() {
     // shows what it actually resolves to.
     images: own('images', setting ? setting.defaultImagesModel : ''),
     check: own('check', setting ? setting.defaultCheckModel : ''),
+    think: own('think', setting ? setting.defaultThinkModel : ''),
+    deep: own('deep', setting ? setting.defaultDeepModel : ''),
   };
 
   // Well-formed, but is it a model OpenRouter serves? Warned about, never
@@ -624,6 +636,8 @@ export default function SettingsPage() {
     if (k === 'fast' || k === 'web') return resolved.reasoning || 'Same as Reasoning';
     if (k === 'accurx') return resolved.fast || 'Same as Fast';
     if (k === 'images') return (setting && setting.defaultImagesModel) || 'vendor/model';
+    if (k === 'think') return (setting && setting.defaultThinkModel) || 'vendor/model';
+    if (k === 'deep') return (setting && setting.defaultDeepModel) || 'vendor/model';
     return (setting && setting.defaultCheckModel) || 'vendor/model';
   };
 

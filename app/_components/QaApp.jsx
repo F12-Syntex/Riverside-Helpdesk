@@ -21,6 +21,8 @@ import AppHeader from './AppHeader';
 import ChatView from './ChatView';
 import SourcesView from './SourcesView';
 import ModeSwitch from './ModeSwitch';
+import ThinkingSwitch from './ThinkingSwitch';
+import { DEFAULT_THINKING, isThinkingMode, normaliseThinking, thinkingMode } from '../../lib/thinking.mjs';
 import AskIntro from './AskIntro';
 import DocumentViewer from './DocumentViewer';
 import AddGuideModal from './AddGuideModal';
@@ -47,6 +49,11 @@ const MAX_DOCUMENTS = 4;
 // and no patient in it, and having to re-arm it after every reload is the
 // friction the picker was added to remove.
 const MODE_KEY = 'riva-mode-v1';
+
+// Fast, Think or Deep, kept the same way and for the same reason: it carries
+// no question and no patient, and re-choosing it after every reload is the
+// friction a choice that lasts is for. See app/_components/ThinkingSwitch.jsx.
+const THINKING_KEY = 'riva-thinking-v1';
 
 // Whether what is being dragged is a file at all. Dragging selected text or a
 // link over the page must not put the whole window into "drop a document here".
@@ -175,6 +182,9 @@ class RiversidePracticeQA extends React.Component {
       // Whether the kept mode has been read back yet. The pill in the field
       // stays blank until it has (see ModeSwitch).
       modeReady: false,
+      // How hard to think — which model answers (lib/thinking.mjs). Restored
+      // in componentDidMount with the mode, for the same hydration reason.
+      thinking: DEFAULT_THINKING,
       copiedNumber: '',
       customGuides: [],
       // The practice directory, opened from the pill under the box.
@@ -236,6 +246,12 @@ class RiversidePracticeQA extends React.Component {
     try {
       const kept = localStorage.getItem(MODE_KEY) || '';
       if (kept && isMode(kept)) this.setState({ mode: kept });
+    } catch (e) {}
+    // Fast, Think or Deep, read back the same way and held to the same guard:
+    // a value that is not one of the three is Fast, never something dearer.
+    try {
+      const kept = localStorage.getItem(THINKING_KEY) || '';
+      if (kept && isThinkingMode(kept)) this.setState({ thinking: kept });
     } catch (e) {}
     // Only now may the pill show a glyph: drawn any earlier it flashes the
     // default and then swaps to the kept mode.
@@ -432,6 +448,17 @@ class RiversidePracticeQA extends React.Component {
       if (mode) localStorage.setItem(MODE_KEY, mode);
       else localStorage.removeItem(MODE_KEY);
     } catch (e) {}
+  }
+
+  // Fast, Think or Deep. Kept for the next page as well as the next message;
+  // Fast is stored as the absence of the key, as Q&A is for the mode.
+  pickThinking(id) {
+    const thinking = normaliseThinking(id);
+    try {
+      if (thinking === DEFAULT_THINKING) localStorage.removeItem(THINKING_KEY);
+      else localStorage.setItem(THINKING_KEY, thinking);
+    } catch (e) {}
+    this.setState({ thinking });
   }
 
   // Escape backs out of a mode without reaching for the mouse.
@@ -669,7 +696,11 @@ class RiversidePracticeQA extends React.Component {
     // `askedAs` is the kind of answer this question was sent as, so a wrong
     // answer says how it was asked for. Empty for an ordinary question.
     const askedAs = command ? command.label : '';
-    const userMsg = { role: 'user', text: t, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings), askedAs };
+    // Which model this was asked of, said on the question when it was not the
+    // everyday one, so a slow answer or a different one explains itself.
+    const thinking = normaliseThinking(this.state.thinking);
+    const thought = thinking === DEFAULT_THINKING ? '' : thinkingMode(thinking).label;
+    const userMsg = { role: 'user', text: t, images, docNames: attachments.map((a) => a.name), redacted: identifierNote(guard.findings), askedAs, thought };
     // The images ride along on the bot message too, so a retry can resend them.
     // The attached documents ride along for the same reason: a retry has to send
     // the letter the question was asked about, or it asks a different question.
@@ -677,7 +708,7 @@ class RiversidePracticeQA extends React.Component {
     // search it runs appears in the card while it is still working.
     // `commandTemplate` rides along so a retry asks the same way: retrying an
     // AccurX triage as an ordinary question would answer a different thing.
-    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, validation: null, citations: [], alerts: [], panel: null };
+    const aiMsg = { role: 'bot', kind: 'ai', answerKind: 'answer', question, commandTemplate: command ? command.template : '', thinking, images, attachments, status: 'loading', steps: [], statusText: '', intro: '', sections: null, validation: null, citations: [], alerts: [], panel: null };
     const messages = this.state.messages.concat([userMsg, aiMsg]);
     const aiIdx = messages.length - 1;
     // Asking always brings the reader back to the newest question, even if
@@ -800,7 +831,7 @@ class RiversidePracticeQA extends React.Component {
     const ours = () => this.runId === run && !(ctrl && ctrl.signal.aborted);
     try {
       const data = await askAgent(
-        { question, history, images, attachments, template: (m && m.commandTemplate) || '', signal: ctrl ? ctrl.signal : null },
+        { question, history, images, attachments, template: (m && m.commandTemplate) || '', thinking: (m && m.thinking) || this.state.thinking, signal: ctrl ? ctrl.signal : null },
         (ev) => { if (ours()) this.onAgentEvent(idx, ev); },
       );
       if (!ours()) return;
@@ -1356,6 +1387,7 @@ class RiversidePracticeQA extends React.Component {
           // it was sent, if anything.
           redactedNote: m.redacted || '',
           askedAs: m.askedAs || '',
+          thought: m.thought || '',
           idxs: [],
         });
       } else {
@@ -1493,6 +1525,8 @@ class RiversidePracticeQA extends React.Component {
       // in Spell it out. One tap asks it, exactly as if it had been typed.
       presets: modePresets(this.state.mode),
       onPickMode: (name) => self.pickMode(name),
+      thinking: this.state.thinking,
+      onPickThinking: (id) => self.pickThinking(id),
       // Anything on screen other than the opening question can be left, and
       // this is how: back to an empty page with nothing asked.
       canReset: this.state.messages.length > 0,
@@ -1524,6 +1558,7 @@ class RiversidePracticeQA extends React.Component {
         hasDocs: !!(active.docNames && active.docNames.length),
         redactedNote: active.redactedNote || '',
         askedAs: active.askedAs || '',
+        thought: active.thought || '',
         items: active.idxs.map((i) => messages[i]),
         flyFrom: fresh(this.fly) ? this.fly : null,
         focusOnMount: fresh(this.focusTurn),
@@ -1697,6 +1732,7 @@ class RiversidePracticeQA extends React.Component {
                 <input ref={this.inputRef} className="riva-input riva-composer-input" value={v.input} onChange={v.onInput} onKeyDown={v.onInputKey} onPaste={v.onPaste} placeholder={modePlaceholder(v.mode)} aria-label="Ask a question" />
                 <div className="riva-composer-bar">
                   <ModeSwitch mode={v.mode} onPick={v.onPickMode} ready={v.modeReady} />
+                  <ThinkingSwitch value={v.thinking} onPick={v.onPickThinking} ready={v.modeReady} />
                   <SendButton stop={v.isGenerating && !v.canSend} canSend={v.canSend} onStop={v.onStop} />
                 </div>
               </div>

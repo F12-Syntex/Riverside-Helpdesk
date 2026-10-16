@@ -161,6 +161,11 @@ A theme is **which background**, never a colour. Palette = Mist
   after the text; thumbs-down opens reasons in place. Stop, error card (Try
   again / Edit question), jump-to-end pill, history folded to two rows plus
   "N earlier questions". Opening screen heading and field align with Referrals.
+  The composer bar holds the mode pill, then **Fast · Think · Deep**
+  (`ThinkingSwitch`, `.riva-think`): a radio group on a `--rv-surface-3` track,
+  the chosen segment a white tab in the accent, one Tab stop, arrows choose,
+  44px segments under 700px. It is only ever a model switch (`lib/thinking.mjs`);
+  a question asked on Think or Deep carries an "Asked on …" chip.
 - **Notes**: two white cards (tree + page) with a 28px gutter; one pane at a
   time on a phone (list → page, "All notes" back pill). The page's reading width
   is ~720px. Honest save caption (Saving… / Saved · time / Couldn't save ·
