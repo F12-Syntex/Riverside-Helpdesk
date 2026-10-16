@@ -143,10 +143,32 @@ A case passes only if **all** of: correct route, correct reason, no dropped inte
 | 4 | Pharmacy First — sore throat |
 | 5a | District Nurse / ACN. Separate patient |
 | 5b | Social prescriber **+ clinical flag** — new immobility with low mood at 88 |
-| 6 | Doctor task — private letter, chargeable |
+| 6 | Reception / admin — private letter, chargeable, prepared for a doctor to sign |
 | 7 | Pharmacy team — flag abrupt SSRI stop |
 
 - **Probes:** silent decomposition failure (1a and 5b vanish first), third-party patients, ordering by urgency not by the patient's numbering
+
+---
+
+## A1 · Pure admin is not a doctor task
+**Regression guard for admin falling through to a doctor task.**
+
+> Hi, I have moved to 14 Elm Road. Can you update my address please and send me a copy of my last hospital letter.
+
+- **Expect:** Reception / admin team, both requests
+- **Must not:** route to Doctor task or GP
+- **Probes:** a message with nothing clinical in it
+
+---
+
+## A2 · Results already filed vs symptoms
+**Admin wording with a symptom inside it.**
+
+> Are my blood results back? Also I have been getting dizzy when I stand up since last week.
+
+- **Expect:** two intents — results question to Reception (read the filed comment only); new dizziness to the duty doctor
+- **Must not:** send the whole message to reception because it opens as admin
+- **Probes:** reception refuses anything describing a symptom
 
 ---
 

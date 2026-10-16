@@ -79,7 +79,11 @@ District Nurse / Adult Community Nursing
 
 Social prescriber
 
-*Sixteen routes. If a request does not fit one of them, it is a doctor task.*
+### Reception and admin
+
+Reception and admin team
+
+*Seventeen routes. A request with nothing clinical in it is reception's. One that needs a doctor's decision but fits no other route is a doctor task.*
 
 ## SECTION A — EMERGENCY AND URGENT
 
@@ -764,6 +768,42 @@ The PCN Wellbeing Practitioner works longer term with patients facing multiple c
 #### If you are unsure
 
 If the patient's difficulty is practical and social, social prescribing is right. If they are distressed rather than stuck, involve a clinician first.
+
+## SECTION E — RECEPTION AND ADMIN
+
+### Reception and admin team
+
+A request reception or the admin team completes themselves. Nobody clinical needs to see it, because there is nothing in it for a clinician to decide.
+
+#### Route here when
+
+- Booking, moving or cancelling an appointment whose type a clinician has already chosen — a follow-up they asked for, a recall or review invitation the practice sent
+- Changes of address, name, telephone number or email
+- Registration, new patient forms, and leaving the practice
+- NHS App and online access set-up or problems
+- Copies of letters or records, and subject access requests
+- Chasing a referral the doctor has already made — give the hospital or e-RS booking line
+- Asking whether results are back, where the clinician has already filed them
+- Forms, letters and reports for the admin team to prepare for a doctor to sign — insurance, employer, school, private letters
+- Questions about the practice itself — opening hours, ordering repeats online, sending a photo
+
+#### Do not route here
+
+- Anything describing a symptom, a new problem, or a change in a known one — that is a clinical route, however administrative the request is worded
+- A result that has not been filed yet, or was filed as needing action — doctor task
+- A request for a referral, a new fit note or a change to one, or anything else a doctor has to decide — doctor task
+- Any medication request — pharmacy team
+
+#### How to action
+
+- Do it at the desk, or pass it to the admin team.
+- Results: read out only the comment the clinician filed. Never interpret a result.
+- Forms and reports go to the admin team to prepare for signing. Tell the patient if there is a fee.
+- Reply through Accurx so the patient knows it has been done.
+
+#### If you are unsure
+
+If you cannot tell whether anything in the message needs a clinician, it is not this route. Send it as a doctor task.
 
 ## APPLIES TO EVERY ROUTE
 

@@ -29,7 +29,7 @@ test('every destination the practice has is named once, with both lists', () => 
   // entry as what to do as well when the patient is in the building.
   const ids = DESTINATIONS.map((d) => d.id);
   assert.deepEqual(ids, [
-    'minorEyeService', 'pharmacy', 'midwife', 'socialPrescriber',
+    'minorEyeService', 'pharmacy', 'midwife', 'socialPrescriber', 'reception',
     'diabeticNurse', 'fcp', 'nurse', 'pharmacyTeam', 'districtNurse',
     'doctorTask', 'gp', 'dutyDoctor', 'dutyInterrupt', 'ae',
     'eyeEmergency', 'emergency',
@@ -43,7 +43,7 @@ test('every destination the practice has is named once, with both lists', () => 
     // Which page of docs/routing.md it was transcribed from, so an entry can be
     // checked against the source rather than taken on trust.
     assert.ok(d.doc, d.id + ' names the guide page it came from');
-    assert.match(d.section, /^[A-D]$/, d.id + ' names the guide section it is in');
+    assert.match(d.section, /^[A-E]$/, d.id + ' names the guide section it is in');
   }
   // The ladder must never let a nurse clinic outrank a doctor, whatever else is
   // added to it — that is what makes their "yes" a note rather than a route.
