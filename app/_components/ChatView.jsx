@@ -361,14 +361,11 @@ export default function ChatView({ v }) {
           <div className="riva-turn-head">
             {/* A pasted consultation is not a heading — see TurnQuestion. */}
             <TurnQuestion question={v.turn.question} fly={v.turn.flyFrom} focus={v.turn.focusOnMount} />
-            {(v.turn.askedAs || v.turn.thought || v.turn.imageNote || v.turn.redactedNote || v.turn.hasDocs || v.turn.hasImages) && (
+            {(v.turn.askedAs || v.turn.imageNote || v.turn.redactedNote || v.turn.hasDocs || v.turn.hasImages) && (
               <motion.div className="riva-turn-meta" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.25 }}>
                 {/* WHICH KIND OF ANSWER THIS WAS ASKED FOR. Without it a wrong
                     answer has nothing on screen explaining which list it came from. */}
                 {v.turn.askedAs && <span className="rv-chip rv-chip--accent">Asked as {v.turn.askedAs}</span>}
-                {/* WHICH MODEL IT WAS ASKED OF, when not the everyday one: a slower
-                    or a different answer explains itself. */}
-                {v.turn.thought && <span className="rv-chip">Asked on {v.turn.thought}</span>}
                 {v.turn.imageNote && <span className="riva-turn-imgnote">{v.turn.imageNote}</span>}
                 {/* What the local identifier check took out of this question
                     before it was sent. The toast that said so has gone by now;

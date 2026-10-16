@@ -18,6 +18,8 @@ and it is bumped by hand in the commit that earns it.
 
 | Version | Date | Type | Commit | Subject |
 | --- | --- | --- | --- | --- |
+| `6.93.2` | 2026-10-16 | refactor | `1f65daa` | refactor: remove the "Start with a task" tiles from the opening screen |
+| `6.93.1` | 2026-10-16 | docs | `0c66124` | docs: record the routing, thinking, suggestion and Ask page work in versions |
 | `6.93.0` | 2026-10-16 | feat | `c564dfc` | feat: give the Ask page tasks to start from and pages to go to next |
 | `6.92.0` | 2026-10-16 | feat | `4f05a8a` | feat: suggest Notebook pages, contacts and modes as you type |
 | `6.91.0` | 2026-10-16 | feat | `ae34c0a` | feat: add Fast, Think and Deep beside the send button |

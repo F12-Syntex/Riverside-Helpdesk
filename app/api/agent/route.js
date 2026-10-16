@@ -80,7 +80,6 @@ import { draftThrottle, settledDraft } from '@/lib/agent/draft.mjs';
 import { noteUnansweredQuestion } from '@/lib/questions/open';
 import { isCollectableQuestion } from '@/lib/questions/gaps.mjs';
 import { previousUserMessage } from '@/lib/search/query.mjs';
-import { accurxModel, normaliseThinking, thinkingModel } from '@/lib/thinking.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -191,8 +190,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Server is missing OPENROUTER_API_KEY.' }, { status: 500 });
   }
 
-  // The FAST model writes the answer — or the Think or Deep one, when the
-  // question was asked that way (see `thinking` below). There is no research phase left for it to
+  // The FAST model writes the answer. There is no research phase left for it to
   // drive, and no reasoning phase to hand off to: this is the whole turn. An
   // unset fast role resolves to the reasoning model, so an install that has only
   // ever chosen one model still works.
@@ -209,13 +207,7 @@ export async function POST(request) {
   } catch (e) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
-  // FAST, THINK OR DEEP — chosen beside the send button, and nothing but the
-  // model (lib/thinking.mjs). Anything that is not one of the three is Fast,
-  // which is what answered before the choice existed, so an old page or a
-  // caller that never sends it is answered exactly as it always was.
-  const thinking = normaliseThinking(body?.thinking);
-  const answering = thinkingModel(roles, thinking);
-  const model = answering.model;
+  const model = roles.fast.model;
   const asked = typeof body?.question === 'string' && body.question.trim() ? body.question : 'Please look at the attached image.';
   // A slash command names the template outright, so nothing is chosen here. Only
   // a template a command claims is honoured (lib/commands.mjs); anything else
@@ -747,7 +739,7 @@ export async function POST(request) {
                     web: web && web.ok ? web.summary : '',
                   }),
                 }), INTENT_TIMEOUT_MS);
-                recordUsage({ turnId, role: answering.role, phase: 'contractIntent', model, usage: picked.usage, metadata: picked.providerMetadata });
+                recordUsage({ turnId, role: 'fast', phase: 'contractIntent', model, usage: picked.usage, metadata: picked.providerMetadata });
                 // THE ANSWER IS A TEMPLATE, NOT A CONTRACT. The reader has a
                 // job in front of them and wants to know what to open; a
                 // template is a page set holding dozens of entries, so their
@@ -828,11 +820,8 @@ export async function POST(request) {
             // A screenshot beats the rest: a command sent with a picture on it
             // — a /medication screen — is read by the images role, because the
             // others may not see it at all.
-            // Asked to Think or go Deep, the reading runs on that model too
-            // (accurxModel): the routing is the half of /accurx a stronger
-            // model is most worth having on.
-            const callModel = seeing ? imageModel : reading ? accurxModel(roles, thinking) : model;
-            const callRole = seeing ? 'images' : reading ? (thinking === 'fast' ? 'accurx' : answering.role) : answering.role;
+            const callModel = seeing ? imageModel : reading ? (roles.accurx.model || model) : model;
+            const callRole = seeing ? 'images' : reading ? 'accurx' : 'fast';
 
             // THE NOTEBOOK DOES NOT GO INTO THE /accurx READ.
             //
@@ -1120,7 +1109,7 @@ export async function POST(request) {
         sendDraft(streamedText);
         const answerUsage = await generated.usage;
         const answerMetadata = await generated.providerMetadata;
-        recordUsage({ turnId, role: seeing ? 'images' : answering.role, phase: 'answer', model: proseModel, usage: answerUsage, metadata: answerMetadata });
+        recordUsage({ turnId, role: seeing ? 'images' : 'fast', phase: 'answer', model: proseModel, usage: answerUsage, metadata: answerMetadata });
         tookTime('answer', proseModel, proseBegan);
         {
           const { input, cached } = usageCounts(answerUsage);
@@ -1229,7 +1218,7 @@ export async function POST(request) {
         send({
           type: 'error',
           error: timedOut
-            ? (thinking === 'fast' ? 'The model took too long to answer, so this was stopped. Try again, or choose a faster model at /settings.' : 'The model took too long to answer, so this was stopped. Try again on Fast, beside the send button.')
+            ? 'The model took too long to answer, so this was stopped. Try again, or choose a faster model at /settings.'
             : 'The assistant could not complete this answer.',
           detail: String(e).slice(0, 300),
         });
